@@ -515,6 +515,26 @@ export async function assignWorkOrder(
               'assignee must be a staff member or a registered partner',
               { details: [{ path: 'assigneeUserId', message: 'not staff or partner' }] },
             );
+          // The contractor sees the reporter's photos of the problem.
+          const reporterPhotos = await tx
+            .select({ fileId: schema.evidence.fileId })
+            .from(schema.evidence)
+            .where(
+              and(
+                eq(schema.evidence.workOrderId, access.row.id),
+                sql`${schema.evidence.captureMetadata}->>'source' = 'reporter'`,
+              ),
+            );
+          if (reporterPhotos.length > 0) {
+            await tx.insert(schema.fileAccessGrants).values(
+              reporterPhotos.map((p) => ({
+                fileId: p.fileId,
+                userId: input.assigneeUserId,
+                level: 'view' as const,
+                grantedBy: userId,
+              })),
+            );
+          }
           await tx.insert(schema.assignments).values({
             organizationId: access.row.organizationId,
             assigneeUserId: input.assigneeUserId,
@@ -637,13 +657,26 @@ export async function addEvidence(
   const userId = requireUserId(identity);
   return withActor(getDb(), ctxFor(identity, options), async (tx) => {
     const access = await requireWorkOrder(tx, identity, id);
-    if (!['staff', 'assignee'].includes(access.viewer))
-      throw new ApiError('forbidden', 'only the assignee or staff attach evidence');
-    assertWriteRight(identity, access, 'evidence');
-    if (!['assigned', 'in_progress', 'approved', 'awaiting_approval'].includes(access.row.status))
+    // Reporters (the tenant who raised the ticket, or the owner organisation)
+    // attach photos of the problem while the ticket is open; those photos are
+    // context, not proof that work was done, and never satisfy completion.
+    const reporter =
+      (access.viewer === 'tenant' && access.row.reportedByUserId === userId) ||
+      (access.viewer === 'customer' &&
+        authorizeAny(identity.actor, [{ org: 'org.maintenance.request' }], access.ref).allowed);
+    if (!reporter && !['staff', 'assignee'].includes(access.viewer))
+      throw new ApiError(
+        'forbidden',
+        'only the reporter, the assignee or staff attach files to this ticket',
+      );
+    if (!reporter) assertWriteRight(identity, access, 'evidence');
+    const openStatuses = reporter
+      ? ['requested', 'triaged', 'assigned', 'in_progress', 'awaiting_approval', 'approved']
+      : ['assigned', 'in_progress', 'approved', 'awaiting_approval'];
+    if (!openStatuses.includes(access.row.status))
       throw new ApiError(
         'invalid_transition',
-        `evidence is attached while work is open (work order is ${access.row.status})`,
+        `files are attached while the ticket is open (work order is ${access.row.status})`,
       );
     const files = await tx
       .select()
@@ -663,6 +696,30 @@ export async function addEvidence(
         throw new ApiError('validation_failed', 'file belongs to another organisation', {
           details: [{ path: 'fileIds', message: fileId }],
         });
+      if (reporter && (file.ownerUserId !== userId || file.purpose !== 'maintenance_photo'))
+        throw new ApiError('validation_failed', 'attach photos you uploaded for this ticket', {
+          details: [{ path: 'fileIds', message: fileId }],
+        });
+      if (reporter) {
+        // Share the photo with the property's organisation (owner, staff with
+        // file access) and the current assignee; the reporter keeps ownership.
+        await tx
+          .update(schema.fileObjects)
+          .set({
+            organizationId: access.row.organizationId,
+            entityType: 'work_order',
+            entityId: access.row.id,
+          })
+          .where(eq(schema.fileObjects.id, fileId));
+        if (access.row.assigneeUserId && access.row.assigneeUserId !== userId) {
+          await tx.insert(schema.fileAccessGrants).values({
+            fileId,
+            userId: access.row.assigneeUserId,
+            level: 'view',
+            grantedBy: userId,
+          });
+        }
+      }
       await tx.insert(schema.evidence).values({
         organizationId: access.row.organizationId,
         workOrderId: id,
@@ -674,6 +731,7 @@ export async function addEvidence(
             : 'document',
         caption: input.caption ?? null,
         capturedAt: input.capturedAt ? new Date(input.capturedAt) : null,
+        captureMetadata: reporter ? { source: 'reporter' } : null,
         uploaderUserId: userId,
         checksumSha256: file.checksumSha256 ?? '',
       });
@@ -708,10 +766,16 @@ export function completeWorkOrder(
         ...(input.actualCostKobo ? { actualCostKobo: BigInt(input.actualCostKobo) } : {}),
       },
       guard: async (tx, access) => {
+        // Photos from the reporter describe the problem; they are not evidence of the work.
         const [count] = await tx
           .select({ id: schema.evidence.id })
           .from(schema.evidence)
-          .where(eq(schema.evidence.workOrderId, access.row.id))
+          .where(
+            and(
+              eq(schema.evidence.workOrderId, access.row.id),
+              sql`coalesce(${schema.evidence.captureMetadata}->>'source', '') <> 'reporter'`,
+            ),
+          )
           .limit(1);
         if (!count)
           throw new ApiError(

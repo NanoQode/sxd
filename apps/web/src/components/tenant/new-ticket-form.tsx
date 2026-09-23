@@ -16,6 +16,7 @@ import {
 } from '@simplexd/ui';
 import { ErrorState } from '@/components/portal/error-state';
 import { describeTenantError, tenantFetch } from '@/lib/tenant/client';
+import { uploadFile, validateForPurpose } from '@/lib/portal/upload';
 import { TICKET_CATEGORIES, TICKET_PRIORITIES } from '@/lib/tenant/model';
 
 export interface TicketLeaseOption {
@@ -71,6 +72,54 @@ export function NewTicketForm({ leases }: { leases: TicketLeaseOption[] }) {
   const [errors, setErrors] = useState<FieldErrors>({});
   const [failure, setFailure] = useState<ReturnType<typeof describeTenantError> | null>(null);
   const [busy, setBusy] = useState(false);
+  const [photos, setPhotos] = useState<File[]>([]);
+  const [photoError, setPhotoError] = useState<string | null>(null);
+  const MAX_PHOTOS = 5;
+
+  function addPhotos(list: FileList | null) {
+    if (!list) return;
+    const next = [...photos];
+    for (const file of Array.from(list)) {
+      const problem = validateForPurpose(file, 'maintenance_photo');
+      if (problem) {
+        setPhotoError(problem);
+        continue;
+      }
+      if (next.length >= MAX_PHOTOS) {
+        setPhotoError(`Attach up to ${MAX_PHOTOS} photos.`);
+        break;
+      }
+      next.push(file);
+    }
+    setPhotos(next);
+  }
+
+  /**
+   * Uploads the chosen photos and attaches them to the new ticket. The ticket
+   * already exists at this point, so a photo failure never loses the request;
+   * the person is told which photos did not attach.
+   */
+  async function attachPhotos(ticketId: string): Promise<number> {
+    const fileIds: string[] = [];
+    let failed = 0;
+    for (const photo of photos) {
+      try {
+        const res = await uploadFile(photo, { purpose: 'maintenance_photo' });
+        if (res.outcome === 'rejected') failed += 1;
+        else fileIds.push(res.file.id);
+      } catch {
+        failed += 1;
+      }
+    }
+    if (fileIds.length > 0) {
+      try {
+        await tenantFetch(`/api/v1/work-orders/${ticketId}/evidence`, { body: { fileIds } });
+      } catch {
+        failed += fileIds.length;
+      }
+    }
+    return failed;
+  }
 
   function set<K extends keyof Values>(key: K, value: Values[K]) {
     setValues((v) => ({ ...v, [key]: value }));
@@ -101,10 +150,14 @@ export function NewTicketForm({ leases }: { leases: TicketLeaseOption[] }) {
           },
         },
       );
+      const failedPhotos = photos.length > 0 ? await attachPhotos(created.id) : 0;
       toast({
         title: 'Maintenance request sent',
-        description: 'The maintenance team will review it. Track progress on the ticket page.',
-        tone: 'success',
+        description:
+          failedPhotos > 0
+            ? `${failedPhotos} photo(s) could not be attached. The request was sent; describe the problem in a message if needed.`
+            : 'The maintenance team will review it. Track progress on the ticket page.',
+        tone: failedPhotos > 0 ? 'info' : 'success',
       });
       router.push(`/tenant/tickets/${created.id}`);
       router.refresh();
@@ -259,17 +312,59 @@ export function NewTicketForm({ leases }: { leases: TicketLeaseOption[] }) {
         </p>
       </fieldset>
 
-      <div
-        role="note"
-        className="flex gap-3 rounded-md border border-dashed border-border bg-bg-sunken p-3 text-sm text-fg-muted"
-      >
-        <Camera aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0" />
-        <p>
-          <span className="font-medium text-fg">Photo attachments are not available yet.</span> The
-          maintenance service only accepts photos from the assigned contractor or staff, so describe
-          the problem in words; the contractor photographs it on the visit.
+      <fieldset className="space-y-2">
+        <legend className="text-sm font-medium">Photos (optional)</legend>
+        <p id="ticket-photos-help" className="text-xs text-fg-muted">
+          Up to {MAX_PHOTOS} photos of the problem (JPEG, PNG, WebP or HEIC, 25 MB each). They are
+          scanned before anyone opens them and shared only with the property team and the assigned
+          contractor.
         </p>
-      </div>
+        <label className="inline-flex cursor-pointer items-center gap-2 rounded-md border border-border px-3 py-2 text-sm focus-within:ring-2 focus-within:ring-primary">
+          <Camera aria-hidden="true" className="h-4 w-4" />
+          <span>Add photos</span>
+          <input
+            type="file"
+            accept="image/*"
+            capture="environment"
+            multiple
+            className="sr-only"
+            aria-describedby="ticket-photos-help"
+            disabled={busy || photos.length >= MAX_PHOTOS}
+            onChange={(e) => {
+              setPhotoError(null);
+              addPhotos(e.target.files);
+              e.target.value = '';
+            }}
+          />
+        </label>
+        {photoError ? (
+          <p role="alert" className="text-sm text-danger">
+            {photoError}
+          </p>
+        ) : null}
+        {photos.length > 0 ? (
+          <ul className="space-y-1 text-sm">
+            {photos.map((photo, index) => (
+              <li
+                key={`${photo.name}-${index}`}
+                className="flex items-center justify-between gap-2"
+              >
+                <span className="truncate">{photo.name}</span>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  disabled={busy}
+                  onClick={() => setPhotos((list) => list.filter((_, i) => i !== index))}
+                  aria-label={`Remove ${photo.name}`}
+                >
+                  Remove
+                </Button>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+      </fieldset>
 
       <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
         <Button

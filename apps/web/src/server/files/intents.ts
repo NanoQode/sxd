@@ -314,6 +314,16 @@ async function authorizeIntent(
       assertAllowed(decision);
       return { organizationId: null };
     }
+    case 'maintenance_photo': {
+      // Any signed-in reporter may upload; sharing happens only when the
+      // work-order service attaches the photo to a ticket the caller may report on.
+      if (input.entityType)
+        throw new ApiError(
+          'validation_failed',
+          'maintenance photos are attached from the ticket, not at upload',
+        );
+      return { organizationId: null };
+    }
     case 'identity': {
       // Personal document: owned by the user, never shared with an organisation.
       if (input.entityType)

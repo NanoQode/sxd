@@ -24,12 +24,23 @@ import {
   listMyReceipts,
   listMyTickets,
 } from './tenant';
-import { cancelWorkOrder, createWorkOrder, getWorkOrder } from '@/server/maintenance/work-orders';
+import {
+  addEvidence,
+  assignWorkOrder,
+  cancelWorkOrder,
+  completeWorkOrder,
+  createWorkOrder,
+  getWorkOrder,
+  startWorkOrder,
+  triageWorkOrder,
+} from '@/server/maintenance/work-orders';
+import { getFile } from '@/server/files/queries';
 import {
   createRentalFixture,
   errorCode,
   opsIdentity,
   ownerIdentity,
+  partnerIdentity,
   payInvoice,
   tenantIdentity,
   type RentalFixture,
@@ -232,5 +243,65 @@ describe('tenant portal isolation', () => {
     await expect(getMyLease(t1, leaseA)).rejects.toSatisfy((e) => errorCode(e) === 'not_found');
     await expect(getLease(t1, leaseA)).rejects.toSatisfy((e) => errorCode(e) === 'not_found');
     expect(await listMyTickets(t1)).toHaveLength(0);
+  });
+});
+
+describe('ticket photos from the reporter', () => {
+  it('shares the tenant photo with the owner and assignee but never counts it as completion evidence', async () => {
+    // Tenant 1 is revoked earlier in this file; tenant 2 holds the lease in organisation B.
+    const t2 = tenantIdentity(f, 2);
+    const ticket = await createMyTicket(t2, leaseB, {
+      title: 'Cracked window',
+      description: 'Bedroom window pane cracked',
+      category: 'glazing',
+      priority: 'normal',
+    });
+    const [photo] = await f.dbs.owner
+      .insert(schema.fileObjects)
+      .values({
+        organizationId: null,
+        ownerUserId: f.tenant2,
+        bucket: 'private',
+        storageKey: `test/reporter-${ticket.id}`,
+        originalName: 'window.jpg',
+        declaredMime: 'image/jpeg',
+        status: 'clean',
+        purpose: 'maintenance_photo',
+        checksumSha256: 'cd'.repeat(32),
+      })
+      .returning({ id: schema.fileObjects.id });
+    // Another tenant cannot attach to this ticket.
+    await expect(
+      addEvidence(tenantIdentity(f, 1), ticket.id, { fileIds: [photo!.id] }),
+    ).rejects.toSatisfy((e) => ['not_found', 'forbidden'].includes(errorCode(e)!));
+    const withPhoto = await addEvidence(t2, ticket.id, {
+      fileIds: [photo!.id],
+      caption: 'Crack across the lower pane',
+    });
+    expect(withPhoto.evidence).toHaveLength(1);
+    // The owner organisation can now open the photo; the tenant still owns it.
+    const ownerView = await getFile(ownerIdentity(f, 'B'), photo!.id);
+    expect(ownerView.id).toBe(photo!.id);
+    await expect(getFile(ownerIdentity(f, 'A'), photo!.id)).rejects.toBeTruthy();
+
+    // The contractor assigned later is granted view access to the reporter photos.
+    const ops = opsIdentity(f);
+    await triageWorkOrder(ops, ticket.id, { expectedVersion: withPhoto.version });
+    const triaged = await getWorkOrder(ops, ticket.id);
+    await assignWorkOrder(ops, ticket.id, {
+      assigneeUserId: f.partner,
+      expectedVersion: triaged.version,
+    });
+    const partnerView = await getFile(partnerIdentity(f), photo!.id);
+    expect(partnerView.id).toBe(photo!.id);
+
+    // Reporter photos are not evidence that the work was done.
+    const assigned = await getWorkOrder(ops, ticket.id);
+    const started = await startWorkOrder(partnerIdentity(f), ticket.id, {
+      expectedVersion: assigned.version,
+    });
+    await expect(
+      completeWorkOrder(partnerIdentity(f), ticket.id, { expectedVersion: started.version }),
+    ).rejects.toSatisfy((e) => errorCode(e) === 'insufficient_evidence');
   });
 });

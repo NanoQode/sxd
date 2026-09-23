@@ -24,6 +24,12 @@ export const FILE_PURPOSES = [
    * bid or response, and readable by staff once the submission may be opened.
    */
   'partner_submission',
+  /**
+   * Photos a tenant or owner attaches when reporting a maintenance problem.
+   * Owned by the reporter; attaching them to the ticket shares them with the
+   * property's organisation, staff and the assigned contractor.
+   */
+  'maintenance_photo',
 ] as const;
 export const filePurposeSchema = z.enum(FILE_PURPOSES);
 export type FilePurpose = z.infer<typeof filePurposeSchema>;
@@ -121,6 +127,13 @@ export const FILE_PURPOSE_POLICIES: Record<FilePurpose, FilePurposePolicy> = {
     allowedMime: [...IMAGE_MIME, ...DOCUMENT_MIME, 'application/zip'],
     maxBytes: 100 * MB,
     maxBytesByFamily: { image: 25 * MB, video: 0, document: 100 * MB },
+    requiresEntity: false,
+    sensitive: false,
+  },
+  maintenance_photo: {
+    allowedMime: [...IMAGE_MIME],
+    maxBytes: 25 * MB,
+    maxBytesByFamily: { image: 25 * MB, video: 0, document: 0 },
     requiresEntity: false,
     sensitive: false,
   },
