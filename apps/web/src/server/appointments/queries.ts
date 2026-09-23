@@ -47,7 +47,9 @@ function scopeCondition(viewer: Viewer, query: AppointmentListQuery): SQL | unde
     }
     case 'customer': {
       const orgIds = viewer.identity.actor.memberships
-        .filter((m) => orgPermissions(viewer.identity.actor, m.organizationId).has('org.appointments.manage'))
+        .filter((m) =>
+          orgPermissions(viewer.identity.actor, m.organizationId).has('org.appointments.manage'),
+        )
         .map((m) => m.organizationId);
       return or(
         eq(t.customerUserId, viewer.userId),
@@ -86,7 +88,13 @@ export async function listAppointments(
       .limit(query.limit + 1);
     const page = rows.slice(0, query.limit);
     const settings = await loadBookingSettings(tx);
-    const syncs = viewer.kind === 'staff' ? await syncRowsFor(tx, page.map((r) => r.id)) : new Map();
+    const syncs =
+      viewer.kind === 'staff'
+        ? await syncRowsFor(
+            tx,
+            page.map((r) => r.id),
+          )
+        : new Map();
     const names = await staffNames(tx, [...new Set(page.map((r) => r.staffUserId))]);
     const items = page.map((row) => {
       const sync = (syncs.get(row.id) as EventSyncRow | undefined) ?? null;

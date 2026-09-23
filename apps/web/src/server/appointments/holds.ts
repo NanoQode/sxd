@@ -43,7 +43,9 @@ export function kindFromHoldNote(note: string | null): AppointmentKind | null {
 export async function purgeExpiredHolds(tx: DbExecutor, now: Date): Promise<number> {
   const rows = await tx
     .delete(schema.slotReservations)
-    .where(and(eq(schema.slotReservations.kind, 'hold'), lt(schema.slotReservations.expiresAt, now)))
+    .where(
+      and(eq(schema.slotReservations.kind, 'hold'), lt(schema.slotReservations.expiresAt, now)),
+    )
     .returning({ id: schema.slotReservations.id });
   return rows.length;
 }
@@ -121,8 +123,8 @@ export async function createHold(input: HoldCreate, options: CreateHoldOptions):
       }
       throw err;
     }
-    const businessZone = probe.plan.windows.get(staffUserId)?.[0]?.timeZone ??
-      settings.workingHours.timeZone;
+    const businessZone =
+      probe.plan.windows.get(staffUserId)?.[0]?.timeZone ?? settings.workingHours.timeZone;
     return {
       holdToken,
       kind: input.kind,

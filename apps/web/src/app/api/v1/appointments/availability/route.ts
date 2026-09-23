@@ -16,7 +16,10 @@ export const GET = route(async (req, { correlationId }) => {
   const query = parseQuery(req, availabilityQuerySchema);
   const identity = await getIdentity();
   const ipHash = hashIp(clientIp(req));
-  await enforceRateLimit(`availability:ip:${ipHash}`, { windowSeconds: 60, max: identity.session ? 120 : 60 });
+  await enforceRateLimit(`availability:ip:${ipHash}`, {
+    windowSeconds: 60,
+    max: identity.session ? 120 : 60,
+  });
   const result = await computeAvailability({
     kind: query.kind,
     staffUserId: query.staffUserId,
@@ -26,7 +29,10 @@ export const GET = route(async (req, { correlationId }) => {
     providerBusy: providerBusyLoader(),
   });
   if (!identity.session && !isGuestKind(query.kind)) {
-    return json({ ...result, slots: [], unavailableReason: 'kind_not_bookable' as const }, { correlationId });
+    return json(
+      { ...result, slots: [], unavailableReason: 'kind_not_bookable' as const },
+      { correlationId },
+    );
   }
   return json(result, { correlationId });
 });

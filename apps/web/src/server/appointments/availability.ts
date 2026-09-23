@@ -231,7 +231,9 @@ export async function computeAvailability(
         }
       }
     }
-    slots.sort((a, b) => a.start.localeCompare(b.start) || a.staffUserId.localeCompare(b.staffUserId));
+    slots.sort(
+      (a, b) => a.start.localeCompare(b.start) || a.staffUserId.localeCompare(b.staffUserId),
+    );
     return {
       kind: input.kind,
       durationMinutes: duration,

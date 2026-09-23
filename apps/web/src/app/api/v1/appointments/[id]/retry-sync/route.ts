@@ -16,7 +16,10 @@ const idSchema = z.object({ id: uuidSchema });
 export const POST = route<{ params: Promise<{ id: string }> }>(async (_req, ctx) => {
   const identity = await requireStaff('appointments.manage_all');
   const { id } = await params(ctx, idSchema);
-  return json(await retryCalendarSync(viewerFromIdentity(identity), id, { correlationId: ctx.correlationId }), {
-    correlationId: ctx.correlationId,
-  });
+  return json(
+    await retryCalendarSync(viewerFromIdentity(identity), id, { correlationId: ctx.correlationId }),
+    {
+      correlationId: ctx.correlationId,
+    },
+  );
 });

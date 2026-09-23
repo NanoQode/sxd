@@ -316,17 +316,15 @@ async function inviteInTx(
       leadTimeDays: null,
       lines: [],
     };
-    await tx
-      .insert(schema.rfqResponses)
-      .values(
-        fresh.map((supplierUserId) => ({
-          rfqId: rfq.id,
-          supplierUserId,
-          status: 'draft' as const,
-          lines: empty,
-          currency,
-        })),
-      );
+    await tx.insert(schema.rfqResponses).values(
+      fresh.map((supplierUserId) => ({
+        rfqId: rfq.id,
+        supplierUserId,
+        status: 'draft' as const,
+        lines: empty,
+        currency,
+      })),
+    );
   }
   return fresh;
 }

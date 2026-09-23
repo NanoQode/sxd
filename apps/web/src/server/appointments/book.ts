@@ -1,7 +1,19 @@
 import { randomBytes, randomUUID } from 'node:crypto';
 import { and, eq } from 'drizzle-orm';
-import { ApiError, type AppointmentDto, type AppointmentKind, type BookingCreate } from '@simplexd/contracts';
-import { appendOutbox, getDb, schema, systemContext, withActor, type DbExecutor } from '@simplexd/db';
+import {
+  ApiError,
+  type AppointmentDto,
+  type AppointmentKind,
+  type BookingCreate,
+} from '@simplexd/contracts';
+import {
+  appendOutbox,
+  getDb,
+  schema,
+  systemContext,
+  withActor,
+  type DbExecutor,
+} from '@simplexd/db';
 import { recordAudit } from '@/lib/audit';
 import type { RequestIdentity } from '@/lib/auth/session';
 import { viewerFromIdentity, guestViewer } from './access';
@@ -70,9 +82,13 @@ export async function createBooking(
     const hold = await lockHold(tx, input.holdToken, now);
     const kind: AppointmentKind = hold.kind ?? input.kind ?? 'consultation';
     if (input.kind && hold.kind && input.kind !== hold.kind) {
-      throw new ApiError('validation_failed', 'the hold was taken for a different appointment kind', {
-        details: { holdKind: hold.kind, requestedKind: input.kind },
-      });
+      throw new ApiError(
+        'validation_failed',
+        'the hold was taken for a different appointment kind',
+        {
+          details: { holdKind: hold.kind, requestedKind: input.kind },
+        },
+      );
     }
     const settings = await loadBookingSettings(tx);
     if (!identity && !isGuestBookable(settings, kind)) {
@@ -103,12 +119,12 @@ export async function createBooking(
     const meetingProvider = meetingProviderForKind(kind);
     const status = settings.autoConfirm ? 'confirmed' : 'pending_confirmation';
     const leadId = input.leadId
-      ? (
+      ? ((
           await tx
             .select({ id: schema.leads.id })
             .from(schema.leads)
             .where(eq(schema.leads.id, input.leadId))
-        )[0]?.id ?? null
+        )[0]?.id ?? null)
       : null;
     const [appointment] = await tx
       .insert(schema.appointments)

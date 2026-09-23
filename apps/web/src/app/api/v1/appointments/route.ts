@@ -23,9 +23,15 @@ export const POST = route(async (req, { correlationId }) => {
   const body = await parseJson(req, bookingCreateSchema);
   const identity = await getIdentity();
   const ipHash = hashIp(clientIp(req));
-  await enforceRateLimit(`booking:ip:${ipHash}`, { windowSeconds: 3600, max: identity.session ? 30 : 5 });
+  await enforceRateLimit(`booking:ip:${ipHash}`, {
+    windowSeconds: 3600,
+    max: identity.session ? 30 : 5,
+  });
   if (!identity.session && body.guest) {
-    const emailHash = createHash('sha256').update(body.guest.email.toLowerCase()).digest('hex').slice(0, 24);
+    const emailHash = createHash('sha256')
+      .update(body.guest.email.toLowerCase())
+      .digest('hex')
+      .slice(0, 24);
     await enforceRateLimit(`booking:email:${emailHash}`, { windowSeconds: 3600, max: 3 });
   }
   return withIdempotency(req, identity, 'POST /api/v1/appointments', body, async () => {

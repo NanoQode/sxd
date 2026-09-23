@@ -26,9 +26,10 @@ export async function buildAppointmentIcs(id: string, icsToken: string): Promise
       .select({ name: schema.user.name, email: schema.user.email })
       .from(schema.user)
       .where(eq(schema.user.id, row.staffUserId));
-    const organizerEmail = staff?.email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(staff.email)
-      ? staff.email
-      : 'no-reply@simplexd.local';
+    const organizerEmail =
+      staff?.email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(staff.email)
+        ? staff.email
+        : 'no-reply@simplexd.local';
     const active = isActiveStatus(row.status);
     const summary = `SimplexD ${row.kind.replace(/_/g, ' ')}${row.topic ? `: ${row.topic}` : ''}`;
     const descriptionParts = [
@@ -51,10 +52,17 @@ export async function buildAppointmentIcs(id: string, icsToken: string): Promise
       location: row.locationNote ?? undefined,
       organizerEmail,
       organizerName: staff?.name ?? 'SimplexD',
-      attendeeEmails: row.guestEmail && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(row.guestEmail) ? [row.guestEmail] : [],
-      url: active && row.conferenceStatus === 'ready' && row.meetingUrl ? row.meetingUrl : undefined,
+      attendeeEmails:
+        row.guestEmail && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(row.guestEmail) ? [row.guestEmail] : [],
+      url:
+        active && row.conferenceStatus === 'ready' && row.meetingUrl ? row.meetingUrl : undefined,
       sequence: row.version,
-      status: row.status === 'cancelled' ? 'CANCELLED' : row.status === 'pending_confirmation' ? 'TENTATIVE' : 'CONFIRMED',
+      status:
+        row.status === 'cancelled'
+          ? 'CANCELLED'
+          : row.status === 'pending_confirmation'
+            ? 'TENTATIVE'
+            : 'CONFIRMED',
       method: row.status === 'cancelled' ? 'CANCEL' : 'REQUEST',
     });
     return { fileName: icsFileName(summary), body };

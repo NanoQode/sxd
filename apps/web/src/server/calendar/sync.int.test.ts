@@ -8,7 +8,11 @@ import { staffIdentity } from '@/testing/identity';
 import { viewerFromIdentity } from '@/server/appointments/access';
 import { createBooking } from '@/server/appointments/book';
 import { createHold } from '@/server/appointments/holds';
-import { cancelAppointment, rescheduleAppointment, retryCalendarSync } from '@/server/appointments/mutate';
+import {
+  cancelAppointment,
+  rescheduleAppointment,
+  retryCalendarSync,
+} from '@/server/appointments/mutate';
 import { getAppointment } from '@/server/appointments/queries';
 import {
   cancelAppointmentEvent,
@@ -25,6 +29,11 @@ import { completeConnect, disconnectConnection, startConnect } from './oauth';
 import { handleCalendarPush } from './push';
 import { credentialsForConnection, sharedDevProvider } from './runtime';
 
+// The shared test default (packages/db/src/testing/env.ts) is not a 32-byte key; the
+// envelope keyring refuses it, so this suite supplies a valid one before any use.
+process.env.SECRETS_MASTER_KEY = Buffer.alloc(32, 7).toString('base64');
+process.env.SECRETS_MASTER_KEY_ID = 'test-cal-1';
+
 /**
  * Google Calendar / Meet synchronisation through the labelled development
  * adapter: booking → sync job → pending conference → reconcile → Meet URL,
@@ -39,9 +48,14 @@ let dev: DevCalendarProvider;
 const sfx = uniqueSuffix();
 const organiserId = `cal_org_${sfx}`;
 const opsId = `cal_ops_${sfx}`;
-const ops = () => staffIdentity({ userId: opsId, email: `${opsId}@example.test`, roles: ['operations_manager'] });
+const ops = () =>
+  staffIdentity({ userId: opsId, email: `${opsId}@example.test`, roles: ['operations_manager'] });
 const organiser = () =>
-  staffIdentity({ userId: organiserId, email: `${organiserId}@example.test`, roles: ['operations_manager'] });
+  staffIdentity({
+    userId: organiserId,
+    email: `${organiserId}@example.test`,
+    roles: ['operations_manager'],
+  });
 
 function lagosSlot(offsetDays: number, hour: number, minute = 0): string {
   return DateTime.now()
@@ -54,13 +68,22 @@ function lagosSlot(offsetDays: number, hour: number, minute = 0): string {
 
 async function bookGuest(offsetDays: number, hour: number) {
   const hold = await createHold(
-    { kind: 'consultation', staffUserId: organiserId, start: lagosSlot(offsetDays, hour), customerTimeZone: 'Europe/London' },
+    {
+      kind: 'consultation',
+      staffUserId: organiserId,
+      start: lagosSlot(offsetDays, hour),
+      customerTimeZone: 'Europe/London',
+    },
     { identity: null },
   );
   return createBooking(
     {
       holdToken: hold.holdToken,
-      guest: { name: 'Guest Person', email: `guest_${sfx}_${offsetDays}_${hour}@example.test`, phoneE164: '+2348012345678' },
+      guest: {
+        name: 'Guest Person',
+        email: `guest_${sfx}_${offsetDays}_${hour}@example.test`,
+        phoneE164: '+2348012345678',
+      },
       customerTimeZone: 'Europe/London',
       topic: 'Diligence',
     },
@@ -69,12 +92,18 @@ async function bookGuest(offsetDays: number, hour: number) {
 }
 
 async function syncRow(appointmentId: string) {
-  const [row] = await dbs.owner.select().from(schema.eventSyncs).where(eq(schema.eventSyncs.appointmentId, appointmentId));
+  const [row] = await dbs.owner
+    .select()
+    .from(schema.eventSyncs)
+    .where(eq(schema.eventSyncs.appointmentId, appointmentId));
   return row!;
 }
 
 async function appointmentRow(appointmentId: string) {
-  const [row] = await dbs.owner.select().from(schema.appointments).where(eq(schema.appointments.id, appointmentId));
+  const [row] = await dbs.owner
+    .select()
+    .from(schema.appointments)
+    .where(eq(schema.appointments.id, appointmentId));
   return row!;
 }
 
@@ -160,13 +189,19 @@ describe('event sync and Meet lifecycle', () => {
     expect(dto.calendarNote).toMatch(/could not create the Meet link/);
 
     // Staff retry: enqueues a job with retryConference, worker asks for a new conference.
-    const requested = await retryCalendarSync(viewerFromIdentity(ops()), booked.id, { correlationId: 'retry' });
+    const requested = await retryCalendarSync(viewerFromIdentity(ops()), booked.id, {
+      correlationId: 'retry',
+    });
     expect(requested.calendarSyncStatus).toBe('pending');
     const jobs = await dbs.owner
       .select()
       .from(schema.jobs)
       .where(and(eq(schema.jobs.type, 'calendar.sync_event'), eq(schema.jobs.status, 'pending')));
-    const retryJob = jobs.find((j) => (j.payload as { appointmentId: string; retryConference: boolean }).appointmentId === booked.id && (j.payload as { retryConference: boolean }).retryConference);
+    const retryJob = jobs.find(
+      (j) =>
+        (j.payload as { appointmentId: string; retryConference: boolean }).appointmentId ===
+          booked.id && (j.payload as { retryConference: boolean }).retryConference,
+    );
     expect(retryJob).toBeDefined();
     const second = await syncAppointmentEvent(runtime, booked.id, { retryConference: true });
     expect(second.conferenceStatus).toBe('ready');
@@ -177,7 +212,9 @@ describe('event sync and Meet lifecycle', () => {
     expect(dto.meetingUrl).toBe(sync.meetUrl);
     // Exactly one provider event for this appointment.
     const changes = await dev.listChanges(runtime.devCredentials(), { calendarId: 'primary' });
-    const mine = changes.items.filter((e) => e.extendedPrivate['simplexdAppointmentId'] === booked.id);
+    const mine = changes.items.filter(
+      (e) => e.extendedPrivate['simplexdAppointmentId'] === booked.id,
+    );
     expect(mine).toHaveLength(1);
     dev.setConferenceMode('ready');
   });
@@ -187,7 +224,12 @@ describe('event sync and Meet lifecycle', () => {
     await syncAppointmentEvent(runtime, booked.id);
     const before = await syncRow(booked.id);
     const hold = await createHold(
-      { kind: 'consultation', staffUserId: organiserId, start: lagosSlot(5, 15), customerTimeZone: 'Europe/London' },
+      {
+        kind: 'consultation',
+        staffUserId: organiserId,
+        start: lagosSlot(5, 15),
+        customerTimeZone: 'Europe/London',
+      },
       { identity: null },
     );
     const rescheduled = await rescheduleAppointment(
@@ -202,14 +244,25 @@ describe('event sync and Meet lifecycle', () => {
     expect(after.providerEventId).toBe(before.providerEventId);
     expect(after.etag).not.toBe(before.etag);
     expect(after.sequence).toBeGreaterThan(before.sequence ?? 0);
-    const event = await dev.getEvent(runtime.devCredentials(), { calendarId: 'primary', eventId: after.providerEventId! });
+    const event = await dev.getEvent(runtime.devCredentials(), {
+      calendarId: 'primary',
+      eventId: after.providerEventId!,
+    });
     expect(event.start).toBe(hold.start);
     expect((await appointmentRow(booked.id)).calendarSyncStatus).toBe('synced');
 
     // Simulate the organiser editing the event in Google: our etag is now stale (412).
-    await dbs.owner.update(schema.eventSyncs).set({ etag: '"dev-etag-0"' }).where(eq(schema.eventSyncs.id, after.id));
+    await dbs.owner
+      .update(schema.eventSyncs)
+      .set({ etag: '"dev-etag-0"' })
+      .where(eq(schema.eventSyncs.id, after.id));
     const hold2 = await createHold(
-      { kind: 'consultation', staffUserId: organiserId, start: lagosSlot(5, 16), customerTimeZone: 'Europe/London' },
+      {
+        kind: 'consultation',
+        staffUserId: organiserId,
+        start: lagosSlot(5, 16),
+        customerTimeZone: 'Europe/London',
+      },
       { identity: null },
     );
     await rescheduleAppointment(
@@ -219,7 +272,10 @@ describe('event sync and Meet lifecycle', () => {
     );
     const recovered = await syncAppointmentEvent(runtime, booked.id);
     expect(recovered.outcome).toBe('updated');
-    const fresh = await dev.getEvent(runtime.devCredentials(), { calendarId: 'primary', eventId: after.providerEventId! });
+    const fresh = await dev.getEvent(runtime.devCredentials(), {
+      calendarId: 'primary',
+      eventId: after.providerEventId!,
+    });
     expect(fresh.start).toBe(hold2.start);
     expect((await syncRow(booked.id)).etag).toBe(fresh.etag);
   });
@@ -240,7 +296,10 @@ describe('event sync and Meet lifecycle', () => {
       .where(eq(schema.jobs.dedupeKey, `calendar.cancel_event:${booked.id}`));
     expect(cancelJobs).toHaveLength(1);
     expect(await cancelAppointmentEvent(runtime, booked.id)).toBe('cancelled');
-    const event = await dev.getEvent(runtime.devCredentials(), { calendarId: 'primary', eventId: sync.providerEventId! });
+    const event = await dev.getEvent(runtime.devCredentials(), {
+      calendarId: 'primary',
+      eventId: sync.providerEventId!,
+    });
     expect(event.status).toBe('cancelled');
     expect((await appointmentRow(booked.id)).calendarSyncStatus).toBe('cancelled');
     expect((await syncRow(booked.id)).status).toBe('cancelled');
@@ -258,7 +317,12 @@ describe('event sync and Meet lifecycle', () => {
     const outbox = await dbs.owner
       .select()
       .from(schema.outboxEvents)
-      .where(and(eq(schema.outboxEvents.aggregateId, booked.id), eq(schema.outboxEvents.eventType, 'appointment.reminder_due')));
+      .where(
+        and(
+          eq(schema.outboxEvents.aggregateId, booked.id),
+          eq(schema.outboxEvents.eventType, 'appointment.reminder_due'),
+        ),
+      );
     expect(outbox).toHaveLength(1);
     expect((outbox[0]!.payload as { hoursBefore: number }).hoursBefore).toBe(24);
     expect((await appointmentRow(booked.id)).remindersSent).toEqual(['24']);
@@ -289,7 +353,10 @@ describe('organiser connection, push notifications and admin tools', () => {
     expect(result.connection.scopes).toEqual([...DEFAULT_GOOGLE_SCOPES]);
     expect(result.connection.accountEmail).toBe('organiser@dev.simplexd.local');
     expect(result.connection.calendarId).toBe('primary');
-    const [row] = await dbs.owner.select().from(schema.calendarConnections).where(eq(schema.calendarConnections.id, connectionId));
+    const [row] = await dbs.owner
+      .select()
+      .from(schema.calendarConnections)
+      .where(eq(schema.calendarConnections.id, connectionId));
     expect(row!.refreshTokenSecretId).toBeTruthy();
     const secrets = await dbs.owner
       .select()
@@ -341,30 +408,58 @@ describe('organiser connection, push notifications and admin tools', () => {
     const [channel] = await dbs.owner
       .select()
       .from(schema.calendarWatchChannels)
-      .where(and(eq(schema.calendarWatchChannels.calendarConnectionId, connectionId), eq(schema.calendarWatchChannels.status, 'active')));
+      .where(
+        and(
+          eq(schema.calendarWatchChannels.calendarConnectionId, connectionId),
+          eq(schema.calendarWatchChannels.status, 'active'),
+        ),
+      );
     channelId = channel!.channelId;
     expect(channel!.tokenHash).toHaveLength(64);
 
     // Sync message: acknowledged, no job. Exists message: job queued.
     const syncHeaders = dev.simulateNotificationHeaders(channelId, 'sync');
-    expect(await handleCalendarPush(syncHeaders, 'push-1')).toMatchObject({ status: 200, action: 'acknowledged' });
+    expect(await handleCalendarPush(syncHeaders, 'push-1')).toMatchObject({
+      status: 200,
+      action: 'acknowledged',
+    });
     const okHeaders = dev.simulateNotificationHeaders(channelId, 'exists');
-    expect(await handleCalendarPush(okHeaders, 'push-2')).toMatchObject({ status: 200, action: 'queued' });
-    expect(await handleCalendarPush({ ...okHeaders, 'x-goog-channel-token': 'wrong' }, 'push-3')).toMatchObject({ status: 403 });
-    expect(await handleCalendarPush({ ...okHeaders, 'x-goog-channel-id': 'unknown' }, 'push-4')).toMatchObject({ status: 404 });
-    const pushJobs = await dbs.owner.select().from(schema.jobs).where(eq(schema.jobs.type, 'calendar.process_push'));
-    expect(pushJobs.some((j) => (j.payload as { channelId: string }).channelId === channelId)).toBe(true);
+    expect(await handleCalendarPush(okHeaders, 'push-2')).toMatchObject({
+      status: 200,
+      action: 'queued',
+    });
+    expect(
+      await handleCalendarPush({ ...okHeaders, 'x-goog-channel-token': 'wrong' }, 'push-3'),
+    ).toMatchObject({ status: 403 });
+    expect(
+      await handleCalendarPush({ ...okHeaders, 'x-goog-channel-id': 'unknown' }, 'push-4'),
+    ).toMatchObject({ status: 404 });
+    const pushJobs = await dbs.owner
+      .select()
+      .from(schema.jobs)
+      .where(eq(schema.jobs.type, 'calendar.process_push'));
+    expect(pushJobs.some((j) => (j.payload as { channelId: string }).channelId === channelId)).toBe(
+      true,
+    );
 
     // Initial sync establishes a token; then an organiser-side deletion becomes a conflict.
     const initial = await processPush(runtime, channelId);
     expect(initial.fullResync).toBe(false);
-    const [afterInitial] = await dbs.owner.select().from(schema.calendarWatchChannels).where(eq(schema.calendarWatchChannels.channelId, channelId));
+    const [afterInitial] = await dbs.owner
+      .select()
+      .from(schema.calendarWatchChannels)
+      .where(eq(schema.calendarWatchChannels.channelId, channelId));
     expect(afterInitial!.syncToken).toMatch(/^dev-sync-/);
 
     const booked = await bookGuest(7, 13);
     await syncAppointmentEvent(runtime, booked.id);
     const sync = await syncRow(booked.id);
-    await dev.cancelEvent(runtime.devCredentials(), { calendarId: 'primary', eventId: sync.providerEventId!, etag: null, sendUpdates: 'none' });
+    await dev.cancelEvent(runtime.devCredentials(), {
+      calendarId: 'primary',
+      eventId: sync.providerEventId!,
+      etag: null,
+      sendUpdates: 'none',
+    });
     const second = await processPush(runtime, channelId);
     expect(second.conflicts).toBe(1);
     const conflicted = await getAppointment(viewerFromIdentity(ops()), booked.id);
@@ -376,17 +471,25 @@ describe('organiser connection, push notifications and admin tools', () => {
     dev.expireSyncTokens();
     const third = await processPush(runtime, channelId);
     expect(third.fullResync).toBe(true);
-    const [afterResync] = await dbs.owner.select().from(schema.calendarWatchChannels).where(eq(schema.calendarWatchChannels.channelId, channelId));
+    const [afterResync] = await dbs.owner
+      .select()
+      .from(schema.calendarWatchChannels)
+      .where(eq(schema.calendarWatchChannels.channelId, channelId));
     expect(afterResync!.syncToken).toMatch(/^dev-sync-/);
   });
 
   it('marks the connection expired on invalid_grant and shows reconnect instructions; disconnect retires secrets', async () => {
-    const [row] = await dbs.owner.select().from(schema.calendarConnections).where(eq(schema.calendarConnections.id, connectionId));
+    const [row] = await dbs.owner
+      .select()
+      .from(schema.calendarConnections)
+      .where(eq(schema.calendarConnections.id, connectionId));
     const creds = await credentialsForConnection(row!);
     await dev.revoke(creds.accessToken);
     await dev.revoke(creds.refreshToken!);
     const booked = await bookGuest(8, 9);
-    await expect(syncAppointmentEvent(runtime, booked.id)).rejects.toMatchObject({ name: 'NonRetryableJobError' });
+    await expect(syncAppointmentEvent(runtime, booked.id)).rejects.toMatchObject({
+      name: 'NonRetryableJobError',
+    });
     const failed = await getAppointment(viewerFromIdentity(ops()), booked.id);
     expect(failed.calendarSyncStatus).toBe('failed');
     expect(failed.sync?.attempts).toBe(1);

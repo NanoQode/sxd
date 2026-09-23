@@ -38,25 +38,30 @@ import {
  */
 
 export async function toConnectionDto(row: ConnectionRow): Promise<CalendarConnectionDto> {
-  const [organizer, watch] = await withActor(getDb(), systemContext('calendar-admin'), async (tx) => {
-    const [user] = await tx
-      .select({ name: schema.user.name, email: schema.user.email })
-      .from(schema.user)
-      .where(eq(schema.user.id, row.organizerUserId));
-    const [channel] = await tx
-      .select()
-      .from(schema.calendarWatchChannels)
-      .where(
-        and(
-          eq(schema.calendarWatchChannels.calendarConnectionId, row.id),
-          eq(schema.calendarWatchChannels.status, 'active'),
-        ),
-      )
-      .orderBy(desc(schema.calendarWatchChannels.createdAt))
-      .limit(1);
-    return [user ?? null, channel ?? null] as const;
-  });
-  const missing = row.status === 'disconnected' ? [] : missingScopes(row.scopes, DEFAULT_GOOGLE_SCOPES);
+  const [organizer, watch] = await withActor(
+    getDb(),
+    systemContext('calendar-admin'),
+    async (tx) => {
+      const [user] = await tx
+        .select({ name: schema.user.name, email: schema.user.email })
+        .from(schema.user)
+        .where(eq(schema.user.id, row.organizerUserId));
+      const [channel] = await tx
+        .select()
+        .from(schema.calendarWatchChannels)
+        .where(
+          and(
+            eq(schema.calendarWatchChannels.calendarConnectionId, row.id),
+            eq(schema.calendarWatchChannels.status, 'active'),
+          ),
+        )
+        .orderBy(desc(schema.calendarWatchChannels.createdAt))
+        .limit(1);
+      return [user ?? null, channel ?? null] as const;
+    },
+  );
+  const missing =
+    row.status === 'disconnected' ? [] : missingScopes(row.scopes, DEFAULT_GOOGLE_SCOPES);
   return {
     id: row.id,
     provider: row.provider,
@@ -110,7 +115,8 @@ export async function getCalendarStatus(_identity: RequestIdentity): Promise<Cal
         ? 'Development calendar adapter (simulated; not Google). Meet links are placeholders and do not open meetings.'
         : 'Google Calendar adapter active. A saved client ID/secret is not a connected calendar: check the organiser grant below.';
   } catch (err) {
-    message = err instanceof Error ? sanitizeErrorMessage(err.message) : 'calendar provider unavailable';
+    message =
+      err instanceof Error ? sanitizeErrorMessage(err.message) : 'calendar provider unavailable';
   }
   const rows = await withActor(getDb(), systemContext('calendar-admin'), (tx) =>
     tx
@@ -152,7 +158,10 @@ export async function checkConnection(
 ): Promise<CalendarConnectionDto> {
   const now = options.now ?? new Date();
   const [connection] = await withActor(getDb(), systemContext(options.correlationId), (tx) =>
-    tx.select().from(schema.calendarConnections).where(eq(schema.calendarConnections.id, connectionId)),
+    tx
+      .select()
+      .from(schema.calendarConnections)
+      .where(eq(schema.calendarConnections.id, connectionId)),
   );
   if (!connection) throw new ApiError('not_found', 'calendar connection not found');
   if (connection.status === 'disconnected' || connection.status === 'disabled') {
@@ -167,7 +176,11 @@ export async function checkConnection(
     patch = {
       lastCheckedAt: result.checkedAt,
       lastCheckOk: result.ok,
-      lastErrorSanitized: result.ok ? (missing.length > 0 ? `missing scopes: ${missing.join(', ')}` : null) : result.message,
+      lastErrorSanitized: result.ok
+        ? missing.length > 0
+          ? `missing scopes: ${missing.join(', ')}`
+          : null
+        : result.message,
       status: result.ok
         ? missing.length > 0
           ? 'degraded'
@@ -277,7 +290,9 @@ export async function runTestBooking(
       organizer.adapter === 'dev'
         ? `Development adapter: simulated event ${created.eventId} created and deleted; Meet ${conference.status} (placeholder link, not a real meeting).`
         : `Event ${created.eventId} created on ${organizer.calendarId} and deleted; Meet conference ${conference.status}${
-            conference.status === 'pending' ? ' (Google is still preparing it; production bookings are polled until ready)' : ''
+            conference.status === 'pending'
+              ? ' (Google is still preparing it; production bookings are polled until ready)'
+              : ''
           }.`;
   } catch (err) {
     result.message = sanitizeErrorMessage(err instanceof Error ? err.message : String(err));
@@ -287,7 +302,12 @@ export async function runTestBooking(
         await withActor(getDb(), systemContext(options.correlationId), (tx) =>
           tx
             .update(schema.calendarConnections)
-            .set({ status: 'expired', lastCheckedAt: now, lastCheckOk: false, lastErrorSanitized: result.message })
+            .set({
+              status: 'expired',
+              lastCheckedAt: now,
+              lastCheckOk: false,
+              lastErrorSanitized: result.message,
+            })
             .where(eq(schema.calendarConnections.id, organizer.connection!.id)),
         );
       }

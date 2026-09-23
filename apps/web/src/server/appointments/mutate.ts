@@ -5,7 +5,14 @@ import {
   type CancelInput,
   type RescheduleInput,
 } from '@simplexd/contracts';
-import { appendOutbox, getDb, schema, systemContext, withActor, type Transaction } from '@simplexd/db';
+import {
+  appendOutbox,
+  getDb,
+  schema,
+  systemContext,
+  withActor,
+  type Transaction,
+} from '@simplexd/db';
 import { appointmentMachine, evaluateTransition } from '@simplexd/domain/workflow';
 import { recordAudit } from '@/lib/audit';
 import {
@@ -37,7 +44,10 @@ export interface MutateOptions {
 
 type Target = { kind: 'id'; viewer: Viewer; id: string } | { kind: 'token'; manageToken: string };
 
-async function lockTarget(tx: Transaction, target: Target): Promise<{ row: AppointmentRow; viewer: Viewer }> {
+async function lockTarget(
+  tx: Transaction,
+  target: Target,
+): Promise<{ row: AppointmentRow; viewer: Viewer }> {
   if (target.kind === 'token') {
     const row = await loadAppointmentByManageToken(tx, target.manageToken, { forUpdate: true });
     return { row, viewer: { kind: 'guest', manageToken: target.manageToken } };
@@ -46,12 +56,22 @@ async function lockTarget(tx: Transaction, target: Target): Promise<{ row: Appoi
   return { row, viewer: target.viewer };
 }
 
-function assertNotice(row: AppointmentRow, viewer: Viewer, minNoticeHours: number, now: Date, policy: string): void {
+function assertNotice(
+  row: AppointmentRow,
+  viewer: Viewer,
+  minNoticeHours: number,
+  now: Date,
+  policy: string,
+): void {
   if (isStaffViewer(viewer)) return;
   if (row.startsAt.getTime() - now.getTime() < minNoticeHours * 3600_000) {
-    throw new ApiError('deadline_passed', `changes are only possible up to ${minNoticeHours} hours before the start`, {
-      details: { policy },
-    });
+    throw new ApiError(
+      'deadline_passed',
+      `changes are only possible up to ${minNoticeHours} hours before the start`,
+      {
+        details: { policy },
+      },
+    );
   }
 }
 
@@ -179,8 +199,16 @@ export async function rescheduleAppointment(
       entityType: 'appointment',
       entityId: row.id,
       organizationId: row.organizationId,
-      before: { startsAt: row.startsAt.toISOString(), endsAt: row.endsAt.toISOString(), staffUserId: row.staffUserId },
-      after: { startsAt: hold.start.toISOString(), endsAt: hold.end.toISOString(), staffUserId: hold.staffUserId },
+      before: {
+        startsAt: row.startsAt.toISOString(),
+        endsAt: row.endsAt.toISOString(),
+        staffUserId: row.staffUserId,
+      },
+      after: {
+        startsAt: hold.start.toISOString(),
+        endsAt: hold.end.toISOString(),
+        staffUserId: hold.staffUserId,
+      },
       reason: input.reason ?? null,
       correlationId: options.correlationId,
     });
@@ -347,7 +375,9 @@ export async function retryCalendarSync(
       nonce: `${now.getTime()}`,
     });
     await recordAudit(tx, viewer.identity, {
-      action: retryConference ? 'appointment.meet_retry_requested' : 'appointment.sync_retry_requested',
+      action: retryConference
+        ? 'appointment.meet_retry_requested'
+        : 'appointment.sync_retry_requested',
       entityType: 'appointment',
       entityId: id,
       organizationId: row.organizationId,

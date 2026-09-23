@@ -16,10 +16,17 @@ export const POST = route<{ params: Promise<{ id: string }> }>(async (req, ctx) 
   const viewer = viewerFromIdentity(identity);
   const { id } = await params(ctx, idSchema);
   const body = await parseJson(req, rescheduleSchema);
-  return withIdempotency(req, identity, `POST /api/v1/appointments/{id}/reschedule`, { id, ...body }, async () =>
-    json(
-      await rescheduleAppointment({ kind: 'id', viewer, id }, body, { correlationId: ctx.correlationId }),
-      { correlationId: ctx.correlationId },
-    ),
+  return withIdempotency(
+    req,
+    identity,
+    `POST /api/v1/appointments/{id}/reschedule`,
+    { id, ...body },
+    async () =>
+      json(
+        await rescheduleAppointment({ kind: 'id', viewer, id }, body, {
+          correlationId: ctx.correlationId,
+        }),
+        { correlationId: ctx.correlationId },
+      ),
   );
 });

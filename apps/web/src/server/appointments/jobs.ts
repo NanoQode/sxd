@@ -30,11 +30,18 @@ export async function enqueueCalendarSync(
     nonce?: string;
   },
 ): Promise<string> {
-  const suffix = input.retryConference ? `:meet:${input.nonce ?? Date.now()}` : input.nonce ? `:${input.nonce}` : '';
+  const suffix = input.retryConference
+    ? `:meet:${input.nonce ?? Date.now()}`
+    : input.nonce
+      ? `:${input.nonce}`
+      : '';
   const { id } = await enqueueJob(tx, {
     type: CALENDAR_JOBS.syncEvent,
     queue: CALENDAR_QUEUE,
-    payload: { appointmentId: input.appointmentId, retryConference: input.retryConference ?? false },
+    payload: {
+      appointmentId: input.appointmentId,
+      retryConference: input.retryConference ?? false,
+    },
     organizationId: input.organizationId,
     actorUserId: input.actorUserId,
     correlationId: input.correlationId,

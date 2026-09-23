@@ -82,6 +82,39 @@ async function awardWithBid(
   };
 }
 
+/** A partner's outcome from the award row alone (row-level security hides competitors' bids). */
+async function partnerOutcome(
+  tx: DbExecutor,
+  identity: RequestIdentity,
+  tender: TenderRow,
+  own: typeof schema.bids.$inferSelect,
+): Promise<AwardOutcomeDto | null> {
+  const [award] = await tx
+    .select()
+    .from(schema.awards)
+    .where(eq(schema.awards.tenderId, tender.id));
+  if (!award || !award.publishedAt) return null;
+  const isWinner = award.bidId === own.id;
+  const latest = latestSubmittedRevision((await loadBidRevisions(tx, [own.id])).get(own.id) ?? []);
+  return {
+    tenderId: tender.id,
+    tenderReference: tender.reference,
+    tenderTitle: tender.title,
+    outcome: isWinner ? 'awarded' : 'unsuccessful',
+    publishedAt: award.publishedAt.toISOString(),
+    bidStatus: own.status,
+    award: isWinner
+      ? toAwardDto(
+          award,
+          tender,
+          own.partnerUserId,
+          identity.session?.user.name ?? null,
+          latest?.currency ?? 'NGN',
+        )
+      : null,
+  };
+}
+
 export async function decideAward(
   identity: RequestIdentity,
   tenderId: string,
@@ -270,26 +303,9 @@ export async function getAward(
         .from(schema.bids)
         .where(and(eq(schema.bids.tenderId, tenderId), eq(schema.bids.partnerUserId, userId)));
       if (!own || tender.status !== 'awarded') throw new ApiError('not_found', 'award not found');
-      const found = await awardWithBid(tx, tender);
-      if (!found || !found.award.publishedAt) throw new ApiError('not_found', 'award not found');
-      const isWinner = found.bid.id === own.id;
-      return {
-        tenderId,
-        tenderReference: tender.reference,
-        tenderTitle: tender.title,
-        outcome: isWinner ? 'awarded' : 'unsuccessful',
-        publishedAt: found.award.publishedAt.toISOString(),
-        bidStatus: own.status,
-        award: isWinner
-          ? toAwardDto(
-              found.award,
-              tender,
-              own.partnerUserId,
-              identity.session?.user.name ?? null,
-              found.currency,
-            )
-          : null,
-      } satisfies AwardOutcomeDto;
+      const outcome = await partnerOutcome(tx, identity, tender, own);
+      if (!outcome) throw new ApiError('not_found', 'award not found');
+      return outcome;
     }
     const found = await awardWithBid(tx, tender);
     if (!found) throw new ApiError('not_found', 'award not found');
@@ -396,26 +412,8 @@ export async function listMyAwards(
     const page = rows.slice(0, query.limit);
     const items: AwardOutcomeDto[] = [];
     for (const r of page) {
-      const found = await awardWithBid(tx, r.tender);
-      if (!found || !found.award.publishedAt) continue;
-      const isWinner = found.bid.id === r.bid.id;
-      items.push({
-        tenderId: r.tender.id,
-        tenderReference: r.tender.reference,
-        tenderTitle: r.tender.title,
-        outcome: isWinner ? 'awarded' : 'unsuccessful',
-        publishedAt: found.award.publishedAt.toISOString(),
-        bidStatus: r.bid.status,
-        award: isWinner
-          ? toAwardDto(
-              found.award,
-              r.tender,
-              userId,
-              identity.session?.user.name ?? null,
-              found.currency,
-            )
-          : null,
-      });
+      const outcome = await partnerOutcome(tx, identity, r.tender, r.bid);
+      if (outcome) items.push(outcome);
     }
     const last = rows.length > query.limit ? page[page.length - 1] : null;
     return { items, nextCursor: last ? encodeCursor(last.tender.createdAt, last.tender.id) : null };

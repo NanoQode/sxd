@@ -20,6 +20,7 @@ const schedules: Schedule[] = [
   { type: 'bookings.expire_holds', queue: 'default', everyMs: 60_000 },
   { type: 'appointments.scan_reminders', queue: 'calendar', everyMs: 5 * 60_000 },
   { type: 'invoices.mark_overdue', queue: 'default', everyMs: 60 * 60_000 },
+  { type: 'engagements.expire_quotes', queue: 'default', everyMs: 15 * 60_000 },
   { type: 'tenders.close_due', queue: 'default', everyMs: 60_000 },
   { type: 'market_data.expire_stale', queue: 'default', everyMs: 6 * 60 * 60_000 },
   { type: 'files.purge_expired', queue: 'media', everyMs: 60 * 60_000 },

@@ -17,7 +17,10 @@ export interface PushOutcome {
   reason?: string;
 }
 
-export async function handleCalendarPush(headers: HeaderSource, correlationId: string): Promise<PushOutcome> {
+export async function handleCalendarPush(
+  headers: HeaderSource,
+  correlationId: string,
+): Promise<PushOutcome> {
   const validated = await validatePushNotification(headers, async (channelId) => {
     const [row] = await withActor(getDb(), systemContext(correlationId), (tx) =>
       tx

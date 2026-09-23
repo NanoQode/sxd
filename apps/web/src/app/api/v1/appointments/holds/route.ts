@@ -16,7 +16,10 @@ export const POST = route(async (req, { correlationId }) => {
   const body = await parseJson(req, holdCreateSchema);
   const identity = await getIdentity();
   const ipHash = hashIp(clientIp(req));
-  await enforceRateLimit(`hold:ip:${ipHash}`, { windowSeconds: 3600, max: identity.session ? 60 : 20 });
+  await enforceRateLimit(`hold:ip:${ipHash}`, {
+    windowSeconds: 3600,
+    max: identity.session ? 60 : 20,
+  });
   const hold = await createHold(body, {
     identity: identity.session ? identity : null,
     providerBusy: providerBusyLoader(),

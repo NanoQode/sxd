@@ -134,14 +134,12 @@ export async function insertOrganization(
   await owner.insert(schema.organizationProfiles).values({ organizationId: id, kind: 'customer' });
   for (const m of members) {
     await insertUser(owner, m.userId);
-    await owner
-      .insert(schema.member)
-      .values({
-        id: `member_${id}_${m.userId}`,
-        organizationId: id,
-        userId: m.userId,
-        role: m.role,
-      });
+    await owner.insert(schema.member).values({
+      id: `member_${id}_${m.userId}`,
+      organizationId: id,
+      userId: m.userId,
+      role: m.role,
+    });
   }
 }
 

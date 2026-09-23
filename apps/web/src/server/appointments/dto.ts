@@ -53,7 +53,10 @@ export function calendarNoteFor(row: AppointmentRow, provider: 'google' | 'dev' 
   }
 }
 
-export function toSyncDto(sync: EventSyncRow | null, provider: 'google' | 'dev' | null): AppointmentSyncDto | null {
+export function toSyncDto(
+  sync: EventSyncRow | null,
+  provider: 'google' | 'dev' | null,
+): AppointmentSyncDto | null {
   if (!sync) return null;
   return {
     status: sync.status,

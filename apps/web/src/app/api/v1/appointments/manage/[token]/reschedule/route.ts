@@ -14,7 +14,9 @@ export const POST = route<{ params: Promise<{ token: string }> }>(async (req, ct
   const { token } = await params(ctx, tokenSchema);
   const body = await parseJson(req, rescheduleSchema);
   return json(
-    await rescheduleAppointment({ kind: 'token', manageToken: token }, body, { correlationId: ctx.correlationId }),
+    await rescheduleAppointment({ kind: 'token', manageToken: token }, body, {
+      correlationId: ctx.correlationId,
+    }),
     { correlationId: ctx.correlationId },
   );
 });

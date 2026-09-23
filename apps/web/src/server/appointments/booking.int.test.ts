@@ -28,10 +28,18 @@ const customerB = `apt_cust_b_${sfx}`;
 const orgA = `apt_org_a_${sfx}`;
 const orgB = `apt_org_b_${sfx}`;
 
-const ops = () => staffIdentity({ userId: opsId, email: `${opsId}@example.test`, roles: ['operations_manager'] });
-const inspector = () => staffIdentity({ userId: inspectorId, email: `${inspectorId}@example.test`, roles: ['inspector'] });
-const custA = () => customerIdentity({ userId: customerA, email: `${customerA}@example.test`, organizationId: orgA });
-const custB = () => customerIdentity({ userId: customerB, email: `${customerB}@example.test`, organizationId: orgB });
+const ops = () =>
+  staffIdentity({ userId: opsId, email: `${opsId}@example.test`, roles: ['operations_manager'] });
+const inspector = () =>
+  staffIdentity({
+    userId: inspectorId,
+    email: `${inspectorId}@example.test`,
+    roles: ['inspector'],
+  });
+const custA = () =>
+  customerIdentity({ userId: customerA, email: `${customerA}@example.test`, organizationId: orgA });
+const custB = () =>
+  customerIdentity({ userId: customerB, email: `${customerB}@example.test`, organizationId: orgB });
 
 /** 10:00 Lagos on a day `offset` days ahead (staff A works every day, so weekends are fine). */
 function lagosSlot(offsetDays: number, hour = 10, minute = 0): string {
@@ -114,7 +122,9 @@ describe('availability', () => {
       to: new Date(lagosSlot(5, 17)),
       customerTimeZone: 'Africa/Lagos',
     });
-    const starts = result.slots.map((s) => DateTime.fromISO(s.start).setZone('Africa/Lagos').toFormat('HH:mm'));
+    const starts = result.slots.map((s) =>
+      DateTime.fromISO(s.start).setZone('Africa/Lagos').toFormat('HH:mm'),
+    );
     expect(result.durationMinutes).toBe(30);
     expect(result.bufferMinutes).toBe(10);
     expect(starts).toContain('09:00');
@@ -154,7 +164,11 @@ describe('availability', () => {
     expect(monday!.label.customerOffsetMinutes).toBe(0);
     expect(monday!.label.sameZone).toBe(false);
     // No weekend slots for a weekday-only organiser.
-    expect(result.slots.some((s) => s.start.startsWith('2026-10-24') || s.start.startsWith('2026-10-25'))).toBe(false);
+    expect(
+      result.slots.some(
+        (s) => s.start.startsWith('2026-10-24') || s.start.startsWith('2026-10-25'),
+      ),
+    ).toBe(false);
   });
 
   it('reports no_staff_configured for a kind nobody offers', async () => {
@@ -174,8 +188,14 @@ describe('holds', () => {
   it('lets exactly one of two concurrent requests hold the same slot', async () => {
     const start = lagosSlot(6, 11);
     const outcomes = await Promise.allSettled([
-      createHold({ kind: 'consultation', staffUserId: staffA, start, customerTimeZone: 'Africa/Lagos' }, { identity: null }),
-      createHold({ kind: 'consultation', staffUserId: staffA, start, customerTimeZone: 'Africa/Lagos' }, { identity: null }),
+      createHold(
+        { kind: 'consultation', staffUserId: staffA, start, customerTimeZone: 'Africa/Lagos' },
+        { identity: null },
+      ),
+      createHold(
+        { kind: 'consultation', staffUserId: staffA, start, customerTimeZone: 'Africa/Lagos' },
+        { identity: null },
+      ),
     ]);
     const won = outcomes.filter((o) => o.status === 'fulfilled');
     const lost = outcomes.filter((o) => o.status === 'rejected');
@@ -206,7 +226,12 @@ describe('holds', () => {
     expect(new Date(hold.expiresAt).getTime()).toBe(past.getTime() + 10 * 60_000);
     await expect(
       createHold(
-        { kind: 'consultation', staffUserId: staffA, start: DateTime.fromISO(start).plus({ minutes: 15 }).toUTC().toISO()!, customerTimeZone: 'Africa/Lagos' },
+        {
+          kind: 'consultation',
+          staffUserId: staffA,
+          start: DateTime.fromISO(start).plus({ minutes: 15 }).toUTC().toISO()!,
+          customerTimeZone: 'Africa/Lagos',
+        },
         { identity: null, now: past },
       ),
     ).rejects.toMatchObject({ code: 'slot_unavailable' });
@@ -225,10 +250,26 @@ describe('holds', () => {
 
   it('refuses anonymous holds for kinds that need an account and past times', async () => {
     await expect(
-      createHold({ kind: 'site_visit', staffUserId: staffA, start: lagosSlot(4, 10), customerTimeZone: 'Africa/Lagos' }, { identity: null }),
+      createHold(
+        {
+          kind: 'site_visit',
+          staffUserId: staffA,
+          start: lagosSlot(4, 10),
+          customerTimeZone: 'Africa/Lagos',
+        },
+        { identity: null },
+      ),
     ).rejects.toMatchObject({ code: 'unauthenticated' });
     await expect(
-      createHold({ kind: 'consultation', staffUserId: staffA, start: lagosSlot(-1, 10), customerTimeZone: 'Africa/Lagos' }, { identity: null }),
+      createHold(
+        {
+          kind: 'consultation',
+          staffUserId: staffA,
+          start: lagosSlot(-1, 10),
+          customerTimeZone: 'Africa/Lagos',
+        },
+        { identity: null },
+      ),
     ).rejects.toMatchObject({ code: 'slot_unavailable' });
   });
 });
@@ -240,13 +281,22 @@ describe('booking, manage token and isolation', () => {
 
   it('books a guest consultation from a hold and queues the calendar sync', async () => {
     const hold = await createHold(
-      { kind: 'consultation', staffUserId: staffA, start: lagosSlot(8, 9), customerTimeZone: 'Europe/London' },
+      {
+        kind: 'consultation',
+        staffUserId: staffA,
+        start: lagosSlot(8, 9),
+        customerTimeZone: 'Europe/London',
+      },
       { identity: null },
     );
     const appointment = await createBooking(
       {
         holdToken: hold.holdToken,
-        guest: { name: 'Ngozi Guest', email: `ngozi_${sfx}@example.test`, phoneE164: '+2348012345678' },
+        guest: {
+          name: 'Ngozi Guest',
+          email: `ngozi_${sfx}@example.test`,
+          phoneE164: '+2348012345678',
+        },
         customerTimeZone: 'Europe/London',
         topic: 'Buying in Ibadan',
       },
@@ -273,21 +323,38 @@ describe('booking, manage token and isolation', () => {
     const jobs = await dbs.owner
       .select()
       .from(schema.jobs)
-      .where(and(eq(schema.jobs.type, 'calendar.sync_event'), sql`${schema.jobs.payload}->>'appointmentId' = ${appointment.id}`));
+      .where(
+        and(
+          eq(schema.jobs.type, 'calendar.sync_event'),
+          sql`${schema.jobs.payload}->>'appointmentId' = ${appointment.id}`,
+        ),
+      );
     expect(jobs).toHaveLength(1);
     expect(jobs[0]!.queue).toBe('calendar');
     const outbox = await dbs.owner
       .select()
       .from(schema.outboxEvents)
-      .where(and(eq(schema.outboxEvents.aggregateId, appointment.id), eq(schema.outboxEvents.eventType, 'appointment.booked')));
+      .where(
+        and(
+          eq(schema.outboxEvents.aggregateId, appointment.id),
+          eq(schema.outboxEvents.eventType, 'appointment.booked'),
+        ),
+      );
     expect(outbox).toHaveLength(1);
-    const [sync] = await dbs.owner.select().from(schema.eventSyncs).where(eq(schema.eventSyncs.appointmentId, appointment.id));
+    const [sync] = await dbs.owner
+      .select()
+      .from(schema.eventSyncs)
+      .where(eq(schema.eventSyncs.appointmentId, appointment.id));
     expect(sync).toMatchObject({ status: 'pending', conferenceStatus: 'pending', syncVersion: 0 });
     expect(sync!.conferenceRequestId).toHaveLength(36);
     // A consumed hold cannot be booked twice.
     await expect(
       createBooking(
-        { holdToken: hold.holdToken, guest: { name: 'Ngozi Guest', email: 'x@example.test', phoneE164: '+2348012345678' }, customerTimeZone: 'Africa/Lagos' },
+        {
+          holdToken: hold.holdToken,
+          guest: { name: 'Ngozi Guest', email: 'x@example.test', phoneE164: '+2348012345678' },
+          customerTimeZone: 'Africa/Lagos',
+        },
         { identity: null, correlationId: 'dup' },
       ),
     ).rejects.toMatchObject({ code: 'slot_unavailable' });
@@ -298,16 +365,27 @@ describe('booking, manage token and isolation', () => {
     expect(viaToken.id).toBe(guestAppointmentId);
     expect(viaToken.managePath).not.toBeNull();
     expect(viaToken.sync).toBeNull();
-    await expect(getAppointmentByManageToken(`${manageToken}x`)).rejects.toMatchObject({ code: 'not_found' });
+    await expect(getAppointmentByManageToken(`${manageToken}x`)).rejects.toMatchObject({
+      code: 'not_found',
+    });
     await expect(
-      cancelAppointment({ kind: 'token', manageToken: `${manageToken}x` }, { reason: 'nope' }, { correlationId: 'c' }),
+      cancelAppointment(
+        { kind: 'token', manageToken: `${manageToken}x` },
+        { reason: 'nope' },
+        { correlationId: 'c' },
+      ),
     ).rejects.toMatchObject({ code: 'not_found' });
   });
 
   it('lets a guest reschedule onto a fresh hold with an atomic reservation swap', async () => {
     const before = await getAppointmentByManageToken(manageToken);
     const hold = await createHold(
-      { kind: 'consultation', staffUserId: staffA, start: lagosSlot(9, 15), customerTimeZone: 'Europe/London' },
+      {
+        kind: 'consultation',
+        staffUserId: staffA,
+        start: lagosSlot(9, 15),
+        customerTimeZone: 'Europe/London',
+      },
       { identity: null },
     );
     const after = await rescheduleAppointment(
@@ -333,22 +411,39 @@ describe('booking, manage token and isolation', () => {
       customerTimeZone: 'Africa/Lagos',
     });
     expect(oldSlotFree.slots.some((s) => s.start === before.startsAt)).toBe(true);
-    const [sync] = await dbs.owner.select().from(schema.eventSyncs).where(eq(schema.eventSyncs.appointmentId, guestAppointmentId));
+    const [sync] = await dbs.owner
+      .select()
+      .from(schema.eventSyncs)
+      .where(eq(schema.eventSyncs.appointmentId, guestAppointmentId));
     expect(sync!.syncVersion).toBe(1);
     const jobs = await dbs.owner
       .select()
       .from(schema.jobs)
-      .where(and(eq(schema.jobs.type, 'calendar.sync_event'), sql`${schema.jobs.payload}->>'appointmentId' = ${guestAppointmentId}`));
+      .where(
+        and(
+          eq(schema.jobs.type, 'calendar.sync_event'),
+          sql`${schema.jobs.payload}->>'appointmentId' = ${guestAppointmentId}`,
+        ),
+      );
     expect(jobs).toHaveLength(2);
   });
 
   it('links a signed-in customer to their organisation and isolates other organisations', async () => {
     const hold = await createHold(
-      { kind: 'consultation', staffUserId: staffA, start: lagosSlot(10, 9), customerTimeZone: 'Africa/Lagos' },
+      {
+        kind: 'consultation',
+        staffUserId: staffA,
+        start: lagosSlot(10, 9),
+        customerTimeZone: 'Africa/Lagos',
+      },
       { identity: custA() },
     );
     const appointment = await createBooking(
-      { holdToken: hold.holdToken, customerTimeZone: 'Africa/Lagos', guest: { name: 'ignored', email: 'ignored@example.test', phoneE164: '+2348000000000' } },
+      {
+        holdToken: hold.holdToken,
+        customerTimeZone: 'Africa/Lagos',
+        guest: { name: 'ignored', email: 'ignored@example.test', phoneE164: '+2348000000000' },
+      },
       { identity: custA(), correlationId: 'org-book' },
     );
     orgAppointmentId = appointment.id;
@@ -357,14 +452,22 @@ describe('booking, manage token and isolation', () => {
     expect(appointment.contact?.email).toBe(`${customerA}@example.test`);
 
     // Owner sees it; a different organisation does not; the organiser and manage_all staff do; an unrelated inspector does not.
-    expect((await getAppointment(viewerFromIdentity(custA()), orgAppointmentId)).id).toBe(orgAppointmentId);
-    await expect(getAppointment(viewerFromIdentity(custB()), orgAppointmentId)).rejects.toMatchObject({ code: 'not_found' });
-    await expect(getAppointment(viewerFromIdentity(inspector()), orgAppointmentId)).rejects.toMatchObject({ code: 'not_found' });
+    expect((await getAppointment(viewerFromIdentity(custA()), orgAppointmentId)).id).toBe(
+      orgAppointmentId,
+    );
+    await expect(
+      getAppointment(viewerFromIdentity(custB()), orgAppointmentId),
+    ).rejects.toMatchObject({ code: 'not_found' });
+    await expect(
+      getAppointment(viewerFromIdentity(inspector()), orgAppointmentId),
+    ).rejects.toMatchObject({ code: 'not_found' });
     const staffView = await getAppointment(viewerFromIdentity(ops()), orgAppointmentId);
     expect(staffView.sync).not.toBeNull();
     expect(staffView.managePath).toBeNull();
     const organiserView = await getAppointment(
-      viewerFromIdentity(staffIdentity({ userId: staffA, email: `${staffA}@example.test`, roles: ['support'] })),
+      viewerFromIdentity(
+        staffIdentity({ userId: staffA, email: `${staffA}@example.test`, roles: ['support'] }),
+      ),
       orgAppointmentId,
     );
     expect(organiserView.id).toBe(orgAppointmentId);
@@ -375,20 +478,35 @@ describe('booking, manage token and isolation', () => {
     expect(listA.items.map((a) => a.id)).toContain(orgAppointmentId);
     const mine = await listAppointments(viewerFromIdentity(ops()), { limit: 25, scope: 'mine' });
     expect(mine.items.some((a) => a.id === orgAppointmentId)).toBe(false);
-    const all = await listAppointments(viewerFromIdentity(ops()), { limit: 100, scope: 'all', staffUserId: staffA });
+    const all = await listAppointments(viewerFromIdentity(ops()), {
+      limit: 100,
+      scope: 'all',
+      staffUserId: staffA,
+    });
     expect(all.items.map((a) => a.id)).toContain(orgAppointmentId);
   });
 
   it('enforces the notice policy for customers but lets staff cancel late with a reason', async () => {
     await dbs.owner
       .update(schema.appointments)
-      .set({ startsAt: new Date(Date.now() + 2 * 3600_000), endsAt: new Date(Date.now() + 2.5 * 3600_000) })
+      .set({
+        startsAt: new Date(Date.now() + 2 * 3600_000),
+        endsAt: new Date(Date.now() + 2.5 * 3600_000),
+      })
       .where(eq(schema.appointments.id, orgAppointmentId));
     await expect(
-      cancelAppointment({ kind: 'id', viewer: viewerFromIdentity(custA()), id: orgAppointmentId }, { reason: 'too late' }, { correlationId: 'c' }),
+      cancelAppointment(
+        { kind: 'id', viewer: viewerFromIdentity(custA()), id: orgAppointmentId },
+        { reason: 'too late' },
+        { correlationId: 'c' },
+      ),
     ).rejects.toMatchObject({ code: 'deadline_passed' });
     await expect(
-      cancelAppointment({ kind: 'id', viewer: viewerFromIdentity(custB()), id: orgAppointmentId }, { reason: 'not mine' }, { correlationId: 'c' }),
+      cancelAppointment(
+        { kind: 'id', viewer: viewerFromIdentity(custB()), id: orgAppointmentId },
+        { reason: 'not mine' },
+        { correlationId: 'c' },
+      ),
     ).rejects.toMatchObject({ code: 'not_found' });
     const cancelled = await cancelAppointment(
       { kind: 'id', viewer: viewerFromIdentity(ops()), id: orgAppointmentId },
@@ -406,12 +524,21 @@ describe('booking, manage token and isolation', () => {
     expect(reservations).toHaveLength(0);
     expect(cancelled.calendarSyncStatus).toBe('cancelled');
     await expect(
-      cancelAppointment({ kind: 'id', viewer: viewerFromIdentity(ops()), id: orgAppointmentId }, { reason: 'again' }, { correlationId: 'c' }),
+      cancelAppointment(
+        { kind: 'id', viewer: viewerFromIdentity(ops()), id: orgAppointmentId },
+        { reason: 'again' },
+        { correlationId: 'c' },
+      ),
     ).rejects.toMatchObject({ code: 'invalid_transition' });
     const audit = await dbs.owner
       .select()
       .from(schema.auditEvents)
-      .where(and(eq(schema.auditEvents.entityId, orgAppointmentId), eq(schema.auditEvents.action, 'appointment.cancelled')));
+      .where(
+        and(
+          eq(schema.auditEvents.entityId, orgAppointmentId),
+          eq(schema.auditEvents.action, 'appointment.cancelled'),
+        ),
+      );
     expect(audit).toHaveLength(1);
   });
 });

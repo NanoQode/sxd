@@ -51,7 +51,10 @@ export function encodePendingCookie(pending: PendingCookie, secret = env().AUTH_
   return `${payload}.${sign(payload, secret)}`;
 }
 
-export function decodePendingCookie(value: string | null | undefined, secret = env().AUTH_SECRET): PendingCookie | null {
+export function decodePendingCookie(
+  value: string | null | undefined,
+  secret = env().AUTH_SECRET,
+): PendingCookie | null {
   if (!value) return null;
   const [payload, signature] = value.split('.');
   if (!payload || !signature) return null;
@@ -126,14 +129,21 @@ export async function completeConnect(
       retryable: false,
     });
   }
-  if (!input.code || !input.state) throw new ApiError('validation_failed', 'code and state are required');
+  if (!input.code || !input.state)
+    throw new ApiError('validation_failed', 'code and state are required');
   const verified = verifyState(input.state, env().AUTH_SECRET, { now });
   if (!verified.ok) {
-    throw new ApiError('validation_failed', `OAuth state rejected (${verified.reason}); start the connection again`);
+    throw new ApiError(
+      'validation_failed',
+      `OAuth state rejected (${verified.reason}); start the connection again`,
+    );
   }
   const pending = decodePendingCookie(input.cookieValue);
   if (!pending || pending.state !== verified.state || pending.userId !== userId) {
-    throw new ApiError('validation_failed', 'this callback does not match the session that started the connection');
+    throw new ApiError(
+      'validation_failed',
+      'this callback does not match the session that started the connection',
+    );
   }
   const info = await getCalendarProviderInfo();
   let tokens;
@@ -145,7 +155,9 @@ export async function completeConnect(
     });
   } catch (err) {
     if (err instanceof CalendarAuthError) {
-      throw new ApiError('provider_unavailable', `${err.message}. ${err.instructions}`, { retryable: false });
+      throw new ApiError('provider_unavailable', `${err.message}. ${err.instructions}`, {
+        retryable: false,
+      });
     }
     throw err;
   }
@@ -235,7 +247,13 @@ export async function completeConnect(
       action: existing ? 'calendar.reconnected' : 'calendar.connected',
       entityType: 'calendar_connection',
       entityId: id,
-      after: { status, accountEmail: tokens.idTokenEmail, scopes: tokens.scope, calendarId, adapter: info.adapter },
+      after: {
+        status,
+        accountEmail: tokens.idTokenEmail,
+        scopes: tokens.scope,
+        calendarId,
+        adapter: info.adapter,
+      },
       correlationId: input.correlationId,
     });
     if (status === 'connected') {
@@ -251,7 +269,11 @@ export async function completeConnect(
         .where(
           and(
             eq(schema.appointments.calendarSyncStatus, 'failed'),
-            inArray(schema.appointments.status, ['pending_confirmation', 'confirmed', 'rescheduled']),
+            inArray(schema.appointments.status, [
+              'pending_confirmation',
+              'confirmed',
+              'rescheduled',
+            ]),
           ),
         );
       for (const a of failed) {
@@ -272,7 +294,10 @@ export async function completeConnect(
     return id;
   });
   const [connection] = await withActor(getDb(), systemContext(input.correlationId), (tx) =>
-    tx.select().from(schema.calendarConnections).where(eq(schema.calendarConnections.id, connectionId)),
+    tx
+      .select()
+      .from(schema.calendarConnections)
+      .where(eq(schema.calendarConnections.id, connectionId)),
   );
   return { connection: await toConnectionDto(connection!), missingScopes: missing };
 }
@@ -284,7 +309,10 @@ export async function disconnectConnection(
 ): Promise<CalendarConnectionDto> {
   const now = options.now ?? new Date();
   const [connection] = await withActor(getDb(), systemContext(options.correlationId), (tx) =>
-    tx.select().from(schema.calendarConnections).where(eq(schema.calendarConnections.id, connectionId)),
+    tx
+      .select()
+      .from(schema.calendarConnections)
+      .where(eq(schema.calendarConnections.id, connectionId)),
   );
   if (!connection) throw new ApiError('not_found', 'calendar connection not found');
   let revokeError: string | null = null;
@@ -329,7 +357,9 @@ export async function disconnectConnection(
         accessTokenSecretId: null,
         accessTokenExpiresAt: null,
         disconnectedAt: now,
-        lastErrorSanitized: revokeError ? `Disconnected locally; Google revocation failed: ${revokeError}` : null,
+        lastErrorSanitized: revokeError
+          ? `Disconnected locally; Google revocation failed: ${revokeError}`
+          : null,
       })
       .where(eq(schema.calendarConnections.id, connection.id));
     await tx
@@ -346,7 +376,10 @@ export async function disconnectConnection(
     });
   });
   const [after] = await withActor(getDb(), systemContext(options.correlationId), (tx) =>
-    tx.select().from(schema.calendarConnections).where(eq(schema.calendarConnections.id, connection.id)),
+    tx
+      .select()
+      .from(schema.calendarConnections)
+      .where(eq(schema.calendarConnections.id, connection.id)),
   );
   return toConnectionDto(after as ConnectionRow);
 }

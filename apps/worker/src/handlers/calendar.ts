@@ -8,7 +8,10 @@ import {
   type Database,
   type DbExecutor,
 } from '@simplexd/db';
-import { defaultIntegrationEnvironment, loadIntegrationConfig } from '@simplexd/integrations/config';
+import {
+  defaultIntegrationEnvironment,
+  loadIntegrationConfig,
+} from '@simplexd/integrations/config';
 import {
   CalendarAuthError,
   CalendarConflictError,
@@ -28,7 +31,12 @@ import {
   type EventResult,
   type TokenSet,
 } from '@simplexd/integrations/google';
-import { decryptSecret, encryptSecret, keyringFromEnv, type Keyring } from '@simplexd/integrations/secrets';
+import {
+  decryptSecret,
+  encryptSecret,
+  keyringFromEnv,
+  type Keyring,
+} from '@simplexd/integrations/secrets';
 import { NonRetryableJobError, type JobRunner } from '../runner';
 
 /**
@@ -124,7 +132,9 @@ function readClientId(settings: Record<string, unknown>): string | null {
 }
 
 function readClientSecret(secrets: Record<string, string>): string | null {
-  return secrets['clientSecret'] ?? secrets['client_secret'] ?? secrets['oauthClientSecret'] ?? null;
+  return (
+    secrets['clientSecret'] ?? secrets['client_secret'] ?? secrets['oauthClientSecret'] ?? null
+  );
 }
 
 async function loadSecretPlaintext(
@@ -179,7 +189,11 @@ export async function storeTokenSecret(
   return row!.id;
 }
 
-export async function retireSecret(tx: DbExecutor, secretId: string | null, now: Date): Promise<void> {
+export async function retireSecret(
+  tx: DbExecutor,
+  secretId: string | null,
+  now: Date,
+): Promise<void> {
   if (!secretId) return;
   await tx
     .update(schema.secretReferences)
@@ -253,7 +267,9 @@ export function createCalendarRuntime(options: CalendarRuntimeOptions): Calendar
         keyring,
       });
       const clientId =
-        (config?.enabled ? readClientId(config.settings) : null) ?? process.env.GOOGLE_CLIENT_ID ?? null;
+        (config?.enabled ? readClientId(config.settings) : null) ??
+        process.env.GOOGLE_CLIENT_ID ??
+        null;
       const clientSecret =
         (config?.enabled ? readClientSecret(config.secrets) : null) ??
         process.env.GOOGLE_CLIENT_SECRET ??
@@ -398,7 +414,10 @@ export async function markConnectionExpired(
         status: 'expired',
         lastCheckedAt: now,
         lastCheckOk: false,
-        lastErrorSanitized: `${sanitizeErrorMessage(err.message)} — ${err.instructions}`.slice(0, 1000),
+        lastErrorSanitized: `${sanitizeErrorMessage(err.message)} — ${err.instructions}`.slice(
+          0,
+          1000,
+        ),
       })
       .where(eq(schema.calendarConnections.id, connectionId)),
   );
@@ -442,7 +461,10 @@ function isEmail(value: string | null): value is string {
 function attendeesFor(ctx: SyncContext, organizer: Organizer): EventAttendee[] {
   const list: EventAttendee[] = [];
   if (isEmail(ctx.appointment.guestEmail)) {
-    list.push({ email: ctx.appointment.guestEmail, displayName: ctx.appointment.guestName ?? undefined });
+    list.push({
+      email: ctx.appointment.guestEmail,
+      displayName: ctx.appointment.guestName ?? undefined,
+    });
   }
   const organizerIsStaff = organizer.connection?.organizerUserId === ctx.appointment.staffUserId;
   if (!organizerIsStaff && ctx.staff && isEmail(ctx.staff.email)) {
@@ -703,7 +725,8 @@ export async function cancelAppointmentEvent(
     }
     await recordSyncFailure(runtime.db, ctx, err, now);
     if (err instanceof CalendarAuthError) {
-      if (organizer.connection) await markConnectionExpired(runtime.db, organizer.connection.id, err, now);
+      if (organizer.connection)
+        await markConnectionExpired(runtime.db, organizer.connection.id, err, now);
       throw new NonRetryableJobError(`${err.message}; ${err.instructions}`);
     }
     throw err;
@@ -766,7 +789,10 @@ export async function reconcilePendingConferences(
       await withActor(runtime.db, systemContext('calendar-reconcile'), (tx) =>
         tx
           .update(schema.eventSyncs)
-          .set({ attempts: sql`${schema.eventSyncs.attempts} + 1`, lastErrorSanitized: message.slice(0, 500) })
+          .set({
+            attempts: sql`${schema.eventSyncs.attempts} + 1`,
+            lastErrorSanitized: message.slice(0, 500),
+          })
           .where(eq(schema.eventSyncs.id, row.sync.id)),
       );
     }
@@ -899,7 +925,8 @@ export async function processPush(
         calendarId,
         syncToken: pageToken ? null : syncToken,
         pageToken,
-        timeMin: syncToken || pageToken ? null : new Date(now.getTime() - 7 * 24 * 3600_000).toISOString(),
+        timeMin:
+          syncToken || pageToken ? null : new Date(now.getTime() - 7 * 24 * 3600_000).toISOString(),
       });
       if (page.fullResyncRequired) {
         // HTTP 410: the token expired. Drop it and start a full sync bounded by timeMin.
@@ -914,15 +941,21 @@ export async function processPush(
           tx
             .select({ sync: schema.eventSyncs, appointment: schema.appointments })
             .from(schema.eventSyncs)
-            .innerJoin(schema.appointments, eq(schema.appointments.id, schema.eventSyncs.appointmentId))
+            .innerJoin(
+              schema.appointments,
+              eq(schema.appointments.id, schema.eventSyncs.appointmentId),
+            )
             .where(eq(schema.eventSyncs.providerEventId, item.id)),
         );
         if (!sync) continue;
         const appointment = sync.appointment;
-        const active = ['pending_confirmation', 'confirmed', 'rescheduled'].includes(appointment.status);
+        const active = ['pending_confirmation', 'confirmed', 'rescheduled'].includes(
+          appointment.status,
+        );
         let conflict: string | null = null;
         if (item.status === 'cancelled' && active && sync.sync.status !== 'cancelled') {
-          conflict = 'The organiser deleted this event in Google Calendar; confirm or rebook with the customer.';
+          conflict =
+            'The organiser deleted this event in Google Calendar; confirm or rebook with the customer.';
         } else if (item.status !== 'cancelled' && item.start && item.end && active) {
           const drift =
             Math.abs(new Date(item.start).getTime() - appointment.startsAt.getTime()) > 60_000 ||
@@ -950,7 +983,11 @@ export async function processPush(
               aggregateType: 'appointment',
               aggregateId: appointment.id,
               organizationId: appointment.organizationId,
-              payload: { appointmentId: appointment.id, reason: conflict, staffUserId: appointment.staffUserId },
+              payload: {
+                appointmentId: appointment.id,
+                reason: conflict,
+                staffUserId: appointment.staffUserId,
+              },
             });
           }
         });
@@ -986,9 +1023,9 @@ export async function scanReminders(db: Database, now: Date): Promise<number> {
       .select({ value: schema.bookingSettings.value })
       .from(schema.bookingSettings)
       .where(eq(schema.bookingSettings.key, 'reminder_hours'));
-    const hours = (
-      Array.isArray(setting?.value) ? (setting!.value as unknown[]) : [24, 1]
-    ).filter((h): h is number => typeof h === 'number' && h > 0);
+    const hours = (Array.isArray(setting?.value) ? (setting!.value as unknown[]) : [24, 1]).filter(
+      (h): h is number => typeof h === 'number' && h > 0,
+    );
     if (hours.length === 0) return 0;
     const horizon = new Date(now.getTime() + Math.max(...hours) * 3600_000);
     const rows = await tx
@@ -1043,7 +1080,8 @@ export async function scanReminders(db: Database, now: Date): Promise<number> {
 function appointmentIdFrom(payload: unknown): string {
   const p = (payload ?? {}) as { appointmentId?: unknown; event?: { aggregateId?: unknown } };
   const id = typeof p.appointmentId === 'string' ? p.appointmentId : p.event?.aggregateId;
-  if (typeof id !== 'string' || !id) throw new NonRetryableJobError('job payload lacks appointmentId');
+  if (typeof id !== 'string' || !id)
+    throw new NonRetryableJobError('job payload lacks appointmentId');
   return id;
 }
 
@@ -1093,7 +1131,8 @@ export function registerCalendarHandlers(runner: JobRunner): void {
 
   runner.register(CALENDAR_JOB_TYPES.processPush, async ({ db, job, log }) => {
     const channelId = (job.payload as { channelId?: unknown }).channelId;
-    if (typeof channelId !== 'string') throw new NonRetryableJobError('job payload lacks channelId');
+    if (typeof channelId !== 'string')
+      throw new NonRetryableJobError('job payload lacks channelId');
     const summary = await processPush(getRuntime(db), channelId);
     log.info(summary, 'calendar push processed');
   });

@@ -36,7 +36,8 @@ export const GET = route(async (req, { correlationId }) => {
       correlationId,
     });
     target.searchParams.set('calendar', result.connection.status);
-    if (result.missingScopes.length > 0) target.searchParams.set('missingScopes', result.missingScopes.join(' '));
+    if (result.missingScopes.length > 0)
+      target.searchParams.set('missingScopes', result.missingScopes.join(' '));
     res = NextResponse.redirect(target, { status: 302 });
   } catch (err) {
     const message = err instanceof ApiError ? err.message : 'connection failed';

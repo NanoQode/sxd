@@ -1,7 +1,10 @@
 import 'server-only';
 import { and, desc, eq, inArray } from 'drizzle-orm';
 import { getDb, schema, systemContext, withActor, type DbExecutor } from '@simplexd/db';
-import { defaultIntegrationEnvironment, loadIntegrationConfig } from '@simplexd/integrations/config';
+import {
+  defaultIntegrationEnvironment,
+  loadIntegrationConfig,
+} from '@simplexd/integrations/config';
 import {
   CalendarAuthError,
   CalendarProviderError,
@@ -14,7 +17,12 @@ import {
   type CalendarProvider,
   type TokenSet,
 } from '@simplexd/integrations/google';
-import { decryptSecret, encryptSecret, keyringFromEnv, type Keyring } from '@simplexd/integrations/secrets';
+import {
+  decryptSecret,
+  encryptSecret,
+  keyringFromEnv,
+  type Keyring,
+} from '@simplexd/integrations/secrets';
 import { env } from '@/lib/env';
 import type { ProviderBusyLoader } from '@/server/appointments/availability';
 
@@ -73,7 +81,9 @@ function readClientId(settings: Record<string, unknown>): string | null {
 }
 
 function readClientSecret(secrets: Record<string, string>): string | null {
-  return secrets['clientSecret'] ?? secrets['client_secret'] ?? secrets['oauthClientSecret'] ?? null;
+  return (
+    secrets['clientSecret'] ?? secrets['client_secret'] ?? secrets['oauthClientSecret'] ?? null
+  );
 }
 
 /** Reads the active Google Workspace configuration and returns the provider. */
@@ -85,7 +95,8 @@ export async function getCalendarProviderInfo(): Promise<CalendarProviderInfo> {
     environment,
     keyring: calendarKeyring(),
   });
-  const clientId = (config?.enabled ? readClientId(config.settings) : null) ?? e.GOOGLE_CLIENT_ID ?? null;
+  const clientId =
+    (config?.enabled ? readClientId(config.settings) : null) ?? e.GOOGLE_CLIENT_ID ?? null;
   const clientSecret =
     (config?.enabled ? readClientSecret(config.secrets) : null) ?? e.GOOGLE_CLIENT_SECRET ?? null;
   const clientConfigured = Boolean(clientId && clientSecret);
@@ -145,7 +156,11 @@ export async function storeTokenSecret(
   return row!.id;
 }
 
-export async function retireSecret(tx: DbExecutor, secretId: string | null, now: Date): Promise<void> {
+export async function retireSecret(
+  tx: DbExecutor,
+  secretId: string | null,
+  now: Date,
+): Promise<void> {
   if (!secretId) return;
   await tx
     .update(schema.secretReferences)
@@ -197,7 +212,9 @@ async function persistRotatedTokens(connection: ConnectionRow, next: TokenSet): 
   });
 }
 
-export async function credentialsForConnection(connection: ConnectionRow): Promise<CalendarCredentials> {
+export async function credentialsForConnection(
+  connection: ConnectionRow,
+): Promise<CalendarCredentials> {
   const [refreshToken, accessToken] = await Promise.all([
     loadSecretPlaintext(connection.refreshTokenSecretId),
     loadSecretPlaintext(connection.accessTokenSecretId),
@@ -255,7 +272,8 @@ export interface Organizer {
 export async function resolveOrganizer(staffUserId: string | null): Promise<Organizer | null> {
   const info = await getCalendarProviderInfo();
   const connections = await listUsableConnections();
-  const chosen = connections.find((c) => c.organizerUserId === staffUserId) ?? connections[0] ?? null;
+  const chosen =
+    connections.find((c) => c.organizerUserId === staffUserId) ?? connections[0] ?? null;
   if (chosen) {
     return {
       adapter: info.adapter,

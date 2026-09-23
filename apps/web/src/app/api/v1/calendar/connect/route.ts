@@ -25,7 +25,10 @@ export const GET = route(async (req, { correlationId }) => {
   const res =
     query.redirect === '1'
       ? NextResponse.redirect(start.authorizationUrl, { status: 302 })
-      : json({ authorizationUrl: start.authorizationUrl, adapter: start.adapter }, { correlationId });
+      : json(
+          { authorizationUrl: start.authorizationUrl, adapter: start.adapter },
+          { correlationId },
+        );
   res.cookies.set({
     name: OAUTH_COOKIE,
     value: start.cookieValue,

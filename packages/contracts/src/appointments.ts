@@ -173,7 +173,11 @@ export const appointmentDtoSchema = z.object({
   customerUserId: z.string().nullable(),
   /** Only present for staff and the customer themselves. */
   contact: z
-    .object({ name: z.string().nullable(), email: z.string().nullable(), phoneE164: z.string().nullable() })
+    .object({
+      name: z.string().nullable(),
+      email: z.string().nullable(),
+      phoneE164: z.string().nullable(),
+    })
     .nullable(),
   startsAt: isoDateTimeSchema,
   endsAt: isoDateTimeSchema,

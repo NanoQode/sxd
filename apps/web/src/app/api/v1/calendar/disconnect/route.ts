@@ -12,5 +12,7 @@ const bodySchema = z.object({ connectionId: uuidSchema });
 export const POST = route(async (req, { correlationId }) => {
   const identity = await requireStaff('appointments.manage_all');
   const body = await parseJson(req, bodySchema);
-  return json(await disconnectConnection(identity, body.connectionId, { correlationId }), { correlationId });
+  return json(await disconnectConnection(identity, body.connectionId, { correlationId }), {
+    correlationId,
+  });
 });
