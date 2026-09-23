@@ -43,6 +43,13 @@
       "when": 1790131410268,
       "tag": "0005_tender_rfq_child_policies",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1790132010268,
+      "tag": "0006_conversation_participant_update",
+      "breakpoints": true
     }
   ]
 }

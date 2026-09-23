@@ -9,7 +9,14 @@ import {
   type TaskListQuery,
   type TaskStatus,
 } from '@simplexd/contracts';
-import { appendOutbox, getDb, schema, withActor, type DbExecutor } from '@simplexd/db';
+import {
+  appendOutbox,
+  getDb,
+  schema,
+  withActor,
+  type DbExecutor,
+  type Transaction,
+} from '@simplexd/db';
 import { assertAllowed, authorizeAny, membershipFor } from '@simplexd/domain/authz';
 import { recordAudit } from '@/lib/audit';
 import type { RequestIdentity } from '@/lib/auth/session';
@@ -98,7 +105,7 @@ interface TaskContext {
 
 /** Loads a task the caller may see: the SQL read, the parent entity and the visibility rule must all agree. */
 async function requireVisibleTask(
-  tx: DbExecutor,
+  tx: Transaction,
   identity: RequestIdentity,
   id: string,
 ): Promise<TaskContext> {
