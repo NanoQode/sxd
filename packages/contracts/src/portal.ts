@@ -73,7 +73,7 @@ export const serviceRequestCreateSchema = z.object({
 });
 export type ServiceRequestCreate = z.infer<typeof serviceRequestCreateSchema>;
 
-/** Transitions a customer may request. Staff transitions arrive in Wave 2. */
+/** Transitions a customer may request; staff use the staff transition endpoint. */
 export const customerTransitionTargetSchema = z.enum(['cancelled', 'paused', 'in_progress']);
 
 export const serviceRequestTransitionSchema = z.object({

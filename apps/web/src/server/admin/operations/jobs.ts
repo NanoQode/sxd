@@ -22,6 +22,7 @@ import {
 import {
   assertAllowed,
   authorizeStaff,
+  hasStaffPermission,
   type DenyCode,
   type StaffPermission,
 } from '@simplexd/domain/authz';
@@ -58,10 +59,13 @@ export function operationsAccess(ctx: AdminContext): OperationsAccess {
   const actor = ctx.identity.actor;
   const canRead = OPERATIONS_READ_PERMISSIONS.some((p) => authorizeStaff(actor, p).allowed);
   const manage = authorizeStaff(actor, OPERATIONS_MANAGE_PERMISSION);
+  // The policy checks the MFA gate before the role, so a viewer without the
+  // permission would otherwise be told to enrol MFA, which would not help.
+  const holdsPermission = hasStaffPermission(actor, OPERATIONS_MANAGE_PERMISSION);
   return {
     canRead,
     canManage: manage.allowed,
-    manageDeniedCode: manage.allowed ? null : manage.code,
+    manageDeniedCode: manage.allowed ? null : holdsPermission ? manage.code : 'no_permission',
   };
 }
 
@@ -244,9 +248,13 @@ export async function retryJob(
       .for('update');
     if (!current) throw notFound('job');
     if (current.status !== 'dead')
-      throw new ApiError('conflict', `only dead jobs can be retried; this job is ${current.status}`, {
-        details: { status: current.status },
-      });
+      throw new ApiError(
+        'conflict',
+        `only dead jobs can be retried; this job is ${current.status}`,
+        {
+          details: { status: current.status },
+        },
+      );
     if (!(await retryDeadJob(tx, jobId)))
       throw new ApiError('conflict', 'the job changed while retrying; reload and try again');
     await recordAudit(tx, ctx.identity, {
@@ -287,27 +295,26 @@ export async function listStuckOutbox(
   authorizeRead(ctx);
   const take = Math.min(Math.max(limit, 1), 100);
   return transact(ctx, async (tx) => {
-    const [rows, total] = await Promise.all([
-      tx
-        .select({
-          id: o.id,
-          eventType: o.eventType,
-          aggregateType: o.aggregateType,
-          aggregateId: o.aggregateId,
-          attempts: o.attempts,
-          lastError: o.lastError,
-          createdAt: o.createdAt,
-          correlationId: o.correlationId,
-        })
-        .from(o)
-        .where(stuckOutboxWhere())
-        .orderBy(asc(o.id))
-        .limit(take),
-      tx
-        .select({ n: sql<number>`count(*)::int` })
-        .from(o)
-        .where(stuckOutboxWhere()),
-    ]);
+    // Sequential: queries on one transaction's connection cannot overlap.
+    const rows = await tx
+      .select({
+        id: o.id,
+        eventType: o.eventType,
+        aggregateType: o.aggregateType,
+        aggregateId: o.aggregateId,
+        attempts: o.attempts,
+        lastError: o.lastError,
+        createdAt: o.createdAt,
+        correlationId: o.correlationId,
+      })
+      .from(o)
+      .where(stuckOutboxWhere())
+      .orderBy(asc(o.id))
+      .limit(take);
+    const total = await tx
+      .select({ n: sql<number>`count(*)::int` })
+      .from(o)
+      .where(stuckOutboxWhere());
     return {
       items: rows.map((r) => ({
         id: r.id,

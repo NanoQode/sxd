@@ -27,6 +27,7 @@ export type NavIcon =
   | 'partners'
   | 'integrations'
   | 'settings'
+  | 'operations'
   | 'audit';
 
 export interface NavItem {
@@ -172,6 +173,14 @@ export const ADMIN_NAV: NavItem[] = [
     ],
   },
   {
+    // Platform operations (not in the brief's list; placed with Settings/Audit).
+    key: 'operations',
+    label: 'Jobs & Outbox',
+    href: '/admin/operations',
+    icon: 'operations',
+    permissions: ['audit.read', 'platform.settings.manage'],
+  },
+  {
     key: 'audit',
     label: 'Audit',
     href: '/admin/audit',
@@ -284,6 +293,18 @@ export const ADMIN_SUBNAV: SubNavItem[] = [
     href: '/admin/security/mfa',
     parent: 'settings',
     permissions: [],
+  },
+  {
+    label: 'Operations: dead jobs',
+    href: '/admin/operations?status=dead',
+    parent: 'operations',
+    permissions: ['audit.read', 'platform.settings.manage'],
+  },
+  {
+    label: 'Operations: stuck outbox events',
+    href: '/admin/operations#stuck-outbox',
+    parent: 'operations',
+    permissions: ['audit.read', 'platform.settings.manage'],
   },
   {
     label: 'Implementation status',

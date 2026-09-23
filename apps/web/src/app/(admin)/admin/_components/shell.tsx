@@ -19,6 +19,7 @@ import {
   Newspaper,
   Plug,
   Search,
+  ServerCog,
   Settings,
   ShoppingCart,
   UserCheck,
@@ -54,6 +55,7 @@ const icons: Record<NavIcon, typeof Home> = {
   partners: BarChart3,
   integrations: Plug,
   settings: Settings,
+  operations: ServerCog,
   audit: Activity,
 };
 

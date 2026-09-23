@@ -89,6 +89,31 @@ release keeps working against a migrated database. Before an upgrade run a backu
 - Suggested external monitors: uptime on `/api/v1/health`, certificate expiry (Caddy
   renews automatically), disk usage of the database volume, backup job success.
 
+### Dead jobs and stuck outbox events
+
+- **Dead jobs.** The worker retries a failing job with exponential backoff (30 s doubling,
+  capped at 1 hour) until it reaches its `maxAttempts` (8 by default); a job with no
+  registered handler or a non-retryable error goes straight to `dead`. Dead jobs stay in
+  the `jobs` table with their sanitized last error; every attempt is kept in
+  `job_failures`.
+- **Stuck outbox events.** The relay routes unpublished outbox events into jobs. An event
+  whose routing fails 20 times (`OUTBOX_MAX_ATTEMPTS`) is no longer claimed and stays
+  unpublished until someone requeues it.
+- **Admin → Jobs & Outbox** (`/admin/operations`) shows queue depth, dead (and failed,
+  pending, running) jobs and stuck outbox events. Staff with `audit.read` or
+  `platform.settings.manage` can read it. Payloads are never shown, because they can hold
+  personal data; only their top-level field names are listed.
+- **Retry** puts a dead job back to `pending` with attempts reset to 0, due now.
+  **Requeue** resets an unpublished event's attempts to 0 and clears its error so the
+  relay claims it again. Both require `platform.settings.manage` with a verified
+  authenticator (MFA), ask for a reason and write an audit entry (`job.retried`,
+  `outbox_event.requeued`). Other viewers see the lists read-only, with a link to
+  `/admin/security/mfa`. The same actions are available at
+  `POST /api/v1/admin/jobs/{jobId}/retry` and `POST /api/v1/admin/outbox/{eventId}/requeue`.
+- Fix the cause before retrying (provider credentials under Admin → Integrations, a
+  deployment with the missing handler, bad data). Otherwise the job runs out of attempts
+  again and returns to `dead`.
+
 ## 6. Backups and restore
 
 See `docs/operations/backup-restore.md`. Summary:

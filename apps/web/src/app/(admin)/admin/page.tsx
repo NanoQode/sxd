@@ -103,18 +103,18 @@ export default async function AdminOverviewPage() {
               <StatTile
                 label="Dead jobs"
                 value={counts.deadJobs}
-                href="/admin/audit?entityType=job"
+                href="/admin/operations?status=dead"
                 tone={counts.deadJobs > 0 ? 'danger' : 'neutral'}
-                hint="Exhausted retries; retry from the worker admin in wave 3"
+                hint="Exhausted retries; review and retry under Operations"
               />
             ) : null}
             {counts.unpublishedOutbox !== null ? (
               <StatTile
                 label="Unpublished outbox events"
                 value={counts.unpublishedOutbox}
-                href="/admin/audit"
+                href="/admin/operations#stuck-outbox"
                 tone={counts.unpublishedOutbox > 50 ? 'warning' : 'neutral'}
-                hint="Relayed by the worker"
+                hint="Relayed by the worker; stuck events can be requeued under Operations"
               />
             ) : null}
             {counts.staffCount !== null ? (

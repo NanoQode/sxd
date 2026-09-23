@@ -72,9 +72,7 @@ async function auditRows(action: string, entityId: string) {
   return dbs.owner
     .select()
     .from(schema.auditEvents)
-    .where(
-      and(eq(schema.auditEvents.action, action), eq(schema.auditEvents.entityId, entityId)),
-    );
+    .where(and(eq(schema.auditEvents.action, action), eq(schema.auditEvents.entityId, entityId)));
 }
 
 async function denial(promise: Promise<unknown>): Promise<AuthorizationError> {
@@ -146,7 +144,22 @@ describe('dead jobs', () => {
   });
 
   it('lets audit.read-only staff list but not retry', async () => {
-    expect(operationsAccess(ops)).toMatchObject({ canRead: true, canManage: false });
+    expect(operationsAccess(ops)).toMatchObject({
+      canRead: true,
+      canManage: false,
+      manageDeniedCode: 'no_permission',
+    });
+    // Without MFA the reason stays "no permission": enrolling MFA would not help them.
+    const opsNoMfa = contextFor(
+      dbs.app,
+      identityFor(users.ops, ['operations_manager'], { mfaVerified: false }),
+    );
+    expect(operationsAccess(opsNoMfa)).toMatchObject({
+      canRead: true,
+      canManage: false,
+      manageDeniedCode: 'no_permission',
+    });
+    await expect(listJobs(opsNoMfa, { status: 'dead' })).resolves.toBeDefined();
     const page = await listJobs(ops, { status: 'dead' });
     expect(page.items.map((i) => i.id)).toContain(deadId);
     const error = await denial(retryJob(ops, deadId, 'Provider fixed'));
