@@ -7,6 +7,7 @@ import { inviteTenderPartners, createTender, publishTender } from '@/server/tend
 import {
   customerIdentity,
   enableCommercialFlags,
+  enabledFlags,
   hoursFromNow,
   insertOrganization,
   insertPartner,
@@ -32,7 +33,8 @@ const invited = partnerIdentity('mkt-tnd-partner-a');
 const uninvited = partnerIdentity('mkt-tnd-partner-b');
 const customer = customerIdentity('mkt-tnd-customer', 'mkt-tnd-org');
 const stranger = customerIdentity('mkt-tnd-stranger', 'mkt-tnd-org-b');
-const anon = anonymousIdentity('tok-mkt-tnd');
+const anon = anonymousIdentity('tok-mkt-tnd', enabledFlags);
+const anonModuleOff = anonymousIdentity('tok-mkt-tnd', {});
 let lagosId: string;
 let ikejaId: string;
 
@@ -102,7 +104,12 @@ describe('tender opportunities on the market detail', () => {
       .returning({ id: schema.projects.id });
     const [property] = await dbs.owner
       .insert(schema.properties)
-      .values({ organizationId: 'mkt-tnd-org', title: 'Ikeja GRA plot', marketId: ikejaId })
+      .values({
+        organizationId: 'mkt-tnd-org',
+        name: 'Ikeja GRA plot',
+        kind: 'land',
+        marketId: ikejaId,
+      })
       .returning({ id: schema.properties.id });
     const [projectB] = await dbs.owner
       .insert(schema.projects)
@@ -131,6 +138,11 @@ describe('tender opportunities on the market detail', () => {
       items: [],
     });
     expect(tenderScopeFor(anon)).toBe('none');
+    expect((await getMarketBySlug('ng-lagos', anonModuleOff))?.tenderOpportunities).toEqual({
+      moduleEnabled: false,
+      scope: 'none',
+      items: [],
+    });
 
     // Staff see the open tender with its admin link; drafts never appear.
     const staffLagos = await getMarketBySlug('ng-lagos', admin);

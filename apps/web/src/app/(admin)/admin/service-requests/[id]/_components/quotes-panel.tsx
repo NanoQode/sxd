@@ -397,71 +397,69 @@ export function QuotesPanel({
               </div>
             ) : (
               <p className="text-xs text-fg-muted">
-                No active quotation template applies to this service. Templates are managed
-                under Services → Quote templates.
+                No active quotation template applies to this service. Templates are managed under
+                Services → Quote templates.
               </p>
             )}
             <div className="space-y-2">
               <p className="text-sm font-medium">Lines</p>
-                {lines.map((l, i) => (
-                  <div key={i} className="grid gap-2 sm:grid-cols-[3fr_1fr_1.5fr_auto]">
-                    <Input
-                      aria-label={`Line ${i + 1} description`}
-                      placeholder="Description"
-                      value={l.description}
-                      onChange={(e) =>
-                        setLines(
-                          lines.map((x, j) =>
-                            j === i ? { ...x, description: e.target.value } : x,
-                          ),
-                        )
-                      }
-                    />
-                    <Input
-                      aria-label={`Line ${i + 1} quantity`}
-                      placeholder="Qty"
-                      value={l.quantity}
-                      onChange={(e) =>
-                        setLines(
-                          lines.map((x, j) => (j === i ? { ...x, quantity: e.target.value } : x)),
-                        )
-                      }
-                    />
-                    <Input
-                      aria-label={`Line ${i + 1} unit amount in naira`}
-                      placeholder="Unit ₦"
-                      inputMode="decimal"
-                      value={l.unitNaira}
-                      onChange={(e) =>
-                        setLines(
-                          lines.map((x, j) => (j === i ? { ...x, unitNaira: e.target.value } : x)),
-                        )
-                      }
-                      aria-invalid={l.unitNaira !== '' && !parsedLines[i]?.unitKobo}
-                    />
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      aria-label={`Remove line ${i + 1}`}
-                      disabled={lines.length === 1}
-                      onClick={() => setLines(lines.filter((_, j) => j !== i))}
-                    >
-                      Remove
-                    </Button>
-                  </div>
-                ))}
-                <div className="flex items-center justify-between">
+              {lines.map((l, i) => (
+                <div key={i} className="grid gap-2 sm:grid-cols-[3fr_1fr_1.5fr_auto]">
+                  <Input
+                    aria-label={`Line ${i + 1} description`}
+                    placeholder="Description"
+                    value={l.description}
+                    onChange={(e) =>
+                      setLines(
+                        lines.map((x, j) => (j === i ? { ...x, description: e.target.value } : x)),
+                      )
+                    }
+                  />
+                  <Input
+                    aria-label={`Line ${i + 1} quantity`}
+                    placeholder="Qty"
+                    value={l.quantity}
+                    onChange={(e) =>
+                      setLines(
+                        lines.map((x, j) => (j === i ? { ...x, quantity: e.target.value } : x)),
+                      )
+                    }
+                  />
+                  <Input
+                    aria-label={`Line ${i + 1} unit amount in naira`}
+                    placeholder="Unit ₦"
+                    inputMode="decimal"
+                    value={l.unitNaira}
+                    onChange={(e) =>
+                      setLines(
+                        lines.map((x, j) => (j === i ? { ...x, unitNaira: e.target.value } : x)),
+                      )
+                    }
+                    aria-invalid={l.unitNaira !== '' && !parsedLines[i]?.unitKobo}
+                  />
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => setLines([...lines, { ...EMPTY_LINE }])}
+                    aria-label={`Remove line ${i + 1}`}
+                    disabled={lines.length === 1}
+                    onClick={() => setLines(lines.filter((_, j) => j !== i))}
                   >
-                    Add line
+                    Remove
                   </Button>
-                  <span className="text-sm">
-                    Subtotal (before tax): <Money kobo={subtotal} />
-                  </span>
                 </div>
+              ))}
+              <div className="flex items-center justify-between">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setLines([...lines, { ...EMPTY_LINE }])}
+                >
+                  Add line
+                </Button>
+                <span className="text-sm">
+                  Subtotal (before tax): <Money kobo={subtotal} />
+                </span>
+              </div>
             </div>
             <div className="grid gap-3 sm:grid-cols-3">
               <Field label="Tax treatment" hint="Reviewed treatments only; none means no tax line.">

@@ -1,6 +1,6 @@
 import { desc, eq } from 'drizzle-orm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { ApiError, type PriceAnchorValues } from '@simplexd/contracts';
+import type { ApiError, PriceAnchorValues } from '@simplexd/contracts';
 import { closeDb, schema } from '@simplexd/db';
 import { connectTestDatabases, uniqueSuffix, type TestDatabases } from '@simplexd/db/testing';
 import { AuthorizationError } from '@simplexd/domain/authz';
@@ -68,7 +68,10 @@ beforeAll(async () => {
   await insertStaffUser(dbs.owner, users.s, ['support']);
   managerA = contextFor(dbs.app, identityFor(users.a, ['operations_manager']));
   managerB = contextFor(dbs.app, identityFor(users.b, ['operations_manager']));
-  managerBNoMfa = contextFor(dbs.app, identityFor(users.b, ['operations_manager'], { mfaVerified: false }));
+  managerBNoMfa = contextFor(
+    dbs.app,
+    identityFor(users.b, ['operations_manager'], { mfaVerified: false }),
+  );
   support = contextFor(dbs.app, identityFor(users.s, ['support']));
   serviceSlug = `pricing-test-${sfx}`;
   const [svc] = await dbs.owner
@@ -119,14 +122,21 @@ afterAll(async () => {
     .where(eq(schema.servicePackages.serviceId, serviceId));
   for (const p of pkgs) {
     await quiet(() =>
-      dbs.owner.delete(schema.servicePackageRevisions).where(eq(schema.servicePackageRevisions.packageId, p.id)),
+      dbs.owner
+        .delete(schema.servicePackageRevisions)
+        .where(eq(schema.servicePackageRevisions.packageId, p.id)),
     );
   }
-  await quiet(() => dbs.owner.delete(schema.servicePackages).where(eq(schema.servicePackages.serviceId, serviceId)));
+  await quiet(() =>
+    dbs.owner.delete(schema.servicePackages).where(eq(schema.servicePackages.serviceId, serviceId)),
+  );
   await quiet(() => dbs.owner.delete(schema.services).where(eq(schema.services.id, serviceId)));
   // When history keeps the rows alive, archive the service so it never shows publicly.
   await quiet(() =>
-    dbs.owner.update(schema.services).set({ publicationState: 'archived' }).where(eq(schema.services.id, serviceId)),
+    dbs.owner
+      .update(schema.services)
+      .set({ publicationState: 'archived' })
+      .where(eq(schema.services.id, serviceId)),
   );
   await cacheDelete('services:');
   await closeDb();
@@ -167,18 +177,34 @@ describe('price anchors', () => {
 
     // The author cannot publish or reject their own proposal.
     await expect(
-      transitionPriceAnchor(managerA, created.id, { action: 'publish', expectedRevision: 2, reason: 'Approve' }),
+      transitionPriceAnchor(managerA, created.id, {
+        action: 'publish',
+        expectedRevision: 2,
+        reason: 'Approve',
+      }),
     ).rejects.toMatchObject({ decision: { code: 'separation_of_duties' } });
     await expect(
-      transitionPriceAnchor(managerA, created.id, { action: 'reject', expectedRevision: 2, reason: 'No' }),
+      transitionPriceAnchor(managerA, created.id, {
+        action: 'reject',
+        expectedRevision: 2,
+        reason: 'No',
+      }),
     ).rejects.toMatchObject({ decision: { code: 'separation_of_duties' } });
     // A different manager needs a verified authenticator.
     await expect(
-      transitionPriceAnchor(managerBNoMfa, created.id, { action: 'publish', expectedRevision: 2, reason: 'Approve' }),
+      transitionPriceAnchor(managerBNoMfa, created.id, {
+        action: 'publish',
+        expectedRevision: 2,
+        reason: 'Approve',
+      }),
     ).rejects.toMatchObject({ decision: { code: 'mfa_required' } });
     // A stale revision number is refused.
     await expect(
-      transitionPriceAnchor(managerB, created.id, { action: 'publish', expectedRevision: 1, reason: 'Approve' }),
+      transitionPriceAnchor(managerB, created.id, {
+        action: 'publish',
+        expectedRevision: 1,
+        reason: 'Approve',
+      }),
     ).rejects.toMatchObject({ code: 'version_conflict' });
 
     const published = await transitionPriceAnchor(managerB, created.id, {
@@ -191,7 +217,11 @@ describe('price anchors', () => {
     expect(published.reviewedBy?.id).toBe(managerB.identity.actor.userId);
     expect(published.proposal).toBeNull();
     expect(published.latestRevision).toBe(3);
-    expect(published.revisions?.map((r) => r.event)).toEqual(['published', 'submitted', 'draft_saved']);
+    expect(published.revisions?.map((r) => r.event)).toEqual([
+      'published',
+      'submitted',
+      'draft_saved',
+    ]);
     expect(published.version).toBe(created.version + 1);
 
     const audit = await dbs.owner
@@ -200,7 +230,11 @@ describe('price anchors', () => {
       .where(eq(schema.auditEvents.entityId, created.id))
       .orderBy(desc(schema.auditEvents.createdAt));
     expect(audit.map((a) => a.action)).toEqual(
-      expect.arrayContaining(['price_anchor.created', 'price_anchor.submitted', 'price_anchor.published']),
+      expect.arrayContaining([
+        'price_anchor.created',
+        'price_anchor.submitted',
+        'price_anchor.published',
+      ]),
     );
     expect(audit.find((a) => a.action === 'price_anchor.published')?.reason).toBe(
       'Reviewed against the homepage figures',
@@ -216,7 +250,11 @@ describe('price anchors', () => {
     const list = await listPriceAnchors(managerB);
     const standard = list.find((a) => a.serviceId === serviceId && a.slug === 'standard')!;
     const draft = await savePriceAnchorDraft(managerB, standard.id, {
-      values: values({ amountKobo: '99999900', minimumScope: 'SECRET-SCOPE-' + sfx, exclusions: 'SECRET-EXCL-' + sfx }),
+      values: values({
+        amountKobo: '99999900',
+        minimumScope: 'SECRET-SCOPE-' + sfx,
+        exclusions: 'SECRET-EXCL-' + sfx,
+      }),
       expectedRevision: standard.latestRevision,
     });
     await transitionPriceAnchor(managerB, standard.id, {
@@ -256,7 +294,11 @@ describe('price anchors', () => {
     expect(detail.proposal).toMatchObject({ state: 'in_review', implicit: true });
     expect(detail.latestRevision).toBe(0);
     await expect(
-      transitionPriceAnchor(managerA, seededPackageId, { action: 'withdraw', expectedRevision: 0, reason: 'x' }),
+      transitionPriceAnchor(managerA, seededPackageId, {
+        action: 'withdraw',
+        expectedRevision: 0,
+        reason: 'x',
+      }),
     ).rejects.toMatchObject({ code: 'invalid_transition' });
     const rejected = await transitionPriceAnchor(managerA, seededPackageId, {
       action: 'reject',
@@ -271,14 +313,20 @@ describe('price anchors', () => {
       values: values({ name: 'Seeded package', priceBasis: 'fixed', amountKobo: '5000000' }),
       expectedRevision: 1,
     });
-    await transitionPriceAnchor(managerA, seededPackageId, { action: 'submit', expectedRevision: draft.latestRevision, reason: 'ok' });
+    await transitionPriceAnchor(managerA, seededPackageId, {
+      action: 'submit',
+      expectedRevision: draft.latestRevision,
+      reason: 'ok',
+    });
     const live = await transitionPriceAnchor(managerB, seededPackageId, {
       action: 'publish',
       expectedRevision: draft.latestRevision + 1,
       reason: 'Confirmed',
     });
     expect(live.publicationState).toBe('published');
-    expect((await catalog()).item?.packages.find((p) => p.slug === 'seeded')?.priceLabel).toBe('₦50,000');
+    expect((await catalog()).item?.packages.find((p) => p.slug === 'seeded')?.priceLabel).toBe(
+      '₦50,000',
+    );
   });
 
   it('keeps the current anchor public until a future effective date, then retires with MFA and a reason', async () => {
@@ -289,8 +337,16 @@ describe('price anchors', () => {
       values: values({ amountKobo: '18000000', effectiveFrom: tomorrow }),
       expectedRevision: standard.latestRevision,
     });
-    await transitionPriceAnchor(managerA, standard.id, { action: 'submit', expectedRevision: draft.latestRevision, reason: 'Scheduled rise' });
-    await transitionPriceAnchor(managerB, standard.id, { action: 'publish', expectedRevision: draft.latestRevision + 1, reason: 'Approved rise' });
+    await transitionPriceAnchor(managerA, standard.id, {
+      action: 'submit',
+      expectedRevision: draft.latestRevision,
+      reason: 'Scheduled rise',
+    });
+    await transitionPriceAnchor(managerB, standard.id, {
+      action: 'publish',
+      expectedRevision: draft.latestRevision + 1,
+      reason: 'Approved rise',
+    });
 
     const pub = await catalog();
     const shown = pub.item?.packages.find((p) => p.slug === 'standard');
@@ -301,10 +357,16 @@ describe('price anchors', () => {
 
     const current = await getPriceAnchor(managerB, standard.id);
     await expect(
-      retirePriceAnchor(managerBNoMfa, standard.id, { expectedVersion: current.version, reason: 'Withdrawn from sale' }),
+      retirePriceAnchor(managerBNoMfa, standard.id, {
+        expectedVersion: current.version,
+        reason: 'Withdrawn from sale',
+      }),
     ).rejects.toMatchObject({ decision: { code: 'mfa_required' } });
     await expect(
-      retirePriceAnchor(managerB, standard.id, { expectedVersion: current.version - 1, reason: 'Withdrawn from sale' }),
+      retirePriceAnchor(managerB, standard.id, {
+        expectedVersion: current.version - 1,
+        reason: 'Withdrawn from sale',
+      }),
     ).rejects.toMatchObject({ code: 'version_conflict' });
     const retired = await retirePriceAnchor(managerB, standard.id, {
       expectedVersion: current.version,

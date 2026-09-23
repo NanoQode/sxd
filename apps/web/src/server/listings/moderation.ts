@@ -15,12 +15,7 @@ import { evaluateTransition, listingMachine, type ListingState } from '@simplexd
 import { recordAudit } from '@/lib/audit';
 import type { RequestIdentity } from '@/lib/auth/session';
 import { actorContext, requireUserId, type ServiceOptions } from '@/server/assignments/shared';
-import {
-  assertListingVersion,
-  requireListing,
-  requireRevision,
-  type ListingRow,
-} from './access';
+import { assertListingVersion, requireListing, requireRevision, type ListingRow } from './access';
 import { authorityRequiredError, buildListingDetail, currentVerifiedAuthority } from './owner';
 import { invalidatePublicListings } from './public';
 import { availabilityExpiry, effectiveListingStatus, readScope, type StoredCheck } from './rules';
@@ -157,18 +152,25 @@ export async function approveListing(
       (c) => c.item === 'owner_authority' && c.checkedAt === verifiedAt,
     );
     if (!alreadyRecorded) {
-      await appendChecks(tx, id, [revision.version], [
-        {
-          item: 'owner_authority',
-          outcome: 'passed',
-          result: `Authority to act for the owner (${authority.ownerName}) was verified against the submitted document.`,
-          checkedBy: authority.verifiedBy ? await staffName(tx, authority.verifiedBy) : 'SimplexD staff',
-          checkedByUserId: authority.verifiedBy ?? undefined,
-          checkedAt: verifiedAt,
-          ...(authority.expiresAt ? { expiresAt: authority.expiresAt.toISOString() } : {}),
-          recordedAt: now.toISOString(),
-        },
-      ]);
+      await appendChecks(
+        tx,
+        id,
+        [revision.version],
+        [
+          {
+            item: 'owner_authority',
+            outcome: 'passed',
+            result: `Authority to act for the owner (${authority.ownerName}) was verified against the submitted document.`,
+            checkedBy: authority.verifiedBy
+              ? await staffName(tx, authority.verifiedBy)
+              : 'SimplexD staff',
+            checkedByUserId: authority.verifiedBy ?? undefined,
+            checkedAt: verifiedAt,
+            ...(authority.expiresAt ? { expiresAt: authority.expiresAt.toISOString() } : {}),
+            recordedAt: now.toISOString(),
+          },
+        ],
+      );
     }
     const expiresAt = availabilityExpiry(now);
     const updated = await updateVersioned(tx, row, input.expectedVersion, {
@@ -204,7 +206,11 @@ export async function approveListing(
       'listing.published',
       row,
       userId,
-      { title: revision.title, revisionVersion: revision.version, expiresAt: expiresAt.toISOString() },
+      {
+        title: revision.title,
+        revisionVersion: revision.version,
+        expiresAt: expiresAt.toISOString(),
+      },
       options.correlationId,
     );
     return buildListingDetail(tx, identity, updated, now);
@@ -314,18 +320,26 @@ export async function markListingDuplicate(
       .where(eq(schema.listings.id, input.duplicateOfListingId));
     if (!original) throw new ApiError('not_found', 'the original listing was not found');
     if (original.duplicateOfListingId) {
-      throw new ApiError('validation_failed', 'the original is itself a duplicate; point to the listing it duplicates', {
-        details: [{ path: 'duplicateOfListingId', message: 'choose the original listing' }],
-      });
+      throw new ApiError(
+        'validation_failed',
+        'the original is itself a duplicate; point to the listing it duplicates',
+        {
+          details: [{ path: 'duplicateOfListingId', message: 'choose the original listing' }],
+        },
+      );
     }
     if (row.duplicateOfListingId) {
       throw new ApiError('invalid_transition', 'already marked as a duplicate');
     }
     const effective = effectiveListingStatus(row.status, row.expiresAt, now);
     const from: ListingState = effective === 'expired' ? 'expired' : row.status;
-    const to: ListingState = from === 'in_moderation' && row.publishedVersion === null ? 'rejected' : 'withdrawn';
+    const to: ListingState =
+      from === 'in_moderation' && row.publishedVersion === null ? 'rejected' : 'withdrawn';
     if (!['in_moderation', 'published', 'paused', 'expired'].includes(from)) {
-      throw new ApiError('invalid_transition', `a ${from.replace(/_/g, ' ')} listing cannot be marked as a duplicate`);
+      throw new ApiError(
+        'invalid_transition',
+        `a ${from.replace(/_/g, ' ')} listing cannot be marked as a duplicate`,
+      );
     }
     assertMachine(from, to, input.reason);
     const note = `Duplicate of ${original.slug}: ${input.reason}`;
@@ -378,7 +392,10 @@ export async function recordVerificationCheck(
   const result = await withActor(getDb(), ctx, async (tx) => {
     const row = await requireListing(tx, identity, id, 'verify');
     if (row.status === 'archived') {
-      throw new ApiError('invalid_transition', 'closed listings no longer take verification checks');
+      throw new ApiError(
+        'invalid_transition',
+        'closed listings no longer take verification checks',
+      );
     }
     const checkedAt = input.checkedAt ? new Date(input.checkedAt) : now;
     if (checkedAt.getTime() > now.getTime() + 5 * 60_000) {
@@ -425,7 +442,9 @@ export async function recordVerificationCheck(
 export async function listListingInquiries(
   identity: RequestIdentity,
   listingId: string,
-): Promise<Array<Pick<LeadDto, 'id' | 'contactName' | 'status' | 'createdAt'> & { suspicious: boolean }>> {
+): Promise<
+  Array<Pick<LeadDto, 'id' | 'contactName' | 'status' | 'createdAt'> & { suspicious: boolean }>
+> {
   requireUserId(identity);
   assertAllowed(authorizeStaff(identity.actor, 'leads.read'));
   return withActor(getDb(), identity.ctx, async (tx) => {

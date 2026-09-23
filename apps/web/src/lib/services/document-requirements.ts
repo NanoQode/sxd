@@ -109,7 +109,10 @@ export function requirementsForStage<T extends RequirementLike>(
 }
 
 /** Public "What you'll need" list: active, non-sensitive requirements for a service. */
-export function publicRequirements<T extends RequirementLike>(requirements: T[], serviceId: string): T[] {
+export function publicRequirements<T extends RequirementLike>(
+  requirements: T[],
+  serviceId: string,
+): T[] {
   return requirements
     .filter((r) => appliesToService(r, serviceId) && !r.sensitive)
     .sort(byStageThenOrder);

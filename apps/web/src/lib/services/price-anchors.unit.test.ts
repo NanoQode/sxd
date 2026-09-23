@@ -55,7 +55,9 @@ describe('parseAnchorSnapshot', () => {
     expect(ok?.state).toBe('published');
     expect(ok?.values.amountKobo).toBe('15000000');
     expect(parseAnchorSnapshot({ kind: 'market', event: 'published', values: base })).toBeNull();
-    expect(parseAnchorSnapshot({ kind: 'price_anchor', event: 'deleted', values: base })).toBeNull();
+    expect(
+      parseAnchorSnapshot({ kind: 'price_anchor', event: 'deleted', values: base }),
+    ).toBeNull();
     expect(parseAnchorSnapshot({ kind: 'price_anchor', event: 'submitted' })).toBeNull();
     expect(parseAnchorSnapshot(null)).toBeNull();
   });

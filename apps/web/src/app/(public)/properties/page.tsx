@@ -201,7 +201,12 @@ export default async function PropertiesPage({ searchParams }: { searchParams: S
             <label htmlFor="f-market" className="font-medium">
               Market
             </label>
-            <select id="f-market" name="market" defaultValue={filters.market ?? ''} className={field}>
+            <select
+              id="f-market"
+              name="market"
+              defaultValue={filters.market ?? ''}
+              className={field}
+            >
               <option value="">Any market</option>
               {places.markets.map((m) => (
                 <option key={m.slug} value={m.slug}>
@@ -214,7 +219,12 @@ export default async function PropertiesPage({ searchParams }: { searchParams: S
             <label htmlFor="f-tenure" className="font-medium">
               Tenure
             </label>
-            <select id="f-tenure" name="tenure" defaultValue={filters.tenure ?? ''} className={field}>
+            <select
+              id="f-tenure"
+              name="tenure"
+              defaultValue={filters.tenure ?? ''}
+              className={field}
+            >
               <option value="">Any tenure</option>
               {listingTenureSchema.options.map((t) => (
                 <option key={t} value={t}>
@@ -229,13 +239,15 @@ export default async function PropertiesPage({ searchParams }: { searchParams: S
             </label>
             <select id="f-check" name="check" defaultValue={filters.check ?? ''} className={field}>
               <option value="">Any</option>
-              {(Object.keys(VERIFICATION_CHECK_LABELS) as Array<keyof typeof VERIFICATION_CHECK_LABELS>).map(
-                (k) => (
-                  <option key={k} value={k}>
-                    {VERIFICATION_CHECK_LABELS[k]}
-                  </option>
-                ),
-              )}
+              {(
+                Object.keys(VERIFICATION_CHECK_LABELS) as Array<
+                  keyof typeof VERIFICATION_CHECK_LABELS
+                >
+              ).map((k) => (
+                <option key={k} value={k}>
+                  {VERIFICATION_CHECK_LABELS[k]}
+                </option>
+              ))}
             </select>
           </div>
           <div className="flex flex-col gap-1 text-sm">
@@ -320,7 +332,10 @@ export default async function PropertiesPage({ searchParams }: { searchParams: S
                   Clear filters
                 </Link>
               ) : (
-                <Link href="/book?service=property-search" className={buttonVariants({ size: 'sm' })}>
+                <Link
+                  href="/book?service=property-search"
+                  className={buttonVariants({ size: 'sm' })}
+                >
                   Request a property search
                 </Link>
               )

@@ -22,7 +22,8 @@ export function WhatYouNeed({ items }: { items: PublicRequirement[] }) {
       </h2>
       {items.length === 0 ? (
         <p className="mt-2 max-w-prose text-sm text-fg-muted">
-          No documents are needed to start; the team tells you during triage if anything is required.
+          No documents are needed to start; the team tells you during triage if anything is
+          required.
         </p>
       ) : (
         <>
@@ -31,7 +32,10 @@ export function WhatYouNeed({ items }: { items: PublicRequirement[] }) {
           </p>
           <ul className="mt-3 grid gap-2 sm:grid-cols-2">
             {items.map((r) => (
-              <li key={r.id} className="rounded-md border border-border bg-bg-elevated px-3 py-2 text-sm">
+              <li
+                key={r.id}
+                className="rounded-md border border-border bg-bg-elevated px-3 py-2 text-sm"
+              >
                 <p className="font-medium">
                   {r.name}
                   {!r.required ? <span className="text-fg-muted"> (optional)</span> : null}

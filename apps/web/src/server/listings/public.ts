@@ -200,8 +200,8 @@ async function loadCandidates(): Promise<PublicListingDto[]> {
   });
 }
 
-const loadAll = cache(
-  async (): Promise<PublicListingDto[]> => cached(CACHE_KEY, 60, loadCandidates),
+const loadAll = cache(async (): Promise<PublicListingDto[]> =>
+  cached(CACHE_KEY, 60, loadCandidates),
 );
 
 function visibleNow(l: PublicListingDto, now: Date): boolean {
@@ -363,7 +363,9 @@ export function locationOptions(listings: PublicListingDto[]): {
       });
   }
   return {
-    states: [...states].map(([slug, name]) => ({ slug, name })).sort((a, b) => a.name.localeCompare(b.name)),
+    states: [...states]
+      .map(([slug, name]) => ({ slug, name }))
+      .sort((a, b) => a.name.localeCompare(b.name)),
     markets: [...markets]
       .map(([slug, v]) => ({ slug, ...v }))
       .sort((a, b) => a.name.localeCompare(b.name)),

@@ -56,7 +56,11 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
     return {
       title: `${state.title} (no longer available)`,
       robots: { index: false, follow: true },
-      alternates: { canonical: state.canonicalSlug ? `/properties/${state.canonicalSlug}` : `/properties/${slug}` },
+      alternates: {
+        canonical: state.canonicalSlug
+          ? `/properties/${state.canonicalSlug}`
+          : `/properties/${slug}`,
+      },
     };
   }
   const listing = state.listing;
@@ -94,7 +98,9 @@ export default async function PropertyDetailPage({ params }: { params: Params })
             <Badge tone="neutral">{humanize(state.kind)}</Badge>
             <Badge tone="warning">No longer available</Badge>
           </div>
-          <h1 className="font-display text-2xl font-semibold leading-tight sm:text-3xl">{state.title}</h1>
+          <h1 className="font-display text-2xl font-semibold leading-tight sm:text-3xl">
+            {state.title}
+          </h1>
           <p className="max-w-prose text-fg-muted">
             {UNAVAILABLE_COPY[state.reason]} Prices, documents and inquiries are not shown for
             listings that are not live.
@@ -140,7 +146,11 @@ export default async function PropertyDetailPage({ params }: { params: Params })
       key: 'outcome',
       header: 'Outcome',
       cell: (c) => (
-        <Badge tone={c.outcome === 'passed' ? 'success' : c.outcome === 'issue_found' ? 'danger' : 'warning'}>
+        <Badge
+          tone={
+            c.outcome === 'passed' ? 'success' : c.outcome === 'issue_found' ? 'danger' : 'warning'
+          }
+        >
           {c.outcome ? humanize(c.outcome) : 'Recorded'}
         </Badge>
       ),
@@ -194,7 +204,10 @@ export default async function PropertyDetailPage({ params }: { params: Params })
             {listing.location.marketSlug && listing.location.marketName ? (
               <>
                 {listing.location.neighborhoodName ? `${listing.location.neighborhoodName}, ` : ''}
-                <Link href={`/locations/${listing.location.marketSlug}`} className="text-primary underline">
+                <Link
+                  href={`/locations/${listing.location.marketSlug}`}
+                  className="text-primary underline"
+                >
                   {listing.location.marketName}
                 </Link>
                 {listing.location.stateName ? `, ${listing.location.stateName}` : ''}
@@ -209,7 +222,10 @@ export default async function PropertyDetailPage({ params }: { params: Params })
             <ul className="mt-6 grid grid-cols-2 gap-2 sm:grid-cols-3" aria-label="Listing photos">
               {images.map((img) => (
                 <li key={img.fileId}>
-                  <a href={img.web} className="block overflow-hidden rounded-md border border-border">
+                  <a
+                    href={img.web}
+                    className="block overflow-hidden rounded-md border border-border"
+                  >
                     {/* eslint-disable-next-line @next/next/no-img-element -- signed, short-lived derivative URLs */}
                     <img
                       src={img.thumb}
@@ -279,9 +295,9 @@ export default async function PropertyDetailPage({ params }: { params: Params })
               Verification scope
             </h2>
             <Alert tone="info" title="Not a legal verification" className="mt-2">
-              Only the checks listed here were performed, on the dates shown, and each lapses at
-              its expiry. This panel is not a statement that the listing is legally verified;
-              commission due diligence before you commit.
+              Only the checks listed here were performed, on the dates shown, and each lapses at its
+              expiry. This panel is not a statement that the listing is legally verified; commission
+              due diligence before you commit.
             </Alert>
             {listing.verification.summary ? (
               <p className="mt-3 text-sm">{listing.verification.summary}</p>
@@ -299,7 +315,10 @@ export default async function PropertyDetailPage({ params }: { params: Params })
           </section>
         </div>
 
-        <aside className="space-y-4 lg:sticky lg:top-24 lg:self-start" aria-label="Inquiries and offers">
+        <aside
+          className="space-y-4 lg:sticky lg:top-24 lg:self-start"
+          aria-label="Inquiries and offers"
+        >
           <section id="inquiry" className="rounded-lg border border-border bg-bg-elevated p-5">
             <h2 className="text-base font-semibold">Ask about this listing</h2>
             <div className="mt-3">
@@ -311,9 +330,15 @@ export default async function PropertyDetailPage({ params }: { params: Params })
               <h2 className="text-base font-semibold">Make an offer</h2>
               <p className="mt-2 text-sm text-fg-muted">
                 Offers are made from a customer account and negotiated with the owner in an
-                append-only log. {listing.priceKobo ? `The stated price is ${formatNairaString(listing.priceKobo)}.` : 'No price is stated; propose one.'}
+                append-only log.{' '}
+                {listing.priceKobo
+                  ? `The stated price is ${formatNairaString(listing.priceKobo)}.`
+                  : 'No price is stated; propose one.'}
               </p>
-              <Link href={offerHref} className={`${buttonVariants({ variant: 'secondary', size: 'lg' })} mt-4 w-full`}>
+              <Link
+                href={offerHref}
+                className={`${buttonVariants({ variant: 'secondary', size: 'lg' })} mt-4 w-full`}
+              >
                 {identity.session ? 'Make an offer' : 'Sign in to make an offer'}
               </Link>
               <Link
@@ -324,7 +349,10 @@ export default async function PropertyDetailPage({ params }: { params: Params })
               </Link>
             </div>
           ) : null}
-          <Alert tone="info" title={`Location shown at ${humanize(listing.location.precision).toLowerCase()} precision`}>
+          <Alert
+            tone="info"
+            title={`Location shown at ${humanize(listing.location.precision).toLowerCase()} precision`}
+          >
             {PRECISION_COPY[listing.location.precision]}
           </Alert>
           <p className="text-xs text-fg-subtle">

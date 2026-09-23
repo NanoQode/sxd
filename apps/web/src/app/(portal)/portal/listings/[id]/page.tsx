@@ -47,7 +47,8 @@ export default async function ListingDetailPage({
   if (!uuidSchema.safeParse(id).success) notFound();
   const identity = await requireSignedIn(`/portal/listings/${id}`);
   const listing = await getListingDetail(identity, id).catch((err) => {
-    if (err instanceof ApiError && (err.code === 'not_found' || err.code === 'forbidden')) return null;
+    if (err instanceof ApiError && (err.code === 'not_found' || err.code === 'forbidden'))
+      return null;
     throw err;
   });
   if (!listing) notFound();
@@ -57,12 +58,20 @@ export default async function ListingDetailPage({
   const canManage = caps.can('org.listings.manage');
   const media = canManage ? await listListingMediaCandidates(identity, listing.organizationId) : [];
   const rev = listing.current;
-  const isLive = listing.effectiveStatus === 'published' || (listing.status === 'in_moderation' && listing.publishedVersion !== null && listing.effectiveStatus !== 'expired');
+  const isLive =
+    listing.effectiveStatus === 'published' ||
+    (listing.status === 'in_moderation' &&
+      listing.publishedVersion !== null &&
+      listing.effectiveStatus !== 'expired');
 
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow={<Link href="/portal/listings" className="underline">Listings</Link>}
+        eyebrow={
+          <Link href="/portal/listings" className="underline">
+            Listings
+          </Link>
+        }
         title={listing.title}
         description={`${humanize(listing.kind)} · ${listing.propertyName ?? 'property'} · revision ${listing.currentVersion}${listing.publishedVersion !== null ? ` (published: ${listing.publishedVersion})` : ''}`}
         actions={
@@ -78,13 +87,18 @@ export default async function ListingDetailPage({
         }
       />
       {listing.moderationNote ? (
-        <Alert tone={listing.status === 'rejected' || listing.duplicateOfListingId ? 'danger' : 'info'} title="Note from moderation">
+        <Alert
+          tone={listing.status === 'rejected' || listing.duplicateOfListingId ? 'danger' : 'info'}
+          title="Note from moderation"
+        >
           {listing.moderationNote}
         </Alert>
       ) : null}
       {listing.duplicateOfListingId ? (
         <Alert tone="warning" title="Marked as a duplicate">
-          Staff recorded this listing as a duplicate{listing.duplicateOfSlug ? ` of ${listing.duplicateOfSlug}` : ''}. It is not shown publicly and cannot be resubmitted.
+          Staff recorded this listing as a duplicate
+          {listing.duplicateOfSlug ? ` of ${listing.duplicateOfSlug}` : ''}. It is not shown
+          publicly and cannot be resubmitted.
         </Alert>
       ) : null}
       <ListingOwnerActions listing={listing} canManage={canManage} media={media} />
@@ -94,7 +108,14 @@ export default async function ListingDetailPage({
         label="Listing sections"
         tabs={[
           { value: 'overview', label: 'Overview' },
-          { value: 'offers', label: 'Offers', badge: listing.offers.open > 0 ? <Badge tone="warning">{listing.offers.open} open</Badge> : undefined },
+          {
+            value: 'offers',
+            label: 'Offers',
+            badge:
+              listing.offers.open > 0 ? (
+                <Badge tone="warning">{listing.offers.open} open</Badge>
+              ) : undefined,
+          },
           { value: 'transaction', label: 'Transaction' },
         ]}
       />
@@ -104,7 +125,10 @@ export default async function ListingDetailPage({
             <CardHeader>
               <CardTitle>Current revision {rev.version}</CardTitle>
               <CardDescription>
-                Saved {formatDateTimeLabel(rev.createdAt, zone)}. {listing.published && listing.published.version !== rev.version ? `The public page shows revision ${listing.published.version}.` : ''}
+                Saved {formatDateTimeLabel(rev.createdAt, zone)}.{' '}
+                {listing.published && listing.published.version !== rev.version
+                  ? `The public page shows revision ${listing.published.version}.`
+                  : ''}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3 text-sm">
@@ -131,16 +155,22 @@ export default async function ListingDetailPage({
                 </div>
                 <div>
                   <dt className="text-fg-muted">Shown until</dt>
-                  <dd className="font-medium">{listing.expiresAt ? formatDateLabel(listing.expiresAt, zone) : 'Not published'}</dd>
+                  <dd className="font-medium">
+                    {listing.expiresAt ? formatDateLabel(listing.expiresAt, zone) : 'Not published'}
+                  </dd>
                 </div>
               </dl>
               <div>
                 <p className="text-fg-muted">Title disclosure</p>
-                <p className="whitespace-pre-wrap rounded-md bg-bg-sunken p-3">{rev.titleDisclosure ?? 'Not stated.'}</p>
+                <p className="whitespace-pre-wrap rounded-md bg-bg-sunken p-3">
+                  {rev.titleDisclosure ?? 'Not stated.'}
+                </p>
               </div>
               <div>
                 <p className="text-fg-muted">Description</p>
-                <p className="whitespace-pre-wrap rounded-md bg-bg-sunken p-3">{rev.descriptionMarkdown ?? 'No description.'}</p>
+                <p className="whitespace-pre-wrap rounded-md bg-bg-sunken p-3">
+                  {rev.descriptionMarkdown ?? 'No description.'}
+                </p>
               </div>
               <div>
                 <p className="text-fg-muted">Photos ({listing.media.length})</p>
@@ -150,7 +180,8 @@ export default async function ListingDetailPage({
                   <ul className="mt-1 list-disc pl-5">
                     {listing.media.map((m) => (
                       <li key={m.id}>
-                        {m.originalName} · {m.isPublicApproved ? 'shown publicly' : 'awaiting public-use approval'}
+                        {m.originalName} ·{' '}
+                        {m.isPublicApproved ? 'shown publicly' : 'awaiting public-use approval'}
                       </li>
                     ))}
                   </ul>
@@ -162,7 +193,10 @@ export default async function ListingDetailPage({
             <Card>
               <CardHeader>
                 <CardTitle>Verification scope</CardTitle>
-                <CardDescription>Recorded by SimplexD staff; it is copied to every new revision and shown publicly with dates and expiry.</CardDescription>
+                <CardDescription>
+                  Recorded by SimplexD staff; it is copied to every new revision and shown publicly
+                  with dates and expiry.
+                </CardDescription>
               </CardHeader>
               <CardContent className="text-sm">
                 {rev.verification.checks.length === 0 ? (
@@ -171,7 +205,9 @@ export default async function ListingDetailPage({
                   <ul className="space-y-2">
                     {rev.verification.checks.map((c, i) => (
                       <li key={`${c.item}-${i}`}>
-                        <span className="font-medium">{c.label}</span> · {c.outcome ? humanize(c.outcome) : 'recorded'} · {formatDateLabel(c.checkedAt, zone)}
+                        <span className="font-medium">{c.label}</span> ·{' '}
+                        {c.outcome ? humanize(c.outcome) : 'recorded'} ·{' '}
+                        {formatDateLabel(c.checkedAt, zone)}
                         {c.expiresAt ? ` · until ${formatDateLabel(c.expiresAt, zone)}` : ''}
                       </li>
                     ))}
@@ -186,13 +222,19 @@ export default async function ListingDetailPage({
               <CardContent className="text-sm">
                 {listing.ownerAuthority ? (
                   <p>
-                    {listing.ownerAuthority.ownerName} · <StatusBadge status={listing.ownerAuthority.effectiveStatus} />
-                    {listing.ownerAuthority.expiresAt ? ` · valid until ${formatDateLabel(listing.ownerAuthority.expiresAt, zone)}` : ''}
+                    {listing.ownerAuthority.ownerName} ·{' '}
+                    <StatusBadge status={listing.ownerAuthority.effectiveStatus} />
+                    {listing.ownerAuthority.expiresAt
+                      ? ` · valid until ${formatDateLabel(listing.ownerAuthority.expiresAt, zone)}`
+                      : ''}
                   </p>
                 ) : (
                   <p className="text-fg-muted">None submitted for this property.</p>
                 )}
-                <Link href={`/portal/properties/${listing.propertyId}`} className="mt-2 inline-block text-primary underline">
+                <Link
+                  href={`/portal/properties/${listing.propertyId}`}
+                  className="mt-2 inline-block text-primary underline"
+                >
                   Manage on the property page
                 </Link>
               </CardContent>
@@ -200,15 +242,21 @@ export default async function ListingDetailPage({
             <Card>
               <CardHeader>
                 <CardTitle>Interest</CardTitle>
-                <CardDescription>Inquiries are qualified by SimplexD staff; contact details are not shared here.</CardDescription>
+                <CardDescription>
+                  Inquiries are qualified by SimplexD staff; contact details are not shared here.
+                </CardDescription>
               </CardHeader>
               <CardContent className="text-sm">
                 <p>
                   {listing.inquiries.total} inquir{listing.inquiries.total === 1 ? 'y' : 'ies'}
-                  {listing.inquiries.lastAt ? `, last ${formatDateTimeLabel(listing.inquiries.lastAt, zone)}` : ''}.
+                  {listing.inquiries.lastAt
+                    ? `, last ${formatDateTimeLabel(listing.inquiries.lastAt, zone)}`
+                    : ''}
+                  .
                 </p>
                 <p>
-                  {listing.offers.total} offer{listing.offers.total === 1 ? '' : 's'} ({listing.offers.open} open).
+                  {listing.offers.total} offer{listing.offers.total === 1 ? '' : 's'} (
+                  {listing.offers.open} open).
                 </p>
               </CardContent>
             </Card>
@@ -221,7 +269,9 @@ export default async function ListingDetailPage({
                   {listing.revisions.map((r) => (
                     <li key={r.version}>
                       v{r.version} · {r.title} · {formatDateTimeLabel(r.createdAt, zone)}
-                      {r.version === listing.publishedVersion ? <Badge tone="success">published</Badge> : null}
+                      {r.version === listing.publishedVersion ? (
+                        <Badge tone="success">published</Badge>
+                      ) : null}
                     </li>
                   ))}
                 </ol>
@@ -242,7 +292,12 @@ async function OffersTab({ id, zone }: { id: string; zone: string }) {
   const identity = await requireSignedIn(`/portal/listings/${id}`);
   const offers = await listOffersForListing(identity, id);
   if (offers.length === 0) {
-    return <EmptyState title="No offers yet" description="Offers from other organisations appear here with their negotiation log. You can counter, accept or decline each one." />;
+    return (
+      <EmptyState
+        title="No offers yet"
+        description="Offers from other organisations appear here with their negotiation log. You can counter, accept or decline each one."
+      />
+    );
   }
   return (
     <ul className="space-y-2">
@@ -265,9 +320,21 @@ async function TransactionTab({
   const identity = await requireSignedIn(`/portal/listings/${listing.id}`);
   const [transaction, files] = await Promise.all([
     getListingTransaction(identity, listing.id),
-    listFilesForEntity(identity, { entityType: 'property', entityId: listing.propertyId, limit: 100 })
+    listFilesForEntity(identity, {
+      entityType: 'property',
+      entityId: listing.propertyId,
+      limit: 100,
+    })
       .then((p) => p.items)
       .catch(() => []),
   ]);
-  return <ListingTransactionPanel listing={listing} transaction={transaction} files={files} canManage={canManage} zone={zone} />;
+  return (
+    <ListingTransactionPanel
+      listing={listing}
+      transaction={transaction}
+      files={files}
+      canManage={canManage}
+      zone={zone}
+    />
+  );
 }

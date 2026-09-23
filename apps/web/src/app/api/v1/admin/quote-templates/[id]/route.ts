@@ -1,10 +1,7 @@
 import { quoteTemplatePatchSchema } from '@simplexd/contracts';
 import { json, params, parseJson, route } from '@/lib/api/respond';
 import { idParams, requireAdminContext } from '@/server/admin/http';
-import {
-  getQuoteTemplate,
-  patchQuoteTemplate,
-} from '@/server/admin/configuration/quote-templates';
+import { getQuoteTemplate, patchQuoteTemplate } from '@/server/admin/configuration/quote-templates';
 
 export const dynamic = 'force-dynamic';
 

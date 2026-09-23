@@ -679,10 +679,7 @@ export async function retirePriceAnchor(
       .update(schema.servicePackages)
       .set({ publicationState: 'retired', updatedBy: userId, version: pkg.version + 1 })
       .where(
-        and(
-          eq(schema.servicePackages.id, pkg.id),
-          eq(schema.servicePackages.version, pkg.version),
-        ),
+        and(eq(schema.servicePackages.id, pkg.id), eq(schema.servicePackages.version, pkg.version)),
       )
       .returning();
     if (!updated) throw versionConflict(pkg.version);

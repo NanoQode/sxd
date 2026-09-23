@@ -34,7 +34,14 @@ import { ErrorState } from './error-state';
 
 type Err = { message: string; correlationId: string | null } | null;
 
-const MILESTONE_STATUSES: LeaseMilestoneStatus[] = ['open', 'in_progress', 'satisfied', 'waived', 'failed', 'cancelled'];
+const MILESTONE_STATUSES: LeaseMilestoneStatus[] = [
+  'open',
+  'in_progress',
+  'satisfied',
+  'waived',
+  'failed',
+  'cancelled',
+];
 
 /**
  * Land transaction tracking for one listing: the linked service request,
@@ -63,9 +70,25 @@ export function ListingTransactionPanel({
   const [outcomeOpen, setOutcomeOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<Err>(null);
-  const [form, setForm] = useState({ serviceRequestId: '', title: '', detail: '', reference: '', dueAt: '' });
-  const [edit, setEdit] = useState<{ status: LeaseMilestoneStatus; note: string; fileIds: string[] }>({ status: 'open', note: '', fileIds: [] });
-  const [outcome, setOutcome] = useState<{ outcome: ListingOutcomeKind; serviceRequestId: string; note: string; fileIds: string[]; offerId: string }>({
+  const [form, setForm] = useState({
+    serviceRequestId: '',
+    title: '',
+    detail: '',
+    reference: '',
+    dueAt: '',
+  });
+  const [edit, setEdit] = useState<{
+    status: LeaseMilestoneStatus;
+    note: string;
+    fileIds: string[];
+  }>({ status: 'open', note: '', fileIds: [] });
+  const [outcome, setOutcome] = useState<{
+    outcome: ListingOutcomeKind;
+    serviceRequestId: string;
+    note: string;
+    fileIds: string[];
+    offerId: string;
+  }>({
     outcome: listing.kind === 'lease' ? 'leased' : 'sold',
     serviceRequestId: '',
     note: '',
@@ -75,10 +98,18 @@ export function ListingTransactionPanel({
 
   const linked = transaction.serviceRequest;
   const needsRequest = !linked;
-  const usable = files.filter((f) => f.status === 'clean' || f.status === 'uploaded' || f.status === 'scanning');
+  const usable = files.filter(
+    (f) => f.status === 'clean' || f.status === 'uploaded' || f.status === 'scanning',
+  );
   const milestoneWord = listing.kind === 'sale' ? 'closing task' : 'lease milestone';
 
-  async function call(path: string, body: unknown, method: 'POST' | 'PATCH', success: string, done: () => void) {
+  async function call(
+    path: string,
+    body: unknown,
+    method: 'POST' | 'PATCH',
+    success: string,
+    done: () => void,
+  ) {
     setBusy(true);
     setError(null);
     try {
@@ -101,7 +132,10 @@ export function ListingTransactionPanel({
       return;
     }
     if (needsRequest && !form.serviceRequestId) {
-      setError({ message: 'Choose the land sales/leasing request this transaction runs under.', correlationId: null });
+      setError({
+        message: 'Choose the land sales/leasing request this transaction runs under.',
+        correlationId: null,
+      });
       return;
     }
     void call(
@@ -149,7 +183,9 @@ export function ListingTransactionPanel({
       {
         expectedVersion: listing.version,
         outcome: outcome.outcome,
-        ...(needsRequest && outcome.serviceRequestId ? { serviceRequestId: outcome.serviceRequestId } : {}),
+        ...(needsRequest && outcome.serviceRequestId
+          ? { serviceRequestId: outcome.serviceRequestId }
+          : {}),
         offerId: outcome.offerId || null,
         fileIds: outcome.fileIds,
         note: outcome.note.trim(),
@@ -160,7 +196,8 @@ export function ListingTransactionPanel({
     );
   }
 
-  const toggle = (list: string[], id: string) => (list.includes(id) ? list.filter((x) => x !== id) : [...list, id]);
+  const toggle = (list: string[], id: string) =>
+    list.includes(id) ? list.filter((x) => x !== id) : [...list, id];
 
   const requestSelect = (value: string, onChange: (v: string) => void, idPrefix: string) => (
     <Field
@@ -170,7 +207,12 @@ export function ListingTransactionPanel({
       required
     >
       {({ id, describedBy }) => (
-        <NativeSelect id={id} aria-describedby={describedBy} value={value} onChange={(e) => onChange(e.target.value)}>
+        <NativeSelect
+          id={id}
+          aria-describedby={describedBy}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+        >
           <option value="">Choose a request</option>
           {transaction.eligibleRequests.map((r) => (
             <option key={r.id} value={r.id}>
@@ -187,15 +229,23 @@ export function ListingTransactionPanel({
       <legend className="text-sm font-medium">Evidence files</legend>
       {usable.length === 0 ? (
         <p className="text-sm text-fg-muted">
-          No usable files on the property yet. Upload the agreement or receipt from the property&apos;s Documents tab first.
+          No usable files on the property yet. Upload the agreement or receipt from the
+          property&apos;s Documents tab first.
         </p>
       ) : (
         <ul className="max-h-48 space-y-1 overflow-y-auto">
           {usable.map((f) => (
             <li key={f.id} className="flex items-start gap-2 text-sm">
-              <input id={`${idPrefix}-${f.id}`} type="checkbox" className="mt-1 h-4 w-4" checked={selected.includes(f.id)} onChange={() => onToggle(f.id)} />
+              <input
+                id={`${idPrefix}-${f.id}`}
+                type="checkbox"
+                className="mt-1 h-4 w-4"
+                checked={selected.includes(f.id)}
+                onChange={() => onToggle(f.id)}
+              />
               <label htmlFor={`${idPrefix}-${f.id}`} className="break-all">
-                {f.originalName} <span className="text-xs text-fg-muted">({humanize(f.status)})</span>
+                {f.originalName}{' '}
+                <span className="text-xs text-fg-muted">({humanize(f.status)})</span>
               </label>
             </li>
           ))}
@@ -206,7 +256,9 @@ export function ListingTransactionPanel({
 
   return (
     <div className="space-y-6">
-      {error ? <ErrorState title="Not saved" message={error.message} correlationId={error.correlationId} /> : null}
+      {error ? (
+        <ErrorState title="Not saved" message={error.message} correlationId={error.correlationId} />
+      ) : null}
       <section className="rounded-lg border border-border bg-bg-elevated p-4">
         <h3 className="text-base font-semibold">Transaction request</h3>
         {linked ? (
@@ -219,13 +271,20 @@ export function ListingTransactionPanel({
           </p>
         ) : transaction.eligibleRequests.length > 0 ? (
           <p className="mt-1 text-sm text-fg-muted">
-            Not linked yet. The first milestone or the outcome names one of your open land sales/leasing requests.
+            Not linked yet. The first milestone or the outcome names one of your open land
+            sales/leasing requests.
           </p>
         ) : (
           <div className="mt-1 text-sm text-fg-muted">
-            <p>No open land sales/leasing request exists for your organisation, so milestones and the outcome cannot be recorded yet.</p>
+            <p>
+              No open land sales/leasing request exists for your organisation, so milestones and the
+              outcome cannot be recorded yet.
+            </p>
             {canManage ? (
-              <Link href="/portal/requests/new?service=land-sales-leasing" className="mt-2 inline-block text-primary underline">
+              <Link
+                href="/portal/requests/new?service=land-sales-leasing"
+                className="mt-2 inline-block text-primary underline"
+              >
                 Request the land sales/leasing service
               </Link>
             ) : null}
@@ -234,22 +293,33 @@ export function ListingTransactionPanel({
         {transaction.acceptedOffer ? (
           <p className="mt-2 text-sm">
             Accepted offer: {formatNairaString(transaction.acceptedOffer.amountKobo)}
-            {transaction.acceptedOffer.decidedAt ? ` on ${formatDateLabel(transaction.acceptedOffer.decidedAt, zone)}` : ''}.
+            {transaction.acceptedOffer.decidedAt
+              ? ` on ${formatDateLabel(transaction.acceptedOffer.decidedAt, zone)}`
+              : ''}
+            .
           </p>
         ) : null}
       </section>
 
       <section>
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <h3 className="text-base font-semibold">{listing.kind === 'sale' ? 'Closing tasks' : 'Lease milestones'}</h3>
-          {canManage && listing.status !== 'archived' && (linked || transaction.eligibleRequests.length > 0) ? (
+          <h3 className="text-base font-semibold">
+            {listing.kind === 'sale' ? 'Closing tasks' : 'Lease milestones'}
+          </h3>
+          {canManage &&
+          listing.status !== 'archived' &&
+          (linked || transaction.eligibleRequests.length > 0) ? (
             <Button type="button" size="sm" variant="secondary" onClick={() => setAdding(true)}>
               Add {milestoneWord}
             </Button>
           ) : null}
         </div>
         {transaction.milestones.length === 0 ? (
-          <EmptyState title={`No ${milestoneWord}s yet`} description="Deposit, execution of the agreement, consent, handover: each step is recorded with a due date, a status and evidence." className="mt-3" />
+          <EmptyState
+            title={`No ${milestoneWord}s yet`}
+            description="Deposit, execution of the agreement, consent, handover: each step is recorded with a due date, a status and evidence."
+            className="mt-3"
+          />
         ) : (
           <ul className="mt-3 space-y-2">
             {transaction.milestones.map((m) => (
@@ -265,7 +335,11 @@ export function ListingTransactionPanel({
                         variant="ghost"
                         onClick={() => {
                           setEditing(m);
-                          setEdit({ status: m.status, note: m.resolutionNote ?? '', fileIds: m.fileIds });
+                          setEdit({
+                            status: m.status,
+                            note: m.resolutionNote ?? '',
+                            fileIds: m.fileIds,
+                          });
                         }}
                       >
                         Update
@@ -277,7 +351,9 @@ export function ListingTransactionPanel({
                   {m.dueAt ? `Due ${formatDateLabel(m.dueAt, zone)}` : 'No due date'}
                   {m.reference ? ` · ref ${m.reference}` : ''}
                   {m.resolvedAt ? ` · resolved ${formatDateTimeLabel(m.resolvedAt, zone)}` : ''}
-                  {m.fileIds.length > 0 ? ` · ${m.fileIds.length} file${m.fileIds.length === 1 ? '' : 's'}` : ''}
+                  {m.fileIds.length > 0
+                    ? ` · ${m.fileIds.length} file${m.fileIds.length === 1 ? '' : 's'}`
+                    : ''}
                 </p>
                 {m.detail ? <p className="mt-1 whitespace-pre-wrap">{m.detail}</p> : null}
                 {m.resolutionNote ? <p className="mt-1 text-fg-muted">{m.resolutionNote}</p> : null}
@@ -292,16 +368,21 @@ export function ListingTransactionPanel({
         {transaction.outcome ? (
           <div className="mt-1 text-sm">
             <p>
-              <StatusBadge status="completed" label={humanize(transaction.outcome.outcome)} /> recorded{' '}
-              {formatDateTimeLabel(transaction.outcome.recordedAt, zone)} with {transaction.outcome.fileIds.length} evidence file
+              <StatusBadge status="completed" label={humanize(transaction.outcome.outcome)} />{' '}
+              recorded {formatDateTimeLabel(transaction.outcome.recordedAt, zone)} with{' '}
+              {transaction.outcome.fileIds.length} evidence file
               {transaction.outcome.fileIds.length === 1 ? '' : 's'}.
             </p>
-            {transaction.outcome.note ? <p className="mt-1 whitespace-pre-wrap text-fg-muted">{transaction.outcome.note}</p> : null}
+            {transaction.outcome.note ? (
+              <p className="mt-1 whitespace-pre-wrap text-fg-muted">{transaction.outcome.note}</p>
+            ) : null}
           </div>
         ) : (
           <>
             <p className="mt-1 text-sm text-fg-muted">
-              Completion evidence for the land sales/leasing service is the authorised listing plus this documented outcome: sold or leased with the executed agreement, or withdrawn with a reason.
+              Completion evidence for the land sales/leasing service is the authorised listing plus
+              this documented outcome: sold or leased with the executed agreement, or withdrawn with
+              a reason.
             </p>
             {canManage && listing.status !== 'archived' ? (
               <Button type="button" size="sm" className="mt-3" onClick={() => setOutcomeOpen(true)}>
@@ -315,23 +396,68 @@ export function ListingTransactionPanel({
       <Dialog open={adding} onOpenChange={(v) => !busy && setAdding(v)}>
         <DialogContent title={`Add ${milestoneWord}`} size="lg">
           <form onSubmit={addMilestone} className="space-y-4" noValidate>
-            {needsRequest ? requestSelect(form.serviceRequestId, (v) => setForm((p) => ({ ...p, serviceRequestId: v })), 'ms') : null}
+            {needsRequest
+              ? requestSelect(
+                  form.serviceRequestId,
+                  (v) => setForm((p) => ({ ...p, serviceRequestId: v })),
+                  'ms',
+                )
+              : null}
             <Field label="Title" htmlFor="ms-title" required>
-              {({ id, describedBy }) => <Input id={id} aria-describedby={describedBy} value={form.title} onChange={(e) => setForm((p) => ({ ...p, title: e.target.value }))} />}
+              {({ id, describedBy }) => (
+                <Input
+                  id={id}
+                  aria-describedby={describedBy}
+                  value={form.title}
+                  onChange={(e) => setForm((p) => ({ ...p, title: e.target.value }))}
+                />
+              )}
             </Field>
             <Field label="Detail (optional)" htmlFor="ms-detail">
-              {({ id, describedBy }) => <Textarea id={id} rows={3} aria-describedby={describedBy} value={form.detail} onChange={(e) => setForm((p) => ({ ...p, detail: e.target.value }))} />}
+              {({ id, describedBy }) => (
+                <Textarea
+                  id={id}
+                  rows={3}
+                  aria-describedby={describedBy}
+                  value={form.detail}
+                  onChange={(e) => setForm((p) => ({ ...p, detail: e.target.value }))}
+                />
+              )}
             </Field>
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Reference (optional)" htmlFor="ms-ref" hint="Deed, consent or receipt number.">
-                {({ id, describedBy }) => <Input id={id} aria-describedby={describedBy} value={form.reference} onChange={(e) => setForm((p) => ({ ...p, reference: e.target.value }))} />}
+              <Field
+                label="Reference (optional)"
+                htmlFor="ms-ref"
+                hint="Deed, consent or receipt number."
+              >
+                {({ id, describedBy }) => (
+                  <Input
+                    id={id}
+                    aria-describedby={describedBy}
+                    value={form.reference}
+                    onChange={(e) => setForm((p) => ({ ...p, reference: e.target.value }))}
+                  />
+                )}
               </Field>
               <Field label="Due (optional)" htmlFor="ms-due">
-                {({ id, describedBy }) => <Input id={id} type="datetime-local" aria-describedby={describedBy} value={form.dueAt} onChange={(e) => setForm((p) => ({ ...p, dueAt: e.target.value }))} />}
+                {({ id, describedBy }) => (
+                  <Input
+                    id={id}
+                    type="datetime-local"
+                    aria-describedby={describedBy}
+                    value={form.dueAt}
+                    onChange={(e) => setForm((p) => ({ ...p, dueAt: e.target.value }))}
+                  />
+                )}
               </Field>
             </div>
             <DialogFooter>
-              <Button type="button" variant="ghost" onClick={() => setAdding(false)} disabled={busy}>
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => setAdding(false)}
+                disabled={busy}
+              >
                 Cancel
               </Button>
               <Button type="submit" loading={busy} disabled={busy}>
@@ -347,7 +473,14 @@ export function ListingTransactionPanel({
           <div className="space-y-4">
             <Field label="Status" htmlFor="me-status" required>
               {({ id, describedBy }) => (
-                <NativeSelect id={id} aria-describedby={describedBy} value={edit.status} onChange={(e) => setEdit((p) => ({ ...p, status: e.target.value as LeaseMilestoneStatus }))}>
+                <NativeSelect
+                  id={id}
+                  aria-describedby={describedBy}
+                  value={edit.status}
+                  onChange={(e) =>
+                    setEdit((p) => ({ ...p, status: e.target.value as LeaseMilestoneStatus }))
+                  }
+                >
                   {MILESTONE_STATUSES.map((s) => (
                     <option key={s} value={s}>
                       {humanize(s)}
@@ -356,12 +489,33 @@ export function ListingTransactionPanel({
                 </NativeSelect>
               )}
             </Field>
-            <Field label="Note" htmlFor="me-note" hint="Required when waiving, failing or cancelling.">
-              {({ id, describedBy }) => <Textarea id={id} rows={3} aria-describedby={describedBy} value={edit.note} onChange={(e) => setEdit((p) => ({ ...p, note: e.target.value }))} />}
+            <Field
+              label="Note"
+              htmlFor="me-note"
+              hint="Required when waiving, failing or cancelling."
+            >
+              {({ id, describedBy }) => (
+                <Textarea
+                  id={id}
+                  rows={3}
+                  aria-describedby={describedBy}
+                  value={edit.note}
+                  onChange={(e) => setEdit((p) => ({ ...p, note: e.target.value }))}
+                />
+              )}
             </Field>
-            {fileChecklist(edit.fileIds, (fid) => setEdit((p) => ({ ...p, fileIds: toggle(p.fileIds, fid) })), 'me-file')}
+            {fileChecklist(
+              edit.fileIds,
+              (fid) => setEdit((p) => ({ ...p, fileIds: toggle(p.fileIds, fid) })),
+              'me-file',
+            )}
             <DialogFooter>
-              <Button type="button" variant="ghost" onClick={() => setEditing(null)} disabled={busy}>
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => setEditing(null)}
+                disabled={busy}
+              >
                 Cancel
               </Button>
               <Button type="button" loading={busy} disabled={busy} onClick={saveMilestone}>
@@ -373,35 +527,90 @@ export function ListingTransactionPanel({
       </Dialog>
 
       <Dialog open={outcomeOpen} onOpenChange={(v) => !busy && setOutcomeOpen(v)}>
-        <DialogContent title="Record the outcome" description="Sold and leased close the listing and need evidence; withdrawn takes the listing off the market." size="lg">
+        <DialogContent
+          title="Record the outcome"
+          description="Sold and leased close the listing and need evidence; withdrawn takes the listing off the market."
+          size="lg"
+        >
           <form onSubmit={recordOutcome} className="space-y-4" noValidate>
             <Field label="Outcome" htmlFor="oc-kind" required>
               {({ id, describedBy }) => (
-                <NativeSelect id={id} aria-describedby={describedBy} value={outcome.outcome} onChange={(e) => setOutcome((p) => ({ ...p, outcome: e.target.value as ListingOutcomeKind }))}>
+                <NativeSelect
+                  id={id}
+                  aria-describedby={describedBy}
+                  value={outcome.outcome}
+                  onChange={(e) =>
+                    setOutcome((p) => ({ ...p, outcome: e.target.value as ListingOutcomeKind }))
+                  }
+                >
                   <option value="sold">Sold</option>
                   <option value="leased">Leased</option>
                   <option value="withdrawn">Withdrawn</option>
                 </NativeSelect>
               )}
             </Field>
-            {needsRequest && transaction.eligibleRequests.length > 0 ? requestSelect(outcome.serviceRequestId, (v) => setOutcome((p) => ({ ...p, serviceRequestId: v })), 'oc') : null}
-            {needsRequest && transaction.eligibleRequests.length === 0 && outcome.outcome !== 'withdrawn' ? (
+            {needsRequest && transaction.eligibleRequests.length > 0
+              ? requestSelect(
+                  outcome.serviceRequestId,
+                  (v) => setOutcome((p) => ({ ...p, serviceRequestId: v })),
+                  'oc',
+                )
+              : null}
+            {needsRequest &&
+            transaction.eligibleRequests.length === 0 &&
+            outcome.outcome !== 'withdrawn' ? (
               <Alert tone="warning" title="No land sales/leasing request">
-                A sold or leased outcome must be recorded on a land sales/leasing request. Request the service first, or record a withdrawal.
+                A sold or leased outcome must be recorded on a land sales/leasing request. Request
+                the service first, or record a withdrawal.
               </Alert>
             ) : null}
             {transaction.acceptedOffer ? (
               <label className="flex items-center gap-2 text-sm">
-                <input type="checkbox" className="h-4 w-4" checked={outcome.offerId === transaction.acceptedOffer.id} onChange={(e) => setOutcome((p) => ({ ...p, offerId: e.target.checked ? transaction.acceptedOffer!.id : '' }))} />
-                Completed on the accepted offer of {formatNairaString(transaction.acceptedOffer.amountKobo)}
+                <input
+                  type="checkbox"
+                  className="h-4 w-4"
+                  checked={outcome.offerId === transaction.acceptedOffer.id}
+                  onChange={(e) =>
+                    setOutcome((p) => ({
+                      ...p,
+                      offerId: e.target.checked ? transaction.acceptedOffer!.id : '',
+                    }))
+                  }
+                />
+                Completed on the accepted offer of{' '}
+                {formatNairaString(transaction.acceptedOffer.amountKobo)}
               </label>
             ) : null}
-            <Field label="Note" htmlFor="oc-note" hint="What was agreed, with whom (organisation, not personal details) and when." required>
-              {({ id, describedBy }) => <Textarea id={id} rows={3} aria-describedby={describedBy} value={outcome.note} onChange={(e) => setOutcome((p) => ({ ...p, note: e.target.value }))} />}
+            <Field
+              label="Note"
+              htmlFor="oc-note"
+              hint="What was agreed, with whom (organisation, not personal details) and when."
+              required
+            >
+              {({ id, describedBy }) => (
+                <Textarea
+                  id={id}
+                  rows={3}
+                  aria-describedby={describedBy}
+                  value={outcome.note}
+                  onChange={(e) => setOutcome((p) => ({ ...p, note: e.target.value }))}
+                />
+              )}
             </Field>
-            {outcome.outcome !== 'withdrawn' ? fileChecklist(outcome.fileIds, (fid) => setOutcome((p) => ({ ...p, fileIds: toggle(p.fileIds, fid) })), 'oc-file') : null}
+            {outcome.outcome !== 'withdrawn'
+              ? fileChecklist(
+                  outcome.fileIds,
+                  (fid) => setOutcome((p) => ({ ...p, fileIds: toggle(p.fileIds, fid) })),
+                  'oc-file',
+                )
+              : null}
             <DialogFooter>
-              <Button type="button" variant="ghost" onClick={() => setOutcomeOpen(false)} disabled={busy}>
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => setOutcomeOpen(false)}
+                disabled={busy}
+              >
                 Cancel
               </Button>
               <Button type="submit" loading={busy} disabled={busy}>

@@ -109,7 +109,8 @@ const specs: RouteSpec[] = [
     method: 'post',
     path: '/api/v1/admin/price-anchors/{id}/retire',
     summary: 'Retire a package from the public site',
-    description: 'History is kept; a later proposal can publish it again. Verified authenticator and reason required.',
+    description:
+      'History is kept; a later proposal can publish it again. Verified authenticator and reason required.',
     tags: pricingTags,
     operationId: 'adminRetirePriceAnchor',
     auth: 'staff',
@@ -197,7 +198,8 @@ const specs: RouteSpec[] = [
     method: 'patch',
     path: '/api/v1/admin/report-templates/{id}',
     summary: 'Edit or activate a report template',
-    description: 'Activating deactivates the kind’s other template. `expectedVersion` and a reason are required.',
+    description:
+      'Activating deactivates the kind’s other template. `expectedVersion` and a reason are required.',
     tags: templateTags,
     operationId: 'adminPatchReportTemplate',
     auth: 'staff',
@@ -241,7 +243,8 @@ const specs: RouteSpec[] = [
     method: 'get',
     path: '/api/v1/admin/sla-policies',
     summary: 'List SLA policies',
-    description: 'Target hours per engagement stage, per service or global. Staff `sla.manage` or `service_requests.read_all`.',
+    description:
+      'Target hours per engagement stage, per service or global. Staff `sla.manage` or `service_requests.read_all`.',
     tags: templateTags,
     operationId: 'adminListSlaPolicies',
     auth: 'staff',
@@ -251,7 +254,8 @@ const specs: RouteSpec[] = [
     method: 'post',
     path: '/api/v1/admin/sla-policies',
     summary: 'Add an SLA policy',
-    description: 'One active policy per service (or global) and stage; the service-specific policy wins at triage. Staff `sla.manage`.',
+    description:
+      'One active policy per service (or global) and stage; the service-specific policy wins at triage. Staff `sla.manage`.',
     tags: templateTags,
     operationId: 'adminCreateSlaPolicy',
     auth: 'staff',

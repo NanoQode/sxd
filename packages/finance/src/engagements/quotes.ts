@@ -160,7 +160,11 @@ function feeBasisFor(input: QuoteVersionCreate | QuoteCreate): StoredFeeBasis {
 function linesFromFeeBasis(input: QuoteCreate | QuoteVersionCreate): LineInput[] | null {
   const fb = input.feeBasis;
   if (!fb?.percentageBps) return null;
-  if (!fb.basisAmountKobo || !/^\d+$/.test(fb.basisAmountKobo) || BigInt(fb.basisAmountKobo) <= 0n) {
+  if (
+    !fb.basisAmountKobo ||
+    !/^\d+$/.test(fb.basisAmountKobo) ||
+    BigInt(fb.basisAmountKobo) <= 0n
+  ) {
     throw new ApiError(
       'validation_failed',
       'a percentage fee needs the agreed basis amount it applies to (the agreed purchase price or an explicit cap)',

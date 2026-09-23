@@ -25,6 +25,24 @@ import { LeadActions } from './lead-actions';
 export const metadata: Metadata = { title: 'Lead' };
 export const dynamic = 'force-dynamic';
 
+/** Listing reference carried by inquiries raised from a public listing page. */
+function listingRef(
+  context: unknown,
+): { listingId: string; listingTitle: string | null; interest: string | null } | null {
+  const c = context as {
+    kind?: unknown;
+    listingId?: unknown;
+    listingTitle?: unknown;
+    interest?: unknown;
+  } | null;
+  if (!c || c.kind !== 'listing_inquiry' || typeof c.listingId !== 'string') return null;
+  return {
+    listingId: c.listingId,
+    listingTitle: typeof c.listingTitle === 'string' ? c.listingTitle : null,
+    interest: typeof c.interest === 'string' ? c.interest : null,
+  };
+}
+
 export default async function LeadDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   if (!uuidSchema.safeParse(id).success) notFound();

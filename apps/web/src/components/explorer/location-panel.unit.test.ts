@@ -8,7 +8,7 @@ const renderToString = (element: ReactElement): string =>
   renderRaw(element).replace(/<!-- -->/g, '');
 import { COPY, emptyCalculatorResult } from '@/lib/explorer';
 import { marketDetail, observation, ranked, recommendation } from '@/lib/explorer/test-fixtures';
-import { LocationPanelContent } from './location-panel';
+import { LocationPanelContent, TenderOpportunities } from './location-panel';
 
 const noop = () => undefined;
 
@@ -66,7 +66,8 @@ describe('LocationPanelContent', () => {
     expect(html).toContain('₦14,000,000');
     expect(html).toContain('34,389');
     expect(html).toContain(COPY.unableToAssess);
-    expect(html).toContain(COPY.noTenders);
+    // The fixture models a deployment without the tendering module: say so, never invent tenders.
+    expect(html).toContain(COPY.tendersModuleOff);
     expect(html).toContain('Local build rate');
     expect(html).toContain('Local rent evidence');
     expect(html).toContain('Not yet reviewed');
@@ -97,5 +98,58 @@ describe('LocationPanelContent', () => {
     expect(html).toContain('Schedule not computed: Missing required inputs: land.');
     expect(html).toContain('Not computed: Missing required inputs: land.');
     expect(html).toContain('/book?market=kano"');
+  });
+});
+
+describe('TenderOpportunities', () => {
+  it('tells anonymous visitors tenders are invitation-based and never lists any', () => {
+    const html = renderToString(
+      createElement(TenderOpportunities, {
+        tenders: { moduleEnabled: true, scope: 'none', items: [] },
+      }),
+    );
+    expect(html).toContain(COPY.noTenders);
+    expect(html).not.toContain('/partner/tenders');
+  });
+
+  it('shows a signed-in partner their empty state with the workspace link', () => {
+    const html = renderToString(
+      createElement(TenderOpportunities, {
+        tenders: { moduleEnabled: true, scope: 'partner', items: [] },
+      }),
+    );
+    expect(html).toContain(COPY.noTendersForYou);
+    expect(html).toContain('href="/partner/tenders"');
+  });
+
+  it('lists real open tenders with reference, closing time in the tender time zone and link', () => {
+    const html = renderToString(
+      createElement(TenderOpportunities, {
+        tenders: {
+          moduleEnabled: true,
+          scope: 'staff',
+          items: [
+            {
+              id: '44444444-4444-4444-8444-444444444444',
+              reference: 'TND-2026-0004',
+              title: 'Lekki duplex works',
+              status: 'clarifications',
+              releaseAt: '2026-09-20T08:00:00.000Z',
+              submissionDeadlineAt: '2026-10-01T11:00:00.000Z',
+              displayTimeZone: 'Africa/Lagos',
+              linkedThrough: 'property',
+              href: '/admin/tenders/44444444-4444-4444-8444-444444444444',
+            },
+          ],
+        },
+      }),
+    );
+    expect(html).toContain('TND-2026-0004');
+    expect(html).toContain('Lekki duplex works');
+    expect(html).toContain('closes 1 Oct 2026, 12:00');
+    expect(html).toContain('released 20 Sep 2026');
+    expect(html).toContain('linked through the project site');
+    expect(html).toContain('href="/admin/tenders/44444444-4444-4444-8444-444444444444"');
+    expect(html).toContain('never a score');
   });
 });

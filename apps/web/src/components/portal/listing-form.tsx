@@ -14,7 +14,16 @@ import {
   type ListingPriceBasis,
   type ListingTenure,
 } from '@simplexd/contracts';
-import { Alert, Button, Field, Input, NativeSelect, Textarea, humanize, useToast } from '@simplexd/ui';
+import {
+  Alert,
+  Button,
+  Field,
+  Input,
+  NativeSelect,
+  Textarea,
+  humanize,
+  useToast,
+} from '@simplexd/ui';
 import { describeError, portalFetch } from '@/lib/portal/client';
 import { ErrorState } from './error-state';
 
@@ -31,8 +40,16 @@ export interface ListableProperty {
 const KINDS: ListingKind[] = ['sale', 'lease', 'short_stay'];
 const PRECISIONS: Array<{ value: ListingLocationPrecision; label: string; hint: string }> = [
   { value: 'state', label: 'State only', hint: 'Only the state is shown publicly.' },
-  { value: 'market', label: 'Market (default)', hint: 'Market and state are shown; nothing more precise.' },
-  { value: 'neighborhood', label: 'Neighbourhood', hint: 'Needs a neighbourhood on the property record.' },
+  {
+    value: 'market',
+    label: 'Market (default)',
+    hint: 'Market and state are shown; nothing more precise.',
+  },
+  {
+    value: 'neighborhood',
+    label: 'Neighbourhood',
+    hint: 'Needs a neighbourhood on the property record.',
+  },
   {
     value: 'exact',
     label: 'Exact coordinates',
@@ -65,7 +82,10 @@ function koboToNairaInput(kobo: string | null): string {
 
 /** "12,500,000" or "12500000.50" to a kobo string; null when not a valid amount. */
 export function nairaInputToKobo(raw: string): string | null {
-  const cleaned = raw.trim().replace(/^₦/, '').replace(/[,\s_]/g, '');
+  const cleaned = raw
+    .trim()
+    .replace(/^₦/, '')
+    .replace(/[,\s_]/g, '');
   const m = /^(\d{1,13})(?:\.(\d{1,2}))?$/.exec(cleaned);
   if (!m) return null;
   const whole = BigInt(m[1]!);
@@ -121,7 +141,9 @@ export function ListingForm({
   const { toast } = useToast();
   const [form, setForm] = useState<FormState>(() => initial(listing, defaultPropertyId ?? null));
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<{ message: string; correlationId: string | null } | null>(null);
+  const [error, setError] = useState<{ message: string; correlationId: string | null } | null>(
+    null,
+  );
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) =>
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -131,7 +153,8 @@ export function ListingForm({
   function validate(): Record<string, string> {
     const errors: Record<string, string> = {};
     if (!listing && !form.propertyId) errors.propertyId = 'Choose the property to list.';
-    if (form.title.trim().length < 8) errors.title = 'Give the listing a title of at least 8 characters.';
+    if (form.title.trim().length < 8)
+      errors.title = 'Give the listing a title of at least 8 characters.';
     if (form.priceNaira.trim() && nairaInputToKobo(form.priceNaira) === null)
       errors.priceNaira = 'Enter a whole or two-decimal naira amount, e.g. 12,500,000.';
     if (form.priceNaira.trim() && !form.priceBasis)
@@ -209,10 +232,17 @@ export function ListingForm({
 
   return (
     <form onSubmit={(e) => void submit(e)} noValidate className="space-y-5">
-      {error ? <ErrorState title="Could not save" message={error.message} correlationId={error.correlationId} /> : null}
+      {error ? (
+        <ErrorState
+          title="Could not save"
+          message={error.message}
+          correlationId={error.correlationId}
+        />
+      ) : null}
       {listing ? (
         <Alert tone="info" title={`Saving creates revision ${listing.currentVersion + 1}`}>
-          Earlier revisions are kept. {listing.publishedVersion !== null
+          Earlier revisions are kept.{' '}
+          {listing.publishedVersion !== null
             ? 'The public page keeps showing the approved revision until the new one is submitted and approved.'
             : 'Submit the listing for moderation when you are ready.'}
         </Alert>
@@ -263,7 +293,13 @@ export function ListingForm({
             the authority document from the property page.
           </Alert>
         ) : null}
-        <Field label="Title" htmlFor="lf-title" error={fieldErrors.title} required className="sm:col-span-2">
+        <Field
+          label="Title"
+          htmlFor="lf-title"
+          error={fieldErrors.title}
+          required
+          className="sm:col-span-2"
+        >
           {({ id, describedBy, invalid }) => (
             <Input
               id={id}
@@ -395,7 +431,12 @@ export function ListingForm({
             Available from a date
           </label>
           {form.availabilityMode === 'date' ? (
-            <Field label="Available from" htmlFor="lf-available-from" error={fieldErrors.availableFrom} required>
+            <Field
+              label="Available from"
+              htmlFor="lf-available-from"
+              error={fieldErrors.availableFrom}
+              required
+            >
               {({ id, describedBy, invalid }) => (
                 <Input
                   id={id}
@@ -446,7 +487,10 @@ export function ListingForm({
           ) : (
             <ul className="grid gap-2 sm:grid-cols-2">
               {media.map((m) => (
-                <li key={m.id} className="flex items-start gap-2 rounded-md border border-border p-2 text-sm">
+                <li
+                  key={m.id}
+                  className="flex items-start gap-2 rounded-md border border-border p-2 text-sm"
+                >
                   <input
                     id={`lf-media-${m.id}`}
                     type="checkbox"
@@ -457,7 +501,9 @@ export function ListingForm({
                   <label htmlFor={`lf-media-${m.id}`} className="min-w-0">
                     <span className="block break-all font-medium">{m.originalName}</span>
                     <span className="text-xs text-fg-muted">
-                      {m.isPublicApproved ? 'Approved for public use' : 'Not yet approved for public use'}
+                      {m.isPublicApproved
+                        ? 'Approved for public use'
+                        : 'Not yet approved for public use'}
                       {m.altText ? ` · alt: ${m.altText}` : ''}
                     </span>
                   </label>

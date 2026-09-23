@@ -15,7 +15,10 @@ export const GET = route<Ctx>(async (req, ctx) => {
   const identity = await getIdentity();
   if (!identity.session) throw new ApiError('unauthenticated', 'sign in required');
   const { id } = await params(ctx, idParams);
-  return json({ items: await listOffersForListing(identity, id) }, { correlationId: ctx.correlationId });
+  return json(
+    { items: await listOffersForListing(identity, id) },
+    { correlationId: ctx.correlationId },
+  );
 });
 
 /** POST /api/v1/listings/:id/offers — the active organisation makes an offer. */

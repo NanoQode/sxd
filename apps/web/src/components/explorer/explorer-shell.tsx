@@ -2,7 +2,7 @@
 
 import { ArrowRight, List, Map as MapIcon, SlidersHorizontal } from 'lucide-react';
 import Link from 'next/link';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Alert, Button, NativeSelect, cn } from '@simplexd/ui';
 import {
   COPY,
@@ -126,21 +126,23 @@ export function ExplorerShell() {
     resumeIntent,
     clearResumeIntent,
   } = ctx;
-  const [comparisonOpen, setComparisonOpen] = useState(false);
+  const [comparisonOpenState, setComparisonOpen] = useState(false);
   const [report, setReport] = useState<ReportBundle | null>(null);
   const [prioritiesOpen, setPrioritiesOpen] = useState(false);
-  const [saveOpen, setSaveOpen] = useState(false);
-  const [verificationOpen, setVerificationOpen] = useState(false);
+  const [saveOpenState, setSaveOpen] = useState(false);
+  const [verificationOpenState, setVerificationOpen] = useState(false);
   const exploreHref = useMemo(() => buildExploreHref(params), [params]);
 
-  // Back from sign-in: re-open the dialog for the action the visitor chose.
+  // Back from sign-in: the dialog for the action the visitor chose is open
+  // until that action completes or is cancelled (which clears the intent).
   // The state itself came back through the URL and the stored draft.
-  useEffect(() => {
-    if (!resumeIntent) return;
-    if (resumeIntent === 'verify') setVerificationOpen(true);
-    else if (resumeIntent === 'report') setComparisonOpen(true);
-    else setSaveOpen(true);
-  }, [resumeIntent]);
+  const saveOpen =
+    saveOpenState ||
+    resumeIntent === 'save' ||
+    resumeIntent === 'share' ||
+    resumeIntent === 'service';
+  const verificationOpen = verificationOpenState || resumeIntent === 'verify';
+  const comparisonOpen = comparisonOpenState || resumeIntent === 'report';
   const stateNames = useMemo(
     () => new Map(stateOptions.map((s) => [s.id, s.name])),
     [stateOptions],

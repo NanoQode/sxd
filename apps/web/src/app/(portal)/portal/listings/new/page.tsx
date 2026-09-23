@@ -10,7 +10,11 @@ import { listListableProperties, listListingMediaCandidates } from '@/server/lis
 export const metadata: Metadata = { title: 'Create listing' };
 export const dynamic = 'force-dynamic';
 
-export default async function NewListingPage({ searchParams }: { searchParams: Promise<{ propertyId?: string }> }) {
+export default async function NewListingPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ propertyId?: string }>;
+}) {
   const identity = await requireSignedIn('/portal/listings/new');
   const { propertyId } = await searchParams;
   const caps = customerCapabilities(identity);
@@ -18,11 +22,29 @@ export default async function NewListingPage({ searchParams }: { searchParams: P
   if (!organizationId || !caps.can('org.listings.manage')) {
     return (
       <div className="space-y-6">
-        <PageHeader title="Create a listing" eyebrow={<Link href="/portal/listings" className="underline">Listings</Link>} />
+        <PageHeader
+          title="Create a listing"
+          eyebrow={
+            <Link href="/portal/listings" className="underline">
+              Listings
+            </Link>
+          }
+        />
         <EmptyState
           title="You cannot create listings"
-          description={organizationId ? capabilityNote(caps, 'Creating listings') : 'Create or join an organisation first.'}
-          action={<LinkButton href={organizationId ? '/portal/listings' : '/onboarding'} variant="secondary">{organizationId ? 'Back to listings' : 'Set up an organisation'}</LinkButton>}
+          description={
+            organizationId
+              ? capabilityNote(caps, 'Creating listings')
+              : 'Create or join an organisation first.'
+          }
+          action={
+            <LinkButton
+              href={organizationId ? '/portal/listings' : '/onboarding'}
+              variant="secondary"
+            >
+              {organizationId ? 'Back to listings' : 'Set up an organisation'}
+            </LinkButton>
+          }
         />
       </div>
     );
@@ -34,7 +56,11 @@ export default async function NewListingPage({ searchParams }: { searchParams: P
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow={<Link href="/portal/listings" className="underline">Listings</Link>}
+        eyebrow={
+          <Link href="/portal/listings" className="underline">
+            Listings
+          </Link>
+        }
         title="Create a listing"
         description="A draft you can edit until you submit it. Nothing is public before staff approve a revision."
       />
@@ -45,7 +71,12 @@ export default async function NewListingPage({ searchParams }: { searchParams: P
           action={<LinkButton href="/portal/properties/new">Add a property</LinkButton>}
         />
       ) : (
-        <ListingForm listing={null} properties={properties} media={media} defaultPropertyId={propertyId ?? null} />
+        <ListingForm
+          listing={null}
+          properties={properties}
+          media={media}
+          defaultPropertyId={propertyId ?? null}
+        />
       )}
     </div>
   );

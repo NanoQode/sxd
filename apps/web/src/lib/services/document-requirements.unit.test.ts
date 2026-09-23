@@ -10,25 +10,85 @@ const svc = '11111111-1111-4111-8111-111111111111';
 const other = '22222222-2222-4222-8222-222222222222';
 
 const reqs: RequirementLike[] = [
-  { id: 'a', serviceId: svc, name: 'Title copy', description: null, stage: 'triage', required: true, sensitive: false, active: true, sortOrder: 10 },
-  { id: 'b', serviceId: null, name: 'Photos', description: null, stage: null, required: false, sensitive: false, active: true, sortOrder: 5 },
-  { id: 'c', serviceId: svc, name: 'Photo ID', description: null, stage: 'in_progress', required: false, sensitive: true, active: true, sortOrder: 20 },
-  { id: 'd', serviceId: svc, name: 'Old form', description: null, stage: null, required: true, sensitive: false, active: false, sortOrder: 1 },
-  { id: 'e', serviceId: other, name: 'Survey', description: null, stage: 'triage', required: true, sensitive: false, active: true, sortOrder: 1 },
+  {
+    id: 'a',
+    serviceId: svc,
+    name: 'Title copy',
+    description: null,
+    stage: 'triage',
+    required: true,
+    sensitive: false,
+    active: true,
+    sortOrder: 10,
+  },
+  {
+    id: 'b',
+    serviceId: null,
+    name: 'Photos',
+    description: null,
+    stage: null,
+    required: false,
+    sensitive: false,
+    active: true,
+    sortOrder: 5,
+  },
+  {
+    id: 'c',
+    serviceId: svc,
+    name: 'Photo ID',
+    description: null,
+    stage: 'in_progress',
+    required: false,
+    sensitive: true,
+    active: true,
+    sortOrder: 20,
+  },
+  {
+    id: 'd',
+    serviceId: svc,
+    name: 'Old form',
+    description: null,
+    stage: null,
+    required: true,
+    sensitive: false,
+    active: false,
+    sortOrder: 1,
+  },
+  {
+    id: 'e',
+    serviceId: other,
+    name: 'Survey',
+    description: null,
+    stage: 'triage',
+    required: true,
+    sensitive: false,
+    active: true,
+    sortOrder: 1,
+  },
 ];
 
 describe('requirementsForStage', () => {
   it('splits by stage, drops inactive and other-service items and keeps sensitive ones for customers', () => {
-    const r = requirementsForStage(reqs, { serviceId: svc, stage: 'triage', includeSensitive: true });
+    const r = requirementsForStage(reqs, {
+      serviceId: svc,
+      stage: 'triage',
+      includeSensitive: true,
+    });
     expect(r.now.map((x) => x.id)).toEqual(['b', 'a']);
     expect(r.later.map((x) => x.id)).toEqual(['c']);
   });
 
   it('excludes sensitive items when asked and returns nothing for a closed request', () => {
-    const r = requirementsForStage(reqs, { serviceId: svc, stage: 'in_progress', includeSensitive: false });
+    const r = requirementsForStage(reqs, {
+      serviceId: svc,
+      stage: 'in_progress',
+      includeSensitive: false,
+    });
     expect(r.now.map((x) => x.id)).toEqual(['b', 'a']);
     expect(r.later).toEqual([]);
-    expect(requirementsForStage(reqs, { serviceId: svc, stage: null, includeSensitive: true })).toEqual({ now: [], later: [] });
+    expect(
+      requirementsForStage(reqs, { serviceId: svc, stage: null, includeSensitive: true }),
+    ).toEqual({ now: [], later: [] });
   });
 });
 

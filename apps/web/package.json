@@ -12,6 +12,7 @@
     "lint": "eslint .",
     "test": "vitest run",
     "seed:demo": "NODE_OPTIONS=--conditions=react-server tsx --env-file-if-exists=../../.env scripts/seed-demo.ts",
+    "reconcile:inventory": "NODE_OPTIONS=--conditions=react-server tsx --env-file-if-exists=../../.env scripts/reconcile-inventory.ts",
     "openapi": "NODE_OPTIONS=--conditions=react-server tsx scripts/openapi.ts"
   },
   "dependencies": {

@@ -87,9 +87,9 @@ describe('quotesFromAward', () => {
   });
 
   it('writes nothing without a delivery market and never invents a quantity or a name', () => {
-    expect(quotesFromAward(source({ rfq: { reference: 'RFQ-1', deliveryMarketId: null } }))).toEqual(
-      [],
-    );
+    expect(
+      quotesFromAward(source({ rfq: { reference: 'RFQ-1', deliveryMarketId: null } })),
+    ).toEqual([]);
     const [row] = quotesFromAward(
       source({
         lines: [{ ...sandLine, conversion: null }],

@@ -57,9 +57,13 @@ export async function issuePublicListingMedia(
       });
     } catch (err) {
       if (err instanceof StorageError) {
-        throw new ApiError('provider_unavailable', 'the storage provider could not sign the photo', {
-          retryable: true,
-        });
+        throw new ApiError(
+          'provider_unavailable',
+          'the storage provider could not sign the photo',
+          {
+            retryable: true,
+          },
+        );
       }
       throw err;
     }

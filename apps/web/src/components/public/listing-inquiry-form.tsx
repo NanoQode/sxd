@@ -135,7 +135,9 @@ export function ListingInquiryForm({ slug, title }: { slug: string; title: strin
       const wait = body?.error?.retryAfterSeconds;
       setServerError(
         `Too many inquiries from this connection or email address. Please try again${
-          wait ? ` in about ${Math.max(1, Math.ceil(wait / 60))} minute${wait > 90 ? 's' : ''}` : ' later'
+          wait
+            ? ` in about ${Math.max(1, Math.ceil(wait / 60))} minute${wait > 90 ? 's' : ''}`
+            : ' later'
         }.`,
       );
       return;
@@ -153,15 +155,19 @@ export function ListingInquiryForm({ slug, title }: { slug: string; title: strin
 
   if (done) {
     return (
-      <div role="status" aria-live="polite" className="rounded-lg border border-success/40 bg-success-soft p-4">
+      <div
+        role="status"
+        aria-live="polite"
+        className="rounded-lg border border-success/40 bg-success-soft p-4"
+      >
         <div className="flex items-start gap-3">
           <CheckCircle2 aria-hidden="true" className="mt-0.5 h-5 w-5 shrink-0 text-success" />
           <div className="min-w-0">
             <h3 className="text-base font-semibold">Inquiry received</h3>
             <p className="mt-1 text-sm text-fg-muted">
               Reference <code className="font-mono text-fg">{done}</code>. The SimplexD team
-              qualifies inquiries about {title} before introducing anyone to the owner, and
-              replies by email.
+              qualifies inquiries about {title} before introducing anyone to the owner, and replies
+              by email.
             </p>
           </div>
         </div>
@@ -175,7 +181,12 @@ export function ListingInquiryForm({ slug, title }: { slug: string; title: strin
   }));
 
   return (
-    <form onSubmit={(e) => void submit(e)} noValidate className="space-y-4" aria-describedby="li-intro">
+    <form
+      onSubmit={(e) => void submit(e)}
+      noValidate
+      className="space-y-4"
+      aria-describedby="li-intro"
+    >
       <p id="li-intro" className="text-sm text-fg-muted">
         Ask about availability, viewings or documents. Fields marked{' '}
         <span aria-hidden="true">*</span>

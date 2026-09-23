@@ -1,7 +1,14 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { listingStatusSchema, type ListingListQuery } from '@simplexd/contracts';
-import { Badge, DataTable, PageHeader, StatusBadge, formatDateTimeLabel, humanize } from '@simplexd/ui';
+import {
+  Badge,
+  DataTable,
+  PageHeader,
+  StatusBadge,
+  formatDateTimeLabel,
+  humanize,
+} from '@simplexd/ui';
 import { requireSignedIn } from '@/lib/auth/session';
 import { attempt, can, requireAnyStaff } from '@/lib/admin/server/context';
 import { ApiAction } from '@/components/admin/api-action';
@@ -34,7 +41,8 @@ export default async function ListingsQueuePage({
   const view = raw.view ?? 'queue';
   const query: ListingListQuery = { limit: 100 };
   if (view === 'queue') query.queue = 'moderation';
-  else if (listingStatusSchema.safeParse(view).success) query.status = view as ListingListQuery['status'];
+  else if (listingStatusSchema.safeParse(view).success)
+    query.status = view as ListingListQuery['status'];
   if (raw.q) query.q = raw.q;
   const loaded = await attempt(() => listListings(identity, query));
   if (!loaded.ok) return <LoadError code={loaded.code} message={loaded.message} what="Listings" />;
@@ -51,7 +59,8 @@ export default async function ListingsQueuePage({
               label="Run expiry job now"
               confirm={{
                 title: 'Run the expiry job?',
-                description: 'Marks published listings whose 90-day availability window lapsed as expired and lapses open offers past their validity date. The hourly worker does the same.',
+                description:
+                  'Marks published listings whose 90-day availability window lapsed as expired and lapses open offers past their validity date. The hourly worker does the same.',
                 confirmLabel: 'Run',
               }}
               successMessage="Expiry job ran"
@@ -60,7 +69,13 @@ export default async function ListingsQueuePage({
         }
       />
       <FilterBar>
-        <FilterSelect name="view" label="View" value={view} options={VIEWS} allLabel="Awaiting decision" />
+        <FilterSelect
+          name="view"
+          label="View"
+          value={view}
+          options={VIEWS}
+          allLabel="Awaiting decision"
+        />
         <FilterInput name="q" label="Title or slug" value={raw.q} placeholder="Search" />
       </FilterBar>
       <DataTable
@@ -68,7 +83,9 @@ export default async function ListingsQueuePage({
         rows={loaded.value}
         rowKey={(l) => l.id}
         rowLabel={(l) => l.title}
-        emptyMessage={view === 'queue' ? 'Nothing is waiting for a decision.' : 'No listings match.'}
+        emptyMessage={
+          view === 'queue' ? 'Nothing is waiting for a decision.' : 'No listings match.'
+        }
         columns={[
           {
             key: 'title',
@@ -79,21 +96,43 @@ export default async function ListingsQueuePage({
               </Link>
             ),
           },
-          { key: 'org', header: 'Organisation', cell: (l) => l.organizationName ?? l.organizationId, hideOnMobile: true },
-          { key: 'kind', header: 'Type', cell: (l) => `${humanize(l.kind)} · ${l.propertyKind ? humanize(l.propertyKind) : '—'}` },
+          {
+            key: 'org',
+            header: 'Organisation',
+            cell: (l) => l.organizationName ?? l.organizationId,
+            hideOnMobile: true,
+          },
+          {
+            key: 'kind',
+            header: 'Type',
+            cell: (l) => `${humanize(l.kind)} · ${l.propertyKind ? humanize(l.propertyKind) : '—'}`,
+          },
           {
             key: 'status',
             header: 'Status',
             cell: (l) => (
               <span className="flex flex-wrap items-center gap-1">
                 <StatusBadge status={l.effectiveStatus} />
-                {l.publishedVersion !== null && l.status === 'in_moderation' ? <Badge tone="info">live; changes under review</Badge> : null}
+                {l.publishedVersion !== null && l.status === 'in_moderation' ? (
+                  <Badge tone="info">live; changes under review</Badge>
+                ) : null}
                 {l.duplicateOfListingId ? <Badge tone="warning">duplicate</Badge> : null}
               </span>
             ),
           },
-          { key: 'rev', header: 'Revision', cell: (l) => `v${l.currentVersion}${l.publishedVersion !== null ? ` (pub v${l.publishedVersion})` : ''}`, hideOnMobile: true },
-          { key: 'updated', header: 'Updated', cell: (l) => formatDateTimeLabel(l.updatedAt), hideOnMobile: true },
+          {
+            key: 'rev',
+            header: 'Revision',
+            cell: (l) =>
+              `v${l.currentVersion}${l.publishedVersion !== null ? ` (pub v${l.publishedVersion})` : ''}`,
+            hideOnMobile: true,
+          },
+          {
+            key: 'updated',
+            header: 'Updated',
+            cell: (l) => formatDateTimeLabel(l.updatedAt),
+            hideOnMobile: true,
+          },
         ]}
       />
     </div>

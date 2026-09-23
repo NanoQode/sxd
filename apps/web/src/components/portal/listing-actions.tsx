@@ -98,7 +98,13 @@ export function ConfirmedAction({
       {disabled && disabledReason ? <span className="sr-only">{disabledReason}</span> : null}
       <Dialog open={open} onOpenChange={(v) => !busy && setOpen(v)}>
         <DialogContent title={title} description={description}>
-          {error ? <ErrorState title="Not done" message={error.message} correlationId={error.correlationId} /> : null}
+          {error ? (
+            <ErrorState
+              title="Not done"
+              message={error.message}
+              correlationId={error.correlationId}
+            />
+          ) : null}
           {reasonKey ? (
             <Field label={reasonLabel} htmlFor="ca-reason" required>
               {({ id, describedBy }) => (
@@ -146,15 +152,27 @@ export function ListingOwnerActions({
   if (!canManage) return null;
   const status = listing.effectiveStatus;
   const authorityOk = listing.ownerAuthority?.effectiveStatus === 'verified';
-  const editable = ['draft', 'rejected', 'in_moderation', 'published', 'expired'].includes(listing.status) && !listing.duplicateOfListingId;
+  const editable =
+    ['draft', 'rejected', 'in_moderation', 'published', 'expired'].includes(listing.status) &&
+    !listing.duplicateOfListingId;
   const canSubmit =
     !listing.duplicateOfListingId &&
     (status === 'draft' ||
       status === 'rejected' ||
       status === 'expired' ||
       (status === 'published' && listing.hasUnpublishedChanges));
-  const live = (listing.status === 'published' || listing.status === 'in_moderation') && listing.publishedVersion !== null && status !== 'expired';
-  const withdrawable = ['draft', 'rejected', 'published', 'in_moderation', 'expired', 'paused'].includes(status);
+  const live =
+    (listing.status === 'published' || listing.status === 'in_moderation') &&
+    listing.publishedVersion !== null &&
+    status !== 'expired';
+  const withdrawable = [
+    'draft',
+    'rejected',
+    'published',
+    'in_moderation',
+    'expired',
+    'paused',
+  ].includes(status);
   const noProperties: ListableProperty[] = [];
   return (
     <div className="flex flex-wrap gap-2">
@@ -169,14 +187,25 @@ export function ListingOwnerActions({
               description={`Version ${listing.version}; a concurrent edit is refused, never overwritten.`}
               size="lg"
             >
-              <ListingForm listing={listing} properties={noProperties} media={media} onDone={() => setEditing(false)} />
+              <ListingForm
+                listing={listing}
+                properties={noProperties}
+                media={media}
+                onDone={() => setEditing(false)}
+              />
             </DialogContent>
           </Dialog>
         </>
       ) : null}
       {canSubmit ? (
         <ConfirmedAction
-          label={status === 'expired' ? 'Re-confirm and resubmit' : listing.publishedVersion !== null ? 'Submit changes for moderation' : 'Submit for moderation'}
+          label={
+            status === 'expired'
+              ? 'Re-confirm and resubmit'
+              : listing.publishedVersion !== null
+                ? 'Submit changes for moderation'
+                : 'Submit for moderation'
+          }
           title="Submit for moderation?"
           description={
             authorityOk
@@ -206,7 +235,11 @@ export function ListingOwnerActions({
       {withdrawable ? (
         <ConfirmedAction
           label={status === 'draft' || status === 'rejected' ? 'Archive draft' : 'Withdraw'}
-          title={status === 'draft' || status === 'rejected' ? 'Archive this draft?' : 'Withdraw this listing?'}
+          title={
+            status === 'draft' || status === 'rejected'
+              ? 'Archive this draft?'
+              : 'Withdraw this listing?'
+          }
           description="A withdrawn listing leaves the public site immediately and cannot be resubmitted; create a new listing to relist. The reason is recorded."
           path={`/api/v1/listings/${listing.id}/withdraw`}
           body={{ expectedVersion: listing.version }}
@@ -214,7 +247,9 @@ export function ListingOwnerActions({
           confirmLabel={status === 'draft' || status === 'rejected' ? 'Archive' : 'Withdraw'}
           variant="ghost"
           tone="danger"
-          successTitle={status === 'draft' || status === 'rejected' ? 'Draft archived' : 'Listing withdrawn'}
+          successTitle={
+            status === 'draft' || status === 'rejected' ? 'Draft archived' : 'Listing withdrawn'
+          }
         />
       ) : null}
       {!authorityOk && !live ? (

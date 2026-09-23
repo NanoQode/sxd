@@ -14,7 +14,14 @@ import {
   type ListingUpdate,
   type ListingVersionOnly,
 } from '@simplexd/contracts';
-import { appendOutbox, getDb, schema, withActor, type DbExecutor, type Transaction } from '@simplexd/db';
+import {
+  appendOutbox,
+  getDb,
+  schema,
+  withActor,
+  type DbExecutor,
+  type Transaction,
+} from '@simplexd/db';
 import { assertAllowed, authorizeOrg } from '@simplexd/domain/authz';
 import { evaluateTransition, listingMachine, type ListingState } from '@simplexd/domain/workflow';
 import { recordAudit } from '@/lib/audit';
@@ -32,21 +39,14 @@ import {
   assertListingVersion,
   canStaffReadListings,
   listingRef,
-  loadListing,
   loadRevision,
   requireListing,
   requireRevision,
   type ListingRow,
-  type RevisionRow,
 } from './access';
 import { toListingSummaryDto, toRevisionDto } from './dto';
 import { invalidatePublicListings } from './public';
-import {
-  availabilityExpiry,
-  effectiveListingStatus,
-  listingSlugBase,
-  readScope,
-} from './rules';
+import { availabilityExpiry, effectiveListingStatus, listingSlugBase } from './rules';
 
 /**
  * Owner side of listings: create (revision 1), revise (each save is a new
@@ -67,7 +67,12 @@ function newSlug(title: string): string {
   return `${listingSlugBase(title)}-${suffix}`;
 }
 
-function assertMachine(from: ListingState, to: ListingState, actor: 'customer' | 'staff' | 'system', reason?: string | null) {
+function assertMachine(
+  from: ListingState,
+  to: ListingState,
+  actor: 'customer' | 'staff' | 'system',
+  reason?: string | null,
+) {
   const result = evaluateTransition(listingMachine, { from, to, actor, reason });
   if (!result.ok) {
     throw new ApiError('invalid_transition', result.message, {
@@ -116,10 +121,14 @@ export async function assertListingMedia(
       throw new ApiError('file_rejected', `${file.originalName} was rejected or deleted`);
     }
     if (file.status !== 'clean') {
-      throw new ApiError('validation_failed', `${file.originalName} has not passed the malware scan yet`, {
-        details: [{ path, message: 'not yet scanned; retry when the scan completes' }],
-        retryable: true,
-      });
+      throw new ApiError(
+        'validation_failed',
+        `${file.originalName} has not passed the malware scan yet`,
+        {
+          details: [{ path, message: 'not yet scanned; retry when the scan completes' }],
+          retryable: true,
+        },
+      );
     }
     if ((SENSITIVE_FILE_PURPOSES as readonly string[]).includes(file.purpose)) {
       throw new ApiError('validation_failed', 'identity documents can never be listing media', {
@@ -171,7 +180,9 @@ function revisionValues(
     titleDisclosure: content.titleDisclosure ?? null,
     availability: content.availability,
     // Staff-owned: carried forward from the previous revision, never taken from the owner.
-    verificationScope: (scope ?? { checks: [] }) as typeof schema.listingRevisions.$inferInsert['verificationScope'],
+    verificationScope: (scope ?? {
+      checks: [],
+    }) as (typeof schema.listingRevisions.$inferInsert)['verificationScope'],
     mediaFileIds: content.mediaFileIds,
     publicLocationPrecision: content.publicLocationPrecision,
     createdBy: userId,
@@ -230,7 +241,10 @@ async function inquiryStats(
           sql`${schema.leads.status} <> 'spam'`,
         ),
       );
-    return { total: Number(row?.total ?? 0), lastAt: row?.lastAt ? new Date(row.lastAt).toISOString() : null };
+    return {
+      total: Number(row?.total ?? 0),
+      lastAt: row?.lastAt ? new Date(row.lastAt).toISOString() : null,
+    };
   } finally {
     if (!isStaff) await demote(tx, identity.ctx);
   }
@@ -428,9 +442,7 @@ export async function listListings(
         ),
       )
       .orderBy(
-        query.queue === 'moderation'
-          ? schema.listings.updatedAt
-          : desc(schema.listings.updatedAt),
+        query.queue === 'moderation' ? schema.listings.updatedAt : desc(schema.listings.updatedAt),
       )
       .limit(query.limit);
     return rows.map((r) =>
@@ -511,10 +523,16 @@ export async function reviseListing(
     const row = await requireListing(tx, identity, id, 'manage');
     assertListingVersion(row, input.expectedVersion);
     if (row.duplicateOfListingId) {
-      throw new ApiError('invalid_transition', 'this listing was marked as a duplicate and cannot be edited');
+      throw new ApiError(
+        'invalid_transition',
+        'this listing was marked as a duplicate and cannot be edited',
+      );
     }
     if (!EDITABLE.includes(row.status)) {
-      throw new ApiError('invalid_transition', `a ${row.status.replace(/_/g, ' ')} listing cannot be edited`);
+      throw new ApiError(
+        'invalid_transition',
+        `a ${row.status.replace(/_/g, ' ')} listing cannot be edited`,
+      );
     }
     const [property] = await tx
       .select()
@@ -533,7 +551,10 @@ export async function reviseListing(
       .where(and(eq(schema.listings.id, id), eq(schema.listings.version, input.expectedVersion)))
       .returning();
     if (!updated) {
-      throw new ApiError('version_conflict', 'the listing changed while saving; reload and try again');
+      throw new ApiError(
+        'version_conflict',
+        'the listing changed while saving; reload and try again',
+      );
     }
     await tx
       .insert(schema.listingRevisions)
@@ -571,7 +592,10 @@ export async function submitListing(
     const row = await requireListing(tx, identity, id, 'manage');
     assertListingVersion(row, input.expectedVersion);
     if (row.duplicateOfListingId) {
-      throw new ApiError('invalid_transition', 'this listing was marked as a duplicate and cannot be resubmitted');
+      throw new ApiError(
+        'invalid_transition',
+        'this listing was marked as a duplicate and cannot be resubmitted',
+      );
     }
     const effective = effectiveListingStatus(row.status, row.expiresAt, now);
     const from: ListingState = effective === 'expired' ? 'expired' : row.status;

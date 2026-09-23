@@ -17,10 +17,7 @@ import { isCheckCurrent } from './rules';
  */
 
 export type RawParams =
-  | URLSearchParams
-  | Record<string, string | string[] | undefined>
-  | null
-  | undefined;
+  URLSearchParams | Record<string, string | string[] | undefined> | null | undefined;
 
 export interface ParsedListingFilters {
   filters: PublicListingFilters;
@@ -53,7 +50,10 @@ function first(params: RawParams, key: string): string | undefined {
 
 /** Whole naira: digits with optional thousands separators or a leading ₦. */
 export function parseNairaParam(raw: string): number | null {
-  const cleaned = raw.trim().replace(/^₦/, '').replace(/[,\s_]/g, '');
+  const cleaned = raw
+    .trim()
+    .replace(/^₦/, '')
+    .replace(/[,\s_]/g, '');
   if (!/^\d{1,15}$/.test(cleaned)) return null;
   const n = Number(cleaned);
   return Number.isSafeInteger(n) ? n : null;

@@ -282,6 +282,9 @@ export interface ArrearsRow {
   bucket: ArrearsBucket;
 }
 
+const OUTER_INVOICE_ID = sql.raw('"invoices"."id"');
+const OUTER_PROJECT_ID = sql.raw('"projects"."id"');
+
 async function loadArrears(tx: Transaction, s: Scope): Promise<ArrearsRow[]> {
   const i = schema.invoices;
   const rows = await tx
@@ -294,9 +297,11 @@ async function loadArrears(tx: Transaction, s: Scope): Promise<ArrearsRow[]> {
       issuedOn: sql<string>`to_char(${i.issuedAt} at time zone 'Africa/Lagos', 'YYYY-MM-DD')`,
       dueDate: i.dueDate,
       totalKobo: sql<string>`${i.totalKobo}::text`,
+      // Correlated subquery: the outer column must be qualified explicitly, because a
+      // column reference inside a select field is rendered without its table name.
       allocatedKobo: sql<string>`(
         select coalesce(sum(a.amount_kobo), 0)::text from allocations a
-        where a.invoice_id = ${i.id} and a.allocated_at < ${s.range.asOfExclusive}
+        where a.invoice_id = ${OUTER_INVOICE_ID} and a.allocated_at < ${s.range.asOfExclusive}
       )`,
     })
     .from(i)
@@ -359,10 +364,10 @@ async function loadProjects(tx: Transaction, s: Scope): Promise<ProjectRow[]> {
       pmUserId: p.pmUserId,
       baseKobo: sql<string | null>`${schema.budgetVersions.totalKobo}::text`,
       contingencyKobo: sql<string | null>`${schema.budgetVersions.contingencyKobo}::text`,
-      committedKobo: sql<string>`(select coalesce(sum(c.amount_kobo),0)::text from budget_commitments c where c.project_id = ${p.id} and c.kind = 'commitment')`,
-      actualKobo: sql<string>`(select coalesce(sum(c.amount_kobo),0)::text from budget_commitments c where c.project_id = ${p.id} and c.kind = 'actual')`,
-      approvedCoKobo: sql<string>`(select coalesce(sum(co.amount_delta_kobo),0)::text from change_orders co where co.project_id = ${p.id} and co.status = 'approved')`,
-      pendingCoKobo: sql<string>`(select coalesce(sum(co.amount_delta_kobo),0)::text from change_orders co where co.project_id = ${p.id} and co.status in ('submitted','customer_review','staff_review'))`,
+      committedKobo: sql<string>`(select coalesce(sum(c.amount_kobo),0)::text from budget_commitments c where c.project_id = ${OUTER_PROJECT_ID} and c.kind = 'commitment')`,
+      actualKobo: sql<string>`(select coalesce(sum(c.amount_kobo),0)::text from budget_commitments c where c.project_id = ${OUTER_PROJECT_ID} and c.kind = 'actual')`,
+      approvedCoKobo: sql<string>`(select coalesce(sum(co.amount_delta_kobo),0)::text from change_orders co where co.project_id = ${OUTER_PROJECT_ID} and co.status = 'approved')`,
+      pendingCoKobo: sql<string>`(select coalesce(sum(co.amount_delta_kobo),0)::text from change_orders co where co.project_id = ${OUTER_PROJECT_ID} and co.status in ('submitted','customer_review','staff_review'))`,
     })
     .from(p)
     .leftJoin(schema.budgetVersions, eq(schema.budgetVersions.id, p.approvedBudgetVersionId))

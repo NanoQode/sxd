@@ -240,9 +240,7 @@ async function buildCatalog(): Promise<ServiceCatalog> {
     const isPublished = s.publicationState === 'published';
     const packages = raw.packages
       .filter((p) => p.serviceId === s.id)
-      .map((p) =>
-        toPackageView(p, isPublished, raw.publishedRevisions[p.id] ?? [], raw.today),
-      );
+      .map((p) => toPackageView(p, isPublished, raw.publishedRevisions[p.id] ?? [], raw.today));
     const primaryPackage =
       packages.find((p) => p.publicationState === 'published') ?? packages[0] ?? null;
     let cms: PublishedContent | null = null;

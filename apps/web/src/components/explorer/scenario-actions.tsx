@@ -4,7 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { ArrowRight, Copy, Save, Share2, ShieldQuestion, UserCheck } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import {
@@ -87,11 +87,15 @@ export function ScenarioActions({
   });
 
   // The dialog can be opened from the location panel or by a resumed intent
-  // as well as from here: pre-fill the name whenever it opens.
-  useEffect(() => {
-    if (saveOpen) setNameDraft(scenarioName || defaultScenarioName(filters.objective));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [saveOpen]);
+  // as well as from here: pre-fill the name whenever it opens (derived state
+  // during render, the same pattern the filter inputs use).
+  const [prefilledFor, setPrefilledFor] = useState(false);
+  if (saveOpen && !prefilledFor) {
+    setPrefilledFor(true);
+    setNameDraft(scenarioName || defaultScenarioName(filters.objective));
+  } else if (!saveOpen && prefilledFor) {
+    setPrefilledFor(false);
+  }
 
   const bookHref = (scenarioId: string): string =>
     `/book?scenario=${encodeURIComponent(scenarioId)}${
@@ -287,7 +291,10 @@ export function ScenarioActions({
         </p>
       ) : null}
 
-      <Dialog open={saveOpen} onOpenChange={(open) => (open ? onSaveOpenChange(true) : closeSave())}>
+      <Dialog
+        open={saveOpen}
+        onOpenChange={(open) => (open ? onSaveOpenChange(true) : closeSave())}
+      >
         <DialogContent
           title={scenario.shared ? 'Save a copy of this scenario' : 'Save scenario'}
           description={saveDescription}

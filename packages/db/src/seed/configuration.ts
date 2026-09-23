@@ -36,7 +36,8 @@ export const reportTemplateDefaults: Array<{
       {
         key: 'summary',
         heading: 'Summary',
-        guidance: 'What changed since the last report, in plain words, and anything that needs the owner.',
+        guidance:
+          'What changed since the last report, in plain words, and anything that needs the owner.',
         required: true,
       },
       {
@@ -496,7 +497,9 @@ export async function seedConfigurationDefaults(
     let documentRequirementsInserted = 0;
 
     for (const t of reportTemplateDefaults) {
-      await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`report_templates:${t.kind}`}))`);
+      await tx.execute(
+        sql`select pg_advisory_xact_lock(hashtext(${`report_templates:${t.kind}`}))`,
+      );
       const existing = await tx
         .select({ id: s.reportTemplates.id })
         .from(s.reportTemplates)

@@ -104,7 +104,11 @@ const specs: RouteSpec[] = [
     operationId: 'reviseListing',
     auth: 'session',
     request: { params: idParams, body: listingUpdateSchema },
-    responses: { 200: { description: 'Listing', body: listingDetailDtoSchema }, ...conflict, ...notFound },
+    responses: {
+      200: { description: 'Listing', body: listingDetailDtoSchema },
+      ...conflict,
+      ...notFound,
+    },
   },
   {
     method: 'post',
@@ -131,25 +135,35 @@ const specs: RouteSpec[] = [
     operationId: 'withdrawListing',
     auth: 'session',
     request: { params: idParams, body: listingReasonSchema },
-    responses: { 200: { description: 'Listing', body: listingDetailDtoSchema }, ...conflict, ...notFound },
+    responses: {
+      200: { description: 'Listing', body: listingDetailDtoSchema },
+      ...conflict,
+      ...notFound,
+    },
   },
   {
     method: 'post',
     path: '/api/v1/listings/{id}/confirm-availability',
     summary: 'Re-confirm availability of a live listing',
-    description: 'Stamps availabilityConfirmedAt and restarts the 90-day window. Expired listings are re-submitted for moderation instead.',
+    description:
+      'Stamps availabilityConfirmedAt and restarts the 90-day window. Expired listings are re-submitted for moderation instead.',
     tags: ['listings'],
     operationId: 'confirmListingAvailability',
     auth: 'session',
     request: { params: idParams, body: listingVersionOnlySchema },
-    responses: { 200: { description: 'Listing', body: listingDetailDtoSchema }, ...conflict, ...notFound },
+    responses: {
+      200: { description: 'Listing', body: listingDetailDtoSchema },
+      ...conflict,
+      ...notFound,
+    },
   },
   /* Offers */
   {
     method: 'get',
     path: '/api/v1/listings/{id}/offers',
     summary: 'Offers on a listing',
-    description: 'The owner organisation and staff see every offer; a buyer organisation sees its own.',
+    description:
+      'The owner organisation and staff see every offer; a buyer organisation sees its own.',
     tags: ['listing-offers'],
     operationId: 'listListingOffers',
     auth: 'session',
@@ -166,7 +180,11 @@ const specs: RouteSpec[] = [
     operationId: 'createListingOffer',
     auth: 'session',
     request: { params: idParams, body: listingOfferCreateSchema },
-    responses: { 201: { description: 'Offer', body: listingOfferDtoSchema }, ...conflict, ...notFound },
+    responses: {
+      201: { description: 'Offer', body: listingOfferDtoSchema },
+      ...conflict,
+      ...notFound,
+    },
   },
   {
     method: 'get',
@@ -198,7 +216,11 @@ const specs: RouteSpec[] = [
     operationId: 'actOnListingOffer',
     auth: 'session',
     request: { params: idParams, body: listingOfferActionSchema },
-    responses: { 200: { description: 'Offer', body: listingOfferDtoSchema }, ...conflict, ...notFound },
+    responses: {
+      200: { description: 'Offer', body: listingOfferDtoSchema },
+      ...conflict,
+      ...notFound,
+    },
   },
   /* Transaction tracking */
   {
@@ -209,7 +231,10 @@ const specs: RouteSpec[] = [
     operationId: 'getListingTransaction',
     auth: 'session',
     request: { params: idParams },
-    responses: { 200: { description: 'Transaction', body: listingTransactionDtoSchema }, ...notFound },
+    responses: {
+      200: { description: 'Transaction', body: listingTransactionDtoSchema },
+      ...notFound,
+    },
   },
   {
     method: 'post',
@@ -221,7 +246,10 @@ const specs: RouteSpec[] = [
     operationId: 'addLeaseMilestone',
     auth: 'session',
     request: { params: idParams, body: leaseMilestoneCreateSchema },
-    responses: { 201: { description: 'Transaction', body: listingTransactionDtoSchema }, ...notFound },
+    responses: {
+      201: { description: 'Transaction', body: listingTransactionDtoSchema },
+      ...notFound,
+    },
   },
   {
     method: 'patch',
@@ -230,8 +258,15 @@ const specs: RouteSpec[] = [
     tags: ['listings'],
     operationId: 'updateLeaseMilestone',
     auth: 'session',
-    request: { params: z.object({ id: uuidSchema, itemId: uuidSchema }), body: leaseMilestoneUpdateSchema },
-    responses: { 200: { description: 'Transaction', body: listingTransactionDtoSchema }, ...conflict, ...notFound },
+    request: {
+      params: z.object({ id: uuidSchema, itemId: uuidSchema }),
+      body: leaseMilestoneUpdateSchema,
+    },
+    responses: {
+      200: { description: 'Transaction', body: listingTransactionDtoSchema },
+      ...conflict,
+      ...notFound,
+    },
   },
   {
     method: 'post',
@@ -243,7 +278,11 @@ const specs: RouteSpec[] = [
     operationId: 'recordListingOutcome',
     auth: 'session',
     request: { params: idParams, body: listingOutcomeSchema },
-    responses: { 201: { description: 'Transaction', body: listingTransactionDtoSchema }, ...conflict, ...notFound },
+    responses: {
+      201: { description: 'Transaction', body: listingTransactionDtoSchema },
+      ...conflict,
+      ...notFound,
+    },
   },
   /* Moderation */
   {
@@ -277,12 +316,17 @@ const specs: RouteSpec[] = [
     method: 'post',
     path: '/api/v1/admin/listings/{id}/reject',
     summary: 'Reject with a reason (content.publish)',
-    description: 'A never-published listing becomes rejected; a live listing keeps its approved revision and returns to published.',
+    description:
+      'A never-published listing becomes rejected; a live listing keeps its approved revision and returns to published.',
     tags: ['admin-listings'],
     operationId: 'rejectListing',
     auth: 'staff',
     request: { params: idParams, body: listingReasonSchema },
-    responses: { 200: { description: 'Listing', body: listingDetailDtoSchema }, ...conflict, ...notFound },
+    responses: {
+      200: { description: 'Listing', body: listingDetailDtoSchema },
+      ...conflict,
+      ...notFound,
+    },
   },
   {
     method: 'post',
@@ -292,18 +336,27 @@ const specs: RouteSpec[] = [
     operationId: 'requestListingChanges',
     auth: 'staff',
     request: { params: idParams, body: listingReasonSchema },
-    responses: { 200: { description: 'Listing', body: listingDetailDtoSchema }, ...conflict, ...notFound },
+    responses: {
+      200: { description: 'Listing', body: listingDetailDtoSchema },
+      ...conflict,
+      ...notFound,
+    },
   },
   {
     method: 'post',
     path: '/api/v1/admin/listings/{id}/mark-duplicate',
     summary: 'Mark as a duplicate of another listing (content.publish)',
-    description: 'Duplicates never show publicly and cannot be resubmitted; the public URL points to the original while it is live.',
+    description:
+      'Duplicates never show publicly and cannot be resubmitted; the public URL points to the original while it is live.',
     tags: ['admin-listings'],
     operationId: 'markListingDuplicate',
     auth: 'staff',
     request: { params: idParams, body: listingMarkDuplicateSchema },
-    responses: { 200: { description: 'Listing', body: listingDetailDtoSchema }, ...conflict, ...notFound },
+    responses: {
+      200: { description: 'Listing', body: listingDetailDtoSchema },
+      ...conflict,
+      ...notFound,
+    },
   },
   {
     method: 'post',
@@ -381,7 +434,10 @@ const specs: RouteSpec[] = [
     request: { params: slugParams },
     responses: {
       200: { description: 'Live listing', body: publicListingStateSchema },
-      410: { description: 'No longer available (expired, duplicate, withdrawn or closed)', body: publicListingStateSchema },
+      410: {
+        description: 'No longer available (expired, duplicate, withdrawn or closed)',
+        body: publicListingStateSchema,
+      },
       404: { description: 'Unknown or never published' },
     },
   },
@@ -396,7 +452,10 @@ const specs: RouteSpec[] = [
     auth: 'public',
     request: { params: slugParams, body: listingInquirySchema },
     responses: {
-      201: { description: 'Received', body: z.object({ id: uuidSchema, status: z.literal('received') }) },
+      201: {
+        description: 'Received',
+        body: z.object({ id: uuidSchema, status: z.literal('received') }),
+      },
       404: { description: 'Listing not open to inquiries' },
       429: { description: 'rate_limited' },
     },
@@ -405,11 +464,15 @@ const specs: RouteSpec[] = [
     method: 'get',
     path: '/api/v1/public/listings/{slug}/media/{fileId}',
     summary: 'Redirect to a publicly approved photo derivative',
-    description: 'Only clean, publicly approved images on the published revision; originals are never served.',
+    description:
+      'Only clean, publicly approved images on the published revision; originals are never served.',
     tags: ['public', 'listings'],
     operationId: 'getPublicListingMedia',
     auth: 'public',
-    request: { params: z.object({ slug: slugSchema, fileId: uuidSchema }), query: publicListingMediaQuerySchema },
+    request: {
+      params: z.object({ slug: slugSchema, fileId: uuidSchema }),
+      query: publicListingMediaQuerySchema,
+    },
     responses: {
       302: { description: 'Signed derivative URL' },
       200: {

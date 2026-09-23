@@ -49,7 +49,9 @@ export function decideScenarioAction(action: GatedAction, access: AccountAccess)
 }
 
 export function isResumeIntent(value: string | null | undefined): value is ResumeIntent {
-  return value !== undefined && value !== null && (RESUME_INTENTS as readonly string[]).includes(value);
+  return (
+    value !== undefined && value !== null && (RESUME_INTENTS as readonly string[]).includes(value)
+  );
 }
 
 /** The explorer URL the visitor comes back to after signing in, carrying every param plus the action. */

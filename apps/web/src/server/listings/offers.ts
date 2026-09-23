@@ -9,7 +9,14 @@ import {
   type ListingOfferDto,
   type ListingOfferListQuery,
 } from '@simplexd/contracts';
-import { appendOutbox, getDb, schema, systemContext, withActor, type DbExecutor } from '@simplexd/db';
+import {
+  appendOutbox,
+  getDb,
+  schema,
+  systemContext,
+  withActor,
+  type DbExecutor,
+} from '@simplexd/db';
 import { assertAllowed, authorizeOrg } from '@simplexd/domain/authz';
 import { evaluateTransition, listingOfferMachine } from '@simplexd/domain/workflow';
 import { recordAudit } from '@/lib/audit';
@@ -326,7 +333,9 @@ export async function actOnListingOffer(
       reason: 'note' in input ? input.note : null,
     });
     if (!machine.ok) {
-      throw new ApiError('invalid_transition', machine.message, { details: { code: machine.code } });
+      throw new ApiError('invalid_transition', machine.message, {
+        details: { code: machine.code },
+      });
     }
     const amountKobo = input.action === 'counter' ? input.amountKobo : offer.amountKobo.toString();
     const entry: ListingNegotiationEntry = {
@@ -385,13 +394,18 @@ export async function actOnListingOffer(
         ),
       )
       .returning();
-    if (!updated) throw new ApiError('version_conflict', 'the negotiation moved on; reload the offer');
+    if (!updated)
+      throw new ApiError('version_conflict', 'the negotiation moved on; reload the offer');
     await recordAudit(tx, identity, {
       action: `listing_offer.${OFFER_ACTION_LOG[input.action]}`,
       entityType: 'offer',
       entityId: offerId,
       organizationId: orgId,
-      before: { status: offer.status, amountKobo: offer.amountKobo.toString(), entries: log.length },
+      before: {
+        status: offer.status,
+        amountKobo: offer.amountKobo.toString(),
+        entries: log.length,
+      },
       after: { status: to, amountKobo, entries: log.length + 1, side },
       reason: input.note ?? null,
       correlationId: options.correlationId,

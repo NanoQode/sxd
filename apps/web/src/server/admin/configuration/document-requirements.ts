@@ -236,9 +236,13 @@ async function activeForService(
 /** Public "What you'll need" list for a service page: active and non-sensitive only (cached 60 s). */
 export async function publicDocumentRequirements(
   serviceId: string,
-): Promise<Array<Pick<DocumentRequirementDto, 'id' | 'name' | 'description' | 'stage' | 'required'>>> {
+): Promise<
+  Array<Pick<DocumentRequirementDto, 'id' | 'name' | 'description' | 'stage' | 'required'>>
+> {
   return cached(`services:requirements:${serviceId}`, 60, async () => {
-    const rows = await withActor(getDb(), anonymousContext, (tx) => activeForService(tx, serviceId));
+    const rows = await withActor(getDb(), anonymousContext, (tx) =>
+      activeForService(tx, serviceId),
+    );
     return publicRequirements(rows, serviceId).map((r) => ({
       id: r.id,
       name: r.name,

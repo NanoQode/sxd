@@ -352,8 +352,14 @@ export const publicListingFiltersSchema = z.object({
   maxPrice: z.number().int().nonnegative().optional(),
   minArea: z.number().nonnegative().optional(),
   maxArea: z.number().nonnegative().optional(),
-  state: z.string().regex(/^[a-z0-9-]{2,80}$/).optional(),
-  market: z.string().regex(/^[a-z0-9-]{2,120}$/).optional(),
+  state: z
+    .string()
+    .regex(/^[a-z0-9-]{2,80}$/)
+    .optional(),
+  market: z
+    .string()
+    .regex(/^[a-z0-9-]{2,120}$/)
+    .optional(),
   tenure: listingTenureSchema.optional(),
   title: z.literal('disclosed').optional(),
   available: z.literal('now').optional(),

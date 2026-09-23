@@ -22,7 +22,10 @@ export const POST = route<{ params: Promise<{ slug: string }> }>(async (req, ctx
   const input = await parseJson(req, listingInquirySchema);
   const ipHash = hashIp(clientIp(req));
   await enforceRateLimit(`listing-inquiry:ip:${ipHash}`, { windowSeconds: HOUR, max: 5 });
-  const emailHash = createHash('sha256').update(input.email.toLowerCase()).digest('hex').slice(0, 24);
+  const emailHash = createHash('sha256')
+    .update(input.email.toLowerCase())
+    .digest('hex')
+    .slice(0, 24);
   await enforceRateLimit(`listing-inquiry:email:${emailHash}`, { windowSeconds: HOUR, max: 3 });
   const identity = await getIdentity();
   const result = await createListingInquiry(slug, input, identity.session ? identity : null, {

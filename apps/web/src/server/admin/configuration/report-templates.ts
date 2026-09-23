@@ -1,10 +1,6 @@
 import 'server-only';
 import { and, asc, desc, eq, ne, sql } from 'drizzle-orm';
-import {
-  ApiError,
-  type ReportTemplateCreate,
-  type ReportTemplatePatch,
-} from '@simplexd/contracts';
+import { ApiError, type ReportTemplateCreate, type ReportTemplatePatch } from '@simplexd/contracts';
 import { schema, type DbExecutor, type Transaction } from '@simplexd/db';
 import { recordAudit } from '@/lib/audit';
 import {
@@ -67,6 +63,14 @@ function toDto(r: TemplateRow): ReportTemplateDto {
 }
 
 function cleanSections(sections: ReportTemplateCreate['sections']): ReportTemplateSectionDto[] {
+  const keys = new Set<string>();
+  for (const s of sections) {
+    if (keys.has(s.key))
+      throw new ApiError('validation_failed', `duplicate section key "${s.key}"`);
+    keys.add(s.key);
+  }
+  if (sections.length === 0)
+    throw new ApiError('validation_failed', 'at least one section is required');
   return sections.map((s) => ({
     key: s.key,
     heading: s.heading.trim(),
@@ -213,10 +217,7 @@ export async function patchReportTemplate(
         version: current.version + 1,
       })
       .where(
-        and(
-          eq(schema.reportTemplates.id, id),
-          eq(schema.reportTemplates.version, current.version),
-        ),
+        and(eq(schema.reportTemplates.id, id), eq(schema.reportTemplates.version, current.version)),
       )
       .returning();
     if (!updated) throw versionConflict(current.version);

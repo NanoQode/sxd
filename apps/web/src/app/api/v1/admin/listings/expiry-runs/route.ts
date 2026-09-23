@@ -10,5 +10,8 @@ export const dynamic = 'force-dynamic';
 export const POST = route(async (req, { correlationId }) => {
   const identity = await getIdentity();
   if (!identity.session) throw new ApiError('unauthenticated', 'sign in required');
-  return json(await runListingExpiryNow(identity, { correlationId }), { status: 201, correlationId });
+  return json(await runListingExpiryNow(identity, { correlationId }), {
+    status: 201,
+    correlationId,
+  });
 });

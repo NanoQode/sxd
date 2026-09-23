@@ -10,19 +10,9 @@ export type PriceBasis = 'fixed' | 'from' | 'per_month' | 'percentage' | 'quotat
 export type PackagePublication = 'draft' | 'in_review' | 'published' | 'retired';
 
 export type RevisionEvent =
-  | 'draft_saved'
-  | 'submitted'
-  | 'published'
-  | 'rejected'
-  | 'withdrawn'
-  | 'retired';
+  'draft_saved' | 'submitted' | 'published' | 'rejected' | 'withdrawn' | 'retired';
 export type RevisionState =
-  | 'draft'
-  | 'in_review'
-  | 'published'
-  | 'rejected'
-  | 'withdrawn'
-  | 'retired';
+  'draft' | 'in_review' | 'published' | 'rejected' | 'withdrawn' | 'retired';
 
 export const STATE_FOR_EVENT: Record<RevisionEvent, RevisionState> = {
   draft_saved: 'draft',

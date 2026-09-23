@@ -49,7 +49,9 @@ export function DocumentsWeNeed({
                 <li key={r.id} className="rounded-md border border-border p-3">
                   <p className="flex flex-wrap items-center gap-2 font-medium">
                     {r.name}
-                    <Badge tone={r.required ? 'primary' : 'neutral'}>{r.required ? 'Required' : 'Optional'}</Badge>
+                    <Badge tone={r.required ? 'primary' : 'neutral'}>
+                      {r.required ? 'Required' : 'Optional'}
+                    </Badge>
                     {r.sensitive ? <Badge tone="warning">Sensitive</Badge> : null}
                   </p>
                   {r.description ? <p className="mt-1 text-fg-muted">{r.description}</p> : null}

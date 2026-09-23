@@ -144,7 +144,12 @@ export const ADMIN_NAV: NavItem[] = [
     label: 'Portfolio Analytics',
     href: '/admin/analytics',
     icon: 'analytics',
-    permissions: ['finance.read', 'rentals.manage', 'projects.read_all', 'service_requests.read_all'],
+    permissions: [
+      'finance.read',
+      'rentals.manage',
+      'projects.read_all',
+      'service_requests.read_all',
+    ],
   },
   {
     key: 'appointments',
@@ -405,7 +410,12 @@ export const ADMIN_SUBNAV: SubNavItem[] = [
     label: 'Portfolio analytics',
     href: '/admin/analytics',
     parent: 'analytics',
-    permissions: ['finance.read', 'rentals.manage', 'projects.read_all', 'service_requests.read_all'],
+    permissions: [
+      'finance.read',
+      'rentals.manage',
+      'projects.read_all',
+      'service_requests.read_all',
+    ],
   },
 ];
 

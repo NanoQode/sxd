@@ -1,0 +1,4 @@
+source_url,status_code,title,content_type,decision,target_url,image_rights,owner,notes
+https://simplexd.co/,200,Home,page,migrate,/,unknown,example,"EXAMPLE ROW: delete before use. One row per crawled URL of the live site."
+https://simplexd.co/services/monitoring,200,Construction monitoring,service,redirect,/services/construction-monitoring,yes,example,"EXAMPLE ROW: decision redirect needs target_url; import into Admin → Content → Redirects (CSV)."
+https://simplexd.co/news/2019-launch,200,Launch announcement,article,drop,,no,example,"EXAMPLE ROW: dropped URLs answer 404 after cutover; record the owner's decision here."

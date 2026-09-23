@@ -186,10 +186,7 @@ async function resolveRequest(
   return sr.id;
 }
 
-async function build(
-  tx: DbExecutor,
-  listing: ListingRow,
-): Promise<ListingTransactionDto> {
+async function build(tx: DbExecutor, listing: ListingRow): Promise<ListingTransactionDto> {
   const { milestones, outcome } = await loadItems(tx, listing.id);
   const linkedId = outcome?.serviceRequestId ?? milestones[0]?.serviceRequestId ?? null;
   const sr = linkedId ? await requestSummary(tx, linkedId) : null;
@@ -243,7 +240,10 @@ export async function addLeaseMilestone(
   return withActor(getDb(), ctx, async (tx) => {
     const listing = await requireListing(tx, identity, listingId, 'transaction');
     if (listing.status === 'archived') {
-      throw new ApiError('invalid_transition', 'the listing is closed; its transaction is complete');
+      throw new ApiError(
+        'invalid_transition',
+        'the listing is closed; its transaction is complete',
+      );
     }
     const { milestones, outcome } = await loadItems(tx, listingId);
     const linked = outcome?.serviceRequestId ?? milestones[0]?.serviceRequestId ?? null;
@@ -278,7 +278,12 @@ export async function addLeaseMilestone(
       entityType: 'engagement_item',
       entityId: item!.id,
       organizationId: listing.organizationId,
-      after: { listingId, serviceRequestId, title: input.title, dueAt: dueAt?.toISOString() ?? null },
+      after: {
+        listingId,
+        serviceRequestId,
+        title: input.title,
+        dueAt: dueAt?.toISOString() ?? null,
+      },
       correlationId: options.correlationId,
     });
     return build(tx, listing);
@@ -336,7 +341,8 @@ export async function updateLeaseMilestone(
         ),
       )
       .returning();
-    if (!updated) throw new ApiError('version_conflict', 'the milestone changed; reload and try again');
+    if (!updated)
+      throw new ApiError('version_conflict', 'the milestone changed; reload and try again');
     await recordAudit(tx, identity, {
       action: 'listing.milestone_updated',
       entityType: 'engagement_item',
@@ -394,16 +400,25 @@ export async function recordListingOutcome(
         .from(schema.offers)
         .where(and(eq(schema.offers.id, input.offerId), eq(schema.offers.listingId, listingId)));
       if (!offer || offer.status !== 'accepted') {
-        throw new ApiError('validation_failed', 'offerId must be an accepted offer on this listing', {
-          details: [{ path: 'offerId', message: 'not an accepted offer on this listing' }],
-        });
+        throw new ApiError(
+          'validation_failed',
+          'offerId must be an accepted offer on this listing',
+          {
+            details: [{ path: 'offerId', message: 'not an accepted offer on this listing' }],
+          },
+        );
       }
     }
     const effective = effectiveListingStatus(listing.status, listing.expiresAt, now);
     const from: ListingState = effective === 'expired' ? 'expired' : listing.status;
     let to: ListingState;
     if (input.outcome === 'withdrawn') {
-      to = from === 'withdrawn' ? 'withdrawn' : from === 'draft' || from === 'rejected' ? 'archived' : 'withdrawn';
+      to =
+        from === 'withdrawn'
+          ? 'withdrawn'
+          : from === 'draft' || from === 'rejected'
+            ? 'archived'
+            : 'withdrawn';
     } else {
       to = 'archived';
     }
@@ -417,10 +432,14 @@ export async function recordListingOutcome(
         .update(schema.listings)
         .set({ status: to, version: sql`${schema.listings.version} + 1` })
         .where(
-          and(eq(schema.listings.id, listingId), eq(schema.listings.version, input.expectedVersion)),
+          and(
+            eq(schema.listings.id, listingId),
+            eq(schema.listings.version, input.expectedVersion),
+          ),
         )
         .returning();
-      if (!updated) throw new ApiError('version_conflict', 'the listing changed; reload and try again');
+      if (!updated)
+        throw new ApiError('version_conflict', 'the listing changed; reload and try again');
     }
     let itemId: string | null = null;
     if (serviceRequestId) {
@@ -485,7 +504,10 @@ export async function recordListingOutcome(
       },
       correlationId: options.correlationId,
     });
-    const [refreshed] = await tx.select().from(schema.listings).where(eq(schema.listings.id, listingId));
+    const [refreshed] = await tx
+      .select()
+      .from(schema.listings)
+      .where(eq(schema.listings.id, listingId));
     return build(tx, refreshed ?? listing);
   });
   await invalidatePublicListings();

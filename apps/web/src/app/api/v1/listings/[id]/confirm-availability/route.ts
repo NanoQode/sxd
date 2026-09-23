@@ -13,7 +13,10 @@ export const POST = route<{ params: Promise<{ id: string }> }>(async (req, ctx) 
   if (!identity.session) throw new ApiError('unauthenticated', 'sign in required');
   const { id } = await params(ctx, z.object({ id: uuidSchema }));
   const body = await parseJson(req, listingVersionOnlySchema);
-  return json(await confirmListingAvailability(identity, id, body, { correlationId: ctx.correlationId }), {
-    correlationId: ctx.correlationId,
-  });
+  return json(
+    await confirmListingAvailability(identity, id, body, { correlationId: ctx.correlationId }),
+    {
+      correlationId: ctx.correlationId,
+    },
+  );
 });
