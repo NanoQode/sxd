@@ -225,3 +225,52 @@ describe('credit notes and voids', () => {
     expect(balance.unbalancedJournals).toBe(0);
   });
 });
+
+describe('invoice addressee payments', () => {
+  it('lets the person an invoice is addressed to pay it without a membership in the issuing organisation', async () => {
+    const invoice = await createInvoice(rt, finance1, {
+      organizationId: t.orgA,
+      customerUserId: t.userB,
+      kind: 'rent',
+      lines: [{ description: 'Rent, October', quantity: '1', unitAmountKobo: '25000000' }],
+      currency: 'NGN',
+      issue: true,
+    });
+    const tenant: FinanceActor = {
+      ...customerB,
+      actor: { ...customerB.actor, memberships: [], activeOrganizationId: null },
+      ctx: { ...customerB.ctx, organizationId: null },
+    };
+    const attempt = await createPaymentAttempt(rt, tenant, invoice.id, {});
+    expect(attempt.amountKobo).toBe('25000000');
+    dev.simulate(attempt.reference, 'success');
+    const settled = await verifyPaymentAttempt(rt, tenant, { id: attempt.id });
+    expect(settled.decision).toBe('settle');
+    expect(settled.invoiceStatus).toBe('paid');
+
+    const stranger: FinanceActor = {
+      ...tenant,
+      actor: { ...tenant.actor, userId: `stranger-${attempt.id}` },
+      ctx: { ...tenant.ctx, userId: `stranger-${attempt.id}` },
+    };
+    await expect(verifyPaymentAttempt(rt, stranger, { id: attempt.id })).rejects.toMatchObject({
+      code: 'not_found',
+    });
+    const impersonated: FinanceActor = {
+      ...tenant,
+      actor: {
+        ...tenant.actor,
+        impersonation: { adminUserId: t.financeUser1, expiresAt: new Date().toISOString() },
+      },
+    };
+    const second = await createInvoice(rt, finance1, {
+      organizationId: t.orgA,
+      customerUserId: t.userB,
+      kind: 'rent',
+      lines: [{ description: 'Rent, November', quantity: '1', unitAmountKobo: '25000000' }],
+      currency: 'NGN',
+      issue: true,
+    });
+    await expect(createPaymentAttempt(rt, impersonated, second.id, {})).rejects.toBeTruthy();
+  });
+});

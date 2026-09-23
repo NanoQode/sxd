@@ -31,7 +31,17 @@ export const GET = route(async (req, { correlationId }) => {
   const rt = getFinanceRuntime();
   const fa = financeActorFrom(identity, req, correlationId);
   const result = await verifyPaymentAttempt(rt, fa, { reference }, { source: 'callback' });
-  const target = new URL(`/portal/invoices/${result.attempt.invoiceId}`, rt.appUrl);
+  // Members of the issuing organisation return to the portal invoice; a payer
+  // who is not a member (a tenant paying rent invoiced by the owner's
+  // organisation) returns to their tenant balances. Both pages show the
+  // stored, provider-verified status, never the query string.
+  const member = identity.actor.memberships.some(
+    (m) => m.organizationId === result.attempt.organizationId,
+  );
+  const target =
+    member || identity.actor.staffRoles.length > 0
+      ? new URL(`/portal/invoices/${result.attempt.invoiceId}`, rt.appUrl)
+      : new URL('/tenant/balances', rt.appUrl);
   target.searchParams.set('payment', result.decision);
   target.searchParams.set('attempt', result.attempt.id);
   return NextResponse.redirect(target, 303);

@@ -1,7 +1,7 @@
-import { Info } from 'lucide-react';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import {
+  Alert,
   Card,
   CardContent,
   CardDescription,
@@ -9,12 +9,12 @@ import {
   CardTitle,
   PageHeader,
 } from '@simplexd/ui';
-import { LinkButton } from '@/components/portal/link-button';
 import { ArrearsAgeing, BalanceFigures } from '@/components/tenant/balance-summary';
 import { ChargesTable, InvoicesTable } from '@/components/tenant/ledger-tables';
 import { LeaseSwitcher } from '@/components/tenant/lease-switcher';
 import { LoadError } from '@/components/tenant/load-error';
 import { NoTenancy } from '@/components/tenant/no-tenancy';
+import { PayInvoiceButton } from '@/components/tenant/pay-invoice-button';
 import { requireSignedIn } from '@/lib/auth/session';
 import {
   INVOICE_PAYABLE_STATUSES,
@@ -26,11 +26,11 @@ import {
   type TenantInvoice,
 } from '@/lib/tenant/model';
 import {
-  canPayLeaseInvoices,
   loadBalance,
   loadCharges,
   loadMyInvoices,
   loadMyLeases,
+  loadPaymentResult,
 } from '@/lib/tenant/server/data';
 
 export const metadata: Metadata = { title: 'Balances' };
@@ -47,10 +47,10 @@ const DESCRIPTION =
 export default async function TenantBalancesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ lease?: string }>;
+  searchParams: Promise<{ lease?: string; attempt?: string }>;
 }) {
   const identity = await requireSignedIn('/tenant/balances');
-  const { lease: leaseParam } = await searchParams;
+  const { lease: leaseParam, attempt: attemptParam } = await searchParams;
   const leases = await loadMyLeases(identity);
   if (!leases.ok) {
     return (
@@ -79,10 +79,9 @@ export default async function TenantBalancesPage({
     loadCharges(identity, lease.id),
     loadMyInvoices(identity, [lease.id]),
   ]);
-  const canPay = canPayLeaseInvoices(identity, lease.organizationId);
+  const paymentResult = attemptParam ? await loadPaymentResult(identity, attemptParam) : null;
   const payable = (i: TenantInvoice) =>
     INVOICE_PAYABLE_STATUSES.has(i.status) && isPositiveKobo(i.balanceKobo);
-  const anyPayable = invoices.ok && invoices.data.some(payable);
 
   return (
     <div className="space-y-6">
@@ -95,6 +94,11 @@ export default async function TenantBalancesPage({
         title="Balances"
         description={DESCRIPTION}
       />
+      {paymentResult ? (
+        <Alert tone={paymentResult.tone} title={paymentResult.title}>
+          {paymentResult.message}
+        </Alert>
+      ) : null}
       <LeaseSwitcher
         basePath="/tenant/balances"
         selectedId={lease.id}
@@ -159,38 +163,16 @@ export default async function TenantBalancesPage({
             <>
               <InvoicesTable
                 invoices={invoices.data}
-                payAction={
-                  canPay
-                    ? (i) =>
-                        payable(i) ? (
-                          <LinkButton
-                            href={`/portal/invoices/${i.id}`}
-                            size="md"
-                            aria-label={`Pay invoice ${i.number} (${formatMoney(i.balanceKobo, i.currency)}) in the customer portal`}
-                          >
-                            Pay {formatMoney(i.balanceKobo, i.currency)}
-                          </LinkButton>
-                        ) : null
-                    : undefined
+                payAction={(i) =>
+                  payable(i) ? (
+                    <PayInvoiceButton
+                      invoiceId={i.id}
+                      invoiceNumber={i.number}
+                      amountLabel={formatMoney(i.balanceKobo, i.currency)}
+                    />
+                  ) : null
                 }
               />
-              {!canPay &&
-              (anyPayable || (balance.ok && isPositiveKobo(balance.data.outstandingKobo))) ? (
-                <div
-                  role="note"
-                  className="flex gap-3 rounded-md border border-dashed border-border bg-bg-sunken p-3 text-sm text-fg-muted"
-                >
-                  <Info aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0" />
-                  <p>
-                    <span className="font-medium text-fg">
-                      Online payment is not available to tenant accounts yet.
-                    </span>{' '}
-                    Pay your landlord or property manager by the method agreed for your lease and
-                    quote the invoice number. Once they record the payment, it reduces your balance
-                    here and a receipt appears on the Receipts page.
-                  </p>
-                </div>
-              ) : null}
             </>
           )}
         </CardContent>

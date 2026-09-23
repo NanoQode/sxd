@@ -64,6 +64,18 @@ export function newAttemptReference(): string {
   return `SXD-${randomBytes(6).toString('hex').toUpperCase()}`;
 }
 
+/**
+ * The person an invoice is addressed to may pay it and follow their own
+ * attempts even without a membership in the issuing organisation: a tenant
+ * paying rent invoiced by the owner's organisation is the main case. Never
+ * during impersonation (paying is a customer-only action).
+ */
+function isInvoicePayer(fa: FinanceActor, payerUserId: string | null): boolean {
+  const userId = fa.actor.userId;
+  if (!userId || !payerUserId || userId !== payerUserId) return false;
+  return !fa.actor.impersonation;
+}
+
 function providerErrorToApi(err: unknown): ApiError {
   if (err instanceof ProviderError) {
     const code =
@@ -106,11 +118,13 @@ export async function createPaymentAttempt(
       .where(eq(schema.invoices.id, invoiceId))
       .for('update');
     if (!invoice) throw new ApiError('not_found', 'invoice not found');
-    assertOrg(fa, 'org.invoices.pay', {
-      type: 'invoice',
-      id: invoice.id,
-      organizationId: invoice.organizationId,
-    });
+    if (!isInvoicePayer(fa, invoice.customerUserId)) {
+      assertOrg(fa, 'org.invoices.pay', {
+        type: 'invoice',
+        id: invoice.id,
+        organizationId: invoice.organizationId,
+      });
+    }
     if (!['issued', 'partially_paid', 'overdue'].includes(invoice.status)) {
       throw new ApiError(
         'invalid_transition',
@@ -247,6 +261,7 @@ async function loadAttemptForActor(
       : eq(schema.paymentAttempts.reference, selector.reference ?? '');
     const [attempt] = await tx.select().from(schema.paymentAttempts).where(where);
     if (!attempt) throw new ApiError('not_found', 'payment attempt not found');
+    if (attempt.initiatedByUserId && isInvoicePayer(fa, attempt.initiatedByUserId)) return attempt;
     assertStaffOrOrg(fa, 'finance.read', 'org.invoices.view', {
       type: 'invoice',
       id: attempt.invoiceId,

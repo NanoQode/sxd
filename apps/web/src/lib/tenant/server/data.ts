@@ -1,4 +1,6 @@
 import 'server-only';
+import { getPaymentAttempt } from '@simplexd/finance';
+import { getFinanceRuntime } from '@/server/finance/runtime';
 import { cache } from 'react';
 import { and, desc, eq, inArray, ne } from 'drizzle-orm';
 import type {
@@ -13,7 +15,6 @@ import type {
 } from '@simplexd/contracts';
 import { ApiError } from '@simplexd/contracts';
 import { getDb, schema, withActor } from '@simplexd/db';
-import { authorizeOrg } from '@simplexd/domain/authz';
 import type { RequestIdentity } from '@/lib/auth/session';
 import type { TenantAppointment, TenantInvoice } from '@/lib/tenant/model';
 import { getFile } from '@/server/files/queries';
@@ -200,9 +201,63 @@ export function loadMyInvoices(
  * which for rent is the owner): a tenant who is not a member of the owner
  * organisation cannot pay online, so no Pay control is rendered for them.
  */
-export function canPayLeaseInvoices(identity: RequestIdentity, organizationId: string): boolean {
-  return authorizeOrg(identity.actor, 'org.invoices.pay', { type: 'invoice', organizationId })
-    .allowed;
+export interface PaymentResult {
+  tone: 'success' | 'warning' | 'danger' | 'info';
+  title: string;
+  message: string;
+}
+
+/**
+ * The server-verified state of a payment attempt the caller started, shown
+ * after returning from checkout. The query string only names the attempt;
+ * the outcome always comes from the stored, provider-verified status.
+ */
+export async function loadPaymentResult(
+  identity: RequestIdentity,
+  attemptId: string,
+): Promise<PaymentResult | null> {
+  if (!/^[0-9a-f-]{36}$/i.test(attemptId)) return null;
+  try {
+    const rt = getFinanceRuntime();
+    const attempt = await getPaymentAttempt(
+      rt,
+      { actor: identity.actor, ctx: identity.ctx },
+      attemptId,
+    );
+    switch (attempt.status) {
+      case 'successful':
+        return {
+          tone: 'success',
+          title: 'Payment received',
+          message:
+            'The payment was verified with the payment provider. Your receipt is on the Receipts page.',
+        };
+      case 'failed':
+      case 'abandoned':
+        return {
+          tone: 'danger',
+          title: 'Payment not completed',
+          message: 'No money was taken. You can try again from the invoice below.',
+        };
+      case 'uncertain':
+      case 'reversed':
+        return {
+          tone: 'warning',
+          title: 'Payment needs checking',
+          message:
+            'The provider reported something that does not match this invoice, so it has not been applied. SimplexD finance will review it; contact support if you were charged.',
+        };
+      default:
+        return {
+          tone: 'info',
+          title: 'Payment pending',
+          message:
+            'The provider has not confirmed the payment yet. This page updates once it is verified; do not pay again in the meantime.',
+        };
+    }
+  } catch {
+    return null;
+  }
 }
 
 export interface VisibleFile {
