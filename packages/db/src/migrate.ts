@@ -28,9 +28,12 @@ function resolveMigrationsFolder(): string {
   );
 }
 
-export const migrationsFolder = resolveMigrationsFolder();
+/** Resolved lazily so importing the package never touches the filesystem. */
+export function migrationsFolder(): string {
+  return resolveMigrationsFolder();
+}
 
 /** Applies all pending migrations. Must run with the owner role. */
 export async function runMigrations(db: Database): Promise<void> {
-  await migrate(db, { migrationsFolder, migrationsTable: 'schema_migrations' });
+  await migrate(db, { migrationsFolder: migrationsFolder(), migrationsTable: 'schema_migrations' });
 }

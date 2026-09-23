@@ -38,7 +38,7 @@ async function snapshotFolder(excludeTag: string): Promise<string> {
   const dir = await mkdtemp(path.join(os.tmpdir(), 'sxd-migrations-'));
   await mkdir(path.join(dir, 'meta'));
   const journal = JSON.parse(
-    await readFile(path.join(migrationsFolder, 'meta/_journal.json'), 'utf8'),
+    await readFile(path.join(migrationsFolder(), 'meta/_journal.json'), 'utf8'),
   ) as Journal & Record<string, unknown>;
   const cutoff = journal.entries.findIndex((e) => e.tag === excludeTag);
   if (cutoff === -1) throw new Error(`journal has no entry ${excludeTag}`);
@@ -49,7 +49,7 @@ async function snapshotFolder(excludeTag: string): Promise<string> {
   );
   for (const entry of kept) {
     const file = `${entry.tag}.sql`;
-    await writeFile(path.join(dir, file), await readFile(path.join(migrationsFolder, file)));
+    await writeFile(path.join(dir, file), await readFile(path.join(migrationsFolder(), file)));
   }
   return dir;
 }
@@ -147,7 +147,7 @@ describe('migrations', () => {
 
     const before = await schemaFingerprint(temp.owner);
     expect(before.migrations).toBe(
-      (await readdir(migrationsFolder)).filter((f) => f.endsWith('.sql')).length - 1,
+      (await readdir(migrationsFolder())).filter((f) => f.endsWith('.sql')).length - 1,
     );
     for (const table of NEW_TABLES) expect(before.tables, table).not.toContain(table);
 
@@ -290,7 +290,7 @@ describe('migrations', () => {
     await runMigrations(temp.owner);
     const first = await schemaFingerprint(temp.owner);
     expect(first.migrations).toBe(
-      (await readdir(migrationsFolder)).filter((f) => f.endsWith('.sql')).length,
+      (await readdir(migrationsFolder())).filter((f) => f.endsWith('.sql')).length,
     );
     expect(first.tables).toEqual(expect.arrayContaining(NEW_TABLES));
     expect(first.policies).toBeGreaterThan(0);
