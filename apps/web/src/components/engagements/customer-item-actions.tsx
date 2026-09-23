@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import type { EngagementItemDto, FileDto } from '@simplexd/contracts';
 import { Alert, Button, Field, Textarea, useToast } from '@simplexd/ui';
 import { describeError, portalFetch } from '@/lib/portal/client';
@@ -22,13 +22,15 @@ export function CustomerItemActions({
 }) {
   const router = useRouter();
   const { toast } = useToast();
-  const [version, setVersion] = useState(item.version);
   const [answer, setAnswer] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<{ message: string; correlationId: string | null } | null>(
     null,
   );
-  useEffect(() => setVersion(item.version), [item.version]);
+  // The optimistic-concurrency token is the server-rendered item version; every
+  // success refreshes the page data, so a second action before that refresh is
+  // refused by the server as a version conflict rather than applied blindly.
+  const version = item.version;
 
   if (!item.can.respond && !item.can.attachEvidence) return null;
 
@@ -37,11 +39,9 @@ export function CustomerItemActions({
     setBusy(true);
     setError(null);
     try {
-      const updated = await portalFetch<EngagementItemDto>(
-        `/api/v1/engagement-items/${item.id}/responses`,
-        { body: { body: answer.trim(), expectedVersion: version } },
-      );
-      setVersion(updated.version);
+      await portalFetch<EngagementItemDto>(`/api/v1/engagement-items/${item.id}/responses`, {
+        body: { body: answer.trim(), expectedVersion: version },
+      });
       setAnswer('');
       toast({ title: 'Answer sent to your team', tone: 'success' });
       router.refresh();
@@ -56,11 +56,9 @@ export function CustomerItemActions({
   async function attach(file: FileDto) {
     setError(null);
     try {
-      const updated = await portalFetch<EngagementItemDto>(
-        `/api/v1/engagement-items/${item.id}/evidence`,
-        { body: { fileIds: [file.id], expectedVersion: version } },
-      );
-      setVersion(updated.version);
+      await portalFetch<EngagementItemDto>(`/api/v1/engagement-items/${item.id}/evidence`, {
+        body: { fileIds: [file.id], expectedVersion: version },
+      });
       toast({ title: `${file.originalName} attached`, tone: 'success' });
       router.refresh();
     } catch (err) {

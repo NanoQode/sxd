@@ -59,21 +59,26 @@ function DraftDialog({
     `${requestTitle} — ${KIND_LABEL[defaultKind(workflowTemplateKey)].toLowerCase()}`,
   );
   const [referenceItems, setReferenceItems] = useState(true);
-  const [outline, setOutline] = useState<ReportTemplateOutlineDto | null>(null);
-  const [outlineError, setOutlineError] = useState<string | null>(null);
+  // The outline is keyed by the kind it was loaded for, so switching kind shows
+  // "loading" until the matching response arrives (no state reset in the effect).
+  const [loaded, setLoaded] = useState<{
+    kind: Kind;
+    outline: ReportTemplateOutlineDto | null;
+    error: string | null;
+  } | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const outline = loaded?.kind === kind ? loaded.outline : null;
+  const outlineError = loaded?.kind === kind ? loaded.error : null;
 
   useEffect(() => {
     let cancelled = false;
-    setOutline(null);
-    setOutlineError(null);
     adminFetch<ReportTemplateOutlineDto>(`/api/v1/report-templates/outline?kind=${kind}`)
       .then((o) => {
-        if (!cancelled) setOutline(o);
+        if (!cancelled) setLoaded({ kind, outline: o, error: null });
       })
       .catch((err) => {
-        if (!cancelled) setOutlineError(errorMessage(err));
+        if (!cancelled) setLoaded({ kind, outline: null, error: errorMessage(err) });
       });
     return () => {
       cancelled = true;

@@ -236,6 +236,45 @@ Customers verify their phone number themselves from _Portal → Settings → Pro
 notifications only go to verified numbers, so an unverified number shows up in the log as
 _Not sent (suppressed)_ with reason `phone_unverified`.
 
+## Service setup (`/admin/services`)
+
+Configuration the business edits itself; the pages read with any of the permissions below and
+every save checks its own permission on the server.
+
+- **Price anchors** (`pricing.manage`): one card per package with the live anchor the public site
+  shows and, when one exists, the proposal under draft or review. _Propose a change_ / _Add
+  package_ saves a new revision (basis, amount in naira, percentage, minimum scope, exclusions,
+  effective dates); _Submit for review_ hands it to a **different** pricing manager, who
+  _Publish_es (verified authenticator, reason) or _Reject_s. Authors _Withdraw_. _Retire_ takes a
+  package off the site; _History_ shows every revision. A future effective date keeps the current
+  anchor public until that day. Public pages never show in-review values.
+- **Quote templates** (`pricing.manage`; `quotes.issue` may read): lines, scope and exclusions per
+  service or for all services. On a service request, _Draft a quote → Start from a quotation
+  template → Use template_ copies them into the form; edit freely, then save. The quote keeps its
+  own copy.
+- **Report templates** (`reports.review`; report permissions may read): ordered sections with
+  author guidance and the scope/limitations wording per report kind. Exactly one template per
+  kind is active (_Make active_ swaps). `pnpm db:seed` installs generic starters for progress,
+  inspection, virtual inspection, diligence memorandum, closing pack and search outcome.
+- **Document requirements** (`pricing.manage`): what each service asks for and from which stage.
+  Tick _Sensitive_ for identity or financial papers: they are requested only when the transaction
+  needs them, never listed publicly, and explained to the customer. Customers see "Documents we
+  need" on their request; the service page shows "What you'll need".
+- **SLA policies** (`sla.manage`): target hours per stage, per service or global; one active policy
+  per service and stage. Triage applies the _triage_ target automatically; other stage targets
+  are recorded and shown, and escalation roles are stored for a future escalation job.
+
+## Portfolio analytics (`/admin/analytics`)
+
+Counts and sums derived from records when the page loads (properties and occupancy, rent
+arrears, active project budgets, open change orders, service requests with SLA state, revenue by
+month). Pick a date range and optionally one customer organisation. Each section appears only
+when your role may read it (`finance.read`, `rentals.manage`, `projects.read_all`,
+`service_requests.read_all`); project managers see their own projects and requests. _Export … CSV_
+downloads the rows a figure was summed from, so a spreadsheet total reproduces the page; arrears
+and revenue exports need `finance.export` with a verified authenticator. See
+`docs/workflows/admin-configuration.md` for the definitions and how to reconcile.
+
 ## Known limitations
 
 - Staff bookings are recorded with the staff member as the contact (booking API); the customer's

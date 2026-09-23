@@ -5,6 +5,7 @@ import { dispatchRequest } from './dispatch';
 import { resolveEnv, type PipelineEnv } from './env';
 import { organizationMemberSpecs, staffWithRoles } from './recipients';
 import { resolveOpsAlert } from './ops-alerts';
+import { partnerOpsResolvers } from './partner-ops';
 import { searchPurchaseResolvers } from './search-purchase';
 import type {
   Db,
@@ -214,7 +215,11 @@ function listingNotice(opts: {
         recipients.push(...(await customerRecipients(tx, orgId, [])));
       }
     } else {
-      recipients = await staffWithRoles(tx, ['content_editor', 'operations_manager', 'super_admin']);
+      recipients = await staffWithRoles(tx, [
+        'content_editor',
+        'operations_manager',
+        'super_admin',
+      ]);
     }
     const seen = new Set<string>();
     const unique = recipients.filter((r) => {
@@ -249,7 +254,8 @@ function listingNotice(opts: {
   };
 }
 
-const listingTitle = (p: Record<string, unknown>) => str(p['title']) ?? str(p['listingTitle']) ?? 'your listing';
+const listingTitle = (p: Record<string, unknown>) =>
+  str(p['title']) ?? str(p['listingTitle']) ?? 'your listing';
 const listingPortalLink = (p: Record<string, unknown>, e: OutboxEventLike) =>
   `/portal/listings/${str(p['listingId']) ?? e.aggregateId}`;
 const offerPortalLink = (p: Record<string, unknown>, e: OutboxEventLike) =>
@@ -287,14 +293,16 @@ const listingResolvers: Record<string, EventResolver> = {
     entityType: 'listing',
     recipients: 'owner',
     title: (p) => `Changes requested: ${listingTitle(p)}`,
-    message: (p) => `Moderation asked for changes before publication: ${str(p['reason']) ?? 'see the listing page'}.`,
+    message: (p) =>
+      `Moderation asked for changes before publication: ${str(p['reason']) ?? 'see the listing page'}.`,
     link: listingPortalLink,
   }),
   'listing.marked_duplicate': listingNotice({
     entityType: 'listing',
     recipients: 'owner',
     title: (p) => `Listing marked as a duplicate: ${listingTitle(p)}`,
-    message: (p) => `${str(p['reason']) ?? 'The listing duplicates another one.'} It is no longer shown publicly.`,
+    message: (p) =>
+      `${str(p['reason']) ?? 'The listing duplicates another one.'} It is no longer shown publicly.`,
     link: listingPortalLink,
   }),
   'listing.expired': listingNotice({
@@ -327,14 +335,16 @@ const listingResolvers: Record<string, EventResolver> = {
     entityType: 'offer',
     recipients: 'named',
     title: (p) => `New offer on ${listingTitle(p)}`,
-    message: () => 'A buyer organisation made an offer. Counter, accept or decline it from your listings.',
+    message: () =>
+      'A buyer organisation made an offer. Counter, accept or decline it from your listings.',
     link: offerPortalLink,
   }),
   'listing_offer.countered': listingNotice({
     entityType: 'offer',
     recipients: 'named',
     title: (p) => `Counter-offer on ${listingTitle(p)}`,
-    message: (p) => `The ${str(p['side']) ?? 'other party'} proposed a different amount. It is your move.`,
+    message: (p) =>
+      `The ${str(p['side']) ?? 'other party'} proposed a different amount. It is your move.`,
     link: offerPortalLink,
   }),
   'listing_offer.accepted': listingNotice({
@@ -758,6 +768,7 @@ const resolvers: Record<string, EventResolver> = {
   ...financeResolvers,
   ...commercialResolvers,
   ...searchPurchaseResolvers,
+  ...partnerOpsResolvers,
   'notification.requested': requestedNotification,
   // Monitoring thresholds (apps/worker/src/monitoring); staff roles named on the event.
   'ops.alert': resolveOpsAlert,
