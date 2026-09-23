@@ -315,10 +315,11 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
             ) : null}
           </Section>
           <Section title="Impersonation">
-            <GapNotice title="Not available">
-              Support impersonation needs an endpoint that records the reason, expiry and audit
-              entry and blocks financial approvals. None exists yet, so the control is hidden rather
-              than shown disabled.
+            <GapNotice title="Not offered">
+              Support impersonation is deliberately not part of this release: support staff work
+              from this read-only customer view with masked finance and identity fields. Adding it
+              would require a reason, expiry, banner and audit trail, and must block secrets and
+              financial approvals.
             </GapNotice>
           </Section>
         </div>

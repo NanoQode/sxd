@@ -429,9 +429,9 @@ export function RequestForm({
                 );
               })}
               <Alert tone="info" title="Attachments">
-                Document and photo uploads (drawings, title documents, evidence) arrive in Wave 2
-                with resumable, scanned uploads. Describe what you have for now; the team will
-                request files securely after triage.
+                Describe what you have here. Once the request is created you can upload drawings,
+                title documents and photos securely from its page; every file is scanned before
+                anyone can open it.
               </Alert>
             </fieldset>
           ) : null}

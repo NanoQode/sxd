@@ -16,7 +16,8 @@ import { loadServiceRequest, toServiceRequestDto } from './queries';
  * Customer-initiated transitions (cancel, pause, resume). The engagement state
  * machine decides validity and whether a reason is required; the organisation
  * permission model decides who may ask; optimistic concurrency prevents a stale
- * screen from overriding a newer change. Staff transitions arrive in Wave 2.
+ * screen from overriding a newer change. Staff transitions go through the
+ * engagement engine in @simplexd/finance (POST .../transitions/staff).
  */
 export async function applyCustomerTransition(
   identity: RequestIdentity,

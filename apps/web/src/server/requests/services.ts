@@ -89,7 +89,7 @@ export const INTAKE_FIELD_LABELS: Record<
   },
   drawings_or_boq: {
     label: 'Drawings or bill of quantities',
-    hint: 'Describe what you already have. Uploads arrive in Wave 2.',
+    hint: 'Describe what you already have; you can upload the files on the request page.',
     multiline: true,
   },
   site_access: { label: 'Site access', hint: 'Who grants access and any constraints.' },
