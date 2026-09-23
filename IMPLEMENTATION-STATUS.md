@@ -313,20 +313,20 @@ versions published; large uploads are resumable and processed asynchronously. **
 
 ## Test results (release candidate)
 
-| Suite                                                                      | Result                                                              |
-| -------------------------------------------------------------------------- | ------------------------------------------------------------------- |
-| Typecheck (all packages and apps)                                          | clean                                                               |
-| Lint (all packages and apps)                                               | 0 errors, 6 warnings                                                |
-| Format check                                                               | clean                                                               |
-| Unit projects (domain, contracts, integrations, ui, web-unit)              | 105 files, 907 tests passed                                         |
-| Integration projects (db, finance, notifications, web-integration, worker) | {{INTEGRATION}}                                                     |
-| Playwright (desktop + mobile-360): smoke, journeys, scenario 1, engagement | 53 passed, 1 skipped (mobile-only keyboard journey), 0 failed       |
-| Production build (`next build`, standalone)                                | compiled successfully; 150 MB standalone output; no warnings        |
-| Worker bundle                                                              | builds; starts and reports healthy                                  |
-| Load check (100 concurrent browsing users, 60 s, local container)          | 3,431 requests, 56 req/s, 0 errors; p50 1.5 s, p95 3.2 s, p99 6.0 s |
-| Dependency audit (`pnpm audit --prod --audit-level high`)                  | no known vulnerabilities                                            |
-| Secret scan (tracked files)                                                | clean                                                               |
-| Restore drill                                                              | verified on the development database                                |
+| Suite                                                                      | Result                                                                                            |
+| -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| Typecheck (all packages and apps)                                          | clean                                                                                             |
+| Lint (all packages and apps)                                               | 0 errors, 6 warnings                                                                              |
+| Format check                                                               | clean                                                                                             |
+| Unit projects (domain, contracts, integrations, ui, web-unit)              | 105 files, 907 tests passed                                                                       |
+| Integration projects (db, finance, notifications, web-integration, worker) | 68 files, 422 tests passed (run alone; one lock-timing flake seen only under concurrent CPU load) |
+| Playwright (desktop + mobile-360): smoke, journeys, scenario 1, engagement | 53 passed, 1 skipped (mobile-only keyboard journey), 0 failed                                     |
+| Production build (`next build`, standalone)                                | compiled successfully; 150 MB standalone output; no warnings                                      |
+| Worker bundle                                                              | builds; starts and reports healthy                                                                |
+| Load check (100 concurrent browsing users, 60 s, local container)          | 3,431 requests, 56 req/s, 0 errors; p50 1.5 s, p95 3.2 s, p99 6.0 s                               |
+| Dependency audit (`pnpm audit --prod --audit-level high`)                  | no known vulnerabilities                                                                          |
+| Secret scan (tracked files)                                                | clean                                                                                             |
+| Restore drill                                                              | verified on the development database                                                              |
 
 Lab conditions: 4 vCPU, 15 GB RAM shared with the database, Redis and the test runner; no CDN,
 no TLS termination. Field performance must be measured after launch.
