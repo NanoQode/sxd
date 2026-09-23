@@ -183,6 +183,12 @@ importers:
 
   apps/worker:
     dependencies:
+      '@aws-sdk/client-s3':
+        specifier: 3.1138.0
+        version: 3.1138.0
+      '@aws-sdk/s3-request-presigner':
+        specifier: 3.1138.0
+        version: 3.1138.0
       '@simplexd/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
@@ -204,12 +210,27 @@ importers:
       drizzle-orm:
         specifier: 0.45.3
         version: 0.45.3(@prisma/client@5.22.0)(@types/pg@8.23.1)(better-sqlite3@12.11.1)(kysely@0.29.6)(pg@8.23.0)
+      file-type:
+        specifier: 22.1.1
+        version: 22.1.1
+      googleapis:
+        specifier: 181.0.0
+        version: 181.0.0
+      ics:
+        specifier: 3.12.0
+        version: 3.12.0
       ioredis:
         specifier: 6.0.0
         version: 6.0.0
+      libphonenumber-js:
+        specifier: 1.13.13
+        version: 1.13.13
       luxon:
         specifier: 3.7.2
         version: 3.7.2
+      nodemailer:
+        specifier: 10.0.10
+        version: 10.0.10
       pg:
         specifier: 8.23.0
         version: 8.23.0
