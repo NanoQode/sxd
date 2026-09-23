@@ -9,9 +9,11 @@ export const metadata: Metadata = { title: 'Implementation status' };
 export const dynamic = 'force-dynamic';
 
 async function loadStatus(): Promise<string | null> {
+  // Read at runtime (the Docker image copies the file next to server.js);
+  // excluded from build tracing so the whole repository is not bundled.
   const candidates = [
-    path.resolve(process.cwd(), 'IMPLEMENTATION-STATUS.md'),
-    path.resolve(process.cwd(), '../../IMPLEMENTATION-STATUS.md'),
+    path.resolve(/*turbopackIgnore: true*/ process.cwd(), 'IMPLEMENTATION-STATUS.md'),
+    path.resolve(/*turbopackIgnore: true*/ process.cwd(), '../../IMPLEMENTATION-STATUS.md'),
   ];
   for (const file of candidates) {
     try {

@@ -17,6 +17,8 @@ COPY packages/db/package.json packages/db/package.json
 COPY packages/ui/package.json packages/ui/package.json
 COPY packages/integrations/package.json packages/integrations/package.json
 COPY packages/contracts/package.json packages/contracts/package.json
+COPY packages/finance/package.json packages/finance/package.json
+COPY packages/notifications/package.json packages/notifications/package.json
 COPY tests/e2e/package.json tests/e2e/package.json
 RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store pnpm install --frozen-lockfile --ignore-scripts
 

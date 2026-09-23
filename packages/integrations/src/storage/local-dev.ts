@@ -190,7 +190,8 @@ export class LocalDevStorageProvider implements StorageProvider {
         'not_configured',
       );
     this.options = options;
-    this.root = path.resolve(options.root ?? './uploads-dev');
+    // Development-only directory chosen at runtime; excluded from build tracing.
+    this.root = path.resolve(/*turbopackIgnore: true*/ options.root ?? './uploads-dev');
     this.ttl = clampExpiry(options.signedUrlTtlSeconds, DEFAULT_SIGNED_URL_SECONDS);
   }
 

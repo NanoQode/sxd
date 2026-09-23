@@ -17,6 +17,8 @@ COPY packages/db/package.json packages/db/package.json
 COPY packages/ui/package.json packages/ui/package.json
 COPY packages/integrations/package.json packages/integrations/package.json
 COPY packages/contracts/package.json packages/contracts/package.json
+COPY packages/finance/package.json packages/finance/package.json
+COPY packages/notifications/package.json packages/notifications/package.json
 COPY tests/e2e/package.json tests/e2e/package.json
 RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store pnpm install --frozen-lockfile --ignore-scripts
 # sharp needs its native binary; run only its build script.
@@ -49,6 +51,7 @@ RUN groupadd --system app && useradd --system --gid app --home /app app
 COPY --from=build --chown=app:app /repo/apps/web/.next/standalone ./
 COPY --from=build --chown=app:app /repo/apps/web/.next/static ./apps/web/.next/static
 COPY --from=build --chown=app:app /repo/apps/web/public ./apps/web/public
+COPY --from=build --chown=app:app /repo/IMPLEMENTATION-STATUS.md ./IMPLEMENTATION-STATUS.md
 USER app
 EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
