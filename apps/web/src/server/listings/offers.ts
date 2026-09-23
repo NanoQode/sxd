@@ -41,6 +41,17 @@ import {
 } from './rules';
 
 /**
+ * Offers made on a listing always name the listing's owner organisation as the
+ * counterparty. Purchase-representation offers (packages under a service
+ * request) share the table with a null counterparty and are not shown or acted
+ * on here, even when they reference a published listing.
+ */
+const isListingOffer = and(
+  isNotNull(schema.offers.listingId),
+  isNotNull(schema.offers.counterpartyOrganizationId),
+);
+
+/**
  * Offers on published listings. The offer belongs to the buyer's organisation
  * (`organizationId`, permission `org.requests.create`) and names the listing
  * owner's organisation as counterparty (`org.listings.manage` to respond).
@@ -293,7 +304,7 @@ export async function actOnListingOffer(
     const [offer] = await tx
       .select()
       .from(schema.offers)
-      .where(and(eq(schema.offers.id, offerId), isNotNull(schema.offers.listingId)));
+      .where(and(eq(schema.offers.id, offerId), isListingOffer));
     if (!offer) throw new ApiError('not_found', 'offer not found');
     const side = sideOf(identity, offer);
     if (side === null) throw new ApiError('not_found', 'offer not found');
@@ -442,7 +453,7 @@ export async function getListingOffer(
     const [offer] = await tx
       .select()
       .from(schema.offers)
-      .where(and(eq(schema.offers.id, offerId), isNotNull(schema.offers.listingId)));
+      .where(and(eq(schema.offers.id, offerId), isListingOffer));
     if (!offer) throw new ApiError('not_found', 'offer not found');
     const [dto] = await decorate(tx, identity, [offer], new Date());
     if (!dto) throw new ApiError('not_found', 'offer not found');
@@ -467,6 +478,7 @@ export async function listOffersForListing(
       .where(
         and(
           eq(schema.offers.listingId, listingId),
+          isListingOffer,
           isStaff
             ? undefined
             : or(
@@ -508,7 +520,7 @@ export async function listMyListingOffers(
       .from(schema.offers)
       .where(
         and(
-          isNotNull(schema.offers.listingId),
+          isListingOffer,
           sideFilter,
           query.status ? eq(schema.offers.status, query.status) : undefined,
         ),
