@@ -18,9 +18,15 @@ const revoked = `user_ops_revoked_${run}`;
 const env = { appUrl: 'https://app.example.test' } as Parameters<typeof resolveOpsAlert>[0]['env'];
 
 beforeAll(async () => {
-  await dbs.owner.insert(schema.user).values(
-    [finance, admin, editor, revoked].map((id) => ({ id, name: id, email: `${id}@example.test` })),
-  );
+  await dbs.owner
+    .insert(schema.user)
+    .values(
+      [finance, admin, editor, revoked].map((id) => ({
+        id,
+        name: id,
+        email: `${id}@example.test`,
+      })),
+    );
   await dbs.owner.insert(schema.staffRoles).values([
     { userId: finance, role: 'finance' },
     { userId: admin, role: 'super_admin' },

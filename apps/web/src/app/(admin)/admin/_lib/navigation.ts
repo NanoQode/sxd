@@ -162,6 +162,14 @@ export const ADMIN_NAV: NavItem[] = [
     permissions: ['integrations.read'],
   },
   {
+    // Notification templates, test sends, delivery log and suppressions (brief §13/§14).
+    key: 'communications',
+    label: 'Communications',
+    href: '/admin/communications',
+    icon: 'messages',
+    permissions: ['notifications.templates.manage', 'notifications.test_send'],
+  },
+  {
     key: 'settings',
     label: 'Settings',
     href: '/admin/settings',
@@ -311,6 +319,30 @@ export const ADMIN_SUBNAV: SubNavItem[] = [
     href: '/admin/implementation-status',
     parent: 'overview',
     permissions: [],
+  },
+  {
+    label: 'Communications: templates',
+    href: '/admin/communications/templates',
+    parent: 'communications',
+    permissions: ['notifications.templates.manage'],
+  },
+  {
+    label: 'Communications: test send',
+    href: '/admin/communications/test-send',
+    parent: 'communications',
+    permissions: ['notifications.test_send'],
+  },
+  {
+    label: 'Communications: delivery log',
+    href: '/admin/communications/deliveries',
+    parent: 'communications',
+    permissions: ['notifications.templates.manage'],
+  },
+  {
+    label: 'Communications: suppressions',
+    href: '/admin/communications/suppressions',
+    parent: 'communications',
+    permissions: ['notifications.templates.manage'],
   },
 ];
 

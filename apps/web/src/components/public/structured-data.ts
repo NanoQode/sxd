@@ -155,18 +155,58 @@ export function faqJsonLd(items: Array<{ question: string; answerText: string }>
   };
 }
 
+/**
+ * RealEstateListing with only facts the page states: price when the owner
+ * stated one, the location at the approved precision, approved photos, and
+ * never a review or rating.
+ */
 export function listingJsonLd(input: {
   name: string;
   url: string;
   datePosted: string | null;
   priceNairaDecimal: string | null;
+  description?: string | null;
+  validThrough?: string | null;
+  addressRegion?: string | null;
+  addressLocality?: string | null;
+  geo?: { lat: number; lon: number } | null;
+  images?: string[];
 }): JsonLd {
+  const address =
+    input.addressRegion || input.addressLocality
+      ? {
+          '@type': 'PostalAddress',
+          addressCountry: 'NG',
+          ...(input.addressRegion ? { addressRegion: input.addressRegion } : {}),
+          ...(input.addressLocality ? { addressLocality: input.addressLocality } : {}),
+        }
+      : null;
   return {
     '@context': 'https://schema.org',
     '@type': 'RealEstateListing',
     name: input.name,
     url: input.url,
+    ...(input.description ? { description: input.description } : {}),
     ...(input.datePosted ? { datePosted: input.datePosted } : {}),
+    ...(input.validThrough ? { validThrough: input.validThrough } : {}),
+    ...(input.images && input.images.length > 0 ? { image: input.images } : {}),
+    ...(address || input.geo
+      ? {
+          about: {
+            '@type': 'Place',
+            ...(address ? { address } : {}),
+            ...(input.geo
+              ? {
+                  geo: {
+                    '@type': 'GeoCoordinates',
+                    latitude: input.geo.lat,
+                    longitude: input.geo.lon,
+                  },
+                }
+              : {}),
+          },
+        }
+      : {}),
     ...(input.priceNairaDecimal
       ? { offers: { '@type': 'Offer', price: input.priceNairaDecimal, priceCurrency: 'NGN' } }
       : {}),

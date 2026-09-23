@@ -6,7 +6,7 @@ import {
   type QuoteTemplateCreate,
   type QuoteTemplatePatch,
 } from '@simplexd/contracts';
-import { schema, type QuoteLine, type Transaction } from '@simplexd/db';
+import { schema, type Transaction } from '@simplexd/db';
 import { recordAudit } from '@/lib/audit';
 import { lineAmountKobo, sumKobo } from '@/lib/admin/money';
 import {
@@ -29,6 +29,7 @@ import { authorizeAny, serviceNames } from './shared';
  */
 
 type TemplateRow = typeof schema.quoteTemplates.$inferSelect;
+type QuoteLine = TemplateRow['lines'][number];
 
 export interface QuoteTemplateDto {
   id: string;

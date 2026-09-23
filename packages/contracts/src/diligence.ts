@@ -211,7 +211,12 @@ export const engagementItemSummaryDtoSchema = z.object({
 /* Reports under a service request                                         */
 /* ---------------------------------------------------------------------- */
 
-export const serviceRequestReportKindSchema = z.enum(['diligence_memo', 'virtual_inspection']);
+export const serviceRequestReportKindSchema = z.enum([
+  'diligence_memo',
+  'virtual_inspection',
+  'closing_pack',
+  'search_outcome',
+]);
 export type ServiceRequestReportKind = z.infer<typeof serviceRequestReportKindSchema>;
 
 export const serviceRequestReportCreateSchema = z.object({

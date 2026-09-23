@@ -842,6 +842,57 @@ const resolvers: Record<string, EventResolver> = {
   'report.released': (ctx) => reportRequest(ctx),
   'project.report.released': (ctx) => reportRequest(ctx),
 
+  // Engagement records (due diligence, virtual inspections, closing checklists):
+  // the assignee hears about work given to them; the customer organisation about
+  // new queries, red flags and replies; staff on the request about customer input.
+  'engagement_item.assigned': activityUpdate({
+    entityType: 'engagement_item',
+    title: (p) => `${str(p['kindLabel']) ?? 'Item'} assigned to you`,
+    message: (p) =>
+      `A ${(str(p['kindLabel']) ?? 'record').toLowerCase()} on request ${str(p['reference']) ?? ''} was assigned to you. Open it to record your findings and evidence.`,
+    link: (p) =>
+      str(p['linkPath']) ??
+      `/partner/items?serviceRequestId=${str(p['serviceRequestId']) ?? ''}`,
+  }),
+  'engagement_item.customer_action': activityUpdate({
+    entityType: 'engagement_item',
+    organizationMembers: true,
+    title: (p) =>
+      str(p['reason']) === 'reply'
+        ? `Reply on a ${(str(p['kindLabel']) ?? 'record').toLowerCase()}`
+        : str(p['kind']) === 'red_flag'
+          ? `Red flag recorded${str(p['severity']) ? ` (${statusLabel(str(p['severity']))})` : ''}`
+          : `New ${(str(p['kindLabel']) ?? 'record').toLowerCase()} for you`,
+    message: (p) =>
+      str(p['reason']) === 'reply'
+        ? `Your team replied on request ${str(p['reference']) ?? ''}. Open the request to read it.`
+        : str(p['kind']) === 'red_flag'
+          ? `A red flag was recorded on request ${str(p['reference']) ?? ''}. Open the request to read the finding and what it means for your decision.`
+          : `Your team raised a ${(str(p['kindLabel']) ?? 'record').toLowerCase()} on request ${str(p['reference']) ?? ''}. Open the request to answer it.`,
+    link: (p) =>
+      str(p['linkPath']) ?? `/portal/requests/${str(p['serviceRequestId']) ?? ''}?tab=workspace`,
+  }),
+  'engagement_item.responded': activityUpdate({
+    entityType: 'engagement_item',
+    title: (p) =>
+      p['byCustomer'] === true
+        ? `Customer answered a ${(str(p['kindLabel']) ?? 'query').toLowerCase()}`
+        : `Reply on a ${(str(p['kindLabel']) ?? 'record').toLowerCase()}`,
+    message: (p) =>
+      `Request ${str(p['reference']) ?? ''}: a reply was added on a ${(str(p['kindLabel']) ?? 'record').toLowerCase()}. Review it and update the status.`,
+    link: (p) => `/admin/service-requests/${str(p['serviceRequestId']) ?? ''}#engagement-records`,
+    channels: ['in_app', 'email'],
+  }),
+  'engagement_item.evidence_attached': activityUpdate({
+    entityType: 'engagement_item',
+    title: (p) =>
+      p['byCustomer'] === true ? 'Customer uploaded a requested document' : 'Evidence attached',
+    message: (p) =>
+      `Request ${str(p['reference']) ?? ''}: ${String(p['fileCount'] ?? 1)} file(s) were attached to a ${(str(p['kindLabel']) ?? 'record').toLowerCase()}. Check them and update the status.`,
+    link: (p) => `/admin/service-requests/${str(p['serviceRequestId']) ?? ''}#engagement-records`,
+    channels: ['in_app', 'email'],
+  }),
+
   'change_order.submitted': async ({ tx, event, payload, env, scope }) => {
     const id = str(payload['changeOrderId']) ?? event.aggregateId;
     const [co] = await tx.select().from(schema.changeOrders).where(eq(schema.changeOrders.id, id));

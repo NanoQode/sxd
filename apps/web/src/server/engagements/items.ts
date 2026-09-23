@@ -120,12 +120,17 @@ export function canManageItems(
   kind?: EngagementItemKind,
 ): boolean {
   if (!isStaff(identity)) return false;
-  const checks: AccessCheck[] = [...REQUEST_MANAGE_CHECKS];
-  if (kind) {
-    for (const p of kindRule(kind).extraCreatePermissions)
-      checks.push({ staff: p as NonNullable<AccessCheck['staff']> });
-  }
-  return allowsRequest(identity, access, checks);
+  if (allowsRequest(identity, access, REQUEST_MANAGE_CHECKS)) return true;
+  if (!kind) return false;
+  // Kind-specific permissions (an inspector recording site findings) only
+  // count for staff attached to the request: its project manager or an
+  // assignee. Broad roles already passed the manage checks above.
+  const userId = identity.session?.user.id;
+  if (!userId || !access.staffAssigneeIds.includes(userId)) return false;
+  const checks: AccessCheck[] = kindRule(kind).extraCreatePermissions.map((p) => ({
+    staff: p as NonNullable<AccessCheck['staff']>,
+  }));
+  return checks.length > 0 && allowsRequest(identity, access, checks);
 }
 
 /**

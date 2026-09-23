@@ -17,12 +17,11 @@ import {
   StatusBadge,
   Textarea,
   formatDateTimeLabel,
-  formatNairaString,
   humanize,
   useToast,
 } from '@simplexd/ui';
 import { adminFetch, errorMessage } from '@/lib/admin/client';
-import { lineAmountKobo, parseNairaToKobo, sumKobo } from '@/lib/admin/money';
+import { koboToNairaInput, lineAmountKobo, parseNairaToKobo, sumKobo } from '@/lib/admin/money';
 import type { QuoteTemplateOption } from '@/lib/admin/server/service-requests';
 import { ApiAction } from '@/components/admin/api-action';
 import { Money } from '@/components/admin/money';
@@ -53,10 +52,9 @@ export function QuotesPanel({
   const router = useRouter();
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
-  const [mode, setMode] = useState<'lines' | 'template'>(
-    templates.length > 0 ? 'template' : 'lines',
-  );
   const [templateId, setTemplateId] = useState(templates[0]?.id ?? '');
+  /** Template whose lines were copied into the form; sent as provenance only. */
+  const [appliedTemplateId, setAppliedTemplateId] = useState<string | null>(null);
   const [lines, setLines] = useState<DraftLine[]>([{ ...EMPTY_LINE }]);
   const [scope, setScope] = useState('');
   const [exclusions, setExclusions] = useState('');
@@ -87,20 +85,38 @@ export function QuotesPanel({
   const linesValid =
     parsedLines.length > 0 &&
     parsedLines.every((l) => l.description.trim() && l.unitKobo && l.qtyOk);
-  const ready = mode === 'template' ? Boolean(templateId) : linesValid;
+  const ready = linesValid;
+
+  /** Copies the template's lines, scope and exclusions into the form; everything stays editable. */
+  function applyTemplate() {
+    const t = templates.find((x) => x.id === templateId);
+    if (!t) return;
+    setLines(
+      t.lines.length > 0
+        ? t.lines.map((l) => ({
+            description: l.description,
+            quantity: l.quantity,
+            unitNaira: koboToNairaInput(l.unitAmountKobo),
+          }))
+        : [{ ...EMPTY_LINE }],
+    );
+    setScope(t.scopeMarkdown ?? '');
+    setExclusions(t.exclusions ?? '');
+    setAppliedTemplateId(t.id);
+  }
 
   function openNew(existing: QuoteDto | null) {
     setTarget(existing);
     setError(null);
+    setAppliedTemplateId(null);
     if (existing) {
       const v = existing.versions[existing.versions.length - 1];
-      setMode('lines');
       setLines(
         v
           ? v.lines.map((l) => ({
               description: l.description,
               quantity: l.quantity,
-              unitNaira: formatNairaString(l.unitAmountKobo).replace('₦', ''),
+              unitNaira: koboToNairaInput(l.unitAmountKobo),
             }))
           : [{ ...EMPTY_LINE }],
       );
@@ -134,7 +150,11 @@ export function QuotesPanel({
         toast({ title: 'New quote version drafted', tone: 'success' });
       } else {
         await adminFetch(`/api/v1/service-requests/${requestId}/quotes`, {
-          body: mode === 'template' ? { templateId, ...base } : { lines: lineInputs, ...base },
+          body: {
+            lines: lineInputs,
+            ...(appliedTemplateId ? { templateId: appliedTemplateId } : {}),
+            ...base,
+          },
         });
         toast({
           title: 'Quote drafted',
@@ -334,47 +354,55 @@ export function QuotesPanel({
                 {error}
               </Alert>
             ) : null}
-            {!target && templates.length > 0 ? (
-              <div className="flex gap-2">
-                <Button
-                  variant={mode === 'template' ? 'primary' : 'secondary'}
-                  size="sm"
-                  onClick={() => setMode('template')}
+            {templates.length > 0 ? (
+              <div className="rounded-md border border-border bg-bg-sunken p-3">
+                <Field
+                  label="Start from a quotation template"
+                  hint="Copies the template's lines, scope and exclusions into the form below, where you can change them. The issued quote is its own versioned record; later template edits never touch it."
                 >
-                  From template
-                </Button>
-                <Button
-                  variant={mode === 'lines' ? 'primary' : 'secondary'}
-                  size="sm"
-                  onClick={() => setMode('lines')}
-                >
-                  From lines
-                </Button>
+                  {({ id }) => (
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+                      <NativeSelect
+                        id={id}
+                        value={templateId}
+                        onChange={(e) => setTemplateId(e.target.value)}
+                        className="sm:flex-1"
+                      >
+                        {templates.map((t) => (
+                          <option key={t.id} value={t.id}>
+                            {t.name} ({t.lineCount} {t.lineCount === 1 ? 'line' : 'lines'}
+                            {t.global ? ', all services' : ''})
+                          </option>
+                        ))}
+                      </NativeSelect>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        onClick={applyTemplate}
+                        disabled={!templateId}
+                      >
+                        Use template
+                      </Button>
+                    </div>
+                  )}
+                </Field>
+                {appliedTemplateId ? (
+                  <p className="mt-2 text-xs text-fg-muted">
+                    Lines copied from “
+                    {templates.find((t) => t.id === appliedTemplateId)?.name ?? 'template'}”. Edit
+                    anything before saving.
+                  </p>
+                ) : null}
               </div>
-            ) : null}
-            {!target && mode === 'template' ? (
-              <Field
-                label="Quotation template"
-                required
-                hint="Templates are managed in the database (quote_templates); there is no editor in the console yet."
-              >
-                {({ id }) => (
-                  <NativeSelect
-                    id={id}
-                    value={templateId}
-                    onChange={(e) => setTemplateId(e.target.value)}
-                  >
-                    {templates.map((t) => (
-                      <option key={t.id} value={t.id}>
-                        {t.name} ({t.lineCount} lines)
-                      </option>
-                    ))}
-                  </NativeSelect>
-                )}
-              </Field>
             ) : (
-              <div className="space-y-2">
-                <p className="text-sm font-medium">Lines</p>
+              <p className="text-xs text-fg-muted">
+                No active quotation template applies to this service. Templates are managed
+                under Services → Quote templates.
+              </p>
+            )}
+            <div className="space-y-2">
+              <p className="text-sm font-medium">Lines</p>
                 {lines.map((l, i) => (
                   <div key={i} className="grid gap-2 sm:grid-cols-[3fr_1fr_1.5fr_auto]">
                     <Input
@@ -434,8 +462,7 @@ export function QuotesPanel({
                     Subtotal (before tax): <Money kobo={subtotal} />
                   </span>
                 </div>
-              </div>
-            )}
+            </div>
             <div className="grid gap-3 sm:grid-cols-3">
               <Field label="Tax treatment" hint="Reviewed treatments only; none means no tax line.">
                 {({ id }) => (

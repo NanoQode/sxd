@@ -1,8 +1,8 @@
 import 'server-only';
-import { inArray, sql } from 'drizzle-orm';
+import { asc, inArray, sql } from 'drizzle-orm';
 import { schema, type Transaction } from '@simplexd/db';
 import { AuthorizationError, type StaffPermission } from '@simplexd/domain/authz';
-import { can, type AdminContext } from '../context';
+import { can, transact, type AdminContext } from '../context';
 
 /** Helpers shared by the admin configuration modules (pricing, templates, requirements, SLA). */
 
@@ -74,4 +74,37 @@ export async function serviceNames(
  */
 export async function lockKey(tx: Transaction, key: string): Promise<void> {
   await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${key}))`);
+}
+
+export const CONFIG_READ_PERMISSIONS: StaffPermission[] = [
+  'pricing.manage',
+  'quotes.issue',
+  'sla.manage',
+  'reports.draft',
+  'reports.review',
+  'reports.release',
+  'service_requests.read_all',
+];
+
+export interface ServiceOption {
+  id: string;
+  slug: string;
+  name: string;
+  category: 'core' | 'expansion';
+}
+
+/** Services for configuration pickers (any configuration reader). */
+export async function listConfigServices(ctx: AdminContext): Promise<ServiceOption[]> {
+  authorizeAny(ctx, CONFIG_READ_PERMISSIONS);
+  return transact(ctx, (tx) =>
+    tx
+      .select({
+        id: schema.services.id,
+        slug: schema.services.slug,
+        name: schema.services.name,
+        category: schema.services.category,
+      })
+      .from(schema.services)
+      .orderBy(asc(schema.services.category), asc(schema.services.sortOrder)),
+  );
 }

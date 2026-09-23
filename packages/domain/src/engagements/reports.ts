@@ -9,7 +9,13 @@
  */
 
 /** Report kinds that may be drafted directly under a service request (no project needed). */
-export const SERVICE_REQUEST_REPORT_KINDS = ['diligence_memo', 'virtual_inspection'] as const;
+export const SERVICE_REQUEST_REPORT_KINDS = [
+  'diligence_memo',
+  'virtual_inspection',
+  // Purchase representation and property search deliverables (build brief §8).
+  'closing_pack',
+  'search_outcome',
+] as const;
 export type ServiceRequestReportKind = (typeof SERVICE_REQUEST_REPORT_KINDS)[number];
 
 export function isServiceRequestReportKind(kind: string): kind is ServiceRequestReportKind {
@@ -46,6 +52,19 @@ export const FALLBACK_SECTIONS: Record<ServiceRequestReportKind, TemplateSection
     { key: 'checklist', heading: 'Checklist results', required: true },
     { key: 'findings', heading: 'Findings and severity', required: true },
     { key: 'next_steps', heading: 'Recommended next steps', required: false },
+  ],
+  closing_pack: [
+    { key: 'transaction', heading: 'Transaction and accepted offer', required: true },
+    { key: 'conditions', heading: 'Conditions and diligence dependency', required: true },
+    { key: 'checklist', heading: 'Closing checklist', required: true },
+    { key: 'handover', heading: 'Documents handed over', required: true },
+    { key: 'fee_basis', heading: 'Agreed fee basis', required: true },
+  ],
+  search_outcome: [
+    { key: 'outcome', heading: 'Outcome', required: true },
+    { key: 'shortlist', heading: 'Shortlist considered', required: true },
+    { key: 'viewings', heading: 'Viewings and feedback', required: false },
+    { key: 'next_steps', heading: 'Next steps', required: false },
   ],
 };
 

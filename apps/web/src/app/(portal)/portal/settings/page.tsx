@@ -12,6 +12,7 @@ import { ConsentsSection } from './consents-section';
 import { DangerZone } from './danger-zone';
 import { NotificationPreferencesForm } from './notification-preferences-form';
 import { OrganizationSettings } from './organization-settings';
+import { PhoneVerification } from './phone-verification';
 import { ProfileForm } from './profile-form';
 
 export const metadata: Metadata = { title: 'Settings' };
@@ -67,6 +68,9 @@ export default async function SettingsPage() {
           timeZone={identity.profile?.timeZone ?? 'Africa/Lagos'}
           countryOfResidence={identity.profile?.countryOfResidence ?? null}
         />
+        {identity.profile?.phoneE164 && !identity.profile.phoneVerifiedAt ? (
+          <PhoneVerification phoneE164={identity.profile.phoneE164} />
+        ) : null}
       </section>
       <section
         id="notifications"
@@ -78,7 +82,7 @@ export default async function SettingsPage() {
         </h2>
         <NotificationPreferencesForm
           initial={notificationPreferences}
-          hasPhone={Boolean(identity.profile?.phoneE164)}
+          hasPhone={Boolean(identity.profile?.phoneE164 && identity.profile.phoneVerifiedAt)}
         />
       </section>
       <section

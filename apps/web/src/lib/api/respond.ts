@@ -4,6 +4,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { ApiError, correlationIdHeader, type ErrorCode } from '@simplexd/contracts';
 import { AuthorizationError } from '@simplexd/domain/authz';
+import { reportServerError } from '../error-reporting';
 import { logger } from '../logger';
 
 /** JSON replacer that serialises bigint (kobo) as decimal strings and Dates as ISO. */
@@ -110,10 +111,15 @@ export function route<Ctx>(
       return res;
     } catch (err) {
       const res = errorResponse(err, correlationId);
+      const path = new URL(req.url).pathname;
+      if (res.status >= 500) {
+        // Error tracking (SENTRY_DSN): sanitized event with the correlation id and route only.
+        void reportServerError(err, { correlationId, route: path, method: req.method });
+      }
       logger().info(
         {
           method: req.method,
-          path: new URL(req.url).pathname,
+          path,
           status: res.status,
           ms: Date.now() - started,
           correlationId,

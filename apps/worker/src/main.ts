@@ -1,8 +1,10 @@
 import { randomUUID } from 'node:crypto';
 import http from 'node:http';
 import { checkRuntimeRole, closeDb, getDb, queueDepth } from '@simplexd/db';
+import { createErrorReporter } from '@simplexd/integrations/observability';
 import { createLogger } from './logger';
 import { runOutboxRelay } from './outbox';
+import { closeRedis } from './redis';
 import { JobRunner } from './runner';
 import { registerHandlers } from './handlers';
 import { startScheduler } from './scheduler';
@@ -16,6 +18,15 @@ import { startScheduler } from './scheduler';
 const log = createLogger('worker');
 const workerId = `${process.env.HOSTNAME ?? 'worker'}-${randomUUID().slice(0, 8)}`;
 const appEnv = process.env.APP_ENV ?? 'development';
+// Error tracking (SENTRY_DSN): sanitized job failures with job type, queue, attempt and
+// correlation id; see packages/integrations/src/observability/error-reporting.ts.
+const errors = createErrorReporter({
+  dsn: process.env.SENTRY_DSN,
+  release: process.env.APP_VERSION ?? 'dev',
+  environment: appEnv,
+  source: 'worker',
+  onWarning: (message, detail) => log.warn(detail, message),
+});
 
 async function main(): Promise<void> {
   const db = getDb();
@@ -39,6 +50,14 @@ async function main(): Promise<void> {
     concurrency: Number(process.env.WORKER_CONCURRENCY ?? 4),
     pollIntervalMs: Number(process.env.WORKER_POLL_MS ?? 1000),
     log,
+    onJobFailed: ({ job, error, outcome }) =>
+      errors.capture(error, {
+        correlationId: job.correlationId,
+        route: job.type,
+        method: job.queue,
+        level: outcome === 'dead' ? 'error' : 'warning',
+        tags: { job_type: job.type, queue: job.queue, attempt: job.attempts, outcome },
+      }),
   });
   registerHandlers(runner);
 
@@ -76,6 +95,7 @@ async function main(): Promise<void> {
     stopRelay();
     stopScheduler();
     await runner.stop();
+    await closeRedis();
     await closeDb();
     process.exit(0);
   };
@@ -83,7 +103,8 @@ async function main(): Promise<void> {
   process.on('SIGTERM', () => void shutdown('SIGTERM'));
 }
 
-main().catch((err) => {
+main().catch(async (err) => {
   log.error({ err }, 'worker failed to start');
+  await errors.capture(err, { level: 'fatal', route: 'worker.start' });
   process.exit(1);
 });

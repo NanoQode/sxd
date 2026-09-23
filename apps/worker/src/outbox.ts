@@ -93,6 +93,15 @@ const routes: Record<string, OutboxRoute> = {
   'engagement.transitioned': () => [{ type: 'notifications.dispatch', queue: 'notifications' }],
   'payment.settled': () => [{ type: 'notifications.dispatch', queue: 'notifications' }],
   'project.report.released': () => [{ type: 'notifications.dispatch', queue: 'notifications' }],
+  // Engagement records (apps/web/src/server/engagements): assignee, customer and staff notices.
+  'engagement_item.assigned': () => [{ type: 'notifications.dispatch', queue: 'notifications' }],
+  'engagement_item.customer_action': () => [
+    { type: 'notifications.dispatch', queue: 'notifications' },
+  ],
+  'engagement_item.responded': () => [{ type: 'notifications.dispatch', queue: 'notifications' }],
+  'engagement_item.evidence_attached': () => [
+    { type: 'notifications.dispatch', queue: 'notifications' },
+  ],
   'project.status_changed': () => [{ type: 'notifications.dispatch', queue: 'notifications' }],
   'task.assigned': () => [{ type: 'notifications.dispatch', queue: 'notifications' }],
   'message.posted': () => [{ type: 'notifications.dispatch', queue: 'notifications' }],

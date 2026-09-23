@@ -1,26 +1,19 @@
-import pino, { type Logger } from 'pino';
+import { LOG_REDACT_CENSOR, LOG_REDACT_PATHS } from '@simplexd/integrations/observability';
+import pino, { type DestinationStream, type Logger } from 'pino';
 
-const redactPaths = [
-  'req.headers.authorization',
-  'req.headers.cookie',
-  '*.password',
-  '*.secret',
-  '*.token',
-  '*.refreshToken',
-  '*.accessToken',
-  '*.apiKey',
-  '*.api_key',
-  'payload.password',
-  'payload.otp',
-];
-
-export function createLogger(name: string): Logger {
+/**
+ * Structured JSON logger with the shared redaction paths (authorization and
+ * cookie headers, passwords, secrets, tokens, API keys, OTPs, card numbers,
+ * including inside job payloads). `destination` is for tests.
+ */
+export function createLogger(name: string, destination?: DestinationStream): Logger {
   const pretty =
-    process.env.LOG_PRETTY === 'true' || (process.env.APP_ENV ?? 'development') === 'development';
-  return pino({
+    !destination &&
+    (process.env.LOG_PRETTY === 'true' || (process.env.APP_ENV ?? 'development') === 'development');
+  const options: pino.LoggerOptions = {
     name,
     level: process.env.LOG_LEVEL ?? 'info',
-    redact: { paths: redactPaths, censor: '[redacted]' },
+    redact: { paths: [...LOG_REDACT_PATHS], censor: LOG_REDACT_CENSOR },
     ...(pretty
       ? {
           transport: {
@@ -29,5 +22,6 @@ export function createLogger(name: string): Logger {
           },
         }
       : {}),
-  });
+  };
+  return destination ? pino(options, destination) : pino(options);
 }

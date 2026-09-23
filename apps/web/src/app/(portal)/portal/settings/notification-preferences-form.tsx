@@ -154,7 +154,9 @@ export function NotificationPreferencesForm({
                             onCheckedChange={(v) => update(c.key, cat.key, { enabled: v })}
                           />
                           {c.key === 'sms' && !hasPhone ? (
-                            <p className="mt-1 text-xs text-fg-subtle">Add a phone first</p>
+                            <p className="mt-1 text-xs text-fg-subtle">
+                              Verify a phone number first
+                            </p>
                           ) : null}
                         </td>
                       );
