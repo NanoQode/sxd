@@ -33,7 +33,7 @@ export const filesRoutes = [
     path: '/api/v1/files/upload-intents',
     summary: 'Create an upload intent',
     description:
-      'Validates purpose, declared type and size, creates a pending file in quarantine and returns a signed PUT URL (or a multipart plan for large files). Authorisation depends on the purpose: org_document (org.documents.upload), evidence (assigned staff with site_visits.perform, partners with partner.evidence.upload, or the customer organisation), content_media (content.media.manage), bank_receipt (org.invoices.pay), identity (any signed-in user; sensitive). Rate limited per user.',
+      'Validates purpose, declared type and size, creates a pending file in quarantine and returns a signed PUT URL (or a multipart plan for large files). Authorisation depends on the purpose: org_document (org.documents.upload), evidence (assigned staff with site_visits.perform, partners with partner.evidence.upload, or the customer organisation), content_media (content.media.manage), bank_receipt (org.invoices.pay), identity (any signed-in user; sensitive), partner_submission (partner accounts with partner.bids.submit or partner.rfqs.respond; owned by the partner; evaluators read them once the sealed bid is opened). Rate limited per user.',
     tags: ['Files'],
     operationId: 'createUploadIntent',
     auth: 'session',

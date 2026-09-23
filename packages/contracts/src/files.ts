@@ -18,6 +18,12 @@ export const FILE_PURPOSES = [
   'bank_receipt',
   /** Identity documents (sensitive: owner and files.sensitive.read only). */
   'identity',
+  /**
+   * A partner's own submission documents (bid attachments, RFQ quotations).
+   * Owned by the partner, not by a customer organisation; referenced from the
+   * bid or response, and readable by staff once the submission may be opened.
+   */
+  'partner_submission',
 ] as const;
 export const filePurposeSchema = z.enum(FILE_PURPOSES);
 export type FilePurpose = z.infer<typeof filePurposeSchema>;
@@ -110,6 +116,13 @@ export const FILE_PURPOSE_POLICIES: Record<FilePurpose, FilePurposePolicy> = {
     maxBytesByFamily: { image: 25 * MB, video: 0, document: 25 * MB },
     requiresEntity: false,
     sensitive: true,
+  },
+  partner_submission: {
+    allowedMime: [...IMAGE_MIME, ...DOCUMENT_MIME, 'application/zip'],
+    maxBytes: 100 * MB,
+    maxBytesByFamily: { image: 25 * MB, video: 0, document: 100 * MB },
+    requiresEntity: false,
+    sensitive: false,
   },
 };
 

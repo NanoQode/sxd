@@ -291,6 +291,29 @@ async function authorizeIntent(
       assertAllowed(orgCheck('org.invoices.pay', organizationId));
       return { organizationId };
     }
+    case 'partner_submission': {
+      // Bid attachments and RFQ quotations belong to the partner who submits
+      // them; the bid/response services only accept files the caller owns.
+      if (input.entityType)
+        throw new ApiError(
+          'validation_failed',
+          'partner submission files are attached from the bid or quotation, not at upload',
+        );
+      let decision: Decision = {
+        allowed: false,
+        code: 'no_permission',
+        reason: 'only partner accounts upload submission documents',
+      };
+      for (const permission of ['partner.bids.submit', 'partner.rfqs.respond'] as const) {
+        decision = authorizePartner(identity.actor, permission, {
+          type: 'partner_submission',
+          createdBy: userId,
+        });
+        if (decision.allowed) break;
+      }
+      assertAllowed(decision);
+      return { organizationId: null };
+    }
     case 'identity': {
       // Personal document: owned by the user, never shared with an organisation.
       if (input.entityType)

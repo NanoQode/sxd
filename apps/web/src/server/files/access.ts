@@ -1,5 +1,5 @@
 import 'server-only';
-import { and, eq, isNull } from 'drizzle-orm';
+import { and, eq, isNull, sql } from 'drizzle-orm';
 import { ApiError } from '@simplexd/contracts';
 import { applyActorContext, schema, type ActorContext, type Transaction } from '@simplexd/db';
 import {
@@ -41,6 +41,11 @@ export interface FileAccessContext {
   grants: FileGrantRow[];
   /** Fresh memberships read from the database in this transaction. */
   memberships: Membership[];
+  /**
+   * For partner submission files: true once a bid revision that references the
+   * file belongs to a bid whose sealed contents were opened by an evaluator.
+   */
+  openedSubmission?: boolean;
 }
 
 function normalizeOrgRole(role: string): OrgRole {
@@ -109,7 +114,18 @@ export async function loadFileAccess(
         ((g.userId !== null && g.userId === ctx.userId) ||
           (g.organizationId !== null && orgIds.has(g.organizationId))),
     );
-    return { file, grants, memberships };
+    let openedSubmission = false;
+    if (file.purpose === 'partner_submission') {
+      const opened = await tx.execute<{ opened: boolean }>(sql`
+        SELECT EXISTS (
+          SELECT 1 FROM bid_revisions br JOIN bids b ON b.id = br.bid_id
+          WHERE b.opened_at IS NOT NULL
+            AND br.attachment_file_ids @> jsonb_build_array(${fileId}::text)
+        ) AS opened
+      `);
+      openedSubmission = Boolean(opened.rows[0]?.opened);
+    }
+    return { file, grants, memberships, openedSubmission };
   });
 }
 
@@ -140,6 +156,13 @@ export function decideFileAccess(
       attributes: { sensitive },
     });
     if (decision.allowed) return decision;
+    // Evaluators read a partner's bid attachments only after the sealed bid was opened.
+    if (file.purpose === 'partner_submission' && access.openedSubmission && level !== 'manage') {
+      for (const permission of ['bids.evaluate', 'tenders.manage'] as const) {
+        const d = authorizeStaff(identity.actor, permission, { type: 'bid', id: file.id });
+        if (d.allowed) return { allowed: true, via: `opened_bid:${permission}` };
+      }
+    }
     // Staff without file permissions fall through to grants; never to org membership.
     if (level === 'manage') return decision;
     const grant = bestGrant(grants);

@@ -896,4 +896,32 @@ describe('access control', () => {
       }),
     ).rejects.toSatisfy((e) => errorCode(e) === 'forbidden');
   });
+
+  it('partner submission files belong to the partner and only partner accounts can create them', async () => {
+    const input = {
+      purpose: 'partner_submission',
+      fileName: 'method-statement.pdf',
+      declaredMime: 'application/pdf',
+      sizeBytes: 2048,
+    } as UploadIntentCreate;
+    const intent = await createUploadIntent(partner(), input);
+    const [row] = await dbs.owner
+      .select()
+      .from(schema.fileObjects)
+      .where(eq(schema.fileObjects.id, intent.fileId));
+    expect(row?.ownerUserId).toBe(ids.partner);
+    expect(row?.organizationId).toBeNull();
+    for (const who of [ownerA(), ops()]) {
+      await expect(createUploadIntent(who, input)).rejects.toSatisfy(
+        (e) => errorCode(e) === 'forbidden',
+      );
+    }
+    await expect(
+      createUploadIntent(partner(), {
+        ...input,
+        entityType: 'project',
+        entityId: ids.projectA,
+      } as UploadIntentCreate),
+    ).rejects.toSatisfy((e) => errorCode(e) === 'validation_failed');
+  });
 });
