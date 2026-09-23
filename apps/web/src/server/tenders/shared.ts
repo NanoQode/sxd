@@ -68,9 +68,13 @@ export async function dbNow(tx: DbExecutor): Promise<{ date: Date; iso: string }
 }
 
 export function versionConflict(current: number): ApiError {
-  return new ApiError('version_conflict', 'this record changed since you loaded it; reload and try again', {
-    details: { currentVersion: current },
-  });
+  return new ApiError(
+    'version_conflict',
+    'this record changed since you loaded it; reload and try again',
+    {
+      details: { currentVersion: current },
+    },
+  );
 }
 
 export function assertVersion(current: number, expected: number | undefined): void {
@@ -90,7 +94,9 @@ export async function allocateCommercialReference(
   now: Date,
 ): Promise<string> {
   const year = now.getUTCFullYear();
-  await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${`commercial-ref:${prefix}:${year}`}))`);
+  await tx.execute(
+    sql`SELECT pg_advisory_xact_lock(hashtext(${`commercial-ref:${prefix}:${year}`}))`,
+  );
   const column = table === 'purchase_orders' ? sql.raw('number') : sql.raw('reference');
   const like = `${prefix}-${year}-%`;
   const res = await tx.execute<{ max: string | null }>(
@@ -123,7 +129,10 @@ export interface AccessOptions {
   customer?: boolean;
 }
 
-export async function loadRevisions(tx: DbExecutor, tenderId: string): Promise<TenderRevisionRow[]> {
+export async function loadRevisions(
+  tx: DbExecutor,
+  tenderId: string,
+): Promise<TenderRevisionRow[]> {
   return tx
     .select()
     .from(schema.tenderRevisions)
@@ -175,7 +184,12 @@ export async function loadTenderAccess(
   const [invitation] = await tx
     .select()
     .from(schema.tenderInvitations)
-    .where(and(eq(schema.tenderInvitations.tenderId, tenderId), eq(schema.tenderInvitations.partnerUserId, userId)));
+    .where(
+      and(
+        eq(schema.tenderInvitations.tenderId, tenderId),
+        eq(schema.tenderInvitations.partnerUserId, userId),
+      ),
+    );
   if (invitation && identity.actor.isPartner && tender.status !== 'draft') {
     assertAllowed(
       authorizePartner(identity.actor, options.partner ?? 'partner.tenders.view_invited', {
@@ -273,7 +287,10 @@ export function toRevisionDto(row: TenderRevisionRow): TenderRevisionDto {
   };
 }
 
-export function toInvitationDto(row: InvitationRow, partnerName: string | null): TenderInvitationDto {
+export function toInvitationDto(
+  row: InvitationRow,
+  partnerName: string | null,
+): TenderInvitationDto {
   return {
     id: row.id,
     tenderId: row.tenderId,
@@ -319,7 +336,10 @@ export function toSealedBidSummary(row: BidRow, partnerName: string | null): Bid
 }
 
 /** Existence derived from the invitation while row-level security still hides the bid row itself. */
-export function toInvitationBidSummary(inv: InvitationRow, partnerName: string | null): BidSummaryDto {
+export function toInvitationBidSummary(
+  inv: InvitationRow,
+  partnerName: string | null,
+): BidSummaryDto {
   return {
     id: null,
     tenderId: inv.tenderId,
@@ -335,7 +355,11 @@ export function toInvitationBidSummary(inv: InvitationRow, partnerName: string |
   };
 }
 
-export function toBidDto(row: BidRow, revisions: BidRevisionRow[], partnerName: string | null): BidDto {
+export function toBidDto(
+  row: BidRow,
+  revisions: BidRevisionRow[],
+  partnerName: string | null,
+): BidDto {
   const sorted = [...revisions].sort((a, b) => a.version - b.version);
   const latest = sorted[sorted.length - 1] ?? null;
   return {
@@ -369,7 +393,10 @@ export async function userNames(tx: DbExecutor, ids: string[]): Promise<Map<stri
   return new Map(rows.map((r) => [r.id, r.name]));
 }
 
-export async function loadBidRevisions(tx: DbExecutor, bidIds: string[]): Promise<Map<string, BidRevisionRow[]>> {
+export async function loadBidRevisions(
+  tx: DbExecutor,
+  bidIds: string[],
+): Promise<Map<string, BidRevisionRow[]>> {
   const out = new Map<string, BidRevisionRow[]>();
   if (bidIds.length === 0) return out;
   const rows = await tx
@@ -394,12 +421,16 @@ export async function logBidAccess(
   reason: string | null = null,
 ): Promise<void> {
   if (bidIds.length === 0) return;
-  await tx.insert(schema.bidAccessLog).values(bidIds.map((bidId) => ({ bidId, userId, action, reason })));
+  await tx
+    .insert(schema.bidAccessLog)
+    .values(bidIds.map((bidId) => ({ bidId, userId, action, reason })));
 }
 
 /** Latest submitted revision (by version) of a bid. */
 export function latestSubmittedRevision(revisions: BidRevisionRow[]): BidRevisionRow | null {
-  const submitted = revisions.filter((r) => r.submittedAt !== null).sort((a, b) => b.version - a.version);
+  const submitted = revisions
+    .filter((r) => r.submittedAt !== null)
+    .sort((a, b) => b.version - a.version);
   return submitted[0] ?? null;
 }
 

@@ -55,7 +55,11 @@ async function pendingAttempt(amountKobo = '5000000') {
 }
 
 function webhook(rawBody: string, signature: string) {
-  return receiveProviderWebhook(rt, { rawBody, signatureHeader: signature, headers: { 'content-type': 'application/json', 'x-paystack-signature': signature } });
+  return receiveProviderWebhook(rt, {
+    rawBody,
+    signatureHeader: signature,
+    headers: { 'content-type': 'application/json', 'x-paystack-signature': signature },
+  });
 }
 
 beforeAll(async () => {
@@ -81,7 +85,12 @@ describe('webhook intake and processing', () => {
     expect(first).toMatchObject({ status: 200, duplicate: false });
     expect(first.jobId).not.toBeNull();
     const second = await webhook(delivery.rawBody, delivery.signature);
-    expect(second).toMatchObject({ status: 200, duplicate: true, jobId: null, providerEventId: first.providerEventId });
+    expect(second).toMatchObject({
+      status: 200,
+      duplicate: true,
+      jobId: null,
+      providerEventId: first.providerEventId,
+    });
 
     const processed = await processProviderEvent(rt, first.providerEventId!);
     expect(processed.actions[0]).toMatchObject({ kind: 'verify_and_settle' });
@@ -96,7 +105,10 @@ describe('webhook intake and processing', () => {
     expect(await countReceiptsForInvoice(dbs.owner, invoiceId)).toBe(1);
     expect((await getInvoice(rt, customerA, invoiceId)).status).toBe('paid');
 
-    const events = await dbs.owner.select().from(schema.providerEvents).where(eq(schema.providerEvents.reference, attempt.reference));
+    const events = await dbs.owner
+      .select()
+      .from(schema.providerEvents)
+      .where(eq(schema.providerEvents.reference, attempt.reference));
     expect(events).toHaveLength(1);
     expect(events[0]!.processingStatus).toBe('processed');
   });
@@ -106,7 +118,15 @@ describe('webhook intake and processing', () => {
     dev.simulate(attempt.reference, 'success');
     const early = JSON.stringify({
       event: 'refund.processed',
-      data: { id: 4242, status: 'processed', transaction_reference: attempt.reference, refund_reference: 'TRF_early', amount: 5000000, currency: 'NGN', domain: 'test' },
+      data: {
+        id: 4242,
+        status: 'processed',
+        transaction_reference: attempt.reference,
+        refund_reference: 'TRF_early',
+        amount: 5000000,
+        currency: 'NGN',
+        domain: 'test',
+      },
     });
     const earlyReceipt = await webhook(early, dev.signWebhook(early));
     expect(earlyReceipt.status).toBe(200);
@@ -120,10 +140,17 @@ describe('webhook intake and processing', () => {
     await verifyPaymentAttempt(rt, customerA, { id: attempt.id });
     expect(await countAllocationsForAttempt(dbs.owner, attempt.id)).toBe(1);
     expect(await countReceiptsForInvoice(dbs.owner, invoiceId)).toBe(1);
-    const refunds = await dbs.owner.select().from(schema.refunds).where(eq(schema.refunds.paymentAttemptId, attempt.id));
+    const refunds = await dbs.owner
+      .select()
+      .from(schema.refunds)
+      .where(eq(schema.refunds.paymentAttemptId, attempt.id));
     expect(refunds).toHaveLength(0);
     const exceptions = await listReconciliationExceptions(rt, finance1, { limit: 5 });
-    expect(exceptions.some((e) => e.code === 'provider_event_flagged' && e.entityId === earlyReceipt.providerEventId)).toBe(true);
+    expect(
+      exceptions.some(
+        (e) => e.code === 'provider_event_flagged' && e.entityId === earlyReceipt.providerEventId,
+      ),
+    ).toBe(true);
   });
 
   it('rejects an invalid signature with 401, records the event as unsigned and enqueues nothing', async () => {
@@ -132,14 +159,36 @@ describe('webhook intake and processing', () => {
     const delivery = dev.buildWebhookEvent('charge.success', attempt.reference);
     const forged = `${delivery.signature.slice(0, -4)}dead`;
     const receipt = await webhook(delivery.rawBody, forged);
-    expect(receipt).toMatchObject({ status: 401, received: false, jobId: null, providerEventId: null });
-    const rows = await dbs.owner.select().from(schema.providerEvents).where(and(eq(schema.providerEvents.signatureValid, false), like(schema.providerEvents.rawBody, `%${attempt.reference}%`)));
+    expect(receipt).toMatchObject({
+      status: 401,
+      received: false,
+      jobId: null,
+      providerEventId: null,
+    });
+    const rows = await dbs.owner
+      .select()
+      .from(schema.providerEvents)
+      .where(
+        and(
+          eq(schema.providerEvents.signatureValid, false),
+          like(schema.providerEvents.rawBody, `%${attempt.reference}%`),
+        ),
+      );
     expect(rows).toHaveLength(1);
     expect(rows[0]!.processingStatus).toBe('ignored');
-    const jobs = await dbs.owner.select().from(schema.jobs).where(like(schema.jobs.dedupeKey, 'provider_event:%'));
-    expect(jobs.some((j) => (j.payload as { reference?: string }).reference === attempt.reference)).toBe(false);
+    const jobs = await dbs.owner
+      .select()
+      .from(schema.jobs)
+      .where(like(schema.jobs.dedupeKey, 'provider_event:%'));
+    expect(
+      jobs.some((j) => (j.payload as { reference?: string }).reference === attempt.reference),
+    ).toBe(false);
     expect(await countAllocationsForAttempt(dbs.owner, attempt.id)).toBe(0);
-    const missing = await receiveProviderWebhook(rt, { rawBody: delivery.rawBody, signatureHeader: null, headers: { 'content-type': 'application/json' } });
+    const missing = await receiveProviderWebhook(rt, {
+      rawBody: delivery.rawBody,
+      signatureHeader: null,
+      headers: { 'content-type': 'application/json' },
+    });
     expect(missing.status).toBe(401);
   });
 
@@ -154,7 +203,9 @@ describe('webhook intake and processing', () => {
     expect(await journalByRef(dbs.owner, `payment_attempt:${attempt.id}:settled`)).toBeNull();
     expect((await getInvoice(rt, customerA, invoiceId)).amountPaidKobo).toBe('0');
     const exceptions = await listReconciliationExceptions(rt, finance1, { limit: 5 });
-    expect(exceptions.some((e) => e.code === 'verification_mismatch' && e.entityId === attempt.id)).toBe(true);
+    expect(
+      exceptions.some((e) => e.code === 'verification_mismatch' && e.entityId === attempt.id),
+    ).toBe(true);
 
     // The webhook path reaches the same conclusion and never settles either.
     const delivery = dev.buildWebhookEvent('charge.success', attempt.reference);
@@ -189,7 +240,11 @@ describe('webhook intake and processing', () => {
     dev.simulate(attempt.reference, 'success');
     await verifyPaymentAttempt(rt, customerA, { id: attempt.id });
 
-    const requested = await requestRefund(rt, finance1, { paymentAttemptId: attempt.id, amountKobo: '2000000', reason: 'Scope reduced after site visit' });
+    const requested = await requestRefund(rt, finance1, {
+      paymentAttemptId: attempt.id,
+      amountKobo: '2000000',
+      reason: 'Scope reduced after site visit',
+    });
     const approved = await approveRefund(rt, finance2, requested.id, {});
     expect(approved.status).toBe('approved');
     expect(await journalByRef(dbs.owner, `refund:${requested.id}:approved`)).not.toBeNull();
@@ -201,11 +256,16 @@ describe('webhook intake and processing', () => {
     // Submitting again reuses the stored idempotency key: the provider sees one refund.
     const resubmitted = await submitRefund(rt, requested.id);
     expect(resubmitted.status).toBe('submitted');
-    const [refundRow] = await dbs.owner.select().from(schema.refunds).where(eq(schema.refunds.id, requested.id));
+    const [refundRow] = await dbs.owner
+      .select()
+      .from(schema.refunds)
+      .where(eq(schema.refunds.id, requested.id));
     const providerRefundId = refundRow!.providerReference!;
 
     dev.simulateRefund(providerRefundId, 'needs_attention');
-    const attention = dev.buildWebhookEvent('refund.needs-attention', attempt.reference, { providerRefundId });
+    const attention = dev.buildWebhookEvent('refund.needs-attention', attempt.reference, {
+      providerRefundId,
+    });
     const attentionReceipt = await webhook(attention.rawBody, attention.signature);
     await processProviderEvent(rt, attentionReceipt.providerEventId!);
     let current = await getRefund(rt, finance1, requested.id);
@@ -213,10 +273,14 @@ describe('webhook intake and processing', () => {
     expect(current.settledAt).toBeNull();
     expect(await journalByRef(dbs.owner, `refund:${requested.id}:settled`)).toBeNull();
     const exceptions = await listReconciliationExceptions(rt, finance1, { limit: 5 });
-    expect(exceptions.some((e) => e.code === 'refund_needs_attention' && e.entityId === requested.id)).toBe(true);
+    expect(
+      exceptions.some((e) => e.code === 'refund_needs_attention' && e.entityId === requested.id),
+    ).toBe(true);
 
     dev.simulateRefund(providerRefundId, 'processed');
-    const processedEvent = dev.buildWebhookEvent('refund.processed', attempt.reference, { providerRefundId });
+    const processedEvent = dev.buildWebhookEvent('refund.processed', attempt.reference, {
+      providerRefundId,
+    });
     const processedReceipt = await webhook(processedEvent.rawBody, processedEvent.signature);
     await processProviderEvent(rt, processedReceipt.providerEventId!);
     current = await getRefund(rt, finance1, requested.id);

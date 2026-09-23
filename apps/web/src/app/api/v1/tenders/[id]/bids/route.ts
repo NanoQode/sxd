@@ -8,11 +8,17 @@ export const dynamic = 'force-dynamic';
 export const GET = route<{ params: Promise<{ id: string }> }>(async (_req, ctx) => {
   const identity = await getIdentity();
   const { id } = await params(ctx, commercialIdParams);
-  return json({ items: await listTenderBids(identity, id, { correlationId: ctx.correlationId }) }, { correlationId: ctx.correlationId });
+  return json(
+    { items: await listTenderBids(identity, id, { correlationId: ctx.correlationId }) },
+    { correlationId: ctx.correlationId },
+  );
 });
 
 export const POST = route<{ params: Promise<{ id: string }> }>(async (_req, ctx) => {
   const identity = await getIdentity();
   const { id } = await params(ctx, commercialIdParams);
-  return json(await createBid(identity, id, { correlationId: ctx.correlationId }), { status: 201, correlationId: ctx.correlationId });
+  return json(await createBid(identity, id, { correlationId: ctx.correlationId }), {
+    status: 201,
+    correlationId: ctx.correlationId,
+  });
 });

@@ -214,14 +214,12 @@ beforeAll(async () => {
     { userId: ids.superAdmin, role: 'super_admin' },
     { userId: ids.inspector, role: 'inspector' },
   ]);
-  await owner
-    .insert(schema.partnerProfiles)
-    .values({
-      userId: ids.partner,
-      partnerType: 'surveyor',
-      displayName: 'Partner',
-      verificationStatus: 'verified',
-    });
+  await owner.insert(schema.partnerProfiles).values({
+    userId: ids.partner,
+    partnerType: 'surveyor',
+    displayName: 'Partner',
+    verificationStatus: 'verified',
+  });
   const [project] = await owner
     .insert(schema.projects)
     .values({ organizationId: ids.orgA, name: 'Project A', kind: 'construction_monitoring' })
@@ -608,14 +606,12 @@ describe('access control', () => {
       (e) => errorCode(e) === 'not_found',
     );
     await expect(getFile(memberA(), fileId)).rejects.toSatisfy((e) => errorCode(e) === 'not_found');
-    await dbs.owner
-      .insert(schema.member)
-      .values({
-        id: `m_${ids.memberA}`,
-        organizationId: ids.orgA,
-        userId: ids.memberA,
-        role: 'member',
-      });
+    await dbs.owner.insert(schema.member).values({
+      id: `m_${ids.memberA}`,
+      organizationId: ids.orgA,
+      userId: ids.memberA,
+      role: 'member',
+    });
     expect((await getFile(memberA(), fileId)).id).toBe(fileId);
   });
 
@@ -652,26 +648,22 @@ describe('access control', () => {
     await expect(issueDownload(ownerB(), fileId, {})).rejects.toSatisfy(
       (e) => errorCode(e) === 'not_found',
     );
-    await dbs.owner
-      .insert(schema.member)
-      .values({
-        id: `m_${ids.ownerB}`,
-        organizationId: ids.orgB,
-        userId: ids.ownerB,
-        role: 'owner',
-      });
+    await dbs.owner.insert(schema.member).values({
+      id: `m_${ids.ownerB}`,
+      organizationId: ids.orgB,
+      userId: ids.ownerB,
+      role: 'owner',
+    });
     await revokeGrant(ownerA(), fileId, orgGrant.id);
     await expect(getFile(ownerB(), fileId)).rejects.toSatisfy((e) => errorCode(e) === 'not_found');
     // Expired grants do not count.
-    await dbs.owner
-      .insert(schema.fileAccessGrants)
-      .values({
-        fileId,
-        userId: ids.ownerB,
-        level: 'download',
-        grantedBy: ids.ownerA,
-        expiresAt: new Date(Date.now() - 1000),
-      });
+    await dbs.owner.insert(schema.fileAccessGrants).values({
+      fileId,
+      userId: ids.ownerB,
+      level: 'download',
+      grantedBy: ids.ownerA,
+      expiresAt: new Date(Date.now() - 1000),
+    });
     await expect(getFile(ownerB(), fileId)).rejects.toSatisfy((e) => errorCode(e) === 'not_found');
   });
 

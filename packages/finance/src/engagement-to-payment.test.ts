@@ -3,7 +3,13 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { schema } from '@simplexd/db';
 import { connectTestDatabases, type TestDatabases } from '@simplexd/db/testing';
 import type { DevPaymentProvider } from '@simplexd/integrations/payments';
-import { acceptQuote, createQuote, getQuote, issueQuote, listQuotesForRequest } from './engagements/quotes';
+import {
+  acceptQuote,
+  createQuote,
+  getQuote,
+  issueQuote,
+  listQuotesForRequest,
+} from './engagements/quotes';
 import { triageServiceRequest } from './engagements/triage';
 import { getInvoice } from './invoices';
 import { createPaymentAttempt, getPaymentAttempt, verifyPaymentAttempt } from './payment-attempts';
@@ -49,13 +55,26 @@ describe('engagement → quote → acceptance → invoice → payment', () => {
     const customerA = customerActor({ userId: t.userA, organizationId: t.orgA });
     const customerB = customerActor({ userId: t.userB, organizationId: t.orgB });
     const ops = staffActor({ userId: t.opsUser, roles: ['operations_manager'] });
-    const sr = await insertServiceRequest(dbs.owner, t, { organizationId: t.orgA, requestedByUserId: t.userA });
+    const sr = await insertServiceRequest(dbs.owner, t, {
+      organizationId: t.orgA,
+      requestedByUserId: t.userA,
+    });
 
     // Triage: assignment, priority and SLA from sla_policies.
-    const triaged = await triageServiceRequest(rt, ops, sr.id, { assignedPmUserId: t.opsUser, priority: 2, expectedVersion: 1 });
+    const triaged = await triageServiceRequest(rt, ops, sr.id, {
+      assignedPmUserId: t.opsUser,
+      priority: 2,
+      expectedVersion: 1,
+    });
     expect(triaged.status).toBe('triage');
     expect(triaged.slaDueAt).not.toBeNull();
-    await expect(triageServiceRequest(rt, customerA, sr.id, { assignedPmUserId: t.opsUser, priority: 2, expectedVersion: 2 })).rejects.toMatchObject({ name: 'AuthorizationError' });
+    await expect(
+      triageServiceRequest(rt, customerA, sr.id, {
+        assignedPmUserId: t.opsUser,
+        priority: 2,
+        expectedVersion: 2,
+      }),
+    ).rejects.toMatchObject({ name: 'AuthorizationError' });
 
     // Quote drafted from lines; totals are recomputed on the server.
     const draft = await createQuote(rt, ops, sr.id, {
@@ -75,23 +94,45 @@ describe('engagement → quote → acceptance → invoice → payment', () => {
     const issued = await issueQuote(rt, ops, draft.id, { validDays: 7 });
     expect(issued.status).toBe('issued');
     expect(issued.versions[0]!.issuedAt).not.toBeNull();
-    const [srQuoted] = await dbs.owner.select().from(schema.serviceRequests).where(eq(schema.serviceRequests.id, sr.id));
+    const [srQuoted] = await dbs.owner
+      .select()
+      .from(schema.serviceRequests)
+      .where(eq(schema.serviceRequests.id, sr.id));
     expect(srQuoted!.status).toBe('quoted');
 
     // Organisation B cannot see or accept the quote.
     await expect(getQuote(rt, customerB, issued.id)).rejects.toMatchObject({ code: 'not_found' });
-    await expect(listQuotesForRequest(rt, customerB, sr.id)).rejects.toMatchObject({ code: 'not_found' });
+    await expect(listQuotesForRequest(rt, customerB, sr.id)).rejects.toMatchObject({
+      code: 'not_found',
+    });
     await expect(
-      acceptQuote(rt, customerB, issued.id, { quoteVersionId: issued.versions[0]!.id, signatureName: 'Bola B', termsVersion: '2026-09', acceptTerms: true }),
+      acceptQuote(rt, customerB, issued.id, {
+        quoteVersionId: issued.versions[0]!.id,
+        signatureName: 'Bola B',
+        termsVersion: '2026-09',
+        acceptTerms: true,
+      }),
     ).rejects.toMatchObject({ code: 'not_found' });
 
     // Customer A accepts: acceptance recorded, invoice issued, engagement awaiting payment.
-    const accepted = await acceptQuote(rt, customerA, issued.id, { quoteVersionId: issued.versions[0]!.id, signatureName: 'Ada A', termsVersion: '2026-09', acceptTerms: true });
+    const accepted = await acceptQuote(rt, customerA, issued.id, {
+      quoteVersionId: issued.versions[0]!.id,
+      signatureName: 'Ada A',
+      termsVersion: '2026-09',
+      acceptTerms: true,
+    });
     expect(accepted.quote.status).toBe('accepted');
     expect(accepted.engagementStatus).toBe('awaiting_payment');
     expect(accepted.invoiceId).not.toBeNull();
-    expect(accepted.quote.acceptance).toMatchObject({ signatureName: 'Ada A', termsVersion: '2026-09', acceptedByUserId: t.userA });
-    const [acceptanceRow] = await dbs.owner.select().from(schema.acceptances).where(eq(schema.acceptances.quoteVersionId, issued.versions[0]!.id));
+    expect(accepted.quote.acceptance).toMatchObject({
+      signatureName: 'Ada A',
+      termsVersion: '2026-09',
+      acceptedByUserId: t.userA,
+    });
+    const [acceptanceRow] = await dbs.owner
+      .select()
+      .from(schema.acceptances)
+      .where(eq(schema.acceptances.quoteVersionId, issued.versions[0]!.id));
     expect(acceptanceRow).toMatchObject({ ipHash: 'iphash-test', userAgent: 'vitest' });
 
     const invoice = await getInvoice(rt, customerA, accepted.invoiceId!);
@@ -100,10 +141,14 @@ describe('engagement → quote → acceptance → invoice → payment', () => {
     expect(invoice.totalKobo).toBe('15000000');
     expect(invoice.balanceKobo).toBe('15000000');
     expect(await journalByRef(dbs.owner, `invoice:${invoice.id}:issued`)).not.toBeNull();
-    await expect(getInvoice(rt, customerB, invoice.id)).rejects.toMatchObject({ code: 'not_found' });
+    await expect(getInvoice(rt, customerB, invoice.id)).rejects.toMatchObject({
+      code: 'not_found',
+    });
 
     // Payment attempt with the development adapter.
-    await expect(createPaymentAttempt(rt, customerB, invoice.id, {})).rejects.toMatchObject({ code: 'not_found' });
+    await expect(createPaymentAttempt(rt, customerB, invoice.id, {})).rejects.toMatchObject({
+      code: 'not_found',
+    });
     const attempt = await createPaymentAttempt(rt, customerA, invoice.id, {});
     expect(attempt.status).toBe('pending');
     expect(attempt.reference).toMatch(/^SXD-[0-9A-F]{12}$/);
@@ -111,7 +156,9 @@ describe('engagement → quote → acceptance → invoice → payment', () => {
     expect(attempt.authorizationUrl).toContain('/dev/paystack-checkout');
     expect(attempt.developmentAdapter).toBe(true);
     expect(attempt.environment).toBe('test');
-    await expect(getPaymentAttempt(rt, customerB, attempt.id)).rejects.toMatchObject({ code: 'not_found' });
+    await expect(getPaymentAttempt(rt, customerB, attempt.id)).rejects.toMatchObject({
+      code: 'not_found',
+    });
 
     // A redirect is not settlement: verify before the provider reports success keeps it pending.
     const pendingVerify = await verifyPaymentAttempt(rt, customerA, { id: attempt.id });
@@ -119,7 +166,9 @@ describe('engagement → quote → acceptance → invoice → payment', () => {
     expect(pendingVerify.invoiceStatus).toBe('issued');
 
     dev.simulate(attempt.reference, 'success');
-    await expect(verifyPaymentAttempt(rt, customerB, { id: attempt.id })).rejects.toMatchObject({ code: 'not_found' });
+    await expect(verifyPaymentAttempt(rt, customerB, { id: attempt.id })).rejects.toMatchObject({
+      code: 'not_found',
+    });
     const settled = await verifyPaymentAttempt(rt, customerA, { id: attempt.id });
     expect(settled.decision).toBe('settle');
     expect(settled.invoiceStatus).toBe('paid');
@@ -131,7 +180,10 @@ describe('engagement → quote → acceptance → invoice → payment', () => {
     expect(paid.status).toBe('paid');
     expect(paid.amountPaidKobo).toBe('15000000');
     expect(paid.balanceKobo).toBe('0');
-    const [srInProgress] = await dbs.owner.select().from(schema.serviceRequests).where(eq(schema.serviceRequests.id, sr.id));
+    const [srInProgress] = await dbs.owner
+      .select()
+      .from(schema.serviceRequests)
+      .where(eq(schema.serviceRequests.id, sr.id));
     expect(srInProgress!.status).toBe('in_progress');
 
     // A second verification after settlement changes nothing.
@@ -147,9 +199,22 @@ describe('engagement → quote → acceptance → invoice → payment', () => {
     expect(balance.debitKobo).toBe(balance.creditKobo);
     expect(balance.unbalancedJournals).toBe(0);
 
-    const transitions = await dbs.owner.select().from(schema.engagementTransitions).where(eq(schema.engagementTransitions.serviceRequestId, sr.id));
-    expect(transitions.map((x) => x.toStatus)).toEqual(['inquiry', 'triage', 'quoted', 'accepted', 'awaiting_payment', 'in_progress']);
-    const outbox = await dbs.owner.select().from(schema.outboxEvents).where(eq(schema.outboxEvents.aggregateId, attempt.id));
+    const transitions = await dbs.owner
+      .select()
+      .from(schema.engagementTransitions)
+      .where(eq(schema.engagementTransitions.serviceRequestId, sr.id));
+    expect(transitions.map((x) => x.toStatus)).toEqual([
+      'inquiry',
+      'triage',
+      'quoted',
+      'accepted',
+      'awaiting_payment',
+      'in_progress',
+    ]);
+    const outbox = await dbs.owner
+      .select()
+      .from(schema.outboxEvents)
+      .where(eq(schema.outboxEvents.aggregateId, attempt.id));
     expect(outbox.map((e) => e.eventType)).toContain('payment.settled');
   });
 });

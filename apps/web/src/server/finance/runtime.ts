@@ -20,7 +20,11 @@ export function getFinanceRuntime(): FinanceRuntime {
   return cache.__simplexdFinanceRuntime;
 }
 
-export function financeActorFrom(identity: RequestIdentity, req: Request, correlationId: string): FinanceActor {
+export function financeActorFrom(
+  identity: RequestIdentity,
+  req: Request,
+  correlationId: string,
+): FinanceActor {
   return {
     actor: identity.actor,
     ctx: { ...identity.ctx, correlationId },
@@ -37,7 +41,10 @@ export interface FinanceRequestContext {
 }
 
 /** Signed-in caller required; permissions are checked by the finance functions themselves. */
-export async function financeContext(req: Request, correlationId: string): Promise<FinanceRequestContext> {
+export async function financeContext(
+  req: Request,
+  correlationId: string,
+): Promise<FinanceRequestContext> {
   const identity = await getIdentity();
   if (!identity.session) throw new ApiError('unauthenticated', 'sign in required');
   return { rt: getFinanceRuntime(), fa: financeActorFrom(identity, req, correlationId), identity };

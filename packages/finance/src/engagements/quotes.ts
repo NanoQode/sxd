@@ -78,23 +78,23 @@ async function buildQuoteDto(tx: Transaction, quote: QuoteRow): Promise<QuoteDto
   const acceptance =
     versionIds.length === 0
       ? null
-      : (
+      : ((
           await tx
             .select()
             .from(schema.acceptances)
             .where(inArray(schema.acceptances.quoteVersionId, versionIds))
-        )[0] ?? null;
+        )[0] ?? null);
   const invoice =
     versionIds.length === 0
       ? null
-      : (
+      : ((
           await tx
             .select({ id: schema.invoices.id })
             .from(schema.invoices)
             .where(inArray(schema.invoices.quoteVersionId, versionIds))
             .orderBy(desc(schema.invoices.createdAt))
             .limit(1)
-        )[0] ?? null;
+        )[0] ?? null);
   return {
     id: quote.id,
     serviceRequestId: quote.serviceRequestId,
@@ -118,7 +118,11 @@ async function buildQuoteDto(tx: Transaction, quote: QuoteRow): Promise<QuoteDto
 }
 
 async function loadQuoteForUpdate(tx: Transaction, quoteId: string): Promise<QuoteRow> {
-  const [quote] = await tx.select().from(schema.quotes).where(eq(schema.quotes.id, quoteId)).for('update');
+  const [quote] = await tx
+    .select()
+    .from(schema.quotes)
+    .where(eq(schema.quotes.id, quoteId))
+    .for('update');
   if (!quote) throw new ApiError('not_found', 'quote not found');
   return quote;
 }
@@ -127,7 +131,12 @@ async function currentVersionOf(tx: Transaction, quote: QuoteRow): Promise<Quote
   const [version] = await tx
     .select()
     .from(schema.quoteVersions)
-    .where(and(eq(schema.quoteVersions.quoteId, quote.id), eq(schema.quoteVersions.version, quote.currentVersion)));
+    .where(
+      and(
+        eq(schema.quoteVersions.quoteId, quote.id),
+        eq(schema.quoteVersions.version, quote.currentVersion),
+      ),
+    );
   if (!version) throw new ApiError('internal_error', 'quote has no current version');
   return version;
 }
@@ -166,7 +175,10 @@ async function insertVersion(
   const treatment = await loadTaxTreatment(tx, input.taxTreatmentKey ?? null);
   const totals = computeTotals(lines, treatment);
   if (totals.totalKobo <= 0n && input.requiresPayment) {
-    throw new ApiError('validation_failed', 'a quote that requires payment must have a positive total');
+    throw new ApiError(
+      'validation_failed',
+      'a quote that requires payment must have a positive total',
+    );
   }
   const [version] = await tx
     .insert(schema.quoteVersions)
@@ -224,7 +236,10 @@ export async function createQuote(
       assigneeUserIds: sr.assignedPmUserId ? [sr.assignedPmUserId] : [],
     });
     if (!['triage', 'quoted'].includes(sr.status)) {
-      throw new ApiError('invalid_transition', `a quote can only be drafted for a request in triage or quoted (currently ${sr.status})`);
+      throw new ApiError(
+        'invalid_transition',
+        `a quote can only be drafted for a request in triage or quoted (currently ${sr.status})`,
+      );
     }
     let lines: LineInput[] | null = linesFromFeeBasis(input);
     let scope: Pick<QuoteCreate, 'scopeMarkdown' | 'exclusions'> = input;
@@ -232,7 +247,12 @@ export async function createQuote(
       const [template] = await tx
         .select()
         .from(schema.quoteTemplates)
-        .where(and(eq(schema.quoteTemplates.id, input.templateId), eq(schema.quoteTemplates.active, true)));
+        .where(
+          and(
+            eq(schema.quoteTemplates.id, input.templateId),
+            eq(schema.quoteTemplates.active, true),
+          ),
+        );
       if (!template) throw new ApiError('not_found', 'quote template not found');
       lines = template.lines.map((l) => ({
         description: l.description,
@@ -278,9 +298,16 @@ export async function addQuoteVersion(
 ): Promise<QuoteDto> {
   return withActor(rt.db, fa.ctx, async (tx) => {
     const quote = await loadQuoteForUpdate(tx, quoteId);
-    assertStaff(fa, 'quotes.issue', { type: 'quote', id: quote.id, organizationId: quote.organizationId });
+    assertStaff(fa, 'quotes.issue', {
+      type: 'quote',
+      id: quote.id,
+      organizationId: quote.organizationId,
+    });
     if (!['draft', 'issued', 'expired', 'rejected'].includes(quote.status)) {
-      throw new ApiError('invalid_transition', `quote is ${quote.status}; only draft, issued, expired or rejected quotes take a new version`);
+      throw new ApiError(
+        'invalid_transition',
+        `quote is ${quote.status}; only draft, issued, expired or rejected quotes take a new version`,
+      );
     }
     const lines = linesFromFeeBasis(input) ?? input.lines;
     const nextVersion = quote.currentVersion + 1;
@@ -311,7 +338,10 @@ export async function issueQuote(
       assigneeUserIds: sr.assignedPmUserId ? [sr.assignedPmUserId] : [],
     });
     if (quote.status !== 'draft') {
-      throw new ApiError('invalid_transition', `quote is ${quote.status}; only drafts can be issued`);
+      throw new ApiError(
+        'invalid_transition',
+        `quote is ${quote.status}; only drafts can be issued`,
+      );
     }
     const version = await currentVersionOf(tx, quote);
     const now = rt.now();
@@ -320,7 +350,8 @@ export async function issueQuote(
       : version.validUntil && version.validUntil > now
         ? version.validUntil
         : new Date(now.getTime() + (input.validDays ?? DEFAULT_QUOTE_VALIDITY_DAYS) * 86_400_000);
-    if (validUntil <= now) throw new ApiError('validation_failed', 'validUntil must be in the future');
+    if (validUntil <= now)
+      throw new ApiError('validation_failed', 'validUntil must be in the future');
     // Older issued quotes for the same request are superseded by this one.
     await tx
       .update(schema.quotes)
@@ -344,7 +375,12 @@ export async function issueQuote(
     await transitionEngagement(tx, fa, {
       sr,
       to: 'quoted',
-      metadata: { quoteId: quote.id, quoteVersionId: version.id, version: version.version, validUntil: validUntil.toISOString() },
+      metadata: {
+        quoteId: quote.id,
+        quoteVersionId: version.id,
+        version: version.version,
+        validUntil: validUntil.toISOString(),
+      },
     });
     await emitEvent(tx, fa, {
       eventType: 'quote.issued',
@@ -367,7 +403,11 @@ export async function issueQuote(
       entityType: 'quote',
       entityId: quote.id,
       organizationId: quote.organizationId,
-      after: { version: version.version, validUntil: validUntil.toISOString(), totalKobo: version.totalKobo },
+      after: {
+        version: version.version,
+        validUntil: validUntil.toISOString(),
+        totalKobo: version.totalKobo,
+      },
     });
     return buildQuoteDto(tx, updated!);
   });
@@ -396,20 +436,34 @@ export async function acceptQuote(
   const userId = requireUserId(fa);
   return withActor(rt.db, fa.ctx, async (tx) => {
     const quote = await loadQuoteForUpdate(tx, quoteId);
-    assertOrg(fa, 'org.quotes.accept', { type: 'quote', id: quote.id, organizationId: quote.organizationId });
+    assertOrg(fa, 'org.quotes.accept', {
+      type: 'quote',
+      id: quote.id,
+      organizationId: quote.organizationId,
+    });
     const sr = await loadServiceRequestForUpdate(tx, quote.serviceRequestId);
     const version = await currentVersionOf(tx, quote);
     if (version.id !== input.quoteVersionId) {
-      throw new ApiError('conflict', 'a newer quote version was issued; review it before accepting', {
-        details: { currentVersionId: version.id, currentVersion: version.version },
-      });
+      throw new ApiError(
+        'conflict',
+        'a newer quote version was issued; review it before accepting',
+        {
+          details: { currentVersionId: version.id, currentVersion: version.version },
+        },
+      );
     }
     const now = rt.now();
     if (quote.status !== 'issued') {
-      throw new ApiError('invalid_transition', `quote is ${quote.status}; only issued quotes can be accepted`);
+      throw new ApiError(
+        'invalid_transition',
+        `quote is ${quote.status}; only issued quotes can be accepted`,
+      );
     }
     if (version.validUntil && version.validUntil < now) {
-      await tx.update(schema.quotes).set({ status: 'expired' }).where(eq(schema.quotes.id, quote.id));
+      await tx
+        .update(schema.quotes)
+        .set({ status: 'expired' })
+        .where(eq(schema.quotes.id, quote.id));
       throw new ApiError('deadline_passed', 'this quote has expired; ask for a re-issued version');
     }
     try {
@@ -422,7 +476,8 @@ export async function acceptQuote(
         termsVersion: input.termsVersion,
       });
     } catch (err) {
-      if (isUniqueViolation(err)) throw new ApiError('conflict', 'this quote version was already accepted');
+      if (isUniqueViolation(err))
+        throw new ApiError('conflict', 'this quote version was already accepted');
       throw err;
     }
     const [accepted] = await tx
@@ -431,7 +486,10 @@ export async function acceptQuote(
       .where(eq(schema.quotes.id, quote.id))
       .returning();
     const stored = (version.feeBasis ?? {}) as Partial<StoredFeeBasis>;
-    const billing: QuoteBillingTerms = stored.billing ?? { depositBps: 10_000, requiresPayment: true };
+    const billing: QuoteBillingTerms = stored.billing ?? {
+      depositBps: 10_000,
+      requiresPayment: true,
+    };
     const srAfterAccept = await transitionEngagement(tx, fa, {
       sr,
       to: 'accepted',
@@ -446,27 +504,46 @@ export async function acceptQuote(
             },
           }
         : {},
-      metadata: { quoteId: quote.id, quoteVersionId: version.id, signatureName: input.signatureName, termsVersion: input.termsVersion },
+      metadata: {
+        quoteId: quote.id,
+        quoteVersionId: version.id,
+        signatureName: input.signatureName,
+        termsVersion: input.termsVersion,
+      },
     });
     await emitEvent(tx, fa, {
       eventType: 'quote.accepted',
       aggregateType: 'quote',
       aggregateId: quote.id,
       organizationId: quote.organizationId,
-      payload: { quoteId: quote.id, quoteVersionId: version.id, serviceRequestId: sr.id, acceptedByUserId: userId },
+      payload: {
+        quoteId: quote.id,
+        quoteVersionId: version.id,
+        serviceRequestId: sr.id,
+        acceptedByUserId: userId,
+      },
     });
     await recordAudit(tx, fa, {
       action: 'quote.accepted',
       entityType: 'quote',
       entityId: quote.id,
       organizationId: quote.organizationId,
-      after: { quoteVersionId: version.id, signatureName: input.signatureName, termsVersion: input.termsVersion },
+      after: {
+        quoteVersionId: version.id,
+        signatureName: input.signatureName,
+        termsVersion: input.termsVersion,
+      },
     });
 
-    const requiresPayment = billing.requiresPayment && billing.depositBps > 0 && version.totalKobo > 0n;
+    const requiresPayment =
+      billing.requiresPayment && billing.depositBps > 0 && version.totalKobo > 0n;
     // Invoice creation and the follow-on engagement transitions are system
     // actions: the invoice policy is self-referencing and journals are privileged.
-    const system: FinanceActor = { ...systemFinanceActor(fa.correlationId), ipHash: fa.ipHash ?? null, userAgent: fa.userAgent ?? null };
+    const system: FinanceActor = {
+      ...systemFinanceActor(fa.correlationId),
+      ipHash: fa.ipHash ?? null,
+      userAgent: fa.userAgent ?? null,
+    };
     const result = await elevated(tx, fa, async () => {
       if (requiresPayment) {
         const isDeposit = billing.depositBps < 10_000;
@@ -503,7 +580,11 @@ export async function acceptQuote(
           sr: srAfterAccept,
           to: 'awaiting_payment',
           actorKind: 'system',
-          metadata: { invoiceId: issued.id, invoiceNumber: issued.number, totalKobo: issued.totalKobo.toString() },
+          metadata: {
+            invoiceId: issued.id,
+            invoiceNumber: issued.number,
+            totalKobo: issued.totalKobo.toString(),
+          },
         });
         return { invoiceId: issued.id, engagementStatus: 'awaiting_payment' as const };
       }
@@ -528,16 +609,29 @@ export async function rejectQuote(
 ): Promise<QuoteDto> {
   return withActor(rt.db, fa.ctx, async (tx) => {
     const quote = await loadQuoteForUpdate(tx, quoteId);
-    assertStaffOrOrg(fa, 'quotes.issue', 'org.quotes.accept', { type: 'quote', id: quote.id, organizationId: quote.organizationId });
+    assertStaffOrOrg(fa, 'quotes.issue', 'org.quotes.accept', {
+      type: 'quote',
+      id: quote.id,
+      organizationId: quote.organizationId,
+    });
     if (quote.status !== 'issued') {
-      throw new ApiError('invalid_transition', `quote is ${quote.status}; only issued quotes can be rejected`);
+      throw new ApiError(
+        'invalid_transition',
+        `quote is ${quote.status}; only issued quotes can be rejected`,
+      );
     }
     const version = await currentVersionOf(tx, quote);
     if (version.id !== input.quoteVersionId) {
-      throw new ApiError('conflict', 'a newer quote version was issued', { details: { currentVersionId: version.id } });
+      throw new ApiError('conflict', 'a newer quote version was issued', {
+        details: { currentVersionId: version.id },
+      });
     }
     const sr = await loadServiceRequestForUpdate(tx, quote.serviceRequestId);
-    const [updated] = await tx.update(schema.quotes).set({ status: 'rejected' }).where(eq(schema.quotes.id, quote.id)).returning();
+    const [updated] = await tx
+      .update(schema.quotes)
+      .set({ status: 'rejected' })
+      .where(eq(schema.quotes.id, quote.id))
+      .returning();
     await transitionEngagement(tx, fa, {
       sr,
       to: 'rejected',
@@ -557,11 +651,19 @@ export async function rejectQuote(
   });
 }
 
-export async function getQuote(rt: FinanceRuntime, fa: FinanceActor, quoteId: string): Promise<QuoteDto> {
+export async function getQuote(
+  rt: FinanceRuntime,
+  fa: FinanceActor,
+  quoteId: string,
+): Promise<QuoteDto> {
   return withActor(rt.db, fa.ctx, async (tx) => {
     const [quote] = await tx.select().from(schema.quotes).where(eq(schema.quotes.id, quoteId));
     if (!quote) throw new ApiError('not_found', 'quote not found');
-    assertStaffOrOrg(fa, 'service_requests.read_all', 'org.read', { type: 'quote', id: quote.id, organizationId: quote.organizationId });
+    assertStaffOrOrg(fa, 'service_requests.read_all', 'org.read', {
+      type: 'quote',
+      id: quote.id,
+      organizationId: quote.organizationId,
+    });
     return buildQuoteDto(tx, quote);
   });
 }
@@ -572,9 +674,16 @@ export async function listQuotesForRequest(
   serviceRequestId: string,
 ): Promise<QuoteDto[]> {
   return withActor(rt.db, fa.ctx, async (tx) => {
-    const [sr] = await tx.select().from(schema.serviceRequests).where(eq(schema.serviceRequests.id, serviceRequestId));
+    const [sr] = await tx
+      .select()
+      .from(schema.serviceRequests)
+      .where(eq(schema.serviceRequests.id, serviceRequestId));
     if (!sr) throw new ApiError('not_found', 'request not found');
-    assertStaffOrOrg(fa, 'service_requests.read_all', 'org.read', { type: 'service_request', id: sr.id, organizationId: sr.organizationId });
+    assertStaffOrOrg(fa, 'service_requests.read_all', 'org.read', {
+      type: 'service_request',
+      id: sr.id,
+      organizationId: sr.organizationId,
+    });
     const quotes = await tx
       .select()
       .from(schema.quotes)
@@ -591,11 +700,18 @@ export async function expireQuotes(rt: FinanceRuntime, now: Date = rt.now()): Pr
   const system = systemFinanceActor('expire-quotes');
   return withActor(rt.db, system.ctx, async (tx) => {
     const rows = await tx
-      .select({ quoteId: schema.quotes.id, organizationId: schema.quotes.organizationId, versionId: schema.quoteVersions.id })
+      .select({
+        quoteId: schema.quotes.id,
+        organizationId: schema.quotes.organizationId,
+        versionId: schema.quoteVersions.id,
+      })
       .from(schema.quotes)
       .innerJoin(
         schema.quoteVersions,
-        and(eq(schema.quoteVersions.quoteId, schema.quotes.id), eq(schema.quoteVersions.version, schema.quotes.currentVersion)),
+        and(
+          eq(schema.quoteVersions.quoteId, schema.quotes.id),
+          eq(schema.quoteVersions.version, schema.quotes.currentVersion),
+        ),
       )
       .where(and(eq(schema.quotes.status, 'issued'), lt(schema.quoteVersions.validUntil, now)));
     if (rows.length === 0) return [];

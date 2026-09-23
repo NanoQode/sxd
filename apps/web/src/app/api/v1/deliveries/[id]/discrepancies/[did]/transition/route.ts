@@ -10,5 +10,8 @@ export const POST = route<{ params: Promise<{ id: string; did: string }> }>(asyn
   const identity = await getIdentity();
   const { id, did } = await params(ctx, discrepancyParams);
   const body = await parseJson(req, discrepancyTransitionSchema);
-  return json(await transitionDiscrepancy(identity, id, did, body, { correlationId: ctx.correlationId }), { correlationId: ctx.correlationId });
+  return json(
+    await transitionDiscrepancy(identity, id, did, body, { correlationId: ctx.correlationId }),
+    { correlationId: ctx.correlationId },
+  );
 });

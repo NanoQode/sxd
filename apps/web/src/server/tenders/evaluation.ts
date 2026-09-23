@@ -1,6 +1,11 @@
 import 'server-only';
 import { and, asc, eq, inArray } from 'drizzle-orm';
-import { ApiError, type BidEvaluationDto, type BidEvaluationInput, type TenderComparisonDto } from '@simplexd/contracts';
+import {
+  ApiError,
+  type BidEvaluationDto,
+  type BidEvaluationInput,
+  type TenderComparisonDto,
+} from '@simplexd/contracts';
 import { getDb, schema, withActor, type DbExecutor } from '@simplexd/db';
 import { aggregateWeightedScores, rankBids, weightedScore } from '@simplexd/domain/tenders';
 import { bidMachine, evaluateTransition, tenderMachine } from '@simplexd/domain/workflow';
@@ -43,10 +48,17 @@ function toEvaluationDto(row: EvaluationRow, evaluatorName: string | null): BidE
   };
 }
 
-async function loadEvaluableBid(tx: DbExecutor, identity: RequestIdentity, bidId: string): Promise<{ access: TenderAccess; bid: BidRow }> {
+async function loadEvaluableBid(
+  tx: DbExecutor,
+  identity: RequestIdentity,
+  bidId: string,
+): Promise<{ access: TenderAccess; bid: BidRow }> {
   const [bid] = await tx.select().from(schema.bids).where(eq(schema.bids.id, bidId));
   if (!bid) throw new ApiError('not_found', 'bid not found');
-  const access = await loadTenderAccess(tx, identity, bid.tenderId, { staff: ['bids.evaluate'], customer: false });
+  const access = await loadTenderAccess(tx, identity, bid.tenderId, {
+    staff: ['bids.evaluate'],
+    customer: false,
+  });
   if (access.role !== 'staff') throw new ApiError('forbidden', 'evaluation is a staff action');
   return { access, bid };
 }
@@ -59,11 +71,21 @@ export async function startEvaluation(
 ): Promise<{ tenderId: string; status: 'evaluating'; openedBidIds: string[] }> {
   requireTendering(identity);
   return withActor(getDb(), ctxFor(identity, options), async (tx) => {
-    const access = await loadTenderAccess(tx, identity, tenderId, { staff: ['bids.evaluate'], customer: false });
+    const access = await loadTenderAccess(tx, identity, tenderId, {
+      staff: ['bids.evaluate'],
+      customer: false,
+    });
     const { tender } = access;
     assertVersion(tender.version, input.expectedVersion);
-    const decision = evaluateTransition(tenderMachine, { from: tender.status, to: 'evaluating', actor: 'staff' });
-    if (!decision.ok) throw new ApiError('invalid_transition', decision.message, { details: { code: decision.code } });
+    const decision = evaluateTransition(tenderMachine, {
+      from: tender.status,
+      to: 'evaluating',
+      actor: 'staff',
+    });
+    if (!decision.ok)
+      throw new ApiError('invalid_transition', decision.message, {
+        details: { code: decision.code },
+      });
     // Opening requires bids.open_sealed (MFA) on the same actor; the domain check throws forbidden/mfa_required.
     const openedBidIds = await openBidsInTx(tx, identity, access, input.reason, options);
     const [updated] = await tx
@@ -98,26 +120,50 @@ export async function scoreBid(
     const { access, bid } = await loadEvaluableBid(tx, identity, bidId);
     const { tender } = access;
     if (tender.status !== 'evaluating') {
-      throw new ApiError('invalid_transition', 'scores are recorded while the tender is evaluating', { details: { status: tender.status } });
+      throw new ApiError(
+        'invalid_transition',
+        'scores are recorded while the tender is evaluating',
+        { details: { status: tender.status } },
+      );
     }
-    if (!bid.openedAt) throw new ApiError('forbidden', 'the bid is sealed; open the bids first', { details: { code: 'bids_sealed' } });
+    if (!bid.openedAt)
+      throw new ApiError('forbidden', 'the bid is sealed; open the bids first', {
+        details: { code: 'bids_sealed' },
+      });
     if (bid.status !== 'submitted' && bid.status !== 'evaluated') {
       throw new ApiError('invalid_transition', `a ${bid.status} bid cannot be scored`);
     }
     const result = weightedScore(tender.evaluationWeights ?? {}, input.scores);
-    if (!result.ok) throw new ApiError('validation_failed', 'scores do not match the tender criteria', { details: result.violations });
+    if (!result.ok)
+      throw new ApiError('validation_failed', 'scores do not match the tender criteria', {
+        details: result.violations,
+      });
     const [row] = await tx
       .insert(schema.bidEvaluations)
-      .values({ tenderId: tender.id, bidId, evaluatorUserId: userId, scores: input.scores, weightedScore: result.scoreText, notes: input.notes ?? null })
+      .values({
+        tenderId: tender.id,
+        bidId,
+        evaluatorUserId: userId,
+        scores: input.scores,
+        weightedScore: result.scoreText,
+        notes: input.notes ?? null,
+      })
       .onConflictDoUpdate({
         target: [schema.bidEvaluations.bidId, schema.bidEvaluations.evaluatorUserId],
         set: { scores: input.scores, weightedScore: result.scoreText, notes: input.notes ?? null },
       })
       .returning();
     if (bid.status === 'submitted') {
-      const transition = evaluateTransition(bidMachine, { from: 'submitted', to: 'evaluated', actor: 'staff' });
+      const transition = evaluateTransition(bidMachine, {
+        from: 'submitted',
+        to: 'evaluated',
+        actor: 'staff',
+      });
       if (!transition.ok) throw new ApiError('invalid_transition', transition.message);
-      await tx.update(schema.bids).set({ status: 'evaluated', version: bid.version + 1 }).where(eq(schema.bids.id, bidId));
+      await tx
+        .update(schema.bids)
+        .set({ status: 'evaluated', version: bid.version + 1 })
+        .where(eq(schema.bids.id, bidId));
     }
     await logBidAccess(tx, [bidId], userId, 'evaluate');
     await recordAudit(tx, identity, {
@@ -141,9 +187,20 @@ export async function disqualifyBid(
   requireTendering(identity);
   return withActor(getDb(), ctxFor(identity, options), async (tx) => {
     const { access, bid } = await loadEvaluableBid(tx, identity, bidId);
-    const decision = evaluateTransition(bidMachine, { from: bid.status, to: 'disqualified', actor: 'staff', reason: input.reason });
-    if (!decision.ok) throw new ApiError('invalid_transition', decision.message, { details: { code: decision.code } });
-    await tx.update(schema.bids).set({ status: 'disqualified', version: bid.version + 1 }).where(eq(schema.bids.id, bidId));
+    const decision = evaluateTransition(bidMachine, {
+      from: bid.status,
+      to: 'disqualified',
+      actor: 'staff',
+      reason: input.reason,
+    });
+    if (!decision.ok)
+      throw new ApiError('invalid_transition', decision.message, {
+        details: { code: decision.code },
+      });
+    await tx
+      .update(schema.bids)
+      .set({ status: 'disqualified', version: bid.version + 1 })
+      .where(eq(schema.bids.id, bidId));
     await recordAudit(tx, identity, {
       action: 'bid.disqualified',
       entityType: 'bid',
@@ -166,18 +223,49 @@ export async function getTenderComparison(
 ): Promise<TenderComparisonDto> {
   const userId = requireTendering(identity);
   return withActor(getDb(), ctxFor(identity, options), async (tx) => {
-    const access = await loadTenderAccess(tx, identity, tenderId, { staff: ['bids.evaluate'], customer: false });
+    const access = await loadTenderAccess(tx, identity, tenderId, {
+      staff: ['bids.evaluate'],
+      customer: false,
+    });
     const { tender } = access;
-    const bids = await tx.select().from(schema.bids).where(and(eq(schema.bids.tenderId, tenderId), inArray(schema.bids.status, ['submitted', 'evaluated', 'disqualified', 'awarded', 'unsuccessful'])));
-    if (bids.some((b) => !b.openedAt)) {
-      throw new ApiError('forbidden', 'bids are sealed until opened by an authorised staff member', { details: { code: 'bids_sealed' } });
+    const bids = await tx
+      .select()
+      .from(schema.bids)
+      .where(
+        and(
+          eq(schema.bids.tenderId, tenderId),
+          inArray(schema.bids.status, [
+            'submitted',
+            'evaluated',
+            'disqualified',
+            'awarded',
+            'unsuccessful',
+          ]),
+        ),
+      );
+    if (
+      !['closed', 'evaluating', 'awarded'].includes(tender.status) ||
+      bids.some((b) => !b.openedAt)
+    ) {
+      throw new ApiError(
+        'forbidden',
+        'bids are sealed until opened by an authorised staff member',
+        { details: { code: 'bids_sealed' } },
+      );
     }
     const bidIds = bids.map((b) => b.id);
     const revisions = await loadBidRevisions(tx, bidIds);
     const evaluations = bidIds.length
-      ? await tx.select().from(schema.bidEvaluations).where(inArray(schema.bidEvaluations.bidId, bidIds)).orderBy(asc(schema.bidEvaluations.createdAt))
+      ? await tx
+          .select()
+          .from(schema.bidEvaluations)
+          .where(inArray(schema.bidEvaluations.bidId, bidIds))
+          .orderBy(asc(schema.bidEvaluations.createdAt))
       : [];
-    const names = await userNames(tx, [...bids.map((b) => b.partnerUserId), ...evaluations.map((e) => e.evaluatorUserId)]);
+    const names = await userNames(tx, [
+      ...bids.map((b) => b.partnerUserId),
+      ...evaluations.map((e) => e.evaluatorUserId),
+    ]);
     await logBidAccess(tx, bidIds, userId, 'read');
     const perBid = bids.map((bid) => {
       const evals = evaluations.filter((e) => e.bidId === bid.id);
@@ -190,7 +278,10 @@ export async function getTenderComparison(
         bidId: p.bid.id,
         averageWeightedScore: p.aggregate.mean,
         amountKobo: p.latest?.amountKobo ?? null,
-        eligible: p.bid.status === 'evaluated' || p.bid.status === 'awarded' || p.bid.status === 'unsuccessful',
+        eligible:
+          p.bid.status === 'evaluated' ||
+          p.bid.status === 'awarded' ||
+          p.bid.status === 'unsuccessful',
       })),
     );
     const rankOf = new Map(ranked.map((r) => [r.bidId, r.rank]));

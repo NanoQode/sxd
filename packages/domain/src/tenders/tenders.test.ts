@@ -54,7 +54,8 @@ describe('weightedScore', () => {
   it('rejects missing, out-of-range and unknown criteria', () => {
     const missing = weightedScore(weights, { price: 80 });
     expect(missing.ok).toBe(false);
-    if (!missing.ok) expect(missing.violations[0]).toMatchObject({ code: 'missing_score', criterion: 'quality' });
+    if (!missing.ok)
+      expect(missing.violations[0]).toMatchObject({ code: 'missing_score', criterion: 'quality' });
 
     const range = weightedScore(weights, { price: 101, quality: 50 });
     expect(range.ok).toBe(false);
@@ -62,7 +63,11 @@ describe('weightedScore', () => {
 
     const unknown = weightedScore(weights, { price: 80, quality: 50, extra: 10 });
     expect(unknown.ok).toBe(false);
-    if (!unknown.ok) expect(unknown.violations[0]).toMatchObject({ code: 'unknown_criterion', criterion: 'extra' });
+    if (!unknown.ok)
+      expect(unknown.violations[0]).toMatchObject({
+        code: 'unknown_criterion',
+        criterion: 'extra',
+      });
 
     const badWeights = weightedScore({ price: 10 }, { price: 50 });
     expect(badWeights.ok).toBe(false);
@@ -113,7 +118,9 @@ describe('deadline rules', () => {
   });
 
   it('permits a manual close only once the deadline has passed', () => {
-    expect(closeDecision({ now: '2026-09-22T15:00:00Z', submissionDeadlineAt: DEADLINE })).toMatchObject({
+    expect(
+      closeDecision({ now: '2026-09-22T15:00:00Z', submissionDeadlineAt: DEADLINE }),
+    ).toMatchObject({
       canClose: false,
       reason: 'deadline_not_reached',
     });

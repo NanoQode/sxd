@@ -62,7 +62,10 @@ export async function addReconciliationException(
       e.entityId === exception.entityId,
   );
   if (!duplicate) {
-    const entry: ReconciliationException = { code: exception.code, message: exception.message.slice(0, 1000) };
+    const entry: ReconciliationException = {
+      code: exception.code,
+      message: exception.message.slice(0, 1000),
+    };
     if (exception.entityType !== undefined) entry.entityType = exception.entityType;
     if (exception.entityId !== undefined) entry.entityId = exception.entityId;
     await tx

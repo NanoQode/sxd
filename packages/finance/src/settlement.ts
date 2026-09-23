@@ -60,9 +60,15 @@ export async function settleAttempt(rt: FinanceRuntime, input: SettleInput): Pro
       .from(schema.allocations)
       .where(eq(schema.allocations.dedupeKey, attemptDedupeKey(attempt.id)));
     if (existingAllocation || attempt.status === 'successful') {
-      const [inv] = await tx.select({ status: schema.invoices.status }).from(schema.invoices).where(eq(schema.invoices.id, attempt.invoiceId));
+      const [inv] = await tx
+        .select({ status: schema.invoices.status })
+        .from(schema.invoices)
+        .where(eq(schema.invoices.id, attempt.invoiceId));
       const [receipt] = existingAllocation
-        ? await tx.select({ number: schema.receipts.number }).from(schema.receipts).where(eq(schema.receipts.allocationId, existingAllocation.id))
+        ? await tx
+            .select({ number: schema.receipts.number })
+            .from(schema.receipts)
+            .where(eq(schema.receipts.allocationId, existingAllocation.id))
         : [];
       return {
         settled: false,
@@ -74,23 +80,47 @@ export async function settleAttempt(rt: FinanceRuntime, input: SettleInput): Pro
       };
     }
     const outcome = matchVerification({
-      attempt: { reference: attempt.reference, amountKobo: attempt.amountKobo, currency: attempt.currency, status: attempt.status },
+      attempt: {
+        reference: attempt.reference,
+        amountKobo: attempt.amountKobo,
+        currency: attempt.currency,
+        status: attempt.status,
+      },
       verification: input.verification,
     });
     if (outcome.decision !== 'settle') {
-      throw new ApiError('payment_verification_failed', 'the provider record does not match this payment attempt; nothing was allocated', {
-        details: { decision: outcome.decision, reasons: outcome.reasons },
-      });
+      throw new ApiError(
+        'payment_verification_failed',
+        'the provider record does not match this payment attempt; nothing was allocated',
+        {
+          details: { decision: outcome.decision, reasons: outcome.reasons },
+        },
+      );
     }
-    if (input.verification.environment !== 'unknown' && input.verification.environment !== attempt.environment) {
-      throw new ApiError('payment_verification_failed', 'provider environment does not match the attempt', {
-        details: { expected: attempt.environment, reported: input.verification.environment },
-      });
+    if (
+      input.verification.environment !== 'unknown' &&
+      input.verification.environment !== attempt.environment
+    ) {
+      throw new ApiError(
+        'payment_verification_failed',
+        'provider environment does not match the attempt',
+        {
+          details: { expected: attempt.environment, reported: input.verification.environment },
+        },
+      );
     }
-    const transition = evaluateTransition(paymentAttemptMachine, { from: attempt.status, to: 'successful', actor: 'system' });
+    const transition = evaluateTransition(paymentAttemptMachine, {
+      from: attempt.status,
+      to: 'successful',
+      actor: 'system',
+    });
     if (!transition.ok) throw new ApiError('invalid_transition', transition.message);
 
-    const [invoice] = await tx.select().from(schema.invoices).where(eq(schema.invoices.id, attempt.invoiceId)).for('update');
+    const [invoice] = await tx
+      .select()
+      .from(schema.invoices)
+      .where(eq(schema.invoices.id, attempt.invoiceId))
+      .for('update');
     if (!invoice) throw new ApiError('not_found', 'invoice not found');
     const plan = planAllocation({ invoice, amountKobo: attempt.amountKobo });
     const now = rt.now();
@@ -131,7 +161,8 @@ export async function settleAttempt(rt: FinanceRuntime, input: SettleInput): Pro
         .returning({ id: schema.allocations.id });
       allocationId = allocation!.id;
     } catch (err) {
-      if (isUniqueViolation(err)) throw new ApiError('conflict', 'this payment attempt was already allocated');
+      if (isUniqueViolation(err))
+        throw new ApiError('conflict', 'this payment attempt was already allocated');
       throw err;
     }
     const [updatedInvoice] = await tx
@@ -144,7 +175,8 @@ export async function settleAttempt(rt: FinanceRuntime, input: SettleInput): Pro
       })
       .where(and(eq(schema.invoices.id, invoice.id), eq(schema.invoices.version, invoice.version)))
       .returning();
-    if (!updatedInvoice) throw new ApiError('version_conflict', 'invoice changed during settlement');
+    if (!updatedInvoice)
+      throw new ApiError('version_conflict', 'invoice changed during settlement');
 
     let receiptNumber: string | null = null;
     if (plan.receiptRequired) {
@@ -174,13 +206,22 @@ export async function settleAttempt(rt: FinanceRuntime, input: SettleInput): Pro
       .returning();
 
     if (plan.newStatus === 'paid' && invoice.serviceRequestId) {
-      const [sr] = await tx.select().from(schema.serviceRequests).where(eq(schema.serviceRequests.id, invoice.serviceRequestId)).for('update');
+      const [sr] = await tx
+        .select()
+        .from(schema.serviceRequests)
+        .where(eq(schema.serviceRequests.id, invoice.serviceRequestId))
+        .for('update');
       if (sr && sr.status === 'awaiting_payment') {
         await transitionEngagement(tx, system, {
           sr,
           to: 'in_progress',
           actorKind: 'system',
-          metadata: { invoiceId: invoice.id, paymentAttemptId: attempt.id, receiptNumber, billingConsequence: 'verified_payment' },
+          metadata: {
+            invoiceId: invoice.id,
+            paymentAttemptId: attempt.id,
+            receiptNumber,
+            billingConsequence: 'verified_payment',
+          },
         });
       }
     }
@@ -207,7 +248,12 @@ export async function settleAttempt(rt: FinanceRuntime, input: SettleInput): Pro
       aggregateType: 'invoice',
       aggregateId: invoice.id,
       organizationId: attempt.organizationId,
-      payload: { invoiceId: invoice.id, invoiceNumber: updatedInvoice.number, status: plan.newStatus, amountPaidKobo: plan.newAmountPaidKobo },
+      payload: {
+        invoiceId: invoice.id,
+        invoiceNumber: updatedInvoice.number,
+        status: plan.newStatus,
+        amountPaidKobo: plan.newAmountPaidKobo,
+      },
     });
     await recordAudit(tx, system, {
       action: 'payment_attempt.settled',
@@ -253,22 +299,41 @@ export async function recordAttemptOutcome(
 ): Promise<PaymentAttemptRow> {
   const system = systemFinanceActor(input.correlationId);
   return withActor(rt.db, system.ctx, async (tx) => {
-    const [attempt] = await tx.select().from(schema.paymentAttempts).where(eq(schema.paymentAttempts.id, input.attemptId)).for('update');
+    const [attempt] = await tx
+      .select()
+      .from(schema.paymentAttempts)
+      .where(eq(schema.paymentAttempts.id, input.attemptId))
+      .for('update');
     if (!attempt) throw new ApiError('not_found', 'payment attempt not found');
     const now = rt.now();
     if (attempt.status === input.status) {
       const [same] = await tx
         .update(schema.paymentAttempts)
-        .set({ verifiedAt: now, lastReconciledAt: now, providerResponseSanitized: input.verification?.raw ?? attempt.providerResponseSanitized })
+        .set({
+          verifiedAt: now,
+          lastReconciledAt: now,
+          providerResponseSanitized: input.verification?.raw ?? attempt.providerResponseSanitized,
+        })
         .where(eq(schema.paymentAttempts.id, attempt.id))
         .returning();
-      if (input.exceptionCode) await flagAttempt(tx, attempt, input.exceptionCode, input.reasons, now);
+      if (input.exceptionCode)
+        await flagAttempt(tx, attempt, input.exceptionCode, input.reasons, now);
       return same!;
     }
-    const transition = evaluateTransition(paymentAttemptMachine, { from: attempt.status, to: input.status, actor: 'system' });
+    const transition = evaluateTransition(paymentAttemptMachine, {
+      from: attempt.status,
+      to: input.status,
+      actor: 'system',
+    });
     if (!transition.ok) {
       // Terminal or already settled attempts keep their state; the disagreement is a reconciliation matter.
-      await flagAttempt(tx, attempt, input.exceptionCode ?? 'status_conflict', [transition.message, ...input.reasons], now);
+      await flagAttempt(
+        tx,
+        attempt,
+        input.exceptionCode ?? 'status_conflict',
+        [transition.message, ...input.reasons],
+        now,
+      );
       return attempt;
     }
     const [updated] = await tx
@@ -284,7 +349,8 @@ export async function recordAttemptOutcome(
       })
       .where(eq(schema.paymentAttempts.id, attempt.id))
       .returning();
-    if (input.exceptionCode) await flagAttempt(tx, attempt, input.exceptionCode, input.reasons, now);
+    if (input.exceptionCode)
+      await flagAttempt(tx, attempt, input.exceptionCode, input.reasons, now);
     await recordAudit(tx, system, {
       action: `payment_attempt.${input.status}`,
       entityType: 'payment_attempt',
@@ -298,10 +364,21 @@ export async function recordAttemptOutcome(
   });
 }
 
-async function flagAttempt(tx: Transaction, attempt: PaymentAttemptRow, code: string, reasons: string[], now: Date): Promise<void> {
+async function flagAttempt(
+  tx: Transaction,
+  attempt: PaymentAttemptRow,
+  code: string,
+  reasons: string[],
+  now: Date,
+): Promise<void> {
   await addReconciliationException(
     tx,
-    { code, message: `${attempt.reference}: ${reasons.join('; ')}`, entityType: 'payment_attempt', entityId: attempt.id },
+    {
+      code,
+      message: `${attempt.reference}: ${reasons.join('; ')}`,
+      entityType: 'payment_attempt',
+      entityId: attempt.id,
+    },
     now,
   );
 }
@@ -314,18 +391,37 @@ async function flagAttempt(tx: Transaction, attempt: PaymentAttemptRow, code: st
  */
 export async function reverseSettledAttempt(
   rt: FinanceRuntime,
-  input: { attemptId: string; verification: VerifyResult; source: SettleInput['source']; correlationId?: string },
+  input: {
+    attemptId: string;
+    verification: VerifyResult;
+    source: SettleInput['source'];
+    correlationId?: string;
+  },
 ): Promise<PaymentAttemptRow> {
   const system = systemFinanceActor(input.correlationId);
   return withActor(rt.db, system.ctx, async (tx) => {
-    const [attempt] = await tx.select().from(schema.paymentAttempts).where(eq(schema.paymentAttempts.id, input.attemptId)).for('update');
+    const [attempt] = await tx
+      .select()
+      .from(schema.paymentAttempts)
+      .where(eq(schema.paymentAttempts.id, input.attemptId))
+      .for('update');
     if (!attempt) throw new ApiError('not_found', 'payment attempt not found');
     if (attempt.status === 'reversed') return attempt;
-    const transition = evaluateTransition(paymentAttemptMachine, { from: attempt.status, to: 'reversed', actor: 'system' });
+    const transition = evaluateTransition(paymentAttemptMachine, {
+      from: attempt.status,
+      to: 'reversed',
+      actor: 'system',
+    });
     if (!transition.ok) throw new ApiError('invalid_transition', transition.message);
     const now = rt.now();
-    const [invoice] = await tx.select().from(schema.invoices).where(eq(schema.invoices.id, attempt.invoiceId));
-    const [allocation] = await tx.select().from(schema.allocations).where(eq(schema.allocations.dedupeKey, attemptDedupeKey(attempt.id)));
+    const [invoice] = await tx
+      .select()
+      .from(schema.invoices)
+      .where(eq(schema.invoices.id, attempt.invoiceId));
+    const [allocation] = await tx
+      .select()
+      .from(schema.allocations)
+      .where(eq(schema.allocations.dedupeKey, attemptDedupeKey(attempt.id)));
     let journalId: string | null = null;
     const original = await findJournalByRef(tx, `payment_attempt:${attempt.id}:settled`);
     if (original && invoice && allocation) {
@@ -377,7 +473,11 @@ export async function reverseSettledAttempt(
       aggregateType: 'payment_attempt',
       aggregateId: attempt.id,
       organizationId: attempt.organizationId,
-      payload: { paymentAttemptId: attempt.id, invoiceId: attempt.invoiceId, amountKobo: attempt.amountKobo },
+      payload: {
+        paymentAttemptId: attempt.id,
+        invoiceId: attempt.invoiceId,
+        amountKobo: attempt.amountKobo,
+      },
     });
     await recordAudit(tx, system, {
       action: 'payment_attempt.reversed',

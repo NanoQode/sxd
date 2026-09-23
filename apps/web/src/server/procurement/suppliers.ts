@@ -86,8 +86,10 @@ export async function listSupplierDirectory(
         const freshness = quoteFreshness(q, policies, asOf);
         const badge = quoteBadge(q, freshness);
         if (badge === 'disputed') priceEvidence = 'disputed_quote';
-        else if (freshness === 'stale' && priceEvidence === 'no_quote_on_file') priceEvidence = 'stale_quote';
-        else if (q.reviewStatus === 'verified' && freshness === 'fresh') priceEvidence = 'verified_quote';
+        else if (freshness === 'stale' && priceEvidence === 'no_quote_on_file')
+          priceEvidence = 'stale_quote';
+        else if (q.reviewStatus === 'verified' && freshness === 'fresh')
+          priceEvidence = 'verified_quote';
         else if (priceEvidence === 'no_quote_on_file') priceEvidence = 'quote_pending_review';
         return toQuoteDto(q, { asOf, policies });
       });

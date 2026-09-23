@@ -34,8 +34,11 @@ export function registerPaymentHandlers(runner: JobRunner): void {
   runner.register(PROCESS_PROVIDER_EVENT_JOB, async ({ job, log }) => {
     const payload = job.payload as OutboxJobPayload;
     const providerEventId = payload.providerEventId ?? payload.event?.aggregateId;
-    if (!providerEventId) throw new NonRetryableJobError('provider event job without providerEventId');
-    const result = await processProviderEvent(rt(), providerEventId, { correlationId: job.correlationId ?? undefined });
+    if (!providerEventId)
+      throw new NonRetryableJobError('provider event job without providerEventId');
+    const result = await processProviderEvent(rt(), providerEventId, {
+      correlationId: job.correlationId ?? undefined,
+    });
     log.info({ providerEventId, actions: result.actions }, 'provider event processed');
   });
 
@@ -43,8 +46,13 @@ export function registerPaymentHandlers(runner: JobRunner): void {
     const payload = job.payload as OutboxJobPayload;
     const refundId = payload.refundId ?? payload.event?.aggregateId;
     if (!refundId) throw new NonRetryableJobError('refund job without refundId');
-    const refund = await submitRefund(rt(), refundId, { correlationId: job.correlationId ?? undefined });
-    log.info({ refundId, status: refund.status, providerStatus: refund.providerStatus }, 'refund submitted');
+    const refund = await submitRefund(rt(), refundId, {
+      correlationId: job.correlationId ?? undefined,
+    });
+    log.info(
+      { refundId, status: refund.status, providerStatus: refund.providerStatus },
+      'refund submitted',
+    );
   });
 
   runner.register('payments.reconcile_pending', async ({ job, log }) => {
@@ -60,6 +68,9 @@ export function registerPaymentHandlers(runner: JobRunner): void {
   // Posting happens inside the settlement transaction; this legacy job only confirms the event was relayed.
   runner.register('finance.post_payment', async ({ job, log }) => {
     const payload = job.payload as OutboxJobPayload;
-    log.info({ paymentAttemptId: payload.event?.aggregateId }, 'payment already posted at settlement');
+    log.info(
+      { paymentAttemptId: payload.event?.aggregateId },
+      'payment already posted at settlement',
+    );
   });
 }

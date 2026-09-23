@@ -26,10 +26,7 @@ export type WeightScale = 'percent' | 'fraction';
 
 export interface WeightViolation {
   code:
-    | 'no_criteria'
-    | 'invalid_criterion_name'
-    | 'invalid_weight'
-    | 'weights_must_sum_to_100_or_1';
+    'no_criteria' | 'invalid_criterion_name' | 'invalid_weight' | 'weights_must_sum_to_100_or_1';
   criterion?: string;
   message: string;
 }
@@ -294,7 +291,11 @@ export function closeDecision(input: DeadlineContext): CloseDecision {
   if (decision.reason === 'deadline_passed') {
     return { canClose: true, effectiveDeadlineAt: decision.effectiveDeadlineAt as string };
   }
-  return { canClose: false, reason: decision.reason, effectiveDeadlineAt: decision.effectiveDeadlineAt };
+  return {
+    canClose: false,
+    reason: decision.reason,
+    effectiveDeadlineAt: decision.effectiveDeadlineAt,
+  };
 }
 
 export type QuestionWindowDecision =
@@ -389,14 +390,19 @@ export function tenderTimelineView(
     const raw = timeline[field] ?? null;
     const instant = raw ? parseInstant(raw) : null;
     utc[field] = instant ? (instant.toISO({ suppressMilliseconds: true }) as string) : null;
-    display[field] = utc[field] ? (formatDeadlineForDisplay(utc[field], [displayTimeZone])[0] ?? null) : null;
+    display[field] = utc[field]
+      ? (formatDeadlineForDisplay(utc[field], [displayTimeZone])[0] ?? null)
+      : null;
   }
   let effectiveSubmissionDeadlineAt: string | null = null;
   let originalSubmissionDeadlineAt: string | null = null;
   let extensionRevision: number | null = null;
   let windowDays: number | null = null;
   if (utc.submissionDeadlineAt) {
-    const deadline = effectiveDeadline({ submissionDeadlineAt: utc.submissionDeadlineAt, extensions });
+    const deadline = effectiveDeadline({
+      submissionDeadlineAt: utc.submissionDeadlineAt,
+      extensions,
+    });
     if (deadline.ok) {
       effectiveSubmissionDeadlineAt = deadline.effectiveDeadlineAt;
       originalSubmissionDeadlineAt = deadline.originalDeadlineAt;

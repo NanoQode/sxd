@@ -9,12 +9,16 @@ export const dynamic = 'force-dynamic';
 export const GET = route<{ params: Promise<{ id: string }> }>(async (_req, ctx) => {
   const identity = await getIdentity();
   const { id } = await params(ctx, commercialIdParams);
-  return json(await getRfq(identity, id, { correlationId: ctx.correlationId }), { correlationId: ctx.correlationId });
+  return json(await getRfq(identity, id, { correlationId: ctx.correlationId }), {
+    correlationId: ctx.correlationId,
+  });
 });
 
 export const PATCH = route<{ params: Promise<{ id: string }> }>(async (req, ctx) => {
   const identity = await getIdentity();
   const { id } = await params(ctx, commercialIdParams);
   const body = await parseJson(req, rfqPatchSchema);
-  return json(await updateRfq(identity, id, body, { correlationId: ctx.correlationId }), { correlationId: ctx.correlationId });
+  return json(await updateRfq(identity, id, body, { correlationId: ctx.correlationId }), {
+    correlationId: ctx.correlationId,
+  });
 });

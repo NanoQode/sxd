@@ -5,7 +5,15 @@ import { appendOutbox, enqueueJob, getDb, schema, withActor, type DbExecutor } f
 import { questionWindowDecision } from '@simplexd/domain/tenders';
 import { recordAudit } from '@/lib/audit';
 import type { RequestIdentity } from '@/lib/auth/session';
-import { ctxFor, dbNow, iso, loadTenderAccess, requireTendering, type ServiceOptions, type TenderAccess } from './shared';
+import {
+  ctxFor,
+  dbNow,
+  iso,
+  loadTenderAccess,
+  requireTendering,
+  type ServiceOptions,
+  type TenderAccess,
+} from './shared';
 
 /**
  * Clarification questions. Invited partners ask before the question cutoff;
@@ -43,10 +51,20 @@ export async function listQuestionsInTx(
       : access.role === 'partner'
         ? and(
             eq(schema.tenderQuestions.tenderId, tenderId),
-            or(eq(schema.tenderQuestions.askedByUserId, userId), eq(schema.tenderQuestions.published, true)),
+            or(
+              eq(schema.tenderQuestions.askedByUserId, userId),
+              eq(schema.tenderQuestions.published, true),
+            ),
           )
-        : and(eq(schema.tenderQuestions.tenderId, tenderId), eq(schema.tenderQuestions.published, true));
-  const rows = await tx.select().from(schema.tenderQuestions).where(where).orderBy(asc(schema.tenderQuestions.askedAt));
+        : and(
+            eq(schema.tenderQuestions.tenderId, tenderId),
+            eq(schema.tenderQuestions.published, true),
+          );
+  const rows = await tx
+    .select()
+    .from(schema.tenderQuestions)
+    .where(where)
+    .orderBy(asc(schema.tenderQuestions.askedAt));
   return rows.map((r) => toDto(r, userId, access.role === 'staff'));
 }
 
@@ -71,12 +89,17 @@ export async function askTenderQuestion(
   const userId = requireTendering(identity);
   return withActor(getDb(), ctxFor(identity, options), async (tx) => {
     const access = await loadTenderAccess(tx, identity, tenderId, { customer: false });
-    if (access.role !== 'partner') throw new ApiError('forbidden', 'only invited partners ask questions');
+    if (access.role !== 'partner')
+      throw new ApiError('forbidden', 'only invited partners ask questions');
     const { tender } = access;
     if (tender.status !== 'published' && tender.status !== 'clarifications') {
-      throw new ApiError('invalid_transition', 'questions are only accepted while the tender is open', {
-        details: { status: tender.status },
-      });
+      throw new ApiError(
+        'invalid_transition',
+        'questions are only accepted while the tender is open',
+        {
+          details: { status: tender.status },
+        },
+      );
     }
     const now = await dbNow(tx);
     const window = questionWindowDecision({
@@ -125,14 +148,23 @@ async function publishInTx(
   const invitees = await tx
     .select({ partnerUserId: schema.tenderInvitations.partnerUserId })
     .from(schema.tenderInvitations)
-    .where(and(eq(schema.tenderInvitations.tenderId, access.tender.id), sql`${schema.tenderInvitations.status} <> 'declined'`));
+    .where(
+      and(
+        eq(schema.tenderInvitations.tenderId, access.tender.id),
+        sql`${schema.tenderInvitations.status} <> 'declined'`,
+      ),
+    );
   await appendOutbox(tx, {
     eventType: 'tender.question.answered',
     aggregateType: 'tender',
     aggregateId: access.tender.id,
     organizationId: access.tender.organizationId,
     actorUserId: userId,
-    payload: { tenderId: access.tender.id, questionId: question.id, recipientUserIds: invitees.map((i) => i.partnerUserId) },
+    payload: {
+      tenderId: access.tender.id,
+      questionId: question.id,
+      recipientUserIds: invitees.map((i) => i.partnerUserId),
+    },
     correlationId: options.correlationId,
   });
   await enqueueJob(tx, {
@@ -155,19 +187,33 @@ export async function answerTenderQuestion(
 ): Promise<TenderQuestionDto> {
   const userId = requireTendering(identity);
   return withActor(getDb(), ctxFor(identity, options), async (tx) => {
-    const access = await loadTenderAccess(tx, identity, tenderId, { staff: ['tenders.manage'], customer: false });
+    const access = await loadTenderAccess(tx, identity, tenderId, {
+      staff: ['tenders.manage'],
+      customer: false,
+    });
     const [question] = await tx
       .select()
       .from(schema.tenderQuestions)
-      .where(and(eq(schema.tenderQuestions.id, questionId), eq(schema.tenderQuestions.tenderId, tenderId)));
+      .where(
+        and(
+          eq(schema.tenderQuestions.id, questionId),
+          eq(schema.tenderQuestions.tenderId, tenderId),
+        ),
+      );
     if (!question) throw new ApiError('not_found', 'question not found');
     const now = await dbNow(tx);
     const [updated] = await tx
       .update(schema.tenderQuestions)
-      .set({ answer: input.answer, answeredBy: userId, answeredAt: now.date, published: question.published || input.publish })
+      .set({
+        answer: input.answer,
+        answeredBy: userId,
+        answeredAt: now.date,
+        published: question.published || input.publish,
+      })
       .where(eq(schema.tenderQuestions.id, questionId))
       .returning();
-    if (input.publish && !question.published) await publishInTx(tx, identity, access, updated!, options);
+    if (input.publish && !question.published)
+      await publishInTx(tx, identity, access, updated!, options);
     await recordAudit(tx, identity, {
       action: input.publish ? 'tender.question.answered_and_published' : 'tender.question.answered',
       entityType: 'tender_question',
@@ -189,13 +235,22 @@ export async function publishTenderAnswer(
 ): Promise<TenderQuestionDto> {
   const userId = requireTendering(identity);
   return withActor(getDb(), ctxFor(identity, options), async (tx) => {
-    const access = await loadTenderAccess(tx, identity, tenderId, { staff: ['tenders.manage'], customer: false });
+    const access = await loadTenderAccess(tx, identity, tenderId, {
+      staff: ['tenders.manage'],
+      customer: false,
+    });
     const [question] = await tx
       .select()
       .from(schema.tenderQuestions)
-      .where(and(eq(schema.tenderQuestions.id, questionId), eq(schema.tenderQuestions.tenderId, tenderId)));
+      .where(
+        and(
+          eq(schema.tenderQuestions.id, questionId),
+          eq(schema.tenderQuestions.tenderId, tenderId),
+        ),
+      );
     if (!question) throw new ApiError('not_found', 'question not found');
-    if (!question.answer) throw new ApiError('invalid_transition', 'answer the question before publishing it');
+    if (!question.answer)
+      throw new ApiError('invalid_transition', 'answer the question before publishing it');
     if (question.published) return toDto(question, userId, true);
     const [updated] = await tx
       .update(schema.tenderQuestions)

@@ -15,7 +15,12 @@ import { createFinanceRuntime, type FinanceRuntime } from '../runtime';
 
 export const TEST_APP_URL = 'http://localhost:3000';
 
-export function customerActor(input: { userId: string; organizationId: string; role?: OrgRole; correlationId?: string }): FinanceActor {
+export function customerActor(input: {
+  userId: string;
+  organizationId: string;
+  role?: OrgRole;
+  correlationId?: string;
+}): FinanceActor {
   return {
     actor: {
       userId: input.userId,
@@ -27,14 +32,24 @@ export function customerActor(input: { userId: string; organizationId: string; r
       impersonation: null,
       flags: {},
     },
-    ctx: { userId: input.userId, organizationId: input.organizationId, staff: false, anonymousToken: null },
+    ctx: {
+      userId: input.userId,
+      organizationId: input.organizationId,
+      staff: false,
+      anonymousToken: null,
+    },
     correlationId: input.correlationId ?? `corr-${uniqueSuffix()}`,
     ipHash: 'iphash-test',
     userAgent: 'vitest',
   };
 }
 
-export function staffActor(input: { userId: string; roles: StaffRole[]; mfaVerified?: boolean; correlationId?: string }): FinanceActor {
+export function staffActor(input: {
+  userId: string;
+  roles: StaffRole[];
+  mfaVerified?: boolean;
+  correlationId?: string;
+}): FinanceActor {
   return {
     actor: {
       userId: input.userId,
@@ -76,9 +91,16 @@ export async function seedTenants(owner: Database): Promise<Tenants> {
     orgB: `fin_org_b_${sfx}`,
     serviceId: '',
   };
-  await owner.insert(schema.user).values(
-    [t.userA, t.userB, t.opsUser, t.financeUser1, t.financeUser2].map((id) => ({ id, name: id, email: `${id}@example.test`, emailVerified: true })),
-  );
+  await owner
+    .insert(schema.user)
+    .values(
+      [t.userA, t.userB, t.opsUser, t.financeUser1, t.financeUser2].map((id) => ({
+        id,
+        name: id,
+        email: `${id}@example.test`,
+        emailVerified: true,
+      })),
+    );
   await owner.insert(schema.organization).values([
     { id: t.orgA, name: 'Org A', slug: t.orgA },
     { id: t.orgB, name: 'Org B', slug: t.orgB },
@@ -105,13 +127,23 @@ export async function seedTenants(owner: Database): Promise<Tenants> {
     })
     .returning({ id: schema.services.id });
   t.serviceId = service!.id;
-  await owner.insert(schema.slaPolicies).values({ serviceId: t.serviceId, stage: 'triage', targetHours: 24, businessHoursOnly: false });
-  await owner.insert(schema.ledgerAccounts).values(chartOfAccounts).onConflictDoNothing({ target: schema.ledgerAccounts.code });
-  for (const tt of taxTreatmentDefaults) await owner.insert(schema.taxTreatments).values(tt).onConflictDoNothing();
+  await owner
+    .insert(schema.slaPolicies)
+    .values({ serviceId: t.serviceId, stage: 'triage', targetHours: 24, businessHoursOnly: false });
+  await owner
+    .insert(schema.ledgerAccounts)
+    .values(chartOfAccounts)
+    .onConflictDoNothing({ target: schema.ledgerAccounts.code });
+  for (const tt of taxTreatmentDefaults)
+    await owner.insert(schema.taxTreatments).values(tt).onConflictDoNothing();
   return t;
 }
 
-export async function insertServiceRequest(owner: Database, t: Tenants, input: { organizationId: string; requestedByUserId: string; status?: 'inquiry' | 'triage' }): Promise<{ id: string; reference: string }> {
+export async function insertServiceRequest(
+  owner: Database,
+  t: Tenants,
+  input: { organizationId: string; requestedByUserId: string; status?: 'inquiry' | 'triage' },
+): Promise<{ id: string; reference: string }> {
   const reference = `SR-2026-${uniqueSuffix().slice(-6).toUpperCase()}`;
   const [row] = await owner
     .insert(schema.serviceRequests)
@@ -125,7 +157,15 @@ export async function insertServiceRequest(owner: Database, t: Tenants, input: {
       status: input.status ?? 'inquiry',
     })
     .returning({ id: schema.serviceRequests.id, reference: schema.serviceRequests.reference });
-  await owner.insert(schema.engagementTransitions).values({ serviceRequestId: row!.id, fromStatus: null, toStatus: 'inquiry', actorUserId: input.requestedByUserId, actorType: 'customer' });
+  await owner
+    .insert(schema.engagementTransitions)
+    .values({
+      serviceRequestId: row!.id,
+      fromStatus: null,
+      toStatus: 'inquiry',
+      actorUserId: input.requestedByUserId,
+      actorType: 'customer',
+    });
   return row!;
 }
 
@@ -137,14 +177,20 @@ export function devProviderRuntime(db: Database): { rt: FinanceRuntime; dev: Dev
     appEnv: 'test',
     defaultEnvironment: 'test',
     resolveProvider: async (environment) =>
-      environment === 'test' ? { kind: 'dev', environment: 'test', provider: dev, webhookSecretConfigured: true } : null,
+      environment === 'test'
+        ? { kind: 'dev', environment: 'test', provider: dev, webhookSecretConfigured: true }
+        : null,
   });
   return { rt, dev };
 }
 
 /** Debits must equal credits in every journal and across the ledger. */
-export async function assertLedgerBalanced(owner: Database): Promise<{ debitKobo: bigint; creditKobo: bigint; unbalancedJournals: number }> {
-  const totals = await owner.execute<{ d: string; c: string }>(sql`select coalesce(sum(debit_kobo),0)::text as d, coalesce(sum(credit_kobo),0)::text as c from journal_lines`);
+export async function assertLedgerBalanced(
+  owner: Database,
+): Promise<{ debitKobo: bigint; creditKobo: bigint; unbalancedJournals: number }> {
+  const totals = await owner.execute<{ d: string; c: string }>(
+    sql`select coalesce(sum(debit_kobo),0)::text as d, coalesce(sum(credit_kobo),0)::text as c from journal_lines`,
+  );
   const perJournal = await owner.execute<{ n: string }>(
     sql`select count(*)::text as n from (select journal_id, sum(debit_kobo) d, sum(credit_kobo) c from journal_lines group by journal_id) j where j.d <> j.c`,
   );
@@ -155,17 +201,29 @@ export async function assertLedgerBalanced(owner: Database): Promise<{ debitKobo
   };
 }
 
-export async function countAllocationsForAttempt(owner: Database, attemptId: string): Promise<number> {
-  const rows = await owner.select({ id: schema.allocations.id }).from(schema.allocations).where(eq(schema.allocations.paymentAttemptId, attemptId));
+export async function countAllocationsForAttempt(
+  owner: Database,
+  attemptId: string,
+): Promise<number> {
+  const rows = await owner
+    .select({ id: schema.allocations.id })
+    .from(schema.allocations)
+    .where(eq(schema.allocations.paymentAttemptId, attemptId));
   return rows.length;
 }
 
 export async function countReceiptsForInvoice(owner: Database, invoiceId: string): Promise<number> {
-  const rows = await owner.select({ id: schema.receipts.id }).from(schema.receipts).where(eq(schema.receipts.invoiceId, invoiceId));
+  const rows = await owner
+    .select({ id: schema.receipts.id })
+    .from(schema.receipts)
+    .where(eq(schema.receipts.invoiceId, invoiceId));
   return rows.length;
 }
 
 export async function journalByRef(owner: Database, ref: string) {
-  const [row] = await owner.select().from(schema.journals).where(eq(schema.journals.businessEventRef, ref));
+  const [row] = await owner
+    .select()
+    .from(schema.journals)
+    .where(eq(schema.journals.businessEventRef, ref));
   return row ?? null;
 }

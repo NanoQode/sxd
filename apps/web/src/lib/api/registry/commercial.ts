@@ -359,7 +359,12 @@ const specs: RouteSpec[] = [
     operationId: 'tenders.award.get',
     auth: 'session',
     request: { params: commercialIdParams },
-    responses: { 200: { description: 'Award or outcome', body: z.union([awardDtoSchema, awardOutcomeDtoSchema]) } },
+    responses: {
+      200: {
+        description: 'Award or outcome',
+        body: z.union([awardDtoSchema, awardOutcomeDtoSchema]),
+      },
+    },
   },
   {
     method: 'post',
@@ -438,7 +443,10 @@ const specs: RouteSpec[] = [
     auth: 'partner',
     idempotent: true,
     request: { params: commercialIdParams, body: bidSubmitSchema },
-    responses: { 200: { description: 'Bid', body: bidDtoSchema }, 409: { description: 'deadline_passed / version_conflict' } },
+    responses: {
+      200: { description: 'Bid', body: bidDtoSchema },
+      409: { description: 'deadline_passed / version_conflict' },
+    },
   },
   {
     method: 'post',

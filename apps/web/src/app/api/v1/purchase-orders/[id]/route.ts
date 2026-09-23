@@ -8,5 +8,7 @@ export const dynamic = 'force-dynamic';
 export const GET = route<{ params: Promise<{ id: string }> }>(async (_req, ctx) => {
   const identity = await getIdentity();
   const { id } = await params(ctx, commercialIdParams);
-  return json(await getPurchaseOrder(identity, id, { correlationId: ctx.correlationId }), { correlationId: ctx.correlationId });
+  return json(await getPurchaseOrder(identity, id, { correlationId: ctx.correlationId }), {
+    correlationId: ctx.correlationId,
+  });
 });

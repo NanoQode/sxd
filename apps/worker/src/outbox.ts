@@ -72,19 +72,11 @@ const routes: Record<string, OutboxRoute> = {
   'invitation.created': () => [{ type: 'notifications.invitation', queue: 'notifications' }],
   'setup_token.issued': () => [{ type: 'notifications.admin_setup', queue: 'notifications' }],
   // Engagement, invoicing and payment orchestration (@simplexd/finance).
-  'engagement.transitioned': (e) => [
-    {
-      type: 'notifications.engagement_transition',
-      queue: 'notifications',
-      payload: { ...(e.payload as object) },
-    },
-  ],
   'quote.accepted': () => [{ type: 'notifications.dispatch', queue: 'notifications' }],
   'quote.expired': () => [{ type: 'notifications.dispatch', queue: 'notifications' }],
   'invoice.paid': () => [{ type: 'notifications.dispatch', queue: 'notifications' }],
   'invoice.partially_paid': () => [{ type: 'notifications.dispatch', queue: 'notifications' }],
   'invoice.voided': () => [{ type: 'notifications.dispatch', queue: 'notifications' }],
-  'payment.settled': () => [{ type: 'notifications.payment_receipt', queue: 'notifications' }],
   'payment.reversed': () => [{ type: 'notifications.dispatch', queue: 'notifications' }],
   'bank_transfer.declared': () => [{ type: 'notifications.dispatch', queue: 'notifications' }],
   'bank_transfer.rejected': () => [{ type: 'notifications.dispatch', queue: 'notifications' }],

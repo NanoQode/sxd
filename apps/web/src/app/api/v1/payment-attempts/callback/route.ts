@@ -23,7 +23,10 @@ export const GET = route(async (req, { correlationId }) => {
   const url = new URL(req.url);
   if (!identity.session) {
     const next = `${url.pathname}?reference=${encodeURIComponent(reference)}`;
-    return NextResponse.redirect(new URL(`/sign-in?next=${encodeURIComponent(next)}`, url.origin), 303);
+    return NextResponse.redirect(
+      new URL(`/sign-in?next=${encodeURIComponent(next)}`, url.origin),
+      303,
+    );
   }
   const rt = getFinanceRuntime();
   const fa = financeActorFrom(identity, req, correlationId);

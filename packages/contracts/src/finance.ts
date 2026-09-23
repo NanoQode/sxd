@@ -59,7 +59,12 @@ export const refundStatusSchema = z.enum([
 ]);
 export type RefundStatus = z.infer<typeof refundStatusSchema>;
 
-export const bankReceiptStatusSchema = z.enum(['submitted', 'under_review', 'confirmed', 'rejected']);
+export const bankReceiptStatusSchema = z.enum([
+  'submitted',
+  'under_review',
+  'confirmed',
+  'rejected',
+]);
 
 export const installmentSchema = z.object({
   label: z.string().trim().min(1).max(120),
@@ -70,10 +75,16 @@ export type Installment = z.infer<typeof installmentSchema>;
 
 export const invoiceLineInputSchema = z.object({
   description: z.string().trim().min(1).max(500),
-  quantity: z.string().regex(/^\d+(\.\d{1,3})?$/).default('1'),
+  quantity: z
+    .string()
+    .regex(/^\d+(\.\d{1,3})?$/)
+    .default('1'),
   unitAmountKobo: koboStringSchema,
   taxRateBps: z.number().int().min(0).max(10_000).optional(),
-  accountCode: z.string().regex(/^\d{4}$/).optional(),
+  accountCode: z
+    .string()
+    .regex(/^\d{4}$/)
+    .optional(),
 });
 export type InvoiceLineInput = z.infer<typeof invoiceLineInputSchema>;
 

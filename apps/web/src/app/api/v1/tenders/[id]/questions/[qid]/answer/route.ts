@@ -10,5 +10,8 @@ export const POST = route<{ params: Promise<{ id: string; qid: string }> }>(asyn
   const identity = await getIdentity();
   const { id, qid } = await params(ctx, tenderQuestionParams);
   const body = await parseJson(req, tenderQuestionAnswerSchema);
-  return json(await answerTenderQuestion(identity, id, qid, body, { correlationId: ctx.correlationId }), { correlationId: ctx.correlationId });
+  return json(
+    await answerTenderQuestion(identity, id, qid, body, { correlationId: ctx.correlationId }),
+    { correlationId: ctx.correlationId },
+  );
 });

@@ -23,5 +23,8 @@ export const POST = route(async (req, { correlationId }) => {
     headers,
     correlationId,
   });
-  return json({ received: receipt.received, duplicate: receipt.duplicate }, { status: receipt.status, correlationId });
+  return json(
+    { received: receipt.received, duplicate: receipt.duplicate },
+    { status: receipt.status, correlationId },
+  );
 });

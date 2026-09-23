@@ -69,7 +69,13 @@ export const bidStatusSchema = z.enum([
 ]);
 export type BidStatus = z.infer<typeof bidStatusSchema>;
 
-export const awardStatusSchema = z.enum(['decided', 'published', 'accepted', 'declined', 'rescinded']);
+export const awardStatusSchema = z.enum([
+  'decided',
+  'published',
+  'accepted',
+  'declined',
+  'rescinded',
+]);
 export type AwardStatus = z.infer<typeof awardStatusSchema>;
 
 /* ---------------------------------------------------------------------- */
@@ -177,7 +183,10 @@ export const tenderRevisionCreateSchema = z
     expectedVersion: expectedVersionSchema,
   })
   .refine(
-    (v) => Object.keys(v.changes).length > 0 || Boolean(v.addendumMarkdown) || Boolean(v.deadlineExtendedTo),
+    (v) =>
+      Object.keys(v.changes).length > 0 ||
+      Boolean(v.addendumMarkdown) ||
+      Boolean(v.deadlineExtendedTo),
     'a revision needs changes, an addendum or a deadline extension',
   );
 export type TenderRevisionCreate = z.infer<typeof tenderRevisionCreateSchema>;
@@ -191,7 +200,10 @@ export type TenderVariation = z.infer<typeof tenderVariationSchema>;
 
 export const tenderPublishSchema = z.object({ expectedVersion: expectedVersionSchema });
 export const tenderCloseSchema = z.object({ expectedVersion: expectedVersionSchema.optional() });
-export const tenderCancelSchema = z.object({ reason: reasonSchema, expectedVersion: expectedVersionSchema });
+export const tenderCancelSchema = z.object({
+  reason: reasonSchema,
+  expectedVersion: expectedVersionSchema,
+});
 
 export const tenderInviteSchema = z.object({
   partnerUserIds: z.array(userIdSchema).min(1).max(50),
@@ -516,7 +528,13 @@ export const procurementMaterialSchema = z.enum([
 export type ProcurementMaterial = z.infer<typeof procurementMaterialSchema>;
 
 export const rfqStatusSchema = z.enum(['draft', 'sent', 'closed', 'awarded', 'cancelled']);
-export const rfqResponseStatusSchema = z.enum(['draft', 'submitted', 'withdrawn', 'selected', 'rejected']);
+export const rfqResponseStatusSchema = z.enum([
+  'draft',
+  'submitted',
+  'withdrawn',
+  'selected',
+  'rejected',
+]);
 export const purchaseOrderStatusSchema = z.enum([
   'draft',
   'issued',
@@ -527,7 +545,13 @@ export const purchaseOrderStatusSchema = z.enum([
   'cancelled',
 ]);
 export const deliveryStatusSchema = z.enum(['pending', 'received', 'disputed', 'accepted']);
-export const discrepancyStatusSchema = z.enum(['open', 'supplier_notified', 'resolved', 'credited', 'returned']);
+export const discrepancyStatusSchema = z.enum([
+  'open',
+  'supplier_notified',
+  'resolved',
+  'credited',
+  'returned',
+]);
 export const discrepancyKindSchema = z.enum(['short_delivery', 'damaged', 'wrong_spec', 'other']);
 export const conversionBasisSchema = z.enum(['supplier_declared', 'staff_measured']);
 
@@ -535,7 +559,10 @@ export const declaredConversionSchema = z.object({
   fromUnit: z.string().trim().min(1).max(32),
   toUnit: z.string().trim().min(1).max(32),
   /** 1 fromUnit = factor toUnit. */
-  factor: decimalStringSchema.refine((v) => /^\d+(\.\d{1,6})?$/.test(v) && Number(v) > 0, 'positive factor, at most six decimals'),
+  factor: decimalStringSchema.refine(
+    (v) => /^\d+(\.\d{1,6})?$/.test(v) && Number(v) > 0,
+    'positive factor, at most six decimals',
+  ),
   basis: conversionBasisSchema,
 });
 export type DeclaredConversionDto = z.infer<typeof declaredConversionSchema>;
@@ -581,7 +608,13 @@ export const supplierDirectoryEntrySchema = z.object({
     }),
   ),
   quotes: z.array(supplierQuoteDtoSchema),
-  priceEvidence: z.enum(['no_quote_on_file', 'quote_pending_review', 'verified_quote', 'stale_quote', 'disputed_quote']),
+  priceEvidence: z.enum([
+    'no_quote_on_file',
+    'quote_pending_review',
+    'verified_quote',
+    'stale_quote',
+    'disputed_quote',
+  ]),
 });
 export type SupplierDirectoryEntry = z.infer<typeof supplierDirectoryEntrySchema>;
 
@@ -621,7 +654,9 @@ export const rfqPatchSchema = z.object({
   deliveryAddress: z.record(z.string().max(64), z.string().max(500)).nullable().optional(),
   notes: shortText(8000).nullable().optional(),
 });
-export const rfqItemsReplaceSchema = z.object({ items: z.array(rfqItemInputSchema).min(1).max(200) });
+export const rfqItemsReplaceSchema = z.object({
+  items: z.array(rfqItemInputSchema).min(1).max(200),
+});
 
 export const rfqIssueSchema = z.object({
   deadlineAt: isoDateTimeSchema,
@@ -766,7 +801,9 @@ export const rfqComparisonDtoSchema = z.object({
       goodsKobo: z.string().nullable(),
       deliveryKobo: z.string().nullable(),
       totalDeliveredKobo: z.string().nullable(),
-      unknowns: z.array(z.object({ itemId: z.string().nullable(), reason: z.string(), message: z.string() })),
+      unknowns: z.array(
+        z.object({ itemId: z.string().nullable(), reason: z.string(), message: z.string() }),
+      ),
       rank: z.number().int().nullable(),
       leadTimeDays: z.number().int().nullable(),
       validUntil: z.string().nullable(),
@@ -794,13 +831,18 @@ export const purchaseOrderCreateSchema = z.object({
 });
 export type PurchaseOrderCreate = z.infer<typeof purchaseOrderCreateSchema>;
 
-export const purchaseOrderIssueSchema = z.object({ expectedVersion: expectedVersionSchema.optional() });
+export const purchaseOrderIssueSchema = z.object({
+  expectedVersion: expectedVersionSchema.optional(),
+});
 export const purchaseOrderAcknowledgeSchema = z.object({
   supplierRef: shortText(120).nullable().optional(),
   expectedDeliveryAt: isoDateTimeSchema.nullable().optional(),
   expectedVersion: expectedVersionSchema.optional(),
 });
-export const purchaseOrderCancelSchema = z.object({ reason: reasonSchema, expectedVersion: expectedVersionSchema });
+export const purchaseOrderCancelSchema = z.object({
+  reason: reasonSchema,
+  expectedVersion: expectedVersionSchema,
+});
 
 export const purchaseOrderLineDtoSchema = z.object({
   lineId: z.string(),

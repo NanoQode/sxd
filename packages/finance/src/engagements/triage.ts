@@ -62,7 +62,10 @@ function staffResource(sr: ServiceRequestRow, extraAssignee?: string) {
 }
 
 async function assertUserExists(tx: Transaction, userId: string): Promise<void> {
-  const [row] = await tx.select({ id: schema.user.id }).from(schema.user).where(eq(schema.user.id, userId));
+  const [row] = await tx
+    .select({ id: schema.user.id })
+    .from(schema.user)
+    .where(eq(schema.user.id, userId));
   if (!row) throw new ApiError('validation_failed', 'assigned project manager does not exist');
 }
 
@@ -135,19 +138,28 @@ export async function assignServiceRequest(
         reason: input.reason ?? null,
         expectedVersion: input.expectedVersion,
         patch: { assignedPmUserId: input.assignedPmUserId },
-        metadata: { assignedPmUserId: input.assignedPmUserId, billingConsequence: 'no_upfront_payment' },
+        metadata: {
+          assignedPmUserId: input.assignedPmUserId,
+          billingConsequence: 'no_upfront_payment',
+        },
       });
       return toTransitionResult(next);
     }
     if (sr.version !== input.expectedVersion) {
-      throw new ApiError('version_conflict', 'this request changed since you loaded it; reload and try again', {
-        details: { currentVersion: sr.version },
-      });
+      throw new ApiError(
+        'version_conflict',
+        'this request changed since you loaded it; reload and try again',
+        {
+          details: { currentVersion: sr.version },
+        },
+      );
     }
     const [next] = await tx
       .update(schema.serviceRequests)
       .set({ assignedPmUserId: input.assignedPmUserId, version: sr.version + 1 })
-      .where(and(eq(schema.serviceRequests.id, sr.id), eq(schema.serviceRequests.version, sr.version)))
+      .where(
+        and(eq(schema.serviceRequests.id, sr.id), eq(schema.serviceRequests.version, sr.version)),
+      )
       .returning();
     if (!next) throw new ApiError('version_conflict', 'this request changed since you loaded it');
     await recordAudit(tx, fa, {
@@ -163,7 +175,12 @@ export async function assignServiceRequest(
   });
 }
 
-const STAFF_PERMISSION_FOR: Partial<Record<EngagementState, 'service_requests.triage' | 'service_requests.override' | 'service_requests.assign'>> = {
+const STAFF_PERMISSION_FOR: Partial<
+  Record<
+    EngagementState,
+    'service_requests.triage' | 'service_requests.override' | 'service_requests.assign'
+  >
+> = {
   rejected: 'service_requests.triage',
   in_progress: 'service_requests.override',
   cancelled: 'service_requests.override',
@@ -198,7 +215,13 @@ export async function applyStaffTransition(
       metadata: { billingConsequence },
     });
     if (input.to === 'cancelled' && billingConsequence === 'void_unpaid_invoices') {
-      const voided = await voidUnpaidInvoicesForRequest(tx, fa, sr.id, `engagement cancelled: ${input.reason ?? 'no reason given'}`, rt.now());
+      const voided = await voidUnpaidInvoicesForRequest(
+        tx,
+        fa,
+        sr.id,
+        `engagement cancelled: ${input.reason ?? 'no reason given'}`,
+        rt.now(),
+      );
       await recordAudit(tx, fa, {
         action: 'service_request.cancel_billing',
         entityType: 'service_request',
@@ -212,7 +235,10 @@ export async function applyStaffTransition(
   });
 }
 
-function billingDefaultFor(from: EngagementState, to: EngagementState): StaffTransition['billingConsequence'] {
+function billingDefaultFor(
+  from: EngagementState,
+  to: EngagementState,
+): StaffTransition['billingConsequence'] {
   if (to === 'rejected') return 'none';
   if (to === 'cancelled') {
     return ['inquiry', 'triage', 'quoted', 'accepted', 'awaiting_payment'].includes(from)

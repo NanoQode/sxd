@@ -179,7 +179,14 @@ export function resolveConversion(
   if (from === to) {
     return {
       ok: true,
-      conversion: { fromUnit: from, toUnit: to, numerator: 1n, denominator: 1n, basis: 'identity', direction: 'identity' },
+      conversion: {
+        fromUnit: from,
+        toUnit: to,
+        numerator: 1n,
+        denominator: 1n,
+        basis: 'identity',
+        direction: 'identity',
+      },
     };
   }
   if (!declared) {
@@ -193,7 +200,11 @@ export function resolveConversion(
   try {
     factor = parseDecimal(declared.factor);
   } catch {
-    return { ok: false, reason: 'invalid_factor', message: `conversion factor "${String(declared.factor)}" is not a decimal` };
+    return {
+      ok: false,
+      reason: 'invalid_factor',
+      message: `conversion factor "${String(declared.factor)}" is not a decimal`,
+    };
   }
   if (factor <= 0n) {
     return { ok: false, reason: 'invalid_factor', message: 'conversion factor must be positive' };
@@ -203,13 +214,27 @@ export function resolveConversion(
   if (dFrom === from && dTo === to) {
     return {
       ok: true,
-      conversion: { fromUnit: from, toUnit: to, numerator: factor, denominator: ONE, basis: declared.basis, direction: 'declared' },
+      conversion: {
+        fromUnit: from,
+        toUnit: to,
+        numerator: factor,
+        denominator: ONE,
+        basis: declared.basis,
+        direction: 'declared',
+      },
     };
   }
   if (dFrom === to && dTo === from) {
     return {
       ok: true,
-      conversion: { fromUnit: from, toUnit: to, numerator: ONE, denominator: factor, basis: declared.basis, direction: 'inverted' },
+      conversion: {
+        fromUnit: from,
+        toUnit: to,
+        numerator: ONE,
+        denominator: factor,
+        basis: declared.basis,
+        direction: 'inverted',
+      },
     };
   }
   return {
@@ -234,7 +259,11 @@ export function convertQuantity(input: {
   try {
     qty = parseDecimal(input.quantity);
   } catch {
-    return { ok: false, reason: 'invalid_quantity', message: `quantity "${String(input.quantity)}" is not a decimal` };
+    return {
+      ok: false,
+      reason: 'invalid_quantity',
+      message: `quantity "${String(input.quantity)}" is not a decimal`,
+    };
   }
   const resolved = resolveConversion(input.fromUnit, input.toUnit, input.declaredConversion);
   if (!resolved.ok) return resolved;
@@ -328,7 +357,11 @@ export interface ComparisonEntry {
   deliveryKobo: string | null;
   /** Goods + delivery; null whenever any line or the delivery cost is unknown. */
   totalDeliveredKobo: string | null;
-  unknowns: Array<{ itemId: string | null; reason: LineIncomparabilityReason | 'delivery_unknown'; message: string }>;
+  unknowns: Array<{
+    itemId: string | null;
+    reason: LineIncomparabilityReason | 'delivery_unknown';
+    message: string;
+  }>;
   rank: number | null;
   leadTimeDays: number | null;
   validUntil: string | null;
@@ -346,7 +379,11 @@ export interface ComparisonResult {
 export const COMPARISON_NOTE =
   'Totals compare goods plus stated delivery for the RFQ quantities. Lines priced in a different unit are converted only through a declared factor; unknown conversions and unstated delivery costs are shown as unknown, never estimated.';
 
-function compareLine(item: RfqItemSpec, line: ResponseLineInput | undefined, currencyOk: boolean): ComparisonLine {
+function compareLine(
+  item: RfqItemSpec,
+  line: ResponseLineInput | undefined,
+  currencyOk: boolean,
+): ComparisonLine {
   const base: ComparisonLine = {
     itemId: item.itemId,
     comparable: false,
@@ -364,7 +401,8 @@ function compareLine(item: RfqItemSpec, line: ResponseLineInput | undefined, cur
     leadTimeDays: null,
     note: null,
   };
-  if (!line) return { ...base, reason: 'line_missing', message: 'the supplier did not price this item' };
+  if (!line)
+    return { ...base, reason: 'line_missing', message: 'the supplier did not price this item' };
   base.supplierUnit = canonicalUnit(line.quantityUnit);
   base.leadTimeDays = line.leadTimeDays ?? null;
   base.note = line.note ?? null;
@@ -374,10 +412,15 @@ function compareLine(item: RfqItemSpec, line: ResponseLineInput | undefined, cur
   } catch {
     return { ...base, reason: 'invalid_price', message: 'unit price is not integer kobo' };
   }
-  if (price < 0n) return { ...base, reason: 'invalid_price', message: 'unit price cannot be negative' };
+  if (price < 0n)
+    return { ...base, reason: 'invalid_price', message: 'unit price cannot be negative' };
   base.supplierUnitPriceKobo = price.toString();
   if (!currencyOk) {
-    return { ...base, reason: 'currency_mismatch', message: 'response currency differs from the RFQ currency' };
+    return {
+      ...base,
+      reason: 'currency_mismatch',
+      message: 'response currency differs from the RFQ currency',
+    };
   }
   // Conversion from the supplier's unit to the RFQ unit: 1 supplierUnit = n/d rfqUnits.
   const resolved = resolveConversion(line.quantityUnit, item.unit, line.declaredConversion);
@@ -430,10 +473,17 @@ export function compareDeliveredCost(
     const byItem = new Map(response.lines.map((l) => [l.itemId, l]));
     const lines = items.map((item) => compareLine(item, byItem.get(item.itemId), currencyOk));
     const comparable = lines.filter((l) => l.comparable);
-    const comparableGoods = comparable.reduce((sum, l) => sum + BigInt(l.lineTotalKobo as string), 0n);
+    const comparableGoods = comparable.reduce(
+      (sum, l) => sum + BigInt(l.lineTotalKobo as string),
+      0n,
+    );
     const unknowns: ComparisonEntry['unknowns'] = lines
       .filter((l) => !l.comparable)
-      .map((l) => ({ itemId: l.itemId, reason: l.reason as LineIncomparabilityReason, message: l.message ?? '' }));
+      .map((l) => ({
+        itemId: l.itemId,
+        reason: l.reason as LineIncomparabilityReason,
+        message: l.message ?? '',
+      }));
     let delivery: bigint | null = null;
     if (response.deliveryKobo !== null && response.deliveryKobo !== undefined) {
       try {
@@ -443,7 +493,11 @@ export function compareDeliveredCost(
       }
     }
     if (delivery === null) {
-      unknowns.push({ itemId: null, reason: 'delivery_unknown', message: 'delivery cost not stated' });
+      unknowns.push({
+        itemId: null,
+        reason: 'delivery_unknown',
+        message: 'delivery cost not stated',
+      });
     }
     const fullyComparable = unknowns.length === 0 && items.length > 0;
     const goods = comparable.length === items.length && items.length > 0 ? comparableGoods : null;
@@ -458,7 +512,10 @@ export function compareDeliveredCost(
       comparableGoodsKobo: comparableGoods.toString(),
       goodsKobo: goods === null ? null : goods.toString(),
       deliveryKobo: delivery === null ? null : delivery.toString(),
-      totalDeliveredKobo: fullyComparable && goods !== null && delivery !== null ? (goods + delivery).toString() : null,
+      totalDeliveredKobo:
+        fullyComparable && goods !== null && delivery !== null
+          ? (goods + delivery).toString()
+          : null,
       unknowns,
       rank: null,
       leadTimeDays: response.leadTimeDays ?? null,
@@ -479,7 +536,13 @@ export function compareDeliveredCost(
   ranked.forEach((entry, index) => {
     entry.rank = index + 1;
   });
-  return { currency, items, entries, ranked: ranked.map((e) => e.responseId), note: COMPARISON_NOTE };
+  return {
+    currency,
+    items,
+    entries,
+    ranked: ranked.map((e) => e.responseId),
+    note: COMPARISON_NOTE,
+  };
 }
 
 /* -------------------------------------------------------------------------- */
@@ -524,10 +587,16 @@ export interface DeliveryVariance {
  * (receipts for the same line are summed). `delivered` requires every line
  * to be complete or over; anything received short of that is partial.
  */
-export function deliveryVariance(ordered: OrderedLine[], received: ReceivedLine[]): DeliveryVariance {
+export function deliveryVariance(
+  ordered: OrderedLine[],
+  received: ReceivedLine[],
+): DeliveryVariance {
   const receivedByLine = new Map<string, bigint>();
   for (const r of received) {
-    receivedByLine.set(r.lineId, (receivedByLine.get(r.lineId) ?? 0n) + parseDecimal(r.quantityReceived));
+    receivedByLine.set(
+      r.lineId,
+      (receivedByLine.get(r.lineId) ?? 0n) + parseDecimal(r.quantityReceived),
+    );
   }
   const lines = ordered.map((o): LineVariance => {
     const orderedQty = parseDecimal(o.quantity);
@@ -542,7 +611,10 @@ export function deliveryVariance(ordered: OrderedLine[], received: ReceivedLine[
           : excess > 0n
             ? 'over'
             : 'complete';
-    const price = o.unitPriceKobo === null || o.unitPriceKobo === undefined ? null : parseKoboValue(o.unitPriceKobo);
+    const price =
+      o.unitPriceKobo === null || o.unitPriceKobo === undefined
+        ? null
+        : parseKoboValue(o.unitPriceKobo);
     return {
       lineId: o.lineId,
       ordered: formatDecimal(orderedQty),
@@ -550,16 +622,21 @@ export function deliveryVariance(ordered: OrderedLine[], received: ReceivedLine[
       outstanding: formatDecimal(outstanding),
       excess: formatDecimal(excess),
       status,
-      outstandingValueKobo: price === null ? null : divideRoundHalfUp(outstanding * price, ONE).toString(),
+      outstandingValueKobo:
+        price === null ? null : divideRoundHalfUp(outstanding * price, ONE).toString(),
     };
   });
   const anyReceived = lines.some((l) => l.status !== 'not_received');
-  const allDone = lines.length > 0 && lines.every((l) => l.status === 'complete' || l.status === 'over');
+  const allDone =
+    lines.length > 0 && lines.every((l) => l.status === 'complete' || l.status === 'over');
   return { lines, status: allDone ? 'delivered' : anyReceived ? 'partially_delivered' : 'pending' };
 }
 
 /** Value of a discrepancy quantity at the line's unit price (short delivery, damaged, wrong spec). */
-export function discrepancyValueKobo(input: { quantity: string | number; unitPriceKobo: bigint | string | number }): bigint {
+export function discrepancyValueKobo(input: {
+  quantity: string | number;
+  unitPriceKobo: bigint | string | number;
+}): bigint {
   const qty = parseDecimal(input.quantity);
   if (qty < 0n) throw new RangeError('discrepancy quantity cannot be negative');
   return divideRoundHalfUp(qty * parseKoboValue(input.unitPriceKobo), ONE);

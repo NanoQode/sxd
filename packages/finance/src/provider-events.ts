@@ -47,12 +47,15 @@ export async function receiveProviderWebhook(
     correlationId?: string;
   },
 ): Promise<WebhookReceipt> {
-  const rawText = typeof input.rawBody === 'string' ? input.rawBody : input.rawBody.toString('utf8');
+  const rawText =
+    typeof input.rawBody === 'string' ? input.rawBody : input.rawBody.toString('utf8');
   const system = systemFinanceActor(input.correlationId);
   const resolved = await rt.resolveProvider(rt.defaultEnvironment);
   const headersSanitized = sanitizeHeaders(input.headers);
   const now = rt.now();
-  const signatureValid = resolved ? resolved.provider.verifyWebhookSignature(input.rawBody, input.signatureHeader) : false;
+  const signatureValid = resolved
+    ? resolved.provider.verifyWebhookSignature(input.rawBody, input.signatureHeader)
+    : false;
 
   if (!resolved || !signatureValid) {
     const bodyHash = createHash('sha256').update(rawText).digest('hex').slice(0, 24);
@@ -115,7 +118,13 @@ export async function receiveProviderWebhook(
         .select({ id: schema.providerEvents.id })
         .from(schema.providerEvents)
         .where(eq(schema.providerEvents.dedupeKey, dedupeKey));
-      return { status: 200, received: true, duplicate: true, providerEventId: existing?.id ?? null, jobId: null };
+      return {
+        status: 200,
+        received: true,
+        duplicate: true,
+        providerEventId: existing?.id ?? null,
+        jobId: null,
+      };
     }
     const job = await enqueueJob(tx, {
       type: PROCESS_PROVIDER_EVENT_JOB,
@@ -129,10 +138,21 @@ export async function receiveProviderWebhook(
       action: 'provider_event.received',
       entityType: 'provider_event',
       entityId: row.id,
-      after: { eventType: event.eventType, reference: event.reference, environment: event.environment, jobId: job.id },
+      after: {
+        eventType: event.eventType,
+        reference: event.reference,
+        environment: event.environment,
+        jobId: job.id,
+      },
       actorType: 'webhook',
     });
-    return { status: 200, received: true, duplicate: false, providerEventId: row.id, jobId: job.id };
+    return {
+      status: 200,
+      received: true,
+      duplicate: false,
+      providerEventId: row.id,
+      jobId: job.id,
+    };
   });
 }
 
@@ -163,12 +183,18 @@ export async function processProviderEvent(
 ): Promise<ProcessedEvent> {
   const system = systemFinanceActor(options.correlationId);
   const stored = await withActor(rt.db, system.ctx, async (tx) => {
-    const [row] = await tx.select().from(schema.providerEvents).where(eq(schema.providerEvents.id, providerEventId));
+    const [row] = await tx
+      .select()
+      .from(schema.providerEvents)
+      .where(eq(schema.providerEvents.id, providerEventId));
     if (!row) throw new ApiError('not_found', 'provider event not found');
     return row;
   });
   if (!stored.signatureValid) {
-    return { providerEventId, actions: [{ kind: 'ignore', result: 'invalid signature; never processed' }] };
+    return {
+      providerEventId,
+      actions: [{ kind: 'ignore', result: 'invalid signature; never processed' }],
+    };
   }
   if (stored.processingStatus === 'processed') {
     return { providerEventId, actions: [{ kind: 'ignore', result: 'already processed' }] };
@@ -194,19 +220,30 @@ export async function processProviderEvent(
     await withActor(rt.db, system.ctx, (tx) =>
       addReconciliationException(
         tx,
-        { code: 'environment_mismatch', message: `${event.eventType} for ${event.environment} received on the ${resolved.environment} endpoint`, entityType: 'provider_event', entityId: providerEventId },
+        {
+          code: 'environment_mismatch',
+          message: `${event.eventType} for ${event.environment} received on the ${resolved.environment} endpoint`,
+          entityType: 'provider_event',
+          entityId: providerEventId,
+        },
         rt.now(),
       ),
     );
     await markProcessed();
-    return { providerEventId, actions: [{ kind: 'flag_for_reconciliation', result: 'environment mismatch' }] };
+    return {
+      providerEventId,
+      actions: [{ kind: 'flag_for_reconciliation', result: 'environment mismatch' }],
+    };
   }
 
   const existing = await loadExistingRecords(rt, event);
   const actions = planWebhookActions(event, existing);
   try {
     for (const action of actions) {
-      results.push({ kind: action.kind, result: await executeAction(rt, event, action, providerEventId, options.correlationId) });
+      results.push({
+        kind: action.kind,
+        result: await executeAction(rt, event, action, providerEventId, options.correlationId),
+      });
     }
     await markProcessed();
   } catch (err) {
@@ -216,7 +253,10 @@ export async function processProviderEvent(
   return { providerEventId, actions: results };
 }
 
-async function loadExistingRecords(rt: FinanceRuntime, event: ParsedProviderEvent): Promise<ExistingRecords> {
+async function loadExistingRecords(
+  rt: FinanceRuntime,
+  event: ParsedProviderEvent,
+): Promise<ExistingRecords> {
   const system = systemFinanceActor();
   return withActor(rt.db, system.ctx, async (tx) => {
     let attemptStatus: ExistingRecords['attemptStatus'] = null;
@@ -230,17 +270,30 @@ async function loadExistingRecords(rt: FinanceRuntime, event: ParsedProviderEven
       if (attempt) {
         attemptId = attempt.id;
         attemptStatus = attempt.status;
-        const [alloc] = await tx.select({ id: schema.allocations.id }).from(schema.allocations).where(eq(schema.allocations.dedupeKey, attemptDedupeKey(attempt.id)));
+        const [alloc] = await tx
+          .select({ id: schema.allocations.id })
+          .from(schema.allocations)
+          .where(eq(schema.allocations.dedupeKey, attemptDedupeKey(attempt.id)));
         alreadyAllocated = Boolean(alloc);
       }
     }
-    const refund = event.eventType.startsWith('refund.') ? await findRefundForEvent(tx, event, attemptId) : null;
+    const refund = event.eventType.startsWith('refund.')
+      ? await findRefundForEvent(tx, event, attemptId)
+      : null;
     let chargebackStatus: ExistingRecords['chargebackStatus'] = null;
     if (attemptId && event.eventType.startsWith('charge.dispute.')) {
-      const [cb] = await tx.select({ status: schema.chargebacks.status }).from(schema.chargebacks).where(eq(schema.chargebacks.paymentAttemptId, attemptId));
+      const [cb] = await tx
+        .select({ status: schema.chargebacks.status })
+        .from(schema.chargebacks)
+        .where(eq(schema.chargebacks.paymentAttemptId, attemptId));
       chargebackStatus = cb?.status ?? null;
     }
-    return { attemptStatus, alreadyAllocated, refundStatus: refund?.status ?? null, chargebackStatus };
+    return {
+      attemptStatus,
+      alreadyAllocated,
+      refundStatus: refund?.status ?? null,
+      chargebackStatus,
+    };
   });
 }
 
@@ -254,7 +307,10 @@ async function executeAction(
   const system = systemFinanceActor(correlationId);
   switch (action.kind) {
     case 'verify_and_settle': {
-      const result = await verifyAttemptAsSystem(rt, action.reference, { source: 'webhook', correlationId });
+      const result = await verifyAttemptAsSystem(rt, action.reference, {
+        source: 'webhook',
+        correlationId,
+      });
       return `${result.outcome.decision}${result.receiptNumber ? ` receipt ${result.receiptNumber}` : ''}`;
     }
     case 'update_refund': {
@@ -274,7 +330,12 @@ async function executeAction(
       await withActor(rt.db, system.ctx, (tx) =>
         addReconciliationException(
           tx,
-          { code: 'chargeback_evidence_due', message: `${action.reference}: evidence due ${action.evidenceDueAt ?? 'soon'}`, entityType: 'provider_event', entityId: providerEventId },
+          {
+            code: 'chargeback_evidence_due',
+            message: `${action.reference}: evidence due ${action.evidenceDueAt ?? 'soon'}`,
+            entityType: 'provider_event',
+            entityId: providerEventId,
+          },
           rt.now(),
         ),
       );
@@ -288,7 +349,12 @@ async function executeAction(
       await withActor(rt.db, system.ctx, (tx) =>
         addReconciliationException(
           tx,
-          { code: 'provider_event_flagged', message: `${event.eventType}${action.reference ? ` (${action.reference})` : ''}: ${action.reason}`, entityType: 'provider_event', entityId: providerEventId },
+          {
+            code: 'provider_event_flagged',
+            message: `${event.eventType}${action.reference ? ` (${action.reference})` : ''}: ${action.reason}`,
+            entityType: 'provider_event',
+            entityId: providerEventId,
+          },
           rt.now(),
         ),
       );

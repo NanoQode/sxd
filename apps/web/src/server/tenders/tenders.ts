@@ -15,9 +15,20 @@ import {
   type TenderRevisionCreate,
   type TenderVariation,
 } from '@simplexd/contracts';
-import { appendOutbox, getDb, schema, withActor, type DbExecutor, type Transaction } from '@simplexd/db';
+import {
+  appendOutbox,
+  getDb,
+  schema,
+  withActor,
+  type DbExecutor,
+  type Transaction,
+} from '@simplexd/db';
 import { assertAllowed, authorizeOrg, authorizeStaff } from '@simplexd/domain/authz';
-import { closeDecision, extensionDecision, validateEvaluationWeights } from '@simplexd/domain/tenders';
+import {
+  closeDecision,
+  extensionDecision,
+  validateEvaluationWeights,
+} from '@simplexd/domain/tenders';
 import { nextAddendumRevision, validateTenderTimeline } from '@simplexd/domain/timelines';
 import { evaluateTransition, tenderMachine } from '@simplexd/domain/workflow';
 import { recordAudit } from '@/lib/audit';
@@ -94,25 +105,39 @@ async function assertOrganizationLinks(
     .select({ id: schema.organization.id })
     .from(schema.organization)
     .where(eq(schema.organization.id, input.organizationId));
-  if (!org) throw new ApiError('validation_failed', 'organisation not found', { details: { field: 'organizationId' } });
+  if (!org)
+    throw new ApiError('validation_failed', 'organisation not found', {
+      details: { field: 'organizationId' },
+    });
   if (input.projectId) {
     const [project] = await tx
       .select({ id: schema.projects.id, organizationId: schema.projects.organizationId })
       .from(schema.projects)
       .where(eq(schema.projects.id, input.projectId));
     if (!project || project.organizationId !== input.organizationId) {
-      throw new ApiError('validation_failed', 'project not found in this organisation', { details: { field: 'projectId' } });
+      throw new ApiError('validation_failed', 'project not found in this organisation', {
+        details: { field: 'projectId' },
+      });
     }
   }
   if (input.scopeFileIds && input.scopeFileIds.length > 0) {
     const files = await tx
       .select({ id: schema.fileObjects.id })
       .from(schema.fileObjects)
-      .where(and(inArray(schema.fileObjects.id, input.scopeFileIds), eq(schema.fileObjects.organizationId, input.organizationId)));
+      .where(
+        and(
+          inArray(schema.fileObjects.id, input.scopeFileIds),
+          eq(schema.fileObjects.organizationId, input.organizationId),
+        ),
+      );
     if (files.length !== new Set(input.scopeFileIds).size) {
-      throw new ApiError('validation_failed', 'every scope file must belong to the tender organisation', {
-        details: { field: 'scopeFileIds' },
-      });
+      throw new ApiError(
+        'validation_failed',
+        'every scope file must belong to the tender organisation',
+        {
+          details: { field: 'scopeFileIds' },
+        },
+      );
     }
   }
   if (input.boqBudgetVersionId) {
@@ -132,7 +157,12 @@ async function invitedPartnerIds(tx: DbExecutor, tenderId: string): Promise<stri
   const rows = await tx
     .select({ partnerUserId: schema.tenderInvitations.partnerUserId })
     .from(schema.tenderInvitations)
-    .where(and(eq(schema.tenderInvitations.tenderId, tenderId), sql`${schema.tenderInvitations.status} <> 'declined'`));
+    .where(
+      and(
+        eq(schema.tenderInvitations.tenderId, tenderId),
+        sql`${schema.tenderInvitations.status} <> 'declined'`,
+      ),
+    );
   return rows.map((r) => r.partnerUserId);
 }
 
@@ -146,7 +176,12 @@ export async function createTender(
   options: ServiceOptions = {},
 ): Promise<TenderDto> {
   const userId = requireTendering(identity);
-  assertAllowed(authorizeStaff(identity.actor, 'tenders.manage', { type: 'tender', organizationId: input.organizationId }));
+  assertAllowed(
+    authorizeStaff(identity.actor, 'tenders.manage', {
+      type: 'tender',
+      organizationId: input.organizationId,
+    }),
+  );
   assertTimeline(input.timeline);
   assertWeights(input.evaluationWeights);
   return withActor(getDb(), ctxFor(identity, options), async (tx) => {
@@ -179,7 +214,12 @@ export async function createTender(
       entityType: 'tender',
       entityId: row!.id,
       organizationId: input.organizationId,
-      after: { reference, title: input.title, timeline: input.timeline, evaluationWeights: input.evaluationWeights },
+      after: {
+        reference,
+        title: input.title,
+        timeline: input.timeline,
+        evaluationWeights: input.evaluationWeights,
+      },
       correlationId: options.correlationId,
     });
     return toTenderDto(row!, []);
@@ -194,11 +234,18 @@ export async function updateDraftTender(
 ): Promise<TenderDto> {
   requireTendering(identity);
   return withActor(getDb(), ctxFor(identity, options), async (tx) => {
-    const { tender } = await loadTenderAccess(tx, identity, id, { staff: ['tenders.manage'], customer: false });
+    const { tender } = await loadTenderAccess(tx, identity, id, {
+      staff: ['tenders.manage'],
+      customer: false,
+    });
     if (tender.status !== 'draft') {
-      throw new ApiError('invalid_transition', 'only draft tenders can be edited directly; publish changes as a revision', {
-        details: { status: tender.status },
-      });
+      throw new ApiError(
+        'invalid_transition',
+        'only draft tenders can be edited directly; publish changes as a revision',
+        {
+          details: { status: tender.status },
+        },
+      );
     }
     assertVersion(tender.version, input.expectedVersion);
     if (input.timeline) assertTimeline(input.timeline);
@@ -211,7 +258,8 @@ export async function updateDraftTender(
     });
     const patch: Partial<typeof schema.tenders.$inferInsert> = { version: tender.version + 1 };
     if (input.title !== undefined) patch.title = input.title;
-    if (input.descriptionMarkdown !== undefined) patch.descriptionMarkdown = input.descriptionMarkdown;
+    if (input.descriptionMarkdown !== undefined)
+      patch.descriptionMarkdown = input.descriptionMarkdown;
     if (input.scopeFileIds !== undefined) patch.scopeFileIds = input.scopeFileIds;
     if (input.boqBudgetVersionId !== undefined) patch.boqBudgetVersionId = input.boqBudgetVersionId;
     if (input.projectId !== undefined) patch.projectId = input.projectId;
@@ -251,12 +299,25 @@ export async function publishTender(
 ): Promise<TenderDto> {
   const userId = requireTendering(identity);
   return withActor(getDb(), ctxFor(identity, options), async (tx) => {
-    const { tender } = await loadTenderAccess(tx, identity, id, { staff: ['tenders.manage'], customer: false });
+    const { tender } = await loadTenderAccess(tx, identity, id, {
+      staff: ['tenders.manage'],
+      customer: false,
+    });
     assertVersion(tender.version, input.expectedVersion);
-    const decision = evaluateTransition(tenderMachine, { from: tender.status, to: 'published', actor: 'staff' });
-    if (!decision.ok) throw new ApiError('invalid_transition', decision.message, { details: { code: decision.code } });
+    const decision = evaluateTransition(tenderMachine, {
+      from: tender.status,
+      to: 'published',
+      actor: 'staff',
+    });
+    if (!decision.ok)
+      throw new ApiError('invalid_transition', decision.message, {
+        details: { code: decision.code },
+      });
     if (!tender.releaseAt || !tender.submissionDeadlineAt) {
-      throw new ApiError('validation_failed', 'release and submission deadline are required before publication');
+      throw new ApiError(
+        'validation_failed',
+        'release and submission deadline are required before publication',
+      );
     }
     assertTimeline({
       releaseAt: tender.releaseAt.toISOString(),
@@ -269,9 +330,16 @@ export async function publishTender(
     });
     const now = await dbNow(tx);
     if (tender.submissionDeadlineAt.getTime() <= now.date.getTime()) {
-      throw new ApiError('validation_failed', 'the submission deadline must be in the future at publication', {
-        details: { submissionDeadlineAt: tender.submissionDeadlineAt.toISOString(), serverNow: now.iso },
-      });
+      throw new ApiError(
+        'validation_failed',
+        'the submission deadline must be in the future at publication',
+        {
+          details: {
+            submissionDeadlineAt: tender.submissionDeadlineAt.toISOString(),
+            serverNow: now.iso,
+          },
+        },
+      );
     }
     const [updated] = await tx
       .update(schema.tenders)
@@ -313,10 +381,15 @@ export async function reviseTender(
 ): Promise<TenderDetail> {
   const userId = requireTendering(identity);
   return withActor(getDb(), ctxFor(identity, options), async (tx) => {
-    const access = await loadTenderAccess(tx, identity, id, { staff: ['tenders.manage'], customer: false });
+    const access = await loadTenderAccess(tx, identity, id, {
+      staff: ['tenders.manage'],
+      customer: false,
+    });
     const { tender } = access;
     if (!REVISABLE.has(tender.status)) {
-      throw new ApiError('invalid_transition', 'revisions apply to published tenders only', { details: { status: tender.status } });
+      throw new ApiError('invalid_transition', 'revisions apply to published tenders only', {
+        details: { status: tender.status },
+      });
     }
     assertVersion(tender.version, input.expectedVersion);
     const revision = nextAddendumRevision(tender.currentRevision);
@@ -337,11 +410,20 @@ export async function reviseTender(
     setText('descriptionMarkdown');
     setText('partnerDisclosure');
     if (c.scopeFileIds !== undefined) {
-      await assertOrganizationLinks(tx, { organizationId: tender.organizationId, scopeFileIds: c.scopeFileIds });
+      await assertOrganizationLinks(tx, {
+        organizationId: tender.organizationId,
+        scopeFileIds: c.scopeFileIds,
+      });
       changes['scopeFileIds'] = { before: tender.scopeFileIds ?? [], after: c.scopeFileIds };
       patch.scopeFileIds = c.scopeFileIds;
     }
-    const dateKeys = ['siteVisitAt', 'questionCutoffAt', 'answersPublishedAt', 'evaluationCompleteAt', 'awardTargetAt'] as const;
+    const dateKeys = [
+      'siteVisitAt',
+      'questionCutoffAt',
+      'answersPublishedAt',
+      'evaluationCompleteAt',
+      'awardTargetAt',
+    ] as const;
     for (const key of dateKeys) {
       const value = c[key];
       if (value === undefined) continue;
@@ -360,10 +442,17 @@ export async function reviseTender(
         addendumRevision: revision,
       });
       if (!decision.ok) {
-        throw new ApiError('validation_failed', 'a deadline can only be extended to a later instant', { details: decision.error });
+        throw new ApiError(
+          'validation_failed',
+          'a deadline can only be extended to a later instant',
+          { details: decision.error },
+        );
       }
       deadlineExtendedTo = new Date(decision.effectiveDeadlineAt);
-      changes['submissionDeadlineAt'] = { before: iso(tender.submissionDeadlineAt), after: decision.effectiveDeadlineAt };
+      changes['submissionDeadlineAt'] = {
+        before: iso(tender.submissionDeadlineAt),
+        after: decision.effectiveDeadlineAt,
+      };
       patch.submissionDeadlineAt = deadlineExtendedTo;
     }
     const merged = { ...tender, ...patch } as TenderRow;
@@ -398,7 +487,12 @@ export async function reviseTender(
       aggregateId: id,
       organizationId: tender.organizationId,
       actorUserId: userId,
-      payload: { tenderId: id, revision, deadlineExtended: deadlineExtendedTo !== null, recipientUserIds: recipients },
+      payload: {
+        tenderId: id,
+        revision,
+        deadlineExtended: deadlineExtendedTo !== null,
+        recipientUserIds: recipients,
+      },
       correlationId: options.correlationId,
     });
     await recordAudit(tx, identity, {
@@ -407,7 +501,10 @@ export async function reviseTender(
       entityId: id,
       organizationId: tender.organizationId,
       before: Object.fromEntries(Object.entries(changes).map(([k, v]) => [k, v.before])),
-      after: { ...Object.fromEntries(Object.entries(changes).map(([k, v]) => [k, v.after])), revision },
+      after: {
+        ...Object.fromEntries(Object.entries(changes).map(([k, v]) => [k, v.after])),
+        revision,
+      },
       reason: input.reason,
       correlationId: options.correlationId,
     });
@@ -424,12 +521,20 @@ export async function addTenderVariation(
 ): Promise<TenderDetail> {
   const userId = requireTendering(identity);
   return withActor(getDb(), ctxFor(identity, options), async (tx) => {
-    const { tender } = await loadTenderAccess(tx, identity, id, { staff: ['tenders.manage'], customer: false });
+    const { tender } = await loadTenderAccess(tx, identity, id, {
+      staff: ['tenders.manage'],
+      customer: false,
+    });
     if (tender.status !== 'awarded') {
-      throw new ApiError('invalid_transition', 'variations apply to awarded tenders', { details: { status: tender.status } });
+      throw new ApiError('invalid_transition', 'variations apply to awarded tenders', {
+        details: { status: tender.status },
+      });
     }
     const revision = nextAddendumRevision(tender.currentRevision);
-    await tx.update(schema.tenders).set({ currentRevision: revision, version: tender.version + 1 }).where(eq(schema.tenders.id, id));
+    await tx
+      .update(schema.tenders)
+      .set({ currentRevision: revision, version: tender.version + 1 })
+      .where(eq(schema.tenders.id, id));
     await tx.insert(schema.tenderRevisions).values({
       tenderId: id,
       revision,
@@ -460,16 +565,28 @@ export async function closeTender(
 ): Promise<TenderDto> {
   const userId = requireTendering(identity);
   return withActor(getDb(), ctxFor(identity, options), async (tx) => {
-    const { tender } = await loadTenderAccess(tx, identity, id, { staff: ['tenders.manage'], customer: false });
+    const { tender } = await loadTenderAccess(tx, identity, id, {
+      staff: ['tenders.manage'],
+      customer: false,
+    });
     assertVersion(tender.version, input.expectedVersion);
     if (!REVISABLE.has(tender.status)) {
-      throw new ApiError('invalid_transition', `cannot close a ${tender.status} tender`, { details: { status: tender.status } });
+      throw new ApiError('invalid_transition', `cannot close a ${tender.status} tender`, {
+        details: { status: tender.status },
+      });
     }
     const now = await dbNow(tx);
-    const decision = closeDecision({ now: now.iso, submissionDeadlineAt: iso(tender.submissionDeadlineAt) ?? '' });
+    const decision = closeDecision({
+      now: now.iso,
+      submissionDeadlineAt: iso(tender.submissionDeadlineAt) ?? '',
+    });
     if (!decision.canClose) {
       throw new ApiError('invalid_transition', 'the submission deadline has not passed yet', {
-        details: { reason: decision.reason, effectiveDeadlineAt: decision.effectiveDeadlineAt, serverNow: now.iso },
+        details: {
+          reason: decision.reason,
+          effectiveDeadlineAt: decision.effectiveDeadlineAt,
+          serverNow: now.iso,
+        },
       });
     }
     const [updated] = await tx
@@ -508,7 +625,10 @@ export async function cancelTender(
 ): Promise<TenderDto> {
   const userId = requireTendering(identity);
   return withActor(getDb(), ctxFor(identity, options), async (tx) => {
-    const { tender } = await loadTenderAccess(tx, identity, id, { staff: ['tenders.manage'], customer: false });
+    const { tender } = await loadTenderAccess(tx, identity, id, {
+      staff: ['tenders.manage'],
+      customer: false,
+    });
     assertVersion(tender.version, input.expectedVersion);
     const decision = evaluateTransition(tenderMachine, {
       from: tender.status,
@@ -516,7 +636,10 @@ export async function cancelTender(
       actor: 'staff',
       reason: input.reason,
     });
-    if (!decision.ok) throw new ApiError('invalid_transition', decision.message, { details: { code: decision.code } });
+    if (!decision.ok)
+      throw new ApiError('invalid_transition', decision.message, {
+        details: { code: decision.code },
+      });
     const [updated] = await tx
       .update(schema.tenders)
       .set({ status: 'cancelled', cancelledReason: input.reason, version: tender.version + 1 })
@@ -559,11 +682,18 @@ export async function inviteTenderPartners(
 ): Promise<TenderInvitationDto[]> {
   const userId = requireTendering(identity);
   return withActor(getDb(), ctxFor(identity, options), async (tx) => {
-    const { tender } = await loadTenderAccess(tx, identity, id, { staff: ['tenders.manage'], customer: false });
+    const { tender } = await loadTenderAccess(tx, identity, id, {
+      staff: ['tenders.manage'],
+      customer: false,
+    });
     if (!['draft', 'published', 'clarifications'].includes(tender.status)) {
-      throw new ApiError('invalid_transition', 'invitations can only be added before the tender closes', {
-        details: { status: tender.status },
-      });
+      throw new ApiError(
+        'invalid_transition',
+        'invitations can only be added before the tender closes',
+        {
+          details: { status: tender.status },
+        },
+      );
     }
     const ids = [...new Set(input.partnerUserIds)];
     const partners = await tx
@@ -573,7 +703,9 @@ export async function inviteTenderPartners(
     const known = new Set(partners.map((p) => p.userId));
     const missing = ids.filter((p) => !known.has(p));
     if (missing.length > 0) {
-      throw new ApiError('validation_failed', 'every invitee must have a partner profile', { details: { missing } });
+      throw new ApiError('validation_failed', 'every invitee must have a partner profile', {
+        details: { missing },
+      });
     }
     const inserted = await tx
       .insert(schema.tenderInvitations)
@@ -604,7 +736,10 @@ export async function inviteTenderPartners(
   });
 }
 
-async function listInvitationsInTx(tx: DbExecutor, tenderId: string): Promise<TenderInvitationDto[]> {
+async function listInvitationsInTx(
+  tx: DbExecutor,
+  tenderId: string,
+): Promise<TenderInvitationDto[]> {
   const rows = await tx
     .select({ inv: schema.tenderInvitations, name: schema.user.name })
     .from(schema.tenderInvitations)
@@ -640,12 +775,16 @@ export async function respondToInvitation(
   input: TenderInvitationRespond,
   options: ServiceOptions = {},
 ): Promise<TenderInvitationDto> {
-  const userId = requireTendering(identity);
+  requireTendering(identity);
   return withActor(getDb(), ctxFor(identity, options), async (tx) => {
     const access = await loadTenderAccess(tx, identity, id, { customer: false });
-    if (access.role !== 'partner' || !access.invitation) throw new ApiError('forbidden', 'only invited partners respond');
+    if (access.role !== 'partner' || !access.invitation)
+      throw new ApiError('forbidden', 'only invited partners respond');
     if (access.invitation.status === 'submitted') {
-      throw new ApiError('invalid_transition', 'a bid has already been submitted for this invitation');
+      throw new ApiError(
+        'invalid_transition',
+        'a bid has already been submitted for this invitation',
+      );
     }
     const now = await dbNow(tx);
     const [updated] = await tx
@@ -673,7 +812,11 @@ export async function respondToInvitation(
 /* Read models                                                                */
 /* -------------------------------------------------------------------------- */
 
-async function getTenderInTx(tx: Transaction, identity: RequestIdentity, id: string): Promise<TenderDetail> {
+async function getTenderInTx(
+  tx: Transaction,
+  identity: RequestIdentity,
+  id: string,
+): Promise<TenderDetail> {
   const userId = identity.session!.user.id;
   const access = await loadTenderAccess(tx, identity, id);
   const { tender, revisions } = access;
@@ -704,10 +847,20 @@ async function getTenderInTx(tx: Transaction, identity: RequestIdentity, id: str
     return {
       ...dto,
       revisions: revisions.map(toRevisionDto),
-      invitations: invitation ? [toInvitationDto(invitation, identity.session?.user.name ?? null)] : [],
+      invitations: invitation
+        ? [toInvitationDto(invitation, identity.session?.user.name ?? null)]
+        : [],
       questions,
-      myInvitation: invitation ? toInvitationDto(invitation, identity.session?.user.name ?? null) : null,
-      myBid: bid ? { ...toSealedBidSummary(bid, identity.session?.user.name ?? null), sealed: false, openedAt: iso(bid.openedAt) } : null,
+      myInvitation: invitation
+        ? toInvitationDto(invitation, identity.session?.user.name ?? null)
+        : null,
+      myBid: bid
+        ? {
+            ...toSealedBidSummary(bid, identity.session?.user.name ?? null),
+            sealed: false,
+            openedAt: iso(bid.openedAt),
+          }
+        : null,
       bidCount: null,
     };
   }
@@ -724,7 +877,11 @@ async function getTenderInTx(tx: Transaction, identity: RequestIdentity, id: str
   };
 }
 
-export async function getTender(identity: RequestIdentity, id: string, options: ServiceOptions = {}): Promise<TenderDetail> {
+export async function getTender(
+  identity: RequestIdentity,
+  id: string,
+  options: ServiceOptions = {},
+): Promise<TenderDetail> {
   requireTendering(identity);
   return withActor(getDb(), ctxFor(identity, options), (tx) => getTenderInTx(tx, identity, id));
 }
@@ -757,7 +914,10 @@ export async function listTenders(
           cursor
             ? or(
                 lt(schema.tenders.createdAt, cursor.createdAt),
-                and(eq(schema.tenders.createdAt, cursor.createdAt), lt(schema.tenders.id, cursor.id)),
+                and(
+                  eq(schema.tenders.createdAt, cursor.createdAt),
+                  lt(schema.tenders.id, cursor.id),
+                ),
               )
             : undefined,
         ),
@@ -792,7 +952,10 @@ export async function listMyInvitedTenders(
           cursor
             ? or(
                 lt(schema.tenders.createdAt, cursor.createdAt),
-                and(eq(schema.tenders.createdAt, cursor.createdAt), lt(schema.tenders.id, cursor.id)),
+                and(
+                  eq(schema.tenders.createdAt, cursor.createdAt),
+                  lt(schema.tenders.id, cursor.id),
+                ),
               )
             : undefined,
         ),
@@ -804,7 +967,15 @@ export async function listMyInvitedTenders(
       ? await tx
           .select()
           .from(schema.bids)
-          .where(and(eq(schema.bids.partnerUserId, userId), inArray(schema.bids.tenderId, page.map((r) => r.tender.id))))
+          .where(
+            and(
+              eq(schema.bids.partnerUserId, userId),
+              inArray(
+                schema.bids.tenderId,
+                page.map((r) => r.tender.id),
+              ),
+            ),
+          )
       : [];
     const byTender = new Map(bids.map((b) => [b.tenderId, b]));
     const name = identity.session?.user.name ?? null;
@@ -813,7 +984,9 @@ export async function listMyInvitedTenders(
       return {
         ...toTenderDto(r.tender, []),
         invitation: toInvitationDto(r.inv, name),
-        myBid: bid ? { ...toSealedBidSummary(bid, name), sealed: false, openedAt: iso(bid.openedAt) } : null,
+        myBid: bid
+          ? { ...toSealedBidSummary(bid, name), sealed: false, openedAt: iso(bid.openedAt) }
+          : null,
       };
     });
     const last = rows.length > query.limit ? page[page.length - 1] : null;

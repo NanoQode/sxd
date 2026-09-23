@@ -12,7 +12,14 @@ import {
   type RfqResponseDto,
 } from '@simplexd/contracts';
 import { schema, type ActorContext, type DbExecutor } from '@simplexd/db';
-import { assertAllowed, authorizeAny, authorizeOrg, authorizePartner, type PartnerPermission, type StaffPermission } from '@simplexd/domain/authz';
+import {
+  assertAllowed,
+  authorizeAny,
+  authorizeOrg,
+  authorizePartner,
+  type PartnerPermission,
+  type StaffPermission,
+} from '@simplexd/domain/authz';
 import type { RequestIdentity } from '@/lib/auth/session';
 import { requireFeature } from '@/lib/features';
 
@@ -70,9 +77,13 @@ export function isStaffIdentity(identity: RequestIdentity): boolean {
 export const iso = (d: Date | null | undefined): string | null => (d ? d.toISOString() : null);
 
 export function versionConflict(current: number): ApiError {
-  return new ApiError('version_conflict', 'this record changed since you loaded it; reload and try again', {
-    details: { currentVersion: current },
-  });
+  return new ApiError(
+    'version_conflict',
+    'this record changed since you loaded it; reload and try again',
+    {
+      details: { currentVersion: current },
+    },
+  );
 }
 
 export function assertVersion(current: number, expected: number | undefined): void {
@@ -102,21 +113,37 @@ export async function loadRfqAccess(
   if (!rfq) throw new ApiError('not_found', 'RFQ not found');
   if (isStaffIdentity(identity)) {
     const perms = options.staff ?? ['procurement.manage'];
-    assertAllowed(authorizeAny(identity.actor, perms.map((p) => ({ staff: p })), { type: 'rfq', id: rfq.id, organizationId: rfq.organizationId }));
+    assertAllowed(
+      authorizeAny(
+        identity.actor,
+        perms.map((p) => ({ staff: p })),
+        { type: 'rfq', id: rfq.id, organizationId: rfq.organizationId },
+      ),
+    );
     return { rfq, role: 'staff', ownResponse: null };
   }
   const [own] = await tx
     .select()
     .from(schema.rfqResponses)
-    .where(and(eq(schema.rfqResponses.rfqId, rfqId), eq(schema.rfqResponses.supplierUserId, userId)));
+    .where(
+      and(eq(schema.rfqResponses.rfqId, rfqId), eq(schema.rfqResponses.supplierUserId, userId)),
+    );
   if (own && identity.actor.isPartner) {
     assertAllowed(
-      authorizePartner(identity.actor, options.supplier ?? 'partner.rfqs.respond', { type: 'rfq', id: rfq.id, assigneeUserIds: [userId] }),
+      authorizePartner(identity.actor, options.supplier ?? 'partner.rfqs.respond', {
+        type: 'rfq',
+        id: rfq.id,
+        assigneeUserIds: [userId],
+      }),
     );
     return { rfq, role: 'supplier', ownResponse: own };
   }
   if (options.customer !== false) {
-    const decision = authorizeOrg(identity.actor, 'org.read', { type: 'rfq', id: rfq.id, organizationId: rfq.organizationId });
+    const decision = authorizeOrg(identity.actor, 'org.read', {
+      type: 'rfq',
+      id: rfq.id,
+      organizationId: rfq.organizationId,
+    });
     if (decision.allowed) return { rfq, role: 'customer', ownResponse: null };
   }
   throw new ApiError('not_found', 'RFQ not found');
@@ -135,22 +162,39 @@ export async function loadPurchaseOrderAccess(
 ): Promise<PurchaseOrderAccess> {
   const userId = identity.session?.user.id;
   if (!userId) throw new ApiError('unauthenticated', 'sign in required');
-  const [po] = await tx.select().from(schema.purchaseOrders).where(eq(schema.purchaseOrders.id, poId));
+  const [po] = await tx
+    .select()
+    .from(schema.purchaseOrders)
+    .where(eq(schema.purchaseOrders.id, poId));
   if (!po) throw new ApiError('not_found', 'purchase order not found');
   if (isStaffIdentity(identity)) {
     const perms = options.staff ?? ['procurement.manage'];
-    assertAllowed(authorizeAny(identity.actor, perms.map((p) => ({ staff: p })), { type: 'purchase_order', id: po.id, organizationId: po.organizationId }));
+    assertAllowed(
+      authorizeAny(
+        identity.actor,
+        perms.map((p) => ({ staff: p })),
+        { type: 'purchase_order', id: po.id, organizationId: po.organizationId },
+      ),
+    );
     return { po, role: 'staff' };
   }
   // Suppliers learn about an order only once it is issued.
   if (po.supplierUserId === userId && identity.actor.isPartner && po.status !== 'draft') {
     assertAllowed(
-      authorizePartner(identity.actor, options.supplier ?? 'partner.deliveries.view', { type: 'purchase_order', id: po.id, assigneeUserIds: [userId] }),
+      authorizePartner(identity.actor, options.supplier ?? 'partner.deliveries.view', {
+        type: 'purchase_order',
+        id: po.id,
+        assigneeUserIds: [userId],
+      }),
     );
     return { po, role: 'supplier' };
   }
   if (options.customer !== false) {
-    const decision = authorizeOrg(identity.actor, 'org.read', { type: 'purchase_order', id: po.id, organizationId: po.organizationId });
+    const decision = authorizeOrg(identity.actor, 'org.read', {
+      type: 'purchase_order',
+      id: po.id,
+      organizationId: po.organizationId,
+    });
     if (decision.allowed) return { po, role: 'customer' };
   }
   throw new ApiError('not_found', 'purchase order not found');
@@ -280,7 +324,11 @@ export function toDiscrepancyDto(row: DiscrepancyRow, lineId: string | null): Di
   };
 }
 
-export function toDeliveryDto(row: DeliveryRow, purchaseOrderNumber: string, discrepancies: DiscrepancyRow[]): DeliveryDto {
+export function toDeliveryDto(
+  row: DeliveryRow,
+  purchaseOrderNumber: string,
+  discrepancies: DiscrepancyRow[],
+): DeliveryDto {
   const lines = deliveryLines(row);
   const lineOf = new Map<string, string>();
   for (const line of lines) for (const id of line.discrepancyIds) lineOf.set(id, line.lineId);

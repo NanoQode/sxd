@@ -11,7 +11,13 @@ import {
 import { schema, withActor, type Transaction } from '@simplexd/db';
 import { invoiceBalance, invoiceIssued, reverse, type InvoiceKind } from '@simplexd/domain/ledger';
 import { evaluateTransition, invoiceMachine } from '@simplexd/domain/workflow';
-import { assertStaff, assertStaffOrOrg, elevated, systemFinanceActor, type FinanceActor } from './actor';
+import {
+  assertStaff,
+  assertStaffOrOrg,
+  elevated,
+  systemFinanceActor,
+  type FinanceActor,
+} from './actor';
 import { emitEvent, recordAudit } from './audit';
 import { findJournalByRef, postJournal } from './journal';
 import { computeTotals, iso, loadTaxTreatment, type LineInput } from './money';
@@ -84,7 +90,10 @@ export function toInvoiceDto(inv: InvoiceRow, lines: InvoiceLineRow[]): InvoiceD
   };
 }
 
-export async function loadInvoiceLines(tx: Transaction, invoiceId: string): Promise<InvoiceLineRow[]> {
+export async function loadInvoiceLines(
+  tx: Transaction,
+  invoiceId: string,
+): Promise<InvoiceLineRow[]> {
   return tx
     .select()
     .from(schema.invoiceLines)
@@ -92,8 +101,15 @@ export async function loadInvoiceLines(tx: Transaction, invoiceId: string): Prom
     .orderBy(asc(schema.invoiceLines.sortOrder), asc(schema.invoiceLines.id));
 }
 
-export async function loadInvoiceForUpdate(tx: Transaction, invoiceId: string): Promise<InvoiceRow> {
-  const [row] = await tx.select().from(schema.invoices).where(eq(schema.invoices.id, invoiceId)).for('update');
+export async function loadInvoiceForUpdate(
+  tx: Transaction,
+  invoiceId: string,
+): Promise<InvoiceRow> {
+  const [row] = await tx
+    .select()
+    .from(schema.invoices)
+    .where(eq(schema.invoices.id, invoiceId))
+    .for('update');
   if (!row) throw new ApiError('not_found', 'invoice not found');
   return row;
 }
@@ -103,13 +119,18 @@ function assertInstallmentPlan(plan: Installment[] | null | undefined, totalKobo
   let sum = 0n;
   for (const i of plan) {
     const amount = BigInt(i.amountKobo);
-    if (amount <= 0n) throw new ApiError('validation_failed', 'installment amounts must be positive');
+    if (amount <= 0n)
+      throw new ApiError('validation_failed', 'installment amounts must be positive');
     sum += amount;
   }
   if (sum !== totalKobo) {
-    throw new ApiError('validation_failed', `installments (${sum}) must add up to the invoice total (${totalKobo})`, {
-      details: { installmentsKobo: sum.toString(), totalKobo: totalKobo.toString() },
-    });
+    throw new ApiError(
+      'validation_failed',
+      `installments (${sum}) must add up to the invoice total (${totalKobo})`,
+      {
+        details: { installmentsKobo: sum.toString(), totalKobo: totalKobo.toString() },
+      },
+    );
   }
 }
 
@@ -125,7 +146,8 @@ export async function createInvoiceRecord(
 ): Promise<InvoiceRow> {
   const treatment = await loadTaxTreatment(tx, input.taxTreatmentKey ?? null);
   const totals = computeTotals(input.lines, treatment);
-  if (totals.totalKobo <= 0n) throw new ApiError('validation_failed', 'invoice total must be positive');
+  if (totals.totalKobo <= 0n)
+    throw new ApiError('validation_failed', 'invoice total must be positive');
   assertInstallmentPlan(input.installmentPlan ?? null, totals.totalKobo);
   const [invoice] = await tx
     .insert(schema.invoices)
@@ -192,11 +214,17 @@ export async function issueInvoiceTx(
   invoice: InvoiceRow,
   options: { now: Date; dueDate: string | null },
 ): Promise<InvoiceRow> {
-  const decision = evaluateTransition(invoiceMachine, { from: invoice.status, to: 'issued', actor: 'system' });
+  const decision = evaluateTransition(invoiceMachine, {
+    from: invoice.status,
+    to: 'issued',
+    actor: 'system',
+  });
   if (!decision.ok) throw new ApiError('invalid_transition', decision.message);
   const number = await nextDocumentNumber(tx, 'invoices', options.now);
   const dueDate =
-    options.dueDate ?? invoice.dueDate ?? new Date(options.now.getTime() + 7 * 86_400_000).toISOString().slice(0, 10);
+    options.dueDate ??
+    invoice.dueDate ??
+    new Date(options.now.getTime() + 7 * 86_400_000).toISOString().slice(0, 10);
   const [issued] = await tx
     .update(schema.invoices)
     .set({
@@ -258,10 +286,20 @@ export async function issueInvoiceTx(
 }
 
 /** Finance creates an invoice manually (milestone, management fee, other) and optionally issues it. */
-export async function createInvoice(rt: FinanceRuntime, fa: FinanceActor, input: InvoiceCreate): Promise<InvoiceDto> {
-  assertStaff(fa, 'finance.invoices.manage', { type: 'invoice', organizationId: input.organizationId });
+export async function createInvoice(
+  rt: FinanceRuntime,
+  fa: FinanceActor,
+  input: InvoiceCreate,
+): Promise<InvoiceDto> {
+  assertStaff(fa, 'finance.invoices.manage', {
+    type: 'invoice',
+    organizationId: input.organizationId,
+  });
   return withActor(rt.db, fa.ctx, async (tx) => {
-    const [org] = await tx.select({ id: schema.organization.id }).from(schema.organization).where(eq(schema.organization.id, input.organizationId));
+    const [org] = await tx
+      .select({ id: schema.organization.id })
+      .from(schema.organization)
+      .where(eq(schema.organization.id, input.organizationId));
     if (!org) throw new ApiError('not_found', 'organisation not found');
     const record: InvoiceRecordInput = {
       organizationId: input.organizationId,
@@ -280,7 +318,9 @@ export async function createInvoice(rt: FinanceRuntime, fa: FinanceActor, input:
     };
     const invoice = await elevated(tx, fa, async () => {
       const draft = await createInvoiceRecord(tx, fa, record);
-      return input.issue ? issueInvoiceTx(tx, fa, draft, { now: rt.now(), dueDate: input.dueDate ?? null }) : draft;
+      return input.issue
+        ? issueInvoiceTx(tx, fa, draft, { now: rt.now(), dueDate: input.dueDate ?? null })
+        : draft;
     });
     return toInvoiceDto(invoice, await loadInvoiceLines(tx, invoice.id));
   });
@@ -294,11 +334,19 @@ export async function issueInvoice(
 ): Promise<InvoiceDto> {
   return withActor(rt.db, fa.ctx, async (tx) => {
     const invoice = await loadInvoiceForUpdate(tx, invoiceId);
-    assertStaff(fa, 'finance.invoices.manage', { type: 'invoice', id: invoice.id, organizationId: invoice.organizationId });
+    assertStaff(fa, 'finance.invoices.manage', {
+      type: 'invoice',
+      id: invoice.id,
+      organizationId: invoice.organizationId,
+    });
     if (input.expectedVersion !== undefined && invoice.version !== input.expectedVersion) {
-      throw new ApiError('version_conflict', 'invoice changed since you loaded it', { details: { currentVersion: invoice.version } });
+      throw new ApiError('version_conflict', 'invoice changed since you loaded it', {
+        details: { currentVersion: invoice.version },
+      });
     }
-    const issued = await elevated(tx, fa, () => issueInvoiceTx(tx, fa, invoice, { now: rt.now(), dueDate: input.dueDate ?? null }));
+    const issued = await elevated(tx, fa, () =>
+      issueInvoiceTx(tx, fa, invoice, { now: rt.now(), dueDate: input.dueDate ?? null }),
+    );
     return toInvoiceDto(issued, await loadInvoiceLines(tx, issued.id));
   });
 }
@@ -311,14 +359,28 @@ export async function voidInvoiceTx(
   reason: string,
   now: Date,
 ): Promise<InvoiceRow> {
-  const decision = evaluateTransition(invoiceMachine, { from: invoice.status, to: 'void', actor: 'staff', reason });
+  const decision = evaluateTransition(invoiceMachine, {
+    from: invoice.status,
+    to: 'void',
+    actor: 'staff',
+    reason,
+  });
   if (!decision.ok) throw new ApiError('invalid_transition', decision.message);
   if (invoice.amountPaidKobo > 0n || invoice.amountCreditedKobo > 0n) {
-    throw new ApiError('invalid_transition', 'an invoice with allocations cannot be voided; issue a credit note instead');
+    throw new ApiError(
+      'invalid_transition',
+      'an invoice with allocations cannot be voided; issue a credit note instead',
+    );
   }
   const [voided] = await tx
     .update(schema.invoices)
-    .set({ status: 'void', voidedAt: now, voidReason: reason, voidedBy: fa.actor.userId, version: invoice.version + 1 })
+    .set({
+      status: 'void',
+      voidedAt: now,
+      voidReason: reason,
+      voidedBy: fa.actor.userId,
+      version: invoice.version + 1,
+    })
     .where(and(eq(schema.invoices.id, invoice.id), eq(schema.invoices.version, invoice.version)))
     .returning();
   if (!voided) throw new ApiError('version_conflict', 'invoice changed while voiding');
@@ -368,10 +430,19 @@ export async function voidInvoiceTx(
   return voided;
 }
 
-export async function voidInvoice(rt: FinanceRuntime, fa: FinanceActor, invoiceId: string, reason: string): Promise<InvoiceDto> {
+export async function voidInvoice(
+  rt: FinanceRuntime,
+  fa: FinanceActor,
+  invoiceId: string,
+  reason: string,
+): Promise<InvoiceDto> {
   return withActor(rt.db, fa.ctx, async (tx) => {
     const invoice = await loadInvoiceForUpdate(tx, invoiceId);
-    assertStaff(fa, 'finance.invoices.manage', { type: 'invoice', id: invoice.id, organizationId: invoice.organizationId });
+    assertStaff(fa, 'finance.invoices.manage', {
+      type: 'invoice',
+      id: invoice.id,
+      organizationId: invoice.organizationId,
+    });
     const voided = await elevated(tx, fa, () => voidInvoiceTx(tx, fa, invoice, reason, rt.now()));
     return toInvoiceDto(voided, await loadInvoiceLines(tx, voided.id));
   });
@@ -401,7 +472,13 @@ export async function voidUnpaidInvoicesForRequest(
       .for('update');
     const voided: string[] = [];
     for (const invoice of rows) {
-      await voidInvoiceTx(tx, { ...system, actor: { ...system.actor, userId: fa.actor.userId } }, invoice, reason, now);
+      await voidInvoiceTx(
+        tx,
+        { ...system, actor: { ...system.actor, userId: fa.actor.userId } },
+        invoice,
+        reason,
+        now,
+      );
       voided.push(invoice.id);
     }
     return voided;
@@ -409,22 +486,40 @@ export async function voidUnpaidInvoicesForRequest(
 }
 
 /** Customer (`org.invoices.view`) or staff (`finance.read`) read. Row-level security applies first. */
-export async function getInvoice(rt: FinanceRuntime, fa: FinanceActor, invoiceId: string): Promise<InvoiceDto> {
+export async function getInvoice(
+  rt: FinanceRuntime,
+  fa: FinanceActor,
+  invoiceId: string,
+): Promise<InvoiceDto> {
   return withActor(rt.db, fa.ctx, async (tx) => {
-    const [invoice] = await tx.select().from(schema.invoices).where(eq(schema.invoices.id, invoiceId));
+    const [invoice] = await tx
+      .select()
+      .from(schema.invoices)
+      .where(eq(schema.invoices.id, invoiceId));
     if (!invoice) throw new ApiError('not_found', 'invoice not found');
-    assertStaffOrOrg(fa, 'finance.read', 'org.invoices.view', { type: 'invoice', id: invoice.id, organizationId: invoice.organizationId });
+    assertStaffOrOrg(fa, 'finance.read', 'org.invoices.view', {
+      type: 'invoice',
+      id: invoice.id,
+      organizationId: invoice.organizationId,
+    });
     return toInvoiceDto(invoice, await loadInvoiceLines(tx, invoice.id));
   });
 }
 
-export async function listInvoices(rt: FinanceRuntime, fa: FinanceActor, query: InvoiceListQuery): Promise<Page<InvoiceDto>> {
+export async function listInvoices(
+  rt: FinanceRuntime,
+  fa: FinanceActor,
+  query: InvoiceListQuery,
+): Promise<Page<InvoiceDto>> {
   const staff = fa.actor.staffRoles.length > 0;
   const orgId = staff ? (query.organizationId ?? null) : fa.ctx.organizationId;
   if (staff) assertStaff(fa, 'finance.read');
   else {
     if (!orgId) return { items: [], nextCursor: null };
-    assertStaffOrOrg(fa, 'finance.read', 'org.invoices.view', { type: 'invoice', organizationId: orgId });
+    assertStaffOrOrg(fa, 'finance.read', 'org.invoices.view', {
+      type: 'invoice',
+      organizationId: orgId,
+    });
   }
   const cursor = decodeCursor(query.cursor);
   return withActor(rt.db, fa.ctx, async (tx) => {
@@ -435,11 +530,16 @@ export async function listInvoices(rt: FinanceRuntime, fa: FinanceActor, query: 
         and(
           orgId ? eq(schema.invoices.organizationId, orgId) : undefined,
           query.status ? eq(schema.invoices.status, query.status) : undefined,
-          query.serviceRequestId ? eq(schema.invoices.serviceRequestId, query.serviceRequestId) : undefined,
+          query.serviceRequestId
+            ? eq(schema.invoices.serviceRequestId, query.serviceRequestId)
+            : undefined,
           cursor
             ? or(
                 lt(schema.invoices.createdAt, cursor.createdAt),
-                and(eq(schema.invoices.createdAt, cursor.createdAt), lt(schema.invoices.id, cursor.id)),
+                and(
+                  eq(schema.invoices.createdAt, cursor.createdAt),
+                  lt(schema.invoices.id, cursor.id),
+                ),
               )
             : undefined,
         ),

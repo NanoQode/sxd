@@ -29,7 +29,13 @@ import {
 
 type AwardRow = typeof schema.awards.$inferSelect;
 
-function toAwardDto(award: AwardRow, tender: TenderRow, partnerUserId: string, partnerName: string | null, currency: string): AwardDto {
+function toAwardDto(
+  award: AwardRow,
+  tender: TenderRow,
+  partnerUserId: string,
+  partnerName: string | null,
+  currency: string,
+): AwardDto {
   return {
     id: award.id,
     tenderId: award.tenderId,
@@ -50,14 +56,30 @@ function toAwardDto(award: AwardRow, tender: TenderRow, partnerUserId: string, p
   };
 }
 
-async function awardWithBid(tx: DbExecutor, tender: TenderRow): Promise<{ award: AwardRow; bid: typeof schema.bids.$inferSelect; currency: string; partnerName: string | null } | null> {
-  const [award] = await tx.select().from(schema.awards).where(eq(schema.awards.tenderId, tender.id));
+async function awardWithBid(
+  tx: DbExecutor,
+  tender: TenderRow,
+): Promise<{
+  award: AwardRow;
+  bid: typeof schema.bids.$inferSelect;
+  currency: string;
+  partnerName: string | null;
+} | null> {
+  const [award] = await tx
+    .select()
+    .from(schema.awards)
+    .where(eq(schema.awards.tenderId, tender.id));
   if (!award) return null;
   const [bid] = await tx.select().from(schema.bids).where(eq(schema.bids.id, award.bidId));
   if (!bid) return null;
   const latest = latestSubmittedRevision((await loadBidRevisions(tx, [bid.id])).get(bid.id) ?? []);
   const names = await userNames(tx, [bid.partnerUserId]);
-  return { award, bid, currency: latest?.currency ?? 'NGN', partnerName: names.get(bid.partnerUserId) ?? null };
+  return {
+    award,
+    bid,
+    currency: latest?.currency ?? 'NGN',
+    partnerName: names.get(bid.partnerUserId) ?? null,
+  };
 }
 
 export async function decideAward(
@@ -68,26 +90,54 @@ export async function decideAward(
 ): Promise<AwardDto> {
   const userId = requireTendering(identity);
   return withActor(getDb(), ctxFor(identity, options), async (tx) => {
-    const access = await loadTenderAccess(tx, identity, tenderId, { staff: ['tenders.manage'], customer: false });
+    const access = await loadTenderAccess(tx, identity, tenderId, {
+      staff: ['tenders.manage'],
+      customer: false,
+    });
     const { tender } = access;
     assertVersion(tender.version, input.expectedVersion);
     if (tender.status !== 'evaluating') {
-      throw new ApiError('invalid_transition', 'an award is decided while the tender is evaluating', { details: { status: tender.status } });
+      throw new ApiError(
+        'invalid_transition',
+        'an award is decided while the tender is evaluating',
+        { details: { status: tender.status } },
+      );
     }
-    const [bid] = await tx.select().from(schema.bids).where(and(eq(schema.bids.id, input.bidId), eq(schema.bids.tenderId, tenderId)));
+    const [bid] = await tx
+      .select()
+      .from(schema.bids)
+      .where(and(eq(schema.bids.id, input.bidId), eq(schema.bids.tenderId, tenderId)));
     if (!bid) throw new ApiError('not_found', 'bid not found on this tender');
     if (bid.status !== 'evaluated') {
-      throw new ApiError('invalid_transition', 'only an evaluated bid can be awarded', { details: { status: bid.status } });
+      throw new ApiError('invalid_transition', 'only an evaluated bid can be awarded', {
+        details: { status: bid.status },
+      });
     }
-    const latest = latestSubmittedRevision((await loadBidRevisions(tx, [bid.id])).get(bid.id) ?? []);
+    const latest = latestSubmittedRevision(
+      (await loadBidRevisions(tx, [bid.id])).get(bid.id) ?? [],
+    );
     if (!latest) throw new ApiError('invalid_transition', 'the bid has no submitted revision');
-    const [existing] = await tx.select({ id: schema.awards.id }).from(schema.awards).where(eq(schema.awards.tenderId, tenderId));
-    if (existing) throw new ApiError('conflict', 'an award has already been decided for this tender');
+    const [existing] = await tx
+      .select({ id: schema.awards.id })
+      .from(schema.awards)
+      .where(eq(schema.awards.tenderId, tenderId));
+    if (existing)
+      throw new ApiError('conflict', 'an award has already been decided for this tender');
     const [award] = await tx
       .insert(schema.awards)
-      .values({ tenderId, bidId: bid.id, status: 'decided', contractValueKobo: latest.amountKobo, decidedBy: userId, notes: input.notes ?? null })
+      .values({
+        tenderId,
+        bidId: bid.id,
+        status: 'decided',
+        contractValueKobo: latest.amountKobo,
+        decidedBy: userId,
+        notes: input.notes ?? null,
+      })
       .returning();
-    await tx.update(schema.tenders).set({ version: tender.version + 1 }).where(eq(schema.tenders.id, tenderId));
+    await tx
+      .update(schema.tenders)
+      .set({ version: tender.version + 1 })
+      .where(eq(schema.tenders.id, tenderId));
     await recordAudit(tx, identity, {
       action: 'tender.award_decided',
       entityType: 'award',
@@ -97,7 +147,13 @@ export async function decideAward(
       correlationId: options.correlationId,
     });
     const names = await userNames(tx, [bid.partnerUserId]);
-    return toAwardDto(award!, tender, bid.partnerUserId, names.get(bid.partnerUserId) ?? null, latest.currency);
+    return toAwardDto(
+      award!,
+      tender,
+      bid.partnerUserId,
+      names.get(bid.partnerUserId) ?? null,
+      latest.currency,
+    );
   });
 }
 
@@ -109,15 +165,30 @@ export async function publishAward(
 ): Promise<AwardDto> {
   const userId = requireTendering(identity);
   return withActor(getDb(), ctxFor(identity, options), async (tx) => {
-    const access = await loadTenderAccess(tx, identity, tenderId, { staff: ['tenders.manage'], customer: false });
+    const access = await loadTenderAccess(tx, identity, tenderId, {
+      staff: ['tenders.manage'],
+      customer: false,
+    });
     const { tender } = access;
     assertVersion(tender.version, input.expectedVersion);
     const found = await awardWithBid(tx, tender);
     if (!found) throw new ApiError('not_found', 'no award has been decided');
-    if (found.award.status !== 'decided') throw new ApiError('invalid_transition', 'the award is already published');
-    const transition = evaluateTransition(tenderMachine, { from: tender.status, to: 'awarded', actor: 'staff' });
-    if (!transition.ok) throw new ApiError('invalid_transition', transition.message, { details: { code: transition.code } });
-    const win = evaluateTransition(bidMachine, { from: found.bid.status, to: 'awarded', actor: 'staff' });
+    if (found.award.status !== 'decided')
+      throw new ApiError('invalid_transition', 'the award is already published');
+    const transition = evaluateTransition(tenderMachine, {
+      from: tender.status,
+      to: 'awarded',
+      actor: 'staff',
+    });
+    if (!transition.ok)
+      throw new ApiError('invalid_transition', transition.message, {
+        details: { code: transition.code },
+      });
+    const win = evaluateTransition(bidMachine, {
+      from: found.bid.status,
+      to: 'awarded',
+      actor: 'staff',
+    });
     if (!win.ok) throw new ApiError('invalid_transition', win.message);
     const now = await dbNow(tx);
     const [award] = await tx
@@ -144,7 +215,12 @@ export async function publishAward(
       aggregateId: tenderId,
       organizationId: tender.organizationId,
       actorUserId: userId,
-      payload: { tenderId, awardId: award!.id, winnerUserId: found.bid.partnerUserId, recipientUserIds: recipients },
+      payload: {
+        tenderId,
+        awardId: award!.id,
+        winnerUserId: found.bid.partnerUserId,
+        recipientUserIds: recipients,
+      },
       correlationId: options.correlationId,
     });
     await enqueueJob(tx, {
@@ -162,7 +238,11 @@ export async function publishAward(
       entityId: award!.id,
       organizationId: tender.organizationId,
       before: { status: 'decided', tenderStatus: tender.status },
-      after: { status: 'published', tenderStatus: 'awarded', unsuccessfulBidIds: losers.map((l) => l.id) },
+      after: {
+        status: 'published',
+        tenderStatus: 'awarded',
+        unsuccessfulBidIds: losers.map((l) => l.id),
+      },
       correlationId: options.correlationId,
     });
     return toAwardDto(award!, tender, found.bid.partnerUserId, found.partnerName, found.currency);
@@ -175,13 +255,20 @@ export async function publishAward(
  * sees the award; an unsuccessful bidder learns only that. Before
  * publication partners always get not found.
  */
-export async function getAward(identity: RequestIdentity, tenderId: string, options: ServiceOptions = {}): Promise<AwardDto | AwardOutcomeDto> {
+export async function getAward(
+  identity: RequestIdentity,
+  tenderId: string,
+  options: ServiceOptions = {},
+): Promise<AwardDto | AwardOutcomeDto> {
   const userId = requireTendering(identity);
   return withActor(getDb(), ctxFor(identity, options), async (tx) => {
     const access = await loadTenderAccess(tx, identity, tenderId);
     const { tender } = access;
     if (access.role === 'partner') {
-      const [own] = await tx.select().from(schema.bids).where(and(eq(schema.bids.tenderId, tenderId), eq(schema.bids.partnerUserId, userId)));
+      const [own] = await tx
+        .select()
+        .from(schema.bids)
+        .where(and(eq(schema.bids.tenderId, tenderId), eq(schema.bids.partnerUserId, userId)));
       if (!own || tender.status !== 'awarded') throw new ApiError('not_found', 'award not found');
       const found = await awardWithBid(tx, tender);
       if (!found || !found.award.publishedAt) throw new ApiError('not_found', 'award not found');
@@ -193,13 +280,28 @@ export async function getAward(identity: RequestIdentity, tenderId: string, opti
         outcome: isWinner ? 'awarded' : 'unsuccessful',
         publishedAt: found.award.publishedAt.toISOString(),
         bidStatus: own.status,
-        award: isWinner ? toAwardDto(found.award, tender, own.partnerUserId, identity.session?.user.name ?? null, found.currency) : null,
+        award: isWinner
+          ? toAwardDto(
+              found.award,
+              tender,
+              own.partnerUserId,
+              identity.session?.user.name ?? null,
+              found.currency,
+            )
+          : null,
       } satisfies AwardOutcomeDto;
     }
     const found = await awardWithBid(tx, tender);
     if (!found) throw new ApiError('not_found', 'award not found');
-    if (access.role === 'customer' && !found.award.publishedAt) throw new ApiError('not_found', 'award not found');
-    return toAwardDto(found.award, tender, found.bid.partnerUserId, found.partnerName, found.currency);
+    if (access.role === 'customer' && !found.award.publishedAt)
+      throw new ApiError('not_found', 'award not found');
+    return toAwardDto(
+      found.award,
+      tender,
+      found.bid.partnerUserId,
+      found.partnerName,
+      found.currency,
+    );
   });
 }
 
@@ -212,10 +314,13 @@ export async function respondToAward(
   const userId = requireTendering(identity);
   return withActor(getDb(), ctxFor(identity, options), async (tx) => {
     const access = await loadTenderAccess(tx, identity, tenderId, { customer: false });
-    if (access.role !== 'partner') throw new ApiError('forbidden', 'only the awarded partner responds');
+    if (access.role !== 'partner')
+      throw new ApiError('forbidden', 'only the awarded partner responds');
     const found = await awardWithBid(tx, access.tender);
-    if (!found || !found.award.publishedAt || found.bid.partnerUserId !== userId) throw new ApiError('not_found', 'award not found');
-    if (found.award.status !== 'published') throw new ApiError('invalid_transition', `the award is already ${found.award.status}`);
+    if (!found || !found.award.publishedAt || found.bid.partnerUserId !== userId)
+      throw new ApiError('not_found', 'award not found');
+    if (found.award.status !== 'published')
+      throw new ApiError('invalid_transition', `the award is already ${found.award.status}`);
     const now = await dbNow(tx);
     const [award] = await tx
       .update(schema.awards)
@@ -240,7 +345,13 @@ export async function respondToAward(
       after: { status: award!.status, note: input.note ?? null },
       correlationId: options.correlationId,
     });
-    return toAwardDto(award!, access.tender, userId, identity.session?.user.name ?? null, found.currency);
+    return toAwardDto(
+      award!,
+      access.tender,
+      userId,
+      identity.session?.user.name ?? null,
+      found.currency,
+    );
   });
 }
 
@@ -262,9 +373,21 @@ export async function listMyAwards(
         and(
           eq(schema.bids.partnerUserId, userId),
           eq(schema.tenders.status, 'awarded'),
-          inArray(schema.bids.status, ['awarded', 'unsuccessful', 'evaluated', 'submitted', 'disqualified']),
+          inArray(schema.bids.status, [
+            'awarded',
+            'unsuccessful',
+            'evaluated',
+            'submitted',
+            'disqualified',
+          ]),
           cursor
-            ? or(lt(schema.tenders.createdAt, cursor.createdAt), and(eq(schema.tenders.createdAt, cursor.createdAt), lt(schema.tenders.id, cursor.id)))
+            ? or(
+                lt(schema.tenders.createdAt, cursor.createdAt),
+                and(
+                  eq(schema.tenders.createdAt, cursor.createdAt),
+                  lt(schema.tenders.id, cursor.id),
+                ),
+              )
             : undefined,
         ),
       )
@@ -283,7 +406,15 @@ export async function listMyAwards(
         outcome: isWinner ? 'awarded' : 'unsuccessful',
         publishedAt: found.award.publishedAt.toISOString(),
         bidStatus: r.bid.status,
-        award: isWinner ? toAwardDto(found.award, r.tender, userId, identity.session?.user.name ?? null, found.currency) : null,
+        award: isWinner
+          ? toAwardDto(
+              found.award,
+              r.tender,
+              userId,
+              identity.session?.user.name ?? null,
+              found.currency,
+            )
+          : null,
       });
     }
     const last = rows.length > query.limit ? page[page.length - 1] : null;

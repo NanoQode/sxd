@@ -12,5 +12,8 @@ const idParams = z.object({ id: uuidSchema });
 export const GET = route<{ params: Promise<{ id: string }> }>(async (req, ctx) => {
   const { rt, fa } = await financeContext(req, ctx.correlationId);
   const { id } = await params(ctx, idParams);
-  return json({ items: await listReceiptsForInvoice(rt, fa, id) }, { correlationId: ctx.correlationId });
+  return json(
+    { items: await listReceiptsForInvoice(rt, fa, id) },
+    { correlationId: ctx.correlationId },
+  );
 });

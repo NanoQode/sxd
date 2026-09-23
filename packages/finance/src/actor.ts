@@ -1,6 +1,11 @@
 import { sql } from 'drizzle-orm';
 import { ApiError } from '@simplexd/contracts';
-import { applyActorContext, systemContext, type ActorContext, type Transaction } from '@simplexd/db';
+import {
+  applyActorContext,
+  systemContext,
+  type ActorContext,
+  type Transaction,
+} from '@simplexd/db';
 import {
   anonymousActor,
   assertAllowed,
@@ -66,7 +71,11 @@ export function assertStaff(
   assertAllowed(authorizeStaff(fa.actor, permission, resource));
 }
 
-export function assertOrg(fa: FinanceActor, permission: OrgPermission, resource: ResourceRef): void {
+export function assertOrg(
+  fa: FinanceActor,
+  permission: OrgPermission,
+  resource: ResourceRef,
+): void {
   if (!fa.actor.userId) throw new ApiError('unauthenticated', 'sign in required');
   assertAllowed(authorizeOrg(fa.actor, permission, resource));
 }

@@ -31,28 +31,66 @@ describe('unit normalisation', () => {
     expect(canonicalUnit('m³')).toBe('m3');
     expect(canonicalUnit('Bags')).toBe('bag');
     expect(canonicalUnit('ton')).toBe('ton');
-    expect(resolveConversion('m³', 'cubic metre')).toMatchObject({ ok: true, conversion: { direction: 'identity' } });
-    expect(resolveConversion('trip', 'm3')).toMatchObject({ ok: false, reason: 'unit_conversion_unknown' });
-    expect(resolveConversion('bag', 'kg')).toMatchObject({ ok: false, reason: 'unit_conversion_unknown' });
+    expect(resolveConversion('m³', 'cubic metre')).toMatchObject({
+      ok: true,
+      conversion: { direction: 'identity' },
+    });
+    expect(resolveConversion('trip', 'm3')).toMatchObject({
+      ok: false,
+      reason: 'unit_conversion_unknown',
+    });
+    expect(resolveConversion('bag', 'kg')).toMatchObject({
+      ok: false,
+      reason: 'unit_conversion_unknown',
+    });
   });
 
   it('applies a declared factor in either direction and rejects unrelated or invalid declarations', () => {
-    const declared = { fromUnit: 'trip', toUnit: 'm3', factor: '5', basis: 'supplier_declared' as const };
-    expect(convertQuantity({ quantity: '3', fromUnit: 'trips', toUnit: 'm³', declaredConversion: declared })).toMatchObject({
+    const declared = {
+      fromUnit: 'trip',
+      toUnit: 'm3',
+      factor: '5',
+      basis: 'supplier_declared' as const,
+    };
+    expect(
+      convertQuantity({
+        quantity: '3',
+        fromUnit: 'trips',
+        toUnit: 'm³',
+        declaredConversion: declared,
+      }),
+    ).toMatchObject({
       ok: true,
       quantity: '15',
       conversion: { direction: 'declared', basis: 'supplier_declared' },
     });
-    expect(convertQuantity({ quantity: '12', fromUnit: 'm3', toUnit: 'trip', declaredConversion: declared })).toMatchObject({
+    expect(
+      convertQuantity({
+        quantity: '12',
+        fromUnit: 'm3',
+        toUnit: 'trip',
+        declaredConversion: declared,
+      }),
+    ).toMatchObject({
       ok: true,
       quantity: '2.4',
       conversion: { direction: 'inverted' },
     });
     expect(
-      resolveConversion('bag', 'kg', { fromUnit: 'trip', toUnit: 'm3', factor: '5', basis: 'staff_measured' }),
+      resolveConversion('bag', 'kg', {
+        fromUnit: 'trip',
+        toUnit: 'm3',
+        factor: '5',
+        basis: 'staff_measured',
+      }),
     ).toMatchObject({ ok: false, reason: 'unit_conversion_unknown' });
     expect(
-      resolveConversion('bag', 'kg', { fromUnit: 'bag', toUnit: 'kg', factor: '0', basis: 'staff_measured' }),
+      resolveConversion('bag', 'kg', {
+        fromUnit: 'bag',
+        toUnit: 'kg',
+        factor: '0',
+        basis: 'staff_measured',
+      }),
     ).toMatchObject({ ok: false, reason: 'invalid_factor' });
     expect(convertQuantity({ quantity: 'lots', fromUnit: 'bag', toUnit: 'bag' })).toMatchObject({
       ok: false,
@@ -64,7 +102,13 @@ describe('unit normalisation', () => {
 describe('compareDeliveredCost', () => {
   const items = [
     { itemId: 'sand', material: 'sand', specification: 'sharp sand', unit: 'm3', quantity: '20' },
-    { itemId: 'cement', material: 'cement', specification: '42.5R 50kg', unit: 'bag', quantity: '100' },
+    {
+      itemId: 'cement',
+      material: 'cement',
+      specification: '42.5R 50kg',
+      unit: 'bag',
+      quantity: '100',
+    },
   ];
 
   it('ranks fully comparable suppliers by goods plus delivery and surfaces unknown conversions honestly', () => {
@@ -75,7 +119,17 @@ describe('compareDeliveredCost', () => {
         currency: 'NGN',
         deliveryKobo: '5000000',
         lines: [
-          { itemId: 'sand', unitPriceKobo: '9000000', quantityUnit: 'trip', declaredConversion: { fromUnit: 'trip', toUnit: 'm3', factor: '5', basis: 'supplier_declared' } },
+          {
+            itemId: 'sand',
+            unitPriceKobo: '9000000',
+            quantityUnit: 'trip',
+            declaredConversion: {
+              fromUnit: 'trip',
+              toUnit: 'm3',
+              factor: '5',
+              basis: 'supplier_declared',
+            },
+          },
           { itemId: 'cement', unitPriceKobo: '1200000', quantityUnit: 'bags' },
         ],
         leadTimeDays: 3,
@@ -128,11 +182,22 @@ describe('compareDeliveredCost', () => {
       rank: null,
     });
     expect(b?.unknowns).toEqual([
-      { itemId: 'sand', reason: 'unit_conversion_unknown', message: expect.stringContaining('trip') },
+      {
+        itemId: 'sand',
+        reason: 'unit_conversion_unknown',
+        message: expect.stringContaining('trip'),
+      },
     ]);
     // C did not state delivery: goods known, total unknown.
-    expect(c).toMatchObject({ goodsKobo: '130000000', deliveryKobo: null, totalDeliveredKobo: null, rank: null });
-    expect(c?.unknowns).toEqual([{ itemId: null, reason: 'delivery_unknown', message: 'delivery cost not stated' }]);
+    expect(c).toMatchObject({
+      goodsKobo: '130000000',
+      deliveryKobo: null,
+      totalDeliveredKobo: null,
+      rank: null,
+    });
+    expect(c?.unknowns).toEqual([
+      { itemId: null, reason: 'delivery_unknown', message: 'delivery cost not stated' },
+    ]);
     expect(result.ranked).toEqual(['r1']);
   });
 
@@ -145,10 +210,28 @@ describe('compareDeliveredCost', () => {
           supplierLabel: 'A',
           currency: 'NGN',
           deliveryKobo: '0',
-          lines: [{ itemId: 'sand', unitPriceKobo: '1000000', quantityUnit: 'trip', declaredConversion: { fromUnit: 'trip', toUnit: 'm3', factor: '5', basis: 'staff_measured' } }],
+          lines: [
+            {
+              itemId: 'sand',
+              unitPriceKobo: '1000000',
+              quantityUnit: 'trip',
+              declaredConversion: {
+                fromUnit: 'trip',
+                toUnit: 'm3',
+                factor: '5',
+                basis: 'staff_measured',
+              },
+            },
+          ],
         },
         { responseId: 'r2', supplierLabel: 'B', currency: 'NGN', deliveryKobo: '0', lines: [] },
-        { responseId: 'r3', supplierLabel: 'C', currency: 'USD', deliveryKobo: '0', lines: [{ itemId: 'sand', unitPriceKobo: '100', quantityUnit: 'm3' }] },
+        {
+          responseId: 'r3',
+          supplierLabel: 'C',
+          currency: 'USD',
+          deliveryKobo: '0',
+          lines: [{ itemId: 'sand', unitPriceKobo: '100', quantityUnit: 'm3' }],
+        },
       ],
       { currency: 'NGN' },
     );
@@ -174,8 +257,18 @@ describe('delivery variance and discrepancy maths', () => {
       { lineId: 'l1', quantityReceived: '30' },
     ]);
     expect(partial.status).toBe('partially_delivered');
-    expect(partial.lines[0]).toMatchObject({ received: '90', outstanding: '10', excess: '0', status: 'short', outstandingValueKobo: '12000000' });
-    expect(partial.lines[1]).toMatchObject({ received: '0', status: 'not_received', outstandingValueKobo: '30000000' });
+    expect(partial.lines[0]).toMatchObject({
+      received: '90',
+      outstanding: '10',
+      excess: '0',
+      status: 'short',
+      outstandingValueKobo: '12000000',
+    });
+    expect(partial.lines[1]).toMatchObject({
+      received: '0',
+      status: 'not_received',
+      outstandingValueKobo: '30000000',
+    });
     expect(purchaseOrderStatusAfterDelivery(partial.status)).toBe('partially_delivered');
 
     const done = deliveryVariance(ordered, [

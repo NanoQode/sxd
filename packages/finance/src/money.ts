@@ -107,7 +107,10 @@ export async function loadTaxTreatment(
     .where(eq(schema.taxTreatments.key, key));
   if (!row) throw new ApiError('validation_failed', `unknown tax treatment "${key}"`);
   if (!row.active) {
-    throw new ApiError('validation_failed', `tax treatment "${key}" is not active (pending accountant review)`);
+    throw new ApiError(
+      'validation_failed',
+      `tax treatment "${key}" is not active (pending accountant review)`,
+    );
   }
   return {
     key: row.key,

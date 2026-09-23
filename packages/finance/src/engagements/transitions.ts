@@ -76,9 +76,13 @@ export async function transitionEngagement(
     });
   }
   if (input.expectedVersion !== undefined && sr.version !== input.expectedVersion) {
-    throw new ApiError('version_conflict', 'this request changed since you loaded it; reload and try again', {
-      details: { currentVersion: sr.version },
-    });
+    throw new ApiError(
+      'version_conflict',
+      'this request changed since you loaded it; reload and try again',
+      {
+        details: { currentVersion: sr.version },
+      },
+    );
   }
   const patch: Partial<typeof schema.serviceRequests.$inferInsert> = {
     ...input.patch,
@@ -93,11 +97,16 @@ export async function transitionEngagement(
   const updated = await tx
     .update(schema.serviceRequests)
     .set(patch)
-    .where(and(eq(schema.serviceRequests.id, sr.id), eq(schema.serviceRequests.version, sr.version)))
+    .where(
+      and(eq(schema.serviceRequests.id, sr.id), eq(schema.serviceRequests.version, sr.version)),
+    )
     .returning();
   const next = updated[0];
   if (!next) {
-    throw new ApiError('version_conflict', 'this request changed since you loaded it; reload and try again');
+    throw new ApiError(
+      'version_conflict',
+      'this request changed since you loaded it; reload and try again',
+    );
   }
   const metadata = {
     effect: decision.rule.effect ?? null,

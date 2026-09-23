@@ -9,5 +9,7 @@ export const dynamic = 'force-dynamic';
 export const GET = route(async (req, ctx) => {
   const identity = await getIdentity();
   const query = parseQuery(req, partnerBidListQuerySchema);
-  return json(await listMyBids(identity, query, { correlationId: ctx.correlationId }), { correlationId: ctx.correlationId });
+  return json(await listMyBids(identity, query, { correlationId: ctx.correlationId }), {
+    correlationId: ctx.correlationId,
+  });
 });

@@ -74,7 +74,10 @@ export async function postJournal(
   if (draft.reversalOfBusinessEventRef) {
     const original = await findJournalByRef(tx, draft.reversalOfBusinessEventRef);
     if (!original) {
-      throw new ApiError('conflict', `cannot reverse ${draft.reversalOfBusinessEventRef}: journal not found`);
+      throw new ApiError(
+        'conflict',
+        `cannot reverse ${draft.reversalOfBusinessEventRef}: journal not found`,
+      );
     }
     reversalOfJournalId = original.id;
   }
@@ -116,7 +119,9 @@ export async function postJournal(
 }
 
 /** Sum of debits and credits over every posted line; equal when the ledger balances. */
-export async function ledgerTotals(tx: DbExecutor): Promise<{ debitKobo: bigint; creditKobo: bigint }> {
+export async function ledgerTotals(
+  tx: DbExecutor,
+): Promise<{ debitKobo: bigint; creditKobo: bigint }> {
   const res = await tx.execute<{ d: string; c: string }>(
     sql`select coalesce(sum(debit_kobo),0)::text as d, coalesce(sum(credit_kobo),0)::text as c from journal_lines`,
   );

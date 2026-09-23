@@ -9,11 +9,16 @@ export const dynamic = 'force-dynamic';
 export const GET = route(async (req, ctx) => {
   const identity = await getIdentity();
   const query = parseQuery(req, rfqListQuerySchema);
-  return json(await listRfqs(identity, query, { correlationId: ctx.correlationId }), { correlationId: ctx.correlationId });
+  return json(await listRfqs(identity, query, { correlationId: ctx.correlationId }), {
+    correlationId: ctx.correlationId,
+  });
 });
 
 export const POST = route(async (req, ctx) => {
   const identity = await getIdentity();
   const body = await parseJson(req, rfqCreateSchema);
-  return json(await createRfq(identity, body, { correlationId: ctx.correlationId }), { status: 201, correlationId: ctx.correlationId });
+  return json(await createRfq(identity, body, { correlationId: ctx.correlationId }), {
+    status: 201,
+    correlationId: ctx.correlationId,
+  });
 });

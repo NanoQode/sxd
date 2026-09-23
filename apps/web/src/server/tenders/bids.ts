@@ -8,7 +8,14 @@ import {
   type BidSubmit,
   type Page,
 } from '@simplexd/contracts';
-import { appendOutbox, getDb, schema, withActor, type DbExecutor, type Transaction } from '@simplexd/db';
+import {
+  appendOutbox,
+  getDb,
+  schema,
+  withActor,
+  type DbExecutor,
+  type Transaction,
+} from '@simplexd/db';
 import { assertAllowed, authorizeStaff } from '@simplexd/domain/authz';
 import { submissionDecision } from '@simplexd/domain/tenders';
 import { bidMachine, evaluateTransition } from '@simplexd/domain/workflow';
@@ -51,16 +58,27 @@ interface OwnBid {
   bid: BidRow;
 }
 
-async function loadOwnBid(tx: DbExecutor, identity: RequestIdentity, bidId: string): Promise<OwnBid> {
+async function loadOwnBid(
+  tx: DbExecutor,
+  identity: RequestIdentity,
+  bidId: string,
+): Promise<OwnBid> {
   const userId = identity.session!.user.id;
   const [bid] = await tx.select().from(schema.bids).where(eq(schema.bids.id, bidId));
   if (!bid || bid.partnerUserId !== userId) throw new ApiError('not_found', 'bid not found');
-  const access = await loadTenderAccess(tx, identity, bid.tenderId, { partner: 'partner.bids.submit', customer: false });
+  const access = await loadTenderAccess(tx, identity, bid.tenderId, {
+    partner: 'partner.bids.submit',
+    customer: false,
+  });
   if (access.role !== 'partner') throw new ApiError('not_found', 'bid not found');
   return { access, bid };
 }
 
-async function assertSubmissionOpen(tx: DbExecutor, tender: TenderRow, clientClaimedTime?: string | null): Promise<string> {
+async function assertSubmissionOpen(
+  tx: DbExecutor,
+  tender: TenderRow,
+  clientClaimedTime?: string | null,
+): Promise<string> {
   const now = await dbNow(tx);
   if (!OPEN_STATUSES.has(tender.status)) {
     throw new ApiError('deadline_passed', 'the tender is no longer accepting submissions', {
@@ -74,24 +92,41 @@ async function assertSubmissionOpen(tx: DbExecutor, tender: TenderRow, clientCla
   });
   if (!decision.allowed) {
     throw new ApiError('deadline_passed', 'the submission deadline has passed', {
-      details: { reason: decision.reason, effectiveDeadlineAt: decision.effectiveDeadlineAt, serverNow: now.iso, clientClaimedTime: clientClaimedTime ?? null },
+      details: {
+        reason: decision.reason,
+        effectiveDeadlineAt: decision.effectiveDeadlineAt,
+        serverNow: now.iso,
+        clientClaimedTime: clientClaimedTime ?? null,
+      },
     });
   }
   return now.iso;
 }
 
-async function assertOwnAttachments(tx: DbExecutor, userId: string, fileIds: string[]): Promise<void> {
+async function assertOwnAttachments(
+  tx: DbExecutor,
+  userId: string,
+  fileIds: string[],
+): Promise<void> {
   if (fileIds.length === 0) return;
   const files = await tx
     .select({ id: schema.fileObjects.id })
     .from(schema.fileObjects)
-    .where(and(inArray(schema.fileObjects.id, fileIds), eq(schema.fileObjects.ownerUserId, userId)));
+    .where(
+      and(inArray(schema.fileObjects.id, fileIds), eq(schema.fileObjects.ownerUserId, userId)),
+    );
   if (files.length !== new Set(fileIds).size) {
-    throw new ApiError('validation_failed', 'every attachment must be a file you uploaded', { details: { field: 'attachmentFileIds' } });
+    throw new ApiError('validation_failed', 'every attachment must be a file you uploaded', {
+      details: { field: 'attachmentFileIds' },
+    });
   }
 }
 
-async function bidDtoInTx(tx: DbExecutor, bid: BidRow, partnerName: string | null): Promise<BidDto> {
+async function bidDtoInTx(
+  tx: DbExecutor,
+  bid: BidRow,
+  partnerName: string | null,
+): Promise<BidDto> {
   const revisions = (await loadBidRevisions(tx, [bid.id])).get(bid.id) ?? [];
   return toBidDto(bid, revisions, partnerName);
 }
@@ -101,23 +136,36 @@ async function bidDtoInTx(tx: DbExecutor, bid: BidRow, partnerName: string | nul
 /* -------------------------------------------------------------------------- */
 
 /** Creates (or returns) the caller's draft bid on a tender they were invited to. */
-export async function createBid(identity: RequestIdentity, tenderId: string, options: ServiceOptions = {}): Promise<BidDto> {
+export async function createBid(
+  identity: RequestIdentity,
+  tenderId: string,
+  options: ServiceOptions = {},
+): Promise<BidDto> {
   const userId = requireTendering(identity);
   const ctx = ctxFor(identity, options);
   return withActor(getDb(), ctx, async (tx) => {
-    const access = await loadTenderAccess(tx, identity, tenderId, { partner: 'partner.bids.submit', customer: false });
-    if (access.role !== 'partner' || !access.invitation) throw new ApiError('forbidden', 'only invited partners bid');
-    if (access.invitation.status === 'declined') throw new ApiError('invalid_transition', 'the invitation was declined');
+    const access = await loadTenderAccess(tx, identity, tenderId, {
+      partner: 'partner.bids.submit',
+      customer: false,
+    });
+    if (access.role !== 'partner' || !access.invitation)
+      throw new ApiError('forbidden', 'only invited partners bid');
+    if (access.invitation.status === 'declined')
+      throw new ApiError('invalid_transition', 'the invitation was declined');
     await assertSubmissionOpen(tx, access.tender);
     const [existing] = await tx
       .select()
       .from(schema.bids)
       .where(and(eq(schema.bids.tenderId, tenderId), eq(schema.bids.partnerUserId, userId)));
     if (existing) {
-      if (existing.status === 'withdrawn') throw new ApiError('conflict', 'a withdrawn bid cannot be reopened');
+      if (existing.status === 'withdrawn')
+        throw new ApiError('conflict', 'a withdrawn bid cannot be reopened');
       return bidDtoInTx(tx, existing, identity.session?.user.name ?? null);
     }
-    const [row] = await tx.insert(schema.bids).values({ tenderId, partnerUserId: userId, status: 'draft' }).returning();
+    const [row] = await tx
+      .insert(schema.bids)
+      .values({ tenderId, partnerUserId: userId, status: 'draft' })
+      .returning();
     const bid = row!;
     await recordAudit(tx, identity, {
       action: 'bid.created',
@@ -187,8 +235,15 @@ export async function submitBid(
   return withActor(getDb(), ctxFor(identity, options), async (tx) => {
     const { access, bid } = await loadOwnBid(tx, identity, bidId);
     assertVersion(bid.version, input.expectedVersion);
-    const decision = evaluateTransition(bidMachine, { from: bid.status, to: 'submitted', actor: 'partner' });
-    if (!decision.ok) throw new ApiError('invalid_transition', decision.message, { details: { code: decision.code } });
+    const decision = evaluateTransition(bidMachine, {
+      from: bid.status,
+      to: 'submitted',
+      actor: 'partner',
+    });
+    if (!decision.ok)
+      throw new ApiError('invalid_transition', decision.message, {
+        details: { code: decision.code },
+      });
     const nowIso = await assertSubmissionOpen(tx, access.tender, input.clientClaimedTime);
     const revisions = (await loadBidRevisions(tx, [bid.id])).get(bid.id) ?? [];
     const version = (revisions[revisions.length - 1]?.version ?? 0) + 1;
@@ -212,7 +267,12 @@ export async function submitBid(
     // Atomic: the row only changes if the tender is still open on the database clock.
     const updated = await tx
       .update(schema.bids)
-      .set({ status: 'submitted', currentVersion: version, submittedAt: now, version: bid.version + 1 })
+      .set({
+        status: 'submitted',
+        currentVersion: version,
+        submittedAt: now,
+        version: bid.version + 1,
+      })
       .where(
         and(
           eq(schema.bids.id, bidId),
@@ -222,7 +282,9 @@ export async function submitBid(
       )
       .returning({ id: schema.bids.id });
     if (updated.length === 0) {
-      throw new ApiError('deadline_passed', 'the submission deadline has passed', { details: { serverNow: nowIso } });
+      throw new ApiError('deadline_passed', 'the submission deadline has passed', {
+        details: { serverNow: nowIso },
+      });
     }
     await tx.insert(schema.bidRevisions).values({
       bidId,
@@ -238,7 +300,12 @@ export async function submitBid(
     await tx
       .update(schema.tenderInvitations)
       .set({ status: 'submitted', respondedAt: now })
-      .where(and(eq(schema.tenderInvitations.tenderId, bid.tenderId), eq(schema.tenderInvitations.partnerUserId, userId)));
+      .where(
+        and(
+          eq(schema.tenderInvitations.tenderId, bid.tenderId),
+          eq(schema.tenderInvitations.partnerUserId, userId),
+        ),
+      );
     await appendOutbox(tx, {
       eventType: 'bid.submitted',
       aggregateType: 'bid',
@@ -254,7 +321,12 @@ export async function submitBid(
       entityId: bidId,
       organizationId: access.tender.organizationId,
       before: { status: bid.status, currentVersion: bid.currentVersion },
-      after: { status: 'submitted', currentVersion: version, submittedAt: nowIso, clientClaimedTime: input.clientClaimedTime ?? null },
+      after: {
+        status: 'submitted',
+        currentVersion: version,
+        submittedAt: nowIso,
+        clientClaimedTime: input.clientClaimedTime ?? null,
+      },
       correlationId: options.correlationId,
     });
     const [fresh] = await tx.select().from(schema.bids).where(eq(schema.bids.id, bidId));
@@ -272,8 +344,16 @@ export async function withdrawBid(
   return withActor(getDb(), ctxFor(identity, options), async (tx) => {
     const { access, bid } = await loadOwnBid(tx, identity, bidId);
     assertVersion(bid.version, input.expectedVersion);
-    const decision = evaluateTransition(bidMachine, { from: bid.status, to: 'withdrawn', actor: 'partner', reason: input.reason });
-    if (!decision.ok) throw new ApiError('invalid_transition', decision.message, { details: { code: decision.code } });
+    const decision = evaluateTransition(bidMachine, {
+      from: bid.status,
+      to: 'withdrawn',
+      actor: 'partner',
+      reason: input.reason,
+    });
+    if (!decision.ok)
+      throw new ApiError('invalid_transition', decision.message, {
+        details: { code: decision.code },
+      });
     const nowIso = await assertSubmissionOpen(tx, access.tender);
     const now = new Date(nowIso);
     const updated = await tx
@@ -287,11 +367,17 @@ export async function withdrawBid(
         ),
       )
       .returning();
-    if (updated.length === 0) throw new ApiError('deadline_passed', 'the submission deadline has passed');
+    if (updated.length === 0)
+      throw new ApiError('deadline_passed', 'the submission deadline has passed');
     await tx
       .update(schema.tenderInvitations)
       .set({ status: 'viewed', respondedAt: now })
-      .where(and(eq(schema.tenderInvitations.tenderId, bid.tenderId), eq(schema.tenderInvitations.partnerUserId, userId)));
+      .where(
+        and(
+          eq(schema.tenderInvitations.tenderId, bid.tenderId),
+          eq(schema.tenderInvitations.partnerUserId, userId),
+        ),
+      );
     await recordAudit(tx, identity, {
       action: 'bid.withdrawn',
       entityType: 'bid',
@@ -335,7 +421,10 @@ async function readTenderBidsForReviewer(
     .select()
     .from(schema.tenderInvitations)
     .where(eq(schema.tenderInvitations.tenderId, tender.id));
-  const names = await userNames(tx, invitations.map((i) => i.partnerUserId));
+  const names = await userNames(
+    tx,
+    invitations.map((i) => i.partnerUserId),
+  );
 
   let bids: BidRow[] = [];
   const elevated = access.role === 'customer';
@@ -344,10 +433,20 @@ async function readTenderBidsForReviewer(
     bids = await tx.select().from(schema.bids).where(eq(schema.bids.tenderId, tender.id));
     const opened = bids.filter((b) => b.openedAt !== null && b.status !== 'draft');
     const sealed = bids.filter((b) => b.openedAt === null && b.status !== 'draft');
-    const revisions = await loadBidRevisions(tx, opened.map((b) => b.id));
-    await logBidAccess(tx, opened.map((b) => b.id), userId, 'read');
+    const revisions = await loadBidRevisions(
+      tx,
+      opened.map((b) => b.id),
+    );
+    await logBidAccess(
+      tx,
+      opened.map((b) => b.id),
+      userId,
+      'read',
+    );
     const out: BidReadDto[] = [
-      ...opened.map((b) => toBidDto(b, revisions.get(b.id) ?? [], names.get(b.partnerUserId) ?? null)),
+      ...opened.map((b) =>
+        toBidDto(b, revisions.get(b.id) ?? [], names.get(b.partnerUserId) ?? null),
+      ),
       ...sealed.map((b) => toSealedBidSummary(b, names.get(b.partnerUserId) ?? null)),
     ];
     // Before the deadline row-level security hides the bid rows; existence comes from the invitations.
@@ -363,11 +462,17 @@ async function readTenderBidsForReviewer(
   }
 }
 
-export async function listTenderBids(identity: RequestIdentity, tenderId: string, options: ServiceOptions = {}): Promise<BidReadDto[]> {
+export async function listTenderBids(
+  identity: RequestIdentity,
+  tenderId: string,
+  options: ServiceOptions = {},
+): Promise<BidReadDto[]> {
   const userId = requireTendering(identity);
   const ctx = ctxFor(identity, options);
   return withActor(getDb(), ctx, async (tx) => {
-    const access = await loadTenderAccess(tx, identity, tenderId, { partner: 'partner.bids.submit' });
+    const access = await loadTenderAccess(tx, identity, tenderId, {
+      partner: 'partner.bids.submit',
+    });
     if (access.role === 'partner') {
       const [bid] = await tx
         .select()
@@ -379,7 +484,11 @@ export async function listTenderBids(identity: RequestIdentity, tenderId: string
   });
 }
 
-export async function getBid(identity: RequestIdentity, bidId: string, options: ServiceOptions = {}): Promise<BidReadDto> {
+export async function getBid(
+  identity: RequestIdentity,
+  bidId: string,
+  options: ServiceOptions = {},
+): Promise<BidReadDto> {
   const userId = requireTendering(identity);
   const ctx = ctxFor(identity, options);
   return withActor(getDb(), ctx, async (tx) => {
@@ -394,9 +503,15 @@ export async function getBid(identity: RequestIdentity, bidId: string, options: 
       return bidDtoInTx(tx, bid, name);
     }
     // Partner: row-level security only returns the caller's own bid.
-    const [own] = await tx.select().from(schema.bids).where(and(eq(schema.bids.id, bidId), eq(schema.bids.partnerUserId, userId)));
+    const [own] = await tx
+      .select()
+      .from(schema.bids)
+      .where(and(eq(schema.bids.id, bidId), eq(schema.bids.partnerUserId, userId)));
     if (own) {
-      await loadTenderAccess(tx, identity, own.tenderId, { partner: 'partner.bids.submit', customer: false });
+      await loadTenderAccess(tx, identity, own.tenderId, {
+        partner: 'partner.bids.submit',
+        customer: false,
+      });
       return bidDtoInTx(tx, own, identity.session?.user.name ?? null);
     }
     // Customer: only after the tender closed and the bids were opened.
@@ -406,7 +521,8 @@ export async function getBid(identity: RequestIdentity, bidId: string, options: 
     const tenderId = tenderRow.rows[0]?.tender_id;
     if (!tenderId) throw new ApiError('not_found', 'bid not found');
     const access = await loadTenderAccess(tx, identity, tenderId);
-    if (access.role !== 'customer' || !customerMayReadContent(access.tender)) throw new ApiError('not_found', 'bid not found');
+    if (access.role !== 'customer' || !customerMayReadContent(access.tender))
+      throw new ApiError('not_found', 'bid not found');
     const all = await readTenderBidsForReviewer(tx, identity, access, ctx);
     const found = all.find((b) => b.id === bidId);
     if (!found) throw new ApiError('not_found', 'bid not found');
@@ -426,17 +542,33 @@ export async function openBidsInTx(
   options: ServiceOptions,
 ): Promise<string[]> {
   const userId = identity.session!.user.id;
-  assertAllowed(authorizeStaff(identity.actor, 'bids.open_sealed', { type: 'tender', id: access.tender.id, organizationId: access.tender.organizationId }));
+  assertAllowed(
+    authorizeStaff(identity.actor, 'bids.open_sealed', {
+      type: 'tender',
+      id: access.tender.id,
+      organizationId: access.tender.organizationId,
+    }),
+  );
   if (!POST_CLOSE.has(access.tender.status)) {
-    throw new ApiError('invalid_transition', 'sealed bids can only be opened after the tender closes', {
-      details: { status: access.tender.status },
-    });
+    throw new ApiError(
+      'invalid_transition',
+      'sealed bids can only be opened after the tender closes',
+      {
+        details: { status: access.tender.status },
+      },
+    );
   }
   const now = await dbNow(tx);
   const opened = await tx
     .update(schema.bids)
     .set({ openedAt: now.date, openedBy: userId, openReason: reason })
-    .where(and(eq(schema.bids.tenderId, access.tender.id), sql`${schema.bids.openedAt} IS NULL`, sql`${schema.bids.status} <> 'draft'`))
+    .where(
+      and(
+        eq(schema.bids.tenderId, access.tender.id),
+        sql`${schema.bids.openedAt} IS NULL`,
+        sql`${schema.bids.status} <> 'draft'`,
+      ),
+    )
     .returning({ id: schema.bids.id });
   const ids = opened.map((o) => o.id);
   await logBidAccess(tx, ids, userId, 'open', reason);
@@ -473,7 +605,10 @@ export async function openTenderBids(
   requireTendering(identity);
   const ctx = ctxFor(identity, options);
   return withActor(getDb(), ctx, async (tx) => {
-    const access = await loadTenderAccess(tx, identity, tenderId, { staff: ['bids.open_sealed'], customer: false });
+    const access = await loadTenderAccess(tx, identity, tenderId, {
+      staff: ['bids.open_sealed'],
+      customer: false,
+    });
     await openBidsInTx(tx, identity, access, input.reason, options);
     return readTenderBidsForReviewer(tx, identity, access, ctx);
   });
@@ -507,14 +642,20 @@ export async function listMyBids(
           eq(schema.bids.partnerUserId, userId),
           query.status ? eq(schema.bids.status, query.status) : undefined,
           cursor
-            ? or(lt(schema.bids.createdAt, cursor.createdAt), and(eq(schema.bids.createdAt, cursor.createdAt), lt(schema.bids.id, cursor.id)))
+            ? or(
+                lt(schema.bids.createdAt, cursor.createdAt),
+                and(eq(schema.bids.createdAt, cursor.createdAt), lt(schema.bids.id, cursor.id)),
+              )
             : undefined,
         ),
       )
       .orderBy(desc(schema.bids.createdAt), desc(schema.bids.id))
       .limit(query.limit + 1);
     const page = rows.slice(0, query.limit);
-    const revisions = await loadBidRevisions(tx, page.map((r) => r.bid.id));
+    const revisions = await loadBidRevisions(
+      tx,
+      page.map((r) => r.bid.id),
+    );
     const name = identity.session?.user.name ?? null;
     const items = page.map((r) => ({
       ...toBidDto(r.bid, revisions.get(r.bid.id) ?? [], name),

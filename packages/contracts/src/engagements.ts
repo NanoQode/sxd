@@ -31,7 +31,10 @@ export const quoteLineInputSchema = z.object({
   unitAmountKobo: koboStringSchema,
   /** Optional per-line override; the tax treatment supplies the default rate. */
   taxRateBps: z.number().int().min(0).max(10_000).optional(),
-  accountCode: z.string().regex(/^\d{4}$/).optional(),
+  accountCode: z
+    .string()
+    .regex(/^\d{4}$/)
+    .optional(),
 });
 export type QuoteLineInput = z.infer<typeof quoteLineInputSchema>;
 
@@ -110,7 +113,10 @@ const quoteVersionBase = {
       z.object({
         label: z.string().trim().min(1).max(120),
         amountKobo: koboStringSchema,
-        dueDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+        dueDate: z
+          .string()
+          .regex(/^\d{4}-\d{2}-\d{2}$/)
+          .optional(),
       }),
     )
     .max(24)

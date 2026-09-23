@@ -9,5 +9,8 @@ export const dynamic = 'force-dynamic';
 export const GET = route(async (req, { correlationId }) => {
   const { rt, fa } = await financeContext(req, correlationId);
   const query = parseQuery(req, cursorPaginationQuerySchema);
-  return json({ items: await listReconciliationExceptions(rt, fa, { limit: query.limit }) }, { correlationId });
+  return json(
+    { items: await listReconciliationExceptions(rt, fa, { limit: query.limit }) },
+    { correlationId },
+  );
 });

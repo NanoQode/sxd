@@ -25,7 +25,11 @@ export const POST = route<{ params: Promise<{ id: string }> }>(async (req, ctx) 
     identity,
     'POST /api/v1/invoices/{id}/payment-attempts',
     { id, ...body },
-    async () => json(await createPaymentAttempt(rt, fa, id, body), { status: 201, correlationId: ctx.correlationId }),
+    async () =>
+      json(await createPaymentAttempt(rt, fa, id, body), {
+        status: 201,
+        correlationId: ctx.correlationId,
+      }),
     { required: true },
   );
 });

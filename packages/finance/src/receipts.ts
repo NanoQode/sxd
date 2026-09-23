@@ -8,7 +8,11 @@ type ReceiptJoin = {
   receipt: typeof schema.receipts.$inferSelect;
   invoiceNumber: string;
   currency: string;
-  allocation: { paymentAttemptId: string | null; bankReceiptId: string | null; creditNoteId: string | null };
+  allocation: {
+    paymentAttemptId: string | null;
+    bankReceiptId: string | null;
+    creditNoteId: string | null;
+  };
 };
 
 function toReceiptDto(r: ReceiptJoin): ReceiptDto {
@@ -21,7 +25,11 @@ function toReceiptDto(r: ReceiptJoin): ReceiptDto {
     allocationId: r.receipt.allocationId,
     amountKobo: r.receipt.amountKobo.toString(),
     currency: r.currency,
-    source: r.allocation.paymentAttemptId ? 'gateway' : r.allocation.bankReceiptId ? 'bank_transfer' : 'credit_note',
+    source: r.allocation.paymentAttemptId
+      ? 'gateway'
+      : r.allocation.bankReceiptId
+        ? 'bank_transfer'
+        : 'credit_note',
     issuedAt: r.receipt.issuedAt.toISOString(),
   };
 }
@@ -37,7 +45,11 @@ const select = {
   },
 };
 
-export async function getReceipt(rt: FinanceRuntime, fa: FinanceActor, id: string): Promise<ReceiptDto> {
+export async function getReceipt(
+  rt: FinanceRuntime,
+  fa: FinanceActor,
+  id: string,
+): Promise<ReceiptDto> {
   return withActor(rt.db, fa.ctx, async (tx) => {
     const [row] = await tx
       .select(select)
@@ -46,16 +58,31 @@ export async function getReceipt(rt: FinanceRuntime, fa: FinanceActor, id: strin
       .innerJoin(schema.allocations, eq(schema.allocations.id, schema.receipts.allocationId))
       .where(eq(schema.receipts.id, id));
     if (!row) throw new ApiError('not_found', 'receipt not found');
-    assertStaffOrOrg(fa, 'finance.read', 'org.invoices.view', { type: 'invoice', id: row.receipt.invoiceId, organizationId: row.receipt.organizationId });
+    assertStaffOrOrg(fa, 'finance.read', 'org.invoices.view', {
+      type: 'invoice',
+      id: row.receipt.invoiceId,
+      organizationId: row.receipt.organizationId,
+    });
     return toReceiptDto(row);
   });
 }
 
-export async function listReceiptsForInvoice(rt: FinanceRuntime, fa: FinanceActor, invoiceId: string): Promise<ReceiptDto[]> {
+export async function listReceiptsForInvoice(
+  rt: FinanceRuntime,
+  fa: FinanceActor,
+  invoiceId: string,
+): Promise<ReceiptDto[]> {
   return withActor(rt.db, fa.ctx, async (tx) => {
-    const [invoice] = await tx.select({ id: schema.invoices.id, organizationId: schema.invoices.organizationId }).from(schema.invoices).where(eq(schema.invoices.id, invoiceId));
+    const [invoice] = await tx
+      .select({ id: schema.invoices.id, organizationId: schema.invoices.organizationId })
+      .from(schema.invoices)
+      .where(eq(schema.invoices.id, invoiceId));
     if (!invoice) throw new ApiError('not_found', 'invoice not found');
-    assertStaffOrOrg(fa, 'finance.read', 'org.invoices.view', { type: 'invoice', id: invoice.id, organizationId: invoice.organizationId });
+    assertStaffOrOrg(fa, 'finance.read', 'org.invoices.view', {
+      type: 'invoice',
+      id: invoice.id,
+      organizationId: invoice.organizationId,
+    });
     const rows = await tx
       .select(select)
       .from(schema.receipts)

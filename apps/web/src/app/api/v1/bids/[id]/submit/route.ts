@@ -11,7 +11,14 @@ export const POST = route<{ params: Promise<{ id: string }> }>(async (req, ctx) 
   const identity = await getIdentity();
   const { id } = await params(ctx, commercialIdParams);
   const body = await parseJson(req, bidSubmitSchema);
-  return withIdempotency(req, identity, 'POST /api/v1/bids/{id}/submit'.replace('{id}', id), body, async () =>
-    json(await submitBid(identity, id, body, { correlationId: ctx.correlationId }), { correlationId: ctx.correlationId }),
+  return withIdempotency(
+    req,
+    identity,
+    'POST /api/v1/bids/{id}/submit'.replace('{id}', id),
+    body,
+    async () =>
+      json(await submitBid(identity, id, body, { correlationId: ctx.correlationId }), {
+        correlationId: ctx.correlationId,
+      }),
   );
 });

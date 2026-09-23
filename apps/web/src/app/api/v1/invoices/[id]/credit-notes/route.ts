@@ -13,5 +13,8 @@ export const POST = route<{ params: Promise<{ id: string }> }>(async (req, ctx) 
   const { rt, fa } = await financeContext(req, ctx.correlationId);
   const { id } = await params(ctx, idParams);
   const body = await parseJson(req, creditNoteCreateSchema);
-  return json(await issueCreditNote(rt, fa, id, body), { status: 201, correlationId: ctx.correlationId });
+  return json(await issueCreditNote(rt, fa, id, body), {
+    status: 201,
+    correlationId: ctx.correlationId,
+  });
 });

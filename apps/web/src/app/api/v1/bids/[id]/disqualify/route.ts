@@ -10,5 +10,7 @@ export const POST = route<{ params: Promise<{ id: string }> }>(async (req, ctx) 
   const identity = await getIdentity();
   const { id } = await params(ctx, commercialIdParams);
   const body = await parseJson(req, bidDisqualifySchema);
-  return json(await disqualifyBid(identity, id, body, { correlationId: ctx.correlationId }), { correlationId: ctx.correlationId });
+  return json(await disqualifyBid(identity, id, body, { correlationId: ctx.correlationId }), {
+    correlationId: ctx.correlationId,
+  });
 });

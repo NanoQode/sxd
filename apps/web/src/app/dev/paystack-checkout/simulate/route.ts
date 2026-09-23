@@ -21,7 +21,10 @@ export async function POST(req: Request): Promise<Response> {
   }
   const appUrl = process.env.APP_URL ?? 'http://localhost:3000';
   const form = await req.formData();
-  const parsed = formSchema.safeParse({ reference: form.get('reference'), outcome: form.get('outcome') });
+  const parsed = formSchema.safeParse({
+    reference: form.get('reference'),
+    outcome: form.get('outcome'),
+  });
   if (!parsed.success) return new NextResponse('Bad request', { status: 400 });
   const provider = getDevPaymentProvider(appUrl, process.env.APP_ENV);
   try {

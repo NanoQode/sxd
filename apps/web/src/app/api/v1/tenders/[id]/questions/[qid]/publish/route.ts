@@ -8,5 +8,7 @@ export const dynamic = 'force-dynamic';
 export const POST = route<{ params: Promise<{ id: string; qid: string }> }>(async (_req, ctx) => {
   const identity = await getIdentity();
   const { id, qid } = await params(ctx, tenderQuestionParams);
-  return json(await publishTenderAnswer(identity, id, qid, { correlationId: ctx.correlationId }), { correlationId: ctx.correlationId });
+  return json(await publishTenderAnswer(identity, id, qid, { correlationId: ctx.correlationId }), {
+    correlationId: ctx.correlationId,
+  });
 });

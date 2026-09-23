@@ -13,5 +13,7 @@ export const POST = route<{ params: Promise<{ id: string }> }>(async (req, ctx) 
   const { rt, fa } = await financeContext(req, ctx.correlationId);
   const { id } = await params(ctx, idParams);
   const body = await parseJson(req, bankTransferRejectSchema);
-  return json(await rejectBankTransferReceipt(rt, fa, id, body), { correlationId: ctx.correlationId });
+  return json(await rejectBankTransferReceipt(rt, fa, id, body), {
+    correlationId: ctx.correlationId,
+  });
 });

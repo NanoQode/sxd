@@ -12,7 +12,10 @@ const idParams = z.object({ id: uuidSchema });
 export const GET = route<{ params: Promise<{ id: string }> }>(async (req, ctx) => {
   const { rt, fa } = await financeContext(req, ctx.correlationId);
   const { id } = await params(ctx, idParams);
-  return json({ items: await listQuotesForRequest(rt, fa, id) }, { correlationId: ctx.correlationId });
+  return json(
+    { items: await listQuotesForRequest(rt, fa, id) },
+    { correlationId: ctx.correlationId },
+  );
 });
 
 /** POST /api/v1/service-requests/:id/quotes — staff `quotes.issue`: draft a quote from a template or lines. */
@@ -20,5 +23,8 @@ export const POST = route<{ params: Promise<{ id: string }> }>(async (req, ctx) 
   const { rt, fa } = await financeContext(req, ctx.correlationId);
   const { id } = await params(ctx, idParams);
   const body = await parseJson(req, quoteCreateSchema);
-  return json(await createQuote(rt, fa, id, body), { status: 201, correlationId: ctx.correlationId });
+  return json(await createQuote(rt, fa, id, body), {
+    status: 201,
+    correlationId: ctx.correlationId,
+  });
 });

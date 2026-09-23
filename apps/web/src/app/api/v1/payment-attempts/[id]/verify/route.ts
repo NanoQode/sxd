@@ -16,5 +16,7 @@ const idParams = z.object({ id: uuidSchema });
 export const POST = route<{ params: Promise<{ id: string }> }>(async (req, ctx) => {
   const { rt, fa } = await financeContext(req, ctx.correlationId);
   const { id } = await params(ctx, idParams);
-  return json(await verifyPaymentAttempt(rt, fa, { id }, { source: 'verify' }), { correlationId: ctx.correlationId });
+  return json(await verifyPaymentAttempt(rt, fa, { id }, { source: 'verify' }), {
+    correlationId: ctx.correlationId,
+  });
 });

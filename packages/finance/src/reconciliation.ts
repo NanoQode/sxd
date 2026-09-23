@@ -1,12 +1,20 @@
 import { and, desc, eq, gte, lt, lte, sql } from 'drizzle-orm';
-import type { AllocationsExportQuery, PaymentAttemptDto, ReconciliationExceptionDto } from '@simplexd/contracts';
+import type {
+  AllocationsExportQuery,
+  PaymentAttemptDto,
+  ReconciliationExceptionDto,
+} from '@simplexd/contracts';
 import { schema, withActor } from '@simplexd/db';
 import { assertStaff, systemFinanceActor, type FinanceActor } from './actor';
 import { recordAudit } from './audit';
 import { expireQuotes } from './engagements/quotes';
 import { toPaymentAttemptDto, verifyAttemptAsSystem } from './payment-attempts';
 import { pollPendingRefunds } from './refunds';
-import { RECONCILIATION_KIND, addReconciliationException, openReconciliationForDay } from './reconciliation-exceptions';
+import {
+  RECONCILIATION_KIND,
+  addReconciliationException,
+  openReconciliationForDay,
+} from './reconciliation-exceptions';
 import type { FinanceRuntime } from './runtime';
 
 export const RECONCILE_AFTER_SECONDS = 10 * 60;
@@ -27,7 +35,10 @@ export interface ReconcileSummary {
  * day's reconciliation row current. Nothing here settles without the
  * provider confirming the exact attempt.
  */
-export async function reconcilePending(rt: FinanceRuntime, options: { correlationId?: string } = {}): Promise<ReconcileSummary> {
+export async function reconcilePending(
+  rt: FinanceRuntime,
+  options: { correlationId?: string } = {},
+): Promise<ReconcileSummary> {
   const system = systemFinanceActor(options.correlationId);
   const now = rt.now();
   const cutoff = new Date(now.getTime() - RECONCILE_AFTER_SECONDS * 1000);
@@ -35,7 +46,13 @@ export async function reconcilePending(rt: FinanceRuntime, options: { correlatio
     tx
       .select()
       .from(schema.paymentAttempts)
-      .where(and(sql`${schema.paymentAttempts.status} in ('initialized','pending','uncertain')`, lt(schema.paymentAttempts.createdAt, cutoff), sql`${schema.paymentAttempts.provider} <> 'bank_transfer'`))
+      .where(
+        and(
+          sql`${schema.paymentAttempts.status} in ('initialized','pending','uncertain')`,
+          lt(schema.paymentAttempts.createdAt, cutoff),
+          sql`${schema.paymentAttempts.provider} <> 'bank_transfer'`,
+        ),
+      )
       .orderBy(schema.paymentAttempts.createdAt)
       .limit(200),
   );
@@ -44,14 +61,27 @@ export async function reconcilePending(rt: FinanceRuntime, options: { correlatio
   let exceptions = 0;
   for (const attempt of attempts) {
     try {
-      const result = await verifyAttemptAsSystem(rt, attempt.reference, { source: 'reconcile', correlationId: options.correlationId });
+      const result = await verifyAttemptAsSystem(rt, attempt.reference, {
+        source: 'reconcile',
+        correlationId: options.correlationId,
+      });
       reverified += 1;
       if (result.outcome.decision === 'settle') settled += 1;
-      if (result.outcome.decision === 'mismatch' || result.outcome.decision === 'mark_uncertain') exceptions += 1;
+      if (result.outcome.decision === 'mismatch' || result.outcome.decision === 'mark_uncertain')
+        exceptions += 1;
     } catch (err) {
       exceptions += 1;
       await withActor(rt.db, system.ctx, (tx) =>
-        addReconciliationException(tx, { code: 'reverify_failed', message: `${attempt.reference}: ${err instanceof Error ? err.message : 'unknown error'}`, entityType: 'payment_attempt', entityId: attempt.id }, now),
+        addReconciliationException(
+          tx,
+          {
+            code: 'reverify_failed',
+            message: `${attempt.reference}: ${err instanceof Error ? err.message : 'unknown error'}`,
+            entityType: 'payment_attempt',
+            entityId: attempt.id,
+          },
+          now,
+        ),
       );
     }
   }
@@ -75,9 +105,23 @@ export async function reconcilePending(rt: FinanceRuntime, options: { correlatio
     const exceptionCount = (row.exceptions ?? []).length;
     await tx
       .update(schema.reconciliations)
-      .set({ summary, status: exceptionCount > 0 ? 'exceptions' : Number(pending?.n ?? 0) > 0 ? 'in_progress' : 'balanced' })
+      .set({
+        summary,
+        status:
+          exceptionCount > 0
+            ? 'exceptions'
+            : Number(pending?.n ?? 0) > 0
+              ? 'in_progress'
+              : 'balanced',
+      })
       .where(eq(schema.reconciliations.id, row.id));
-    await recordAudit(tx, system, { action: 'reconciliation.run', entityType: 'reconciliation', entityId: row.id, after: summary, actorType: 'job' });
+    await recordAudit(tx, system, {
+      action: 'reconciliation.run',
+      entityType: 'reconciliation',
+      entityId: row.id,
+      after: summary,
+      actorType: 'job',
+    });
     return row.id;
   });
   return { reverified, settled, exceptions, refundsPolled, quotesExpired, reconciliationId };
@@ -95,7 +139,9 @@ export async function listReconciliationAttempts(
       .from(schema.paymentAttempts)
       .where(
         and(
-          query.status ? eq(schema.paymentAttempts.status, query.status) : sql`${schema.paymentAttempts.status} in ('initialized','pending','uncertain','reversed')`,
+          query.status
+            ? eq(schema.paymentAttempts.status, query.status)
+            : sql`${schema.paymentAttempts.status} in ('initialized','pending','uncertain','reversed')`,
           query.environment ? eq(schema.paymentAttempts.environment, query.environment) : undefined,
         ),
       )
@@ -105,7 +151,11 @@ export async function listReconciliationAttempts(
   return rows.map(toPaymentAttemptDto);
 }
 
-export async function listReconciliationExceptions(rt: FinanceRuntime, fa: FinanceActor, options: { limit: number }): Promise<ReconciliationExceptionDto[]> {
+export async function listReconciliationExceptions(
+  rt: FinanceRuntime,
+  fa: FinanceActor,
+  options: { limit: number },
+): Promise<ReconciliationExceptionDto[]> {
   assertStaff(fa, 'finance.reconcile');
   const rows = await withActor(rt.db, fa.ctx, (tx) =>
     tx
@@ -118,7 +168,15 @@ export async function listReconciliationExceptions(rt: FinanceRuntime, fa: Finan
   const out: ReconciliationExceptionDto[] = [];
   for (const row of rows) {
     for (const e of row.exceptions ?? []) {
-      out.push({ reconciliationId: row.id, periodStart: row.periodStart, status: row.status, code: e.code, message: e.message, entityType: e.entityType ?? null, entityId: e.entityId ?? null });
+      out.push({
+        reconciliationId: row.id,
+        periodStart: row.periodStart,
+        status: row.status,
+        code: e.code,
+        message: e.message,
+        entityType: e.entityType ?? null,
+        entityId: e.entityId ?? null,
+      });
     }
   }
   return out;
@@ -147,7 +205,11 @@ export interface AllocationExportRow extends Record<string, unknown> {
  * allocation with its receipt and the journal's debit/credit totals, so an
  * accountant can tie the ledger to the invoices without any provider detail.
  */
-export async function exportAllocations(rt: FinanceRuntime, fa: FinanceActor, query: AllocationsExportQuery): Promise<AllocationExportRow[]> {
+export async function exportAllocations(
+  rt: FinanceRuntime,
+  fa: FinanceActor,
+  query: AllocationsExportQuery,
+): Promise<AllocationExportRow[]> {
   assertStaff(fa, 'finance.export');
   const rows = await withActor(rt.db, fa.ctx, (tx) =>
     tx
@@ -162,39 +224,67 @@ export async function exportAllocations(rt: FinanceRuntime, fa: FinanceActor, qu
       })
       .from(schema.allocations)
       .innerJoin(schema.invoices, eq(schema.invoices.id, schema.allocations.invoiceId))
-      .leftJoin(schema.paymentAttempts, eq(schema.paymentAttempts.id, schema.allocations.paymentAttemptId))
-      .leftJoin(schema.bankTransferReceipts, eq(schema.bankTransferReceipts.id, schema.allocations.bankReceiptId))
+      .leftJoin(
+        schema.paymentAttempts,
+        eq(schema.paymentAttempts.id, schema.allocations.paymentAttemptId),
+      )
+      .leftJoin(
+        schema.bankTransferReceipts,
+        eq(schema.bankTransferReceipts.id, schema.allocations.bankReceiptId),
+      )
       .leftJoin(schema.creditNotes, eq(schema.creditNotes.id, schema.allocations.creditNoteId))
       .leftJoin(schema.receipts, eq(schema.receipts.allocationId, schema.allocations.id))
       .leftJoin(schema.journals, eq(schema.journals.id, schema.allocations.journalId))
       .where(
         and(
-          query.from ? gte(schema.allocations.allocatedAt, new Date(`${query.from}T00:00:00Z`)) : undefined,
-          query.to ? lte(schema.allocations.allocatedAt, new Date(`${query.to}T23:59:59.999Z`)) : undefined,
-          query.organizationId ? eq(schema.allocations.organizationId, query.organizationId) : undefined,
+          query.from
+            ? gte(schema.allocations.allocatedAt, new Date(`${query.from}T00:00:00Z`))
+            : undefined,
+          query.to
+            ? lte(schema.allocations.allocatedAt, new Date(`${query.to}T23:59:59.999Z`))
+            : undefined,
+          query.organizationId
+            ? eq(schema.allocations.organizationId, query.organizationId)
+            : undefined,
         ),
       )
       .orderBy(schema.allocations.allocatedAt)
       .limit(50_000),
   );
-  const journalIds = [...new Set(rows.map((r) => r.allocation.journalId).filter((v): v is string => Boolean(v)))];
+  const journalIds = [
+    ...new Set(rows.map((r) => r.allocation.journalId).filter((v): v is string => Boolean(v))),
+  ];
   const totals = new Map<string, { d: string; c: string }>();
   if (journalIds.length > 0) {
     const agg = await withActor(rt.db, fa.ctx, (tx) =>
       tx
-        .select({ journalId: schema.journalLines.journalId, d: sql<string>`sum(${schema.journalLines.debitKobo})::text`, c: sql<string>`sum(${schema.journalLines.creditKobo})::text` })
+        .select({
+          journalId: schema.journalLines.journalId,
+          d: sql<string>`sum(${schema.journalLines.debitKobo})::text`,
+          c: sql<string>`sum(${schema.journalLines.creditKobo})::text`,
+        })
         .from(schema.journalLines)
-        .where(sql`${schema.journalLines.journalId} = ANY(${sql.raw(`ARRAY[${journalIds.map((id) => `'${id}'`).join(',')}]::uuid[]`)})`)
+        .where(
+          sql`${schema.journalLines.journalId} = ANY(${sql.raw(`ARRAY[${journalIds.map((id) => `'${id}'`).join(',')}]::uuid[]`)})`,
+        )
         .groupBy(schema.journalLines.journalId),
     );
     for (const a of agg) totals.set(a.journalId, { d: a.d, c: a.c });
   }
   await withActor(rt.db, fa.ctx, (tx) =>
-    recordAudit(tx, fa, { action: 'finance.export', entityType: 'allocations', after: { rows: rows.length, ...query } }),
+    recordAudit(tx, fa, {
+      action: 'finance.export',
+      entityType: 'allocations',
+      after: { rows: rows.length, ...query },
+    }),
   );
   return rows.map((r) => {
     const a = r.allocation;
-    const source = a.paymentAttemptId ? 'gateway' : a.bankReceiptId ? 'bank_transfer' : 'credit_note';
+    const source = a.paymentAttemptId
+      ? 'gateway'
+      : a.bankReceiptId
+        ? 'bank_transfer'
+        : 'credit_note';
     const t = a.journalId ? totals.get(a.journalId) : undefined;
     return {
       allocationId: a.id,

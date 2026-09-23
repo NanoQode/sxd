@@ -19,7 +19,12 @@ export const GET = route<{ params: Promise<{ file: string }> }>(async (req, ctx)
   if (file.endsWith('.json')) {
     return json(
       { kind: 'allocations', generatedAt: new Date().toISOString(), filters: query, rows },
-      { correlationId: ctx.correlationId, headers: { 'content-disposition': `attachment; filename="simplexd-allocations-${stamp}.json"` } },
+      {
+        correlationId: ctx.correlationId,
+        headers: {
+          'content-disposition': `attachment; filename="simplexd-allocations-${stamp}.json"`,
+        },
+      },
     );
   }
   return new NextResponse(toCsv(rows), {

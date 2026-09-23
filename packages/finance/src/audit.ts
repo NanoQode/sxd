@@ -1,7 +1,8 @@
 import { appendOutbox, schema, type DbExecutor } from '@simplexd/db';
 import { actorKindOf, isSystemActor, type FinanceActor } from './actor';
 
-const SENSITIVE_KEYS = /password|secret|token|apikey|api_key|ciphertext|wrappeddek|refresh|authorization_code/i;
+const SENSITIVE_KEYS =
+  /password|secret|token|apikey|api_key|ciphertext|wrappeddek|refresh|authorization_code/i;
 
 /** Strips secret-looking keys and serialises bigint kobo for audit snapshots. */
 export function redactForAudit(value: unknown): unknown {
@@ -36,7 +37,8 @@ export async function recordAudit(
   input: AuditInput,
 ): Promise<void> {
   await tx.insert(schema.auditEvents).values({
-    actorType: input.actorType ?? (isSystemActor(fa) ? 'system' : fa.actor.userId ? 'user' : 'anonymous'),
+    actorType:
+      input.actorType ?? (isSystemActor(fa) ? 'system' : fa.actor.userId ? 'user' : 'anonymous'),
     actorUserId: fa.actor.userId,
     impersonationId: null,
     organizationId: input.organizationId ?? fa.ctx.organizationId ?? null,
