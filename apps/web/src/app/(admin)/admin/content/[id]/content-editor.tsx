@@ -87,11 +87,10 @@ export function ContentEditor({ detail, canPublish, currentUserId }: { detail: C
   const dirty = title !== current.title || summary !== (current.summary ?? '') || body !== current.bodyMarkdown || fieldsJson !== (current.fields ? JSON.stringify(current.fields, null, 2) : '');
 
   // Live sanitised preview rendered by the server (same sanitiser as save time).
+  const unchangedBody = body === current.bodyMarkdown && Boolean(current.bodyHtmlSanitized);
+  const displayHtml = unchangedBody ? (current.bodyHtmlSanitized ?? '') : previewHtml;
   useEffect(() => {
-    if (body === current.bodyMarkdown && current.bodyHtmlSanitized) {
-      setPreviewHtml(current.bodyHtmlSanitized);
-      return;
-    }
+    if (unchangedBody) return;
     const controller = new AbortController();
     const handle = setTimeout(async () => {
       setPreviewState('rendering');
@@ -107,7 +106,7 @@ export function ContentEditor({ detail, canPublish, currentUserId }: { detail: C
       clearTimeout(handle);
       controller.abort();
     };
-  }, [body, current.bodyMarkdown, current.bodyHtmlSanitized]);
+  }, [body, unchangedBody]);
 
   function parseFields(): Record<string, unknown> | undefined | 'invalid' {
     if (!fieldsJson.trim()) return undefined;
@@ -295,7 +294,7 @@ export function ContentEditor({ detail, canPublish, currentUserId }: { detail: C
           </CardHeader>
           <CardContent>
             <h2 className="mb-3 font-display text-2xl font-semibold">{title}</h2>
-            <div className="sx-prose" dangerouslySetInnerHTML={{ __html: previewHtml }} />
+            <div className="sx-prose" dangerouslySetInnerHTML={{ __html: displayHtml }} />
           </CardContent>
         </Card>
       </div>

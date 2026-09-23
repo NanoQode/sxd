@@ -11,3 +11,5 @@ export * from './projects';
 export * from './properties';
 export * from './collaboration';
 export * from './commercial';
+export * from './engagements';
+export * from './finance';
