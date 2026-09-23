@@ -12,8 +12,10 @@ export const DEMO_PASSWORD = 'DemoPassword-2026!';
 export const AUTH_DIR = path.join(import.meta.dirname, '.auth');
 export const ROLES = {
   owner: 'owner@demo.simplexd.local',
+  otherOwner: 'other-owner@demo.simplexd.local',
   tenant: 'tenant@demo.simplexd.local',
   contractor: 'contractor@demo.simplexd.local',
+  pm: 'pm@demo.simplexd.local',
   admin: 'admin@demo.simplexd.local',
 } as const;
 export type DemoRole = keyof typeof ROLES;

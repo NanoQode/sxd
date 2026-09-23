@@ -16,7 +16,7 @@ export default async function DevPaystackCheckoutPage({
 }: {
   searchParams: Promise<{ reference?: string; error?: string }>;
 }) {
-  if (process.env.APP_ENV === 'production' || process.env.NODE_ENV === 'production') notFound();
+  if (process.env.APP_ENV === 'production') notFound();
   const { reference, error } = await searchParams;
   const appUrl = process.env.APP_URL ?? 'http://localhost:3000';
   const provider = getDevPaymentProvider(appUrl, process.env.APP_ENV);

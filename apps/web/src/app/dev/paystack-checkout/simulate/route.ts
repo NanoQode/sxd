@@ -16,7 +16,7 @@ const formSchema = z.object({
  * production; never a real gateway.
  */
 export async function POST(req: Request): Promise<Response> {
-  if (process.env.APP_ENV === 'production' || process.env.NODE_ENV === 'production') {
+  if (process.env.APP_ENV === 'production') {
     return new NextResponse('Not found', { status: 404 });
   }
   const appUrl = process.env.APP_URL ?? 'http://localhost:3000';
