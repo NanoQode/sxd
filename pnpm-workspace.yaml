@@ -8,3 +8,9 @@ onlyBuiltDependencies:
   - sharp
   - '@tailwindcss/oxide'
   - unrs-resolver
+
+# Security: better-auth's optional drizzle-kit tooling pulls @esbuild-kit/core-utils,
+# which pins esbuild <=0.18 (GHSA-67mh-4wv8-2f99, development-server request forgery).
+# The loader is never used at runtime; the override moves it to a patched release.
+overrides:
+  '@esbuild-kit/core-utils>esbuild': 0.25.12
