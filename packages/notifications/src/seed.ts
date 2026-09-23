@@ -15,6 +15,35 @@ export const extraNotificationTemplates: Array<{
   bodyText: string;
   variables: string[];
 }> = [
+  // Rentals and maintenance.
+  {
+    key: 'rental_update',
+    channel: 'in_app',
+    subject: '{{title}}',
+    bodyText: '{{message}}',
+    variables: ['title', 'message'],
+  },
+  {
+    key: 'rental_update',
+    channel: 'email',
+    subject: '{{title}}',
+    bodyText: '{{message}}\n\nView: {{linkUrl}}\n\nSimplexD',
+    variables: ['title', 'message', 'linkUrl'],
+  },
+  {
+    key: 'rental_update',
+    channel: 'sms',
+    bodyText: 'SimplexD: {{title}}. {{linkUrl}}',
+    variables: ['title', 'linkUrl'],
+  },
+  {
+    key: 'tenant_invitation',
+    channel: 'email',
+    subject: 'You have been invited to your tenant page',
+    bodyText:
+      'Hello {{name}},\n\nYou have been invited to view your lease, balances and maintenance requests on SimplexD.\n\nAccept the invitation: {{inviteUrl}}\nThe link expires {{expiresAt}}.\n\nSimplexD',
+    variables: ['name', 'inviteUrl', 'expiresAt'],
+  },
   // In-app counterparts of the seeded email/SMS templates.
   {
     key: 'booking_confirmation',

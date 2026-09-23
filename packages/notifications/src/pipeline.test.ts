@@ -171,6 +171,41 @@ describe('notification pipeline', () => {
     expect(rows).toHaveLength(1);
   });
 
+  it('dispatches rental events to the users named in the payload and tenant invitations by email', async () => {
+    const tenant = await createPerson();
+    const overdue = await dispatchOutboxEvent(dbs.app, {
+      id: 515151,
+      type: 'rent.overdue',
+      aggregateType: 'lease',
+      aggregateId: '00000000-0000-4000-8000-000000000051',
+      payload: {
+        leaseId: '00000000-0000-4000-8000-000000000051',
+        recipientUserIds: [tenant.userId],
+      },
+    });
+    expect(overdue.handled).toBe(true);
+    expect(overdue.outcomes.map((o) => o.status).sort()).toEqual(['accepted', 'delivered', 'sent']);
+    const email = mail.outbox.find((m) => m.to[0]?.email === tenant.email);
+    expect(email?.subject).toBe('Rent overdue');
+    expect(email?.text).toContain('/tenant/balances');
+
+    const invite = await dispatchOutboxEvent(dbs.app, {
+      id: 515152,
+      type: 'tenant.invited',
+      aggregateType: 'lease_party',
+      aggregateId: '00000000-0000-4000-8000-000000000052',
+      payload: {
+        email: 'new.tenant@example.test',
+        name: 'Chidi',
+        invitationLink: '/tenant/invitations/accept?token=abc',
+        expiresAt: '2026-10-30T12:00:00.000Z',
+      },
+    });
+    expect(invite.outcomes.map((o) => o.status)).toEqual(['sent']);
+    const inviteMail = mail.outbox.find((m) => m.to[0]?.email === 'new.tenant@example.test');
+    expect(inviteMail?.text).toContain('/tenant/invitations/accept?token=abc');
+  });
+
   it('ignores unknown event types without failing', async () => {
     const result = await dispatchOutboxEvent(dbs.app, {
       id: 1,

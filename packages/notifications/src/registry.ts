@@ -131,7 +131,145 @@ async function customerRecipients(
   return specs;
 }
 
+/**
+ * Rentals and maintenance events. Services put the affected user ids in
+ * `recipientUserIds`; staff-facing events (payouts, SLA breaches) go to the
+ * roles that act on them. Messages carry no amounts beyond what the recipient
+ * can already see in their own portal.
+ */
+function rentalUpdate(opts: {
+  title: (p: Record<string, unknown>) => string;
+  message: (p: Record<string, unknown>) => string;
+  link: (p: Record<string, unknown>, event: OutboxEventLike) => string;
+  channels?: NotificationChannel[];
+  category?: NotificationCategory;
+  staffRoles?: Array<(typeof schema.staffRoleEnum.enumValues)[number]>;
+  entityType: string;
+}): EventResolver {
+  return async ({ tx, event, payload, env, scope }) => {
+    const recipients: RecipientSpec[] = strings(payload['recipientUserIds']).map((userId) => ({
+      userId,
+    }));
+    if (opts.staffRoles) recipients.push(...(await staffWithRoles(tx, opts.staffRoles)));
+    const seen = new Set<string>();
+    const unique = recipients.filter((r) => {
+      const key = r.userId ?? r.email ?? '';
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+    if (unique.length === 0) return [];
+    const linkPath = opts.link(payload, event);
+    return [
+      {
+        templateKey: 'rental_update',
+        category: opts.category ?? 'transactional',
+        channels: opts.channels ?? EMAIL_APP,
+        recipients: unique,
+        variables: {
+          title: opts.title(payload),
+          message: opts.message(payload),
+          linkUrl: `${env.appUrl}${linkPath}`,
+        },
+        dedupeScope: scope,
+        inApp: { linkPath },
+        relatedEntity: {
+          type: opts.entityType,
+          id: isUuid(event.aggregateId) ? event.aggregateId : null,
+        },
+        organizationId: event.organizationId ?? null,
+        correlationId: event.correlationId ?? null,
+      },
+    ];
+  };
+}
+
+const rentalResolvers: Record<string, EventResolver> = {
+  'tenant.invited': async ({ event, payload, env, scope }) => {
+    const email = str(payload['email']);
+    const link = str(payload['invitationLink']);
+    if (!email || !link) return [];
+    return [
+      {
+        templateKey: 'tenant_invitation',
+        category: 'transactional',
+        channels: ['email'],
+        recipients: [{ email, name: str(payload['name']) }],
+        variables: {
+          name: str(payload['name']) ?? 'there',
+          inviteUrl: `${env.appUrl}${link}`,
+          expiresAt: formatWhen(str(payload['expiresAt'])),
+        },
+        dedupeScope: scope,
+        relatedEntity: {
+          type: 'lease_party',
+          id: isUuid(event.aggregateId) ? event.aggregateId : null,
+        },
+        correlationId: event.correlationId ?? null,
+      },
+    ];
+  },
+  'lease.transitioned': rentalUpdate({
+    entityType: 'lease',
+    title: (p) => `Lease ${statusLabel(str(p['to']))}`,
+    message: (p) => `Your lease is now ${statusLabel(str(p['to']))}.`,
+    link: (p, e) => `/tenant/lease/${str(p['leaseId']) ?? e.aggregateId}`,
+  }),
+  'lease.renewed': rentalUpdate({
+    entityType: 'lease',
+    title: () => 'Lease renewed',
+    message: () => 'A renewal of your lease has been recorded. Review the new term and schedule.',
+    link: (p, e) => `/tenant/lease/${str(p['renewalLeaseId']) ?? e.aggregateId}`,
+  }),
+  'rent.invoice_issued': rentalUpdate({
+    entityType: 'lease',
+    title: () => 'Rent invoice issued',
+    message: () =>
+      'A new rent invoice is ready. View the amount due and pay from your tenant page.',
+    link: () => '/tenant/balances',
+    channels: ALL,
+  }),
+  'rent.overdue': rentalUpdate({
+    entityType: 'lease',
+    title: () => 'Rent overdue',
+    message: () =>
+      'A rent charge on your lease is past its due date. Please pay or contact the property manager.',
+    link: () => '/tenant/balances',
+    channels: ALL,
+  }),
+  'tenant.notice': rentalUpdate({
+    entityType: 'lease',
+    title: (p) => str(p['title']) ?? 'Notice from your property manager',
+    message: (p) => str(p['body']) ?? 'Open your tenant page to read the notice.',
+    link: () => '/tenant/notices',
+  }),
+  'owner_statement.issued': rentalUpdate({
+    entityType: 'owner_statement',
+    title: () => 'Owner statement issued',
+    message: () => 'Your property statement for the period is ready to review.',
+    link: (p, e) => `/portal/properties/statements/${str(p['statementId']) ?? e.aggregateId}`,
+  }),
+  'payout.transitioned': rentalUpdate({
+    entityType: 'payout',
+    title: (p) => `Owner payout ${statusLabel(str(p['to']))}`,
+    message: (p) =>
+      `An owner payout moved from ${statusLabel(str(p['from']))} to ${statusLabel(str(p['to']))}.`,
+    link: (p, e) => `/admin/rentals/payouts/${str(p['payoutId']) ?? e.aggregateId}`,
+    channels: ['in_app'],
+    staffRoles: ['finance'],
+  }),
+  'work_order.sla_breached': rentalUpdate({
+    entityType: 'work_order',
+    title: (p) => `Work order SLA breached (${statusLabel(str(p['priority']))} priority)`,
+    message: (p) =>
+      `A ${statusLabel(str(p['priority']))}-priority work order passed its SLA while ${statusLabel(str(p['status']))}.`,
+    link: (p, e) => `/admin/rentals/work-orders/${str(p['workOrderId']) ?? e.aggregateId}`,
+    staffRoles: ['operations_manager'],
+  }),
+};
+
 const resolvers: Record<string, EventResolver> = {
+  ...rentalResolvers,
   'notification.requested': requestedNotification,
 
   'lead.created': async ({ tx, event, payload, env, scope }) => {
