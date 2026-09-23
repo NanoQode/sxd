@@ -1,5 +1,8 @@
 import { z } from 'zod';
 import {
+  adminJobDtoSchema,
+  adminJobListQuerySchema,
+  adminJobListResponseSchema,
   adminMarketListQuerySchema,
   adminMarketListResponseSchema,
   auditEventDtoSchema,
@@ -11,6 +14,7 @@ import {
   importApplySchema,
   importDtoSchema,
   importPreviewRequestSchema,
+  jobRetrySchema,
   listRoutes,
   marketBulkActionSchema,
   marketFlagCreateSchema,
@@ -27,11 +31,14 @@ import {
   observationCreateInputSchema,
   observationListQuerySchema,
   observationReviewInputSchema,
+  outboxRequeueResultSchema,
+  outboxRequeueSchema,
   partnerVerifySchema,
   rankingPolicyActivateSchema,
   rankingPolicyCreateSchema,
   rankingPolicyDtoSchema,
   rankingPolicyPatchSchema,
+  queueSummaryDtoSchema,
   registerRoute,
   researchTaskCreateSchema,
   researchTaskPatchSchema,
@@ -43,13 +50,16 @@ import {
   sourcePatchSchema,
   staffDirectoryQuerySchema,
   staffRoleChangeSchema,
+  stuckOutboxListResponseSchema,
+  stuckOutboxQuerySchema,
   uuidSchema,
   type RouteSpec,
 } from '@simplexd/contracts';
 
 /**
  * OpenAPI registrations for the admin console: market-data administration,
- * platform settings, access management and the audit log. Registration is
+ * platform settings, operations (jobs and outbox), access management and the
+ * audit log. Registration is
  * idempotent so hot reloads never trip the duplicate-operation guard.
  */
 
@@ -66,6 +76,9 @@ function register(spec: RouteSpec): void {
 const tags = ['Admin: market data'];
 const platformTags = ['Admin: platform'];
 const accessTags = ['Admin: access'];
+const operationsTags = ['Admin: operations'];
+const jobIdParams = z.object({ jobId: uuidSchema });
+const eventIdParams = z.object({ eventId: z.coerce.number().int().positive() });
 
 const specs: RouteSpec[] = [
   {
@@ -574,6 +587,65 @@ const specs: RouteSpec[] = [
     auth: 'staff',
     request: { params: keyParams, body: settingPatchSchema },
     responses: { 200: { description: 'Setting' } },
+  },
+  {
+    method: 'get',
+    path: '/api/v1/admin/jobs',
+    summary: 'List jobs by status (dead-letter review)',
+    description:
+      'Newest change first, cursor-paginated. `audit.read` or `platform.settings.manage`. Payloads are never returned (they may hold personal data); only their top-level keys are listed. Errors are sanitized.',
+    tags: operationsTags,
+    operationId: 'adminListJobs',
+    auth: 'staff',
+    request: { query: adminJobListQuerySchema },
+    responses: { 200: { description: 'Jobs page', body: adminJobListResponseSchema } },
+  },
+  {
+    method: 'get',
+    path: '/api/v1/admin/jobs/summary',
+    summary: 'Queue depth, dead jobs and stuck outbox events',
+    tags: operationsTags,
+    operationId: 'adminJobsSummary',
+    auth: 'staff',
+    responses: { 200: { description: 'Queue summary', body: queueSummaryDtoSchema } },
+  },
+  {
+    method: 'post',
+    path: '/api/v1/admin/jobs/{jobId}/retry',
+    summary: 'Retry a dead job',
+    description:
+      'Moves a dead job back to pending with attempts reset and due now. `platform.settings.manage` with a verified authenticator; the reason is written to the audit log (`job.retried`). A job that is not dead answers 409 `conflict`.',
+    tags: operationsTags,
+    operationId: 'adminRetryJob',
+    auth: 'staff',
+    idempotent: true,
+    request: { params: jobIdParams, body: jobRetrySchema },
+    responses: { 200: { description: 'The job, now pending', body: adminJobDtoSchema } },
+  },
+  {
+    method: 'get',
+    path: '/api/v1/admin/outbox/stuck',
+    summary: 'Outbox events the relay stopped claiming',
+    description:
+      'Unpublished events whose attempts reached the relay threshold (20), oldest first, with the total count. Payloads are never returned.',
+    tags: operationsTags,
+    operationId: 'adminListStuckOutbox',
+    auth: 'staff',
+    request: { query: stuckOutboxQuerySchema },
+    responses: { 200: { description: 'Stuck events', body: stuckOutboxListResponseSchema } },
+  },
+  {
+    method: 'post',
+    path: '/api/v1/admin/outbox/{eventId}/requeue',
+    summary: 'Requeue an unpublished outbox event',
+    description:
+      'Resets attempts to 0 and clears the last error so the relay claims the event again. `platform.settings.manage` with a verified authenticator; audited (`outbox_event.requeued`). A published event answers 409 `conflict`.',
+    tags: operationsTags,
+    operationId: 'adminRequeueOutboxEvent',
+    auth: 'staff',
+    idempotent: true,
+    request: { params: eventIdParams, body: outboxRequeueSchema },
+    responses: { 200: { description: 'Requeued event', body: outboxRequeueResultSchema } },
   },
   {
     method: 'get',

@@ -222,9 +222,15 @@ export async function reapStaleJobs(db: DbExecutor, staleAfterMs: number): Promi
 
 export type OutboxRow = typeof s.outboxEvents.$inferSelect;
 
+/**
+ * Unpublished outbox events that failed routing this many times are skipped
+ * by the relay ("stuck") until an operator requeues them from the admin.
+ */
+export const OUTBOX_MAX_ATTEMPTS = 20;
+
 export async function claimOutboxBatch(tx: Transaction, limit: number): Promise<OutboxRow[]> {
   const rows = await tx.execute<Record<string, unknown>>(sql`
-    SELECT * FROM outbox_events WHERE published_at IS NULL AND attempts < 20
+    SELECT * FROM outbox_events WHERE published_at IS NULL AND attempts < ${OUTBOX_MAX_ATTEMPTS}
     ORDER BY id ASC LIMIT ${limit} FOR UPDATE SKIP LOCKED
   `);
   return rows.rows.map((r) => ({

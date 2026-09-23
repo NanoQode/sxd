@@ -7,6 +7,7 @@ export * from './leads';
 export * from './content';
 export * from './portal';
 export * from './admin-market-data';
+export * from './admin-operations';
 export * from './projects';
 export * from './properties';
 export * from './collaboration';
