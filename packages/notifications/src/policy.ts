@@ -119,7 +119,9 @@ export async function loadPolicyFacts(
   const dayStart = new Date(now);
   dayStart.setUTCHours(0, 0, 0, 0);
   const [spend] = await tx
-    .select({ total: sql<string>`coalesce(sum(${schema.deliveryAttempts.estimatedCostKobo}), 0)::text` })
+    .select({
+      total: sql<string>`coalesce(sum(${schema.deliveryAttempts.estimatedCostKobo}), 0)::text`,
+    })
     .from(schema.deliveryAttempts)
     .where(
       and(
@@ -171,7 +173,11 @@ export interface EvaluatePolicyInput {
 export function evaluateChannelPolicy(input: EvaluatePolicyInput): PolicyDecision {
   const { channel, category, recipient, facts } = input;
   const address =
-    channel === 'email' ? recipient.email?.toLowerCase() : channel === 'sms' ? recipient.phoneE164 : null;
+    channel === 'email'
+      ? recipient.email?.toLowerCase()
+      : channel === 'sms'
+        ? recipient.phoneE164
+        : null;
   if (channel !== 'in_app') {
     if (!address) return { action: 'suppress', reason: 'no_address' };
     const suppressed = facts.suppressions.get(`${channel}:${address}`);

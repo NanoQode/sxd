@@ -54,19 +54,30 @@ export async function freshMemberships(tx: Transaction, userId: string): Promise
 }
 
 /**
- * Loads the file, the caller's memberships and the applicable grants. The
- * read is elevated for its duration because organisation-level grants are
- * not visible to a member under the `file_access_grants` policy; the
- * caller's own context is restored before returning so subsequent writes
- * stay under row-level security.
+ * Runs `fn` with the transaction elevated (bypass) and restores the caller's
+ * context afterwards. Used for the file/grant reads that back an explicit
+ * policy decision, and for writes that follow one: organisation-level grants
+ * are invisible to a member under the `file_access_grants` policy, and the
+ * `file_objects` ⇄ `file_access_grants` policies reference each other, which
+ * PostgreSQL refuses as recursive for non-privileged sessions. Every
+ * decision (`decideFileAccess`) runs before the write it authorises.
  */
+export async function elevated<T>(tx: Transaction, ctx: ActorContext, fn: () => Promise<T>): Promise<T> {
+  await applyActorContext(tx, { ...ctx, bypass: true });
+  try {
+    return await fn();
+  } finally {
+    await applyActorContext(tx, { ...ctx, bypass: false });
+  }
+}
+
+/** Loads the file, the caller's fresh memberships and the applicable grants (elevated read). */
 export async function loadFileAccess(
   tx: Transaction,
   ctx: ActorContext,
   fileId: string,
 ): Promise<FileAccessContext | null> {
-  await applyActorContext(tx, { ...ctx, bypass: true });
-  try {
+  return elevated(tx, ctx, async () => {
     const [file] = await tx.select().from(schema.fileObjects).where(eq(schema.fileObjects.id, fileId));
     if (!file || file.deletedAt) return null;
     const memberships = ctx.userId ? await freshMemberships(tx, ctx.userId) : [];
@@ -83,9 +94,7 @@ export async function loadFileAccess(
           (g.organizationId !== null && orgIds.has(g.organizationId))),
     );
     return { file, grants, memberships };
-  } finally {
-    await applyActorContext(tx, { ...ctx, bypass: false });
-  }
+  });
 }
 
 const GRANT_RANK = { view: 1, download: 2 } as const;

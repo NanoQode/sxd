@@ -33,7 +33,10 @@ export async function resolveRecipients(
         .where(inArray(schema.user.id, userIds))
     : [];
   const profiles = userIds.length
-    ? await tx.select().from(schema.userProfiles).where(inArray(schema.userProfiles.userId, userIds))
+    ? await tx
+        .select()
+        .from(schema.userProfiles)
+        .where(inArray(schema.userProfiles.userId, userIds))
     : [];
   const userById = new Map(users.map((u) => [u.id, u]));
   const profileById = new Map(profiles.map((p) => [p.userId, p]));
@@ -73,7 +76,9 @@ export async function organizationMemberSpecs(
     .from(schema.member)
     .where(eq(schema.member.organizationId, organizationId));
   return rows
-    .filter((r) => !roles || roles.includes(r.role) || (r.role === 'admin' && roles.includes('owner')))
+    .filter(
+      (r) => !roles || roles.includes(r.role) || (r.role === 'admin' && roles.includes('owner')),
+    )
     .map((r) => ({ userId: r.userId }));
 }
 

@@ -1,5 +1,12 @@
 import { eq, sql } from 'drizzle-orm';
-import { enqueueJob, sanitizeError, schema, systemContext, withActor, type DbExecutor } from '@simplexd/db';
+import {
+  enqueueJob,
+  sanitizeError,
+  schema,
+  systemContext,
+  withActor,
+  type DbExecutor,
+} from '@simplexd/db';
 import { analyzeSegments, type SmsCategory } from '@simplexd/integrations/sms';
 import type { PipelineEnv } from './env';
 import {
@@ -57,7 +64,10 @@ export class ProviderSet {
 export const DEFERRED_QUEUE = 'notifications-deferred';
 export const DEFERRED_JOB_TYPE = 'notifications.send_deferred';
 
-export function smsCostKobo(body: string, unitCostKobo: number | null | undefined): {
+export function smsCostKobo(
+  body: string,
+  unitCostKobo: number | null | undefined,
+): {
   segments: number;
   estimatedCostKobo: number;
 } {
@@ -196,7 +206,8 @@ export async function recordSendOutcome(
       providerStatus: outcome.providerStatus,
       errorSanitized: outcome.errorSanitized,
       segments: outcome.segments,
-      estimatedCostKobo: outcome.estimatedCostKobo === null ? null : BigInt(outcome.estimatedCostKobo),
+      estimatedCostKobo:
+        outcome.estimatedCostKobo === null ? null : BigInt(outcome.estimatedCostKobo),
       sentAt: outcome.status === 'sent' || outcome.status === 'accepted' ? now : null,
       failedAt: terminalFailure ? now : null,
       attempts: sql`${schema.deliveryAttempts.attempts} + 1`,
@@ -213,11 +224,21 @@ export interface DeferredJobPayload {
 /** Queues a quiet-hours deferral: the attempt stays `queued` with `queued_at` = send time. */
 export async function scheduleDeferredSend(
   tx: DbExecutor,
-  input: DeferredJobPayload & { sendAt: Date; dedupeKey: string; organizationId?: string | null; correlationId?: string | null },
+  input: DeferredJobPayload & {
+    sendAt: Date;
+    dedupeKey: string;
+    organizationId?: string | null;
+    correlationId?: string | null;
+  },
 ): Promise<void> {
   await tx
     .update(schema.deliveryAttempts)
-    .set({ status: 'queued', queuedAt: input.sendAt, errorSanitized: 'quiet_hours', providerStatus: 'deferred' })
+    .set({
+      status: 'queued',
+      queuedAt: input.sendAt,
+      errorSanitized: 'quiet_hours',
+      providerStatus: 'deferred',
+    })
     .where(eq(schema.deliveryAttempts.id, input.attemptId));
   const payload: DeferredJobPayload = {
     attemptId: input.attemptId,
@@ -244,7 +265,10 @@ export async function executeDeferredSend(
   providers = new ProviderSet(db, env),
 ): Promise<SendOutcome | null> {
   const attempt = await withActor(db, systemContext('notifications'), (tx) =>
-    tx.select().from(schema.deliveryAttempts).where(eq(schema.deliveryAttempts.id, payload.attemptId)),
+    tx
+      .select()
+      .from(schema.deliveryAttempts)
+      .where(eq(schema.deliveryAttempts.id, payload.attemptId)),
   );
   const row = attempt[0];
   if (!row || row.status !== 'queued') return null;

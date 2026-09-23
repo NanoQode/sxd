@@ -16,20 +16,9 @@ import type { TemplateVariables } from '@simplexd/integrations/templates';
 
 export type NotificationChannel = 'email' | 'sms' | 'in_app';
 export type NotificationCategory =
-  | 'security'
-  | 'transactional'
-  | 'reminders'
-  | 'digests'
-  | 'marketing';
+  'security' | 'transactional' | 'reminders' | 'digests' | 'marketing';
 export type DeliveryStatus =
-  | 'queued'
-  | 'accepted'
-  | 'sent'
-  | 'delivered'
-  | 'failed'
-  | 'suppressed'
-  | 'bounced'
-  | 'rejected';
+  'queued' | 'accepted' | 'sent' | 'delivered' | 'failed' | 'suppressed' | 'bounced' | 'rejected';
 
 export const NOTIFICATION_CHANNELS: readonly NotificationChannel[] = ['email', 'sms', 'in_app'];
 export const NOTIFICATION_CATEGORIES: readonly NotificationCategory[] = [

@@ -1,9 +1,9 @@
 import 'server-only';
 import { and, desc, eq, inArray, isNull } from 'drizzle-orm';
 import type { FileDto, FileListQuery, Page } from '@simplexd/contracts';
-import { applyActorContext, getDb, schema, withActor } from '@simplexd/db';
+import { getDb, schema, withActor } from '@simplexd/db';
 import type { RequestIdentity } from '@/lib/auth/session';
-import { decideFileAccess, freshMemberships, requireFileAccess } from './access';
+import { decideFileAccess, elevated, freshMemberships, requireFileAccess } from './access';
 import { ctxFor, toFileDto, userIdOf, type FileGrantRow, type ServiceOptions } from './shared';
 
 /** Read models: a single file (view access) and files attached to an entity. */
@@ -48,9 +48,8 @@ export async function listFilesForEntity(
 ): Promise<Page<FileDto>> {
   const userId = userIdOf(identity);
   const ctx = ctxFor(identity, options);
-  return withActor(getDb(), ctx, async (tx) => {
-    await applyActorContext(tx, { ...ctx, bypass: true });
-    try {
+  return withActor(getDb(), ctx, (tx) =>
+    elevated(tx, ctx, async () => {
       const conditions = [
         eq(schema.fileObjects.entityType, query.entityType),
         eq(schema.fileObjects.entityId, query.entityId),
@@ -109,8 +108,6 @@ export async function listFilesForEntity(
         nextCursor: after.length > query.limit && tail ? encodeCursor(tail.createdAt, tail.id) : null,
         total: visible.length,
       };
-    } finally {
-      await applyActorContext(tx, { ...ctx, bypass: false });
-    }
-  });
+    }),
+  );
 }

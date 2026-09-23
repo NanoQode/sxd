@@ -59,7 +59,9 @@ export function formatNaira(kobo: bigint | number | string | null | undefined): 
 
 export function formatWhen(date: Date | string | null | undefined, zone = 'Africa/Lagos'): string {
   if (!date) return 'to be confirmed';
-  const dt = (typeof date === 'string' ? DateTime.fromISO(date) : DateTime.fromJSDate(date)).setZone(zone);
+  const dt = (
+    typeof date === 'string' ? DateTime.fromISO(date) : DateTime.fromJSDate(date)
+  ).setZone(zone);
   return dt.isValid ? dt.toFormat('ccc d LLL yyyy, HH:mm') : String(date);
 }
 
@@ -67,9 +69,11 @@ const requestedNotification: EventResolver = async ({ payload, env, scope, event
   const templateKey = str(payload['templateKey']) ?? str(payload['kind']);
   if (!templateKey) return [];
   const category = (str(payload['category']) as NotificationCategory | null) ?? 'transactional';
-  const channels = (strings(payload['channels']).length
-    ? strings(payload['channels'])
-    : [str(payload['channel']) ?? 'email']) as NotificationChannel[];
+  const channels = (
+    strings(payload['channels']).length
+      ? strings(payload['channels'])
+      : [str(payload['channel']) ?? 'email']
+  ) as NotificationChannel[];
   const recipient: RecipientSpec = {
     userId: str(payload['userId']),
     email: str(payload['email']),
@@ -81,9 +85,7 @@ const requestedNotification: EventResolver = async ({ payload, env, scope, event
     explicit && typeof explicit === 'object'
       ? (explicit as Record<string, string | number>)
       : Object.fromEntries(
-          Object.entries(payload).filter(
-            ([, v]) => typeof v === 'string' || typeof v === 'number',
-          ),
+          Object.entries(payload).filter(([, v]) => typeof v === 'string' || typeof v === 'number'),
         );
   // Organisation invitations are also announced by `invitation.created`; share a scope.
   const dedupeScope =
@@ -104,7 +106,10 @@ const requestedNotification: EventResolver = async ({ payload, env, scope, event
         body: str(payload['body']),
         linkPath: str(payload['linkPath']),
       },
-      relatedEntity: { type: event.aggregateType, id: isUuid(event.aggregateId) ? event.aggregateId : null },
+      relatedEntity: {
+        type: event.aggregateType,
+        id: isUuid(event.aggregateId) ? event.aggregateId : null,
+      },
       organizationId: event.organizationId ?? null,
       correlationId: event.correlationId ?? null,
     },
@@ -114,7 +119,11 @@ const requestedNotification: EventResolver = async ({ payload, env, scope, event
 const isUuid = (v: string | null | undefined): v is string =>
   typeof v === 'string' && /^[0-9a-f-]{36}$/i.test(v);
 
-async function customerRecipients(tx: DbExecutor, organizationId: string | null, extra: Array<string | null | undefined>): Promise<RecipientSpec[]> {
+async function customerRecipients(
+  tx: DbExecutor,
+  organizationId: string | null,
+  extra: Array<string | null | undefined>,
+): Promise<RecipientSpec[]> {
   const specs: RecipientSpec[] = organizationId
     ? await organizationMemberSpecs(tx, organizationId, CUSTOMER_ROLES)
     : [];
@@ -130,7 +139,10 @@ const resolvers: Record<string, EventResolver> = {
     const [lead] = await tx.select().from(schema.leads).where(eq(schema.leads.id, leadId));
     if (!lead) return [];
     const [service] = lead.interestServiceId
-      ? await tx.select({ name: schema.services.name }).from(schema.services).where(eq(schema.services.id, lead.interestServiceId))
+      ? await tx
+          .select({ name: schema.services.name })
+          .from(schema.services)
+          .where(eq(schema.services.id, lead.interestServiceId))
       : [];
     const staff = await staffWithRoles(tx, ['operations_manager', 'super_admin']);
     if (staff.length === 0) return [];
@@ -178,7 +190,10 @@ const resolvers: Record<string, EventResolver> = {
 
   'service_request.transitioned': async ({ tx, event, payload, env, scope }) => {
     const id = str(payload['serviceRequestId']) ?? event.aggregateId;
-    const [sr] = await tx.select().from(schema.serviceRequests).where(eq(schema.serviceRequests.id, id));
+    const [sr] = await tx
+      .select()
+      .from(schema.serviceRequests)
+      .where(eq(schema.serviceRequests.id, id));
     if (!sr) return [];
     const to = str(payload['to']) ?? sr.status;
     const recipients: RecipientSpec[] = [{ userId: sr.requestedByUserId }];
@@ -208,11 +223,20 @@ const resolvers: Record<string, EventResolver> = {
   },
 
   'invitation.created': async ({ tx, event, payload, env }) => {
-    const [invite] = await tx.select().from(schema.invitation).where(eq(schema.invitation.id, event.aggregateId));
+    const [invite] = await tx
+      .select()
+      .from(schema.invitation)
+      .where(eq(schema.invitation.id, event.aggregateId));
     const email = (str(payload['email']) ?? invite?.email ?? '').toLowerCase();
     if (!email || !invite) return [];
-    const [org] = await tx.select({ name: schema.organization.name }).from(schema.organization).where(eq(schema.organization.id, invite.organizationId));
-    const [inviter] = await tx.select({ name: schema.user.name }).from(schema.user).where(eq(schema.user.id, invite.inviterId));
+    const [org] = await tx
+      .select({ name: schema.organization.name })
+      .from(schema.organization)
+      .where(eq(schema.organization.id, invite.organizationId));
+    const [inviter] = await tx
+      .select({ name: schema.user.name })
+      .from(schema.user)
+      .where(eq(schema.user.id, invite.inviterId));
     return [
       {
         templateKey: 'invitation',
@@ -238,7 +262,10 @@ const resolvers: Record<string, EventResolver> = {
     const quoteId = str(payload['quoteId']) ?? event.aggregateId;
     const [quote] = await tx.select().from(schema.quotes).where(eq(schema.quotes.id, quoteId));
     if (!quote) return [];
-    const [sr] = await tx.select().from(schema.serviceRequests).where(eq(schema.serviceRequests.id, quote.serviceRequestId));
+    const [sr] = await tx
+      .select()
+      .from(schema.serviceRequests)
+      .where(eq(schema.serviceRequests.id, quote.serviceRequestId));
     if (!sr) return [];
     return [
       {
@@ -263,7 +290,10 @@ const resolvers: Record<string, EventResolver> = {
 
   'invoice.issued': async ({ tx, event, payload, env, scope }) => {
     const invoiceId = str(payload['invoiceId']) ?? event.aggregateId;
-    const [invoice] = await tx.select().from(schema.invoices).where(eq(schema.invoices.id, invoiceId));
+    const [invoice] = await tx
+      .select()
+      .from(schema.invoices)
+      .where(eq(schema.invoices.id, invoiceId));
     if (!invoice) return [];
     return [
       {
@@ -290,7 +320,10 @@ const resolvers: Record<string, EventResolver> = {
   'payment.verified': async ({ tx, event, payload, env, scope }) => {
     const invoiceId = str(payload['invoiceId']);
     if (!invoiceId) return [];
-    const [invoice] = await tx.select().from(schema.invoices).where(eq(schema.invoices.id, invoiceId));
+    const [invoice] = await tx
+      .select()
+      .from(schema.invoices)
+      .where(eq(schema.invoices.id, invoiceId));
     if (!invoice) return [];
     const [receipt] = await tx
       .select()
@@ -321,10 +354,41 @@ const resolvers: Record<string, EventResolver> = {
     ];
   },
 
+  'appointment.booked': (ctx) => appointmentRequest(ctx, 'booking_confirmation', null),
   'appointment.confirmed': (ctx) => appointmentRequest(ctx, 'booking_confirmation', null),
   'appointment.rescheduled': (ctx) => appointmentRequest(ctx, 'visit_change', 'rescheduled'),
   'appointment.cancelled': (ctx) => appointmentRequest(ctx, 'visit_change', 'cancelled'),
-  'appointment.reminder_due': (ctx) => appointmentRequest(ctx, 'booking_reminder', null, 'reminders'),
+  'appointment.reminder_due': (ctx) =>
+    appointmentRequest(ctx, 'booking_reminder', null, 'reminders'),
+
+  'appointment.sync_conflict': async ({ tx, event, payload, env, scope }) => {
+    const id = str(payload['appointmentId']) ?? event.aggregateId;
+    const [appt] = await tx
+      .select()
+      .from(schema.appointments)
+      .where(eq(schema.appointments.id, id));
+    if (!appt) return [];
+    const staffUserId = str(payload['staffUserId']) ?? appt.staffUserId;
+    return [
+      {
+        templateKey: 'urgent_decision',
+        category: 'transactional',
+        channels: EMAIL_APP,
+        recipients: [{ userId: staffUserId }],
+        variables: (r: ResolvedRecipient) => ({
+          name: r.name,
+          subject: `Calendar conflict for ${statusLabel(appt.kind)} at ${formatWhen(appt.startsAt, appt.businessTimeZone)}${str(payload['reason']) ? ` (${str(payload['reason'])})` : ''}`,
+          dueAt: 'as soon as possible',
+          decisionUrl: `${env.appUrl}/admin/bookings/${appt.id}`,
+        }),
+        dedupeScope: scope,
+        inApp: { linkPath: `/admin/bookings/${appt.id}` },
+        relatedEntity: { type: 'appointment', id: appt.id },
+        organizationId: appt.organizationId,
+        correlationId: event.correlationId ?? null,
+      },
+    ];
+  },
 
   'report.released': (ctx) => reportRequest(ctx),
   'project.report.released': (ctx) => reportRequest(ctx),
@@ -333,14 +397,19 @@ const resolvers: Record<string, EventResolver> = {
     const id = str(payload['changeOrderId']) ?? event.aggregateId;
     const [co] = await tx.select().from(schema.changeOrders).where(eq(schema.changeOrders.id, id));
     if (!co) return [];
-    const [project] = await tx.select({ customerContactUserId: schema.projects.customerContactUserId }).from(schema.projects).where(eq(schema.projects.id, co.projectId));
+    const [project] = await tx
+      .select({ customerContactUserId: schema.projects.customerContactUserId })
+      .from(schema.projects)
+      .where(eq(schema.projects.id, co.projectId));
     const dueAt = str(payload['dueAt']);
     return [
       {
         templateKey: 'urgent_decision',
         category: 'transactional',
         channels: ALL,
-        recipients: await customerRecipients(tx, co.organizationId, [project?.customerContactUserId]),
+        recipients: await customerRecipients(tx, co.organizationId, [
+          project?.customerContactUserId,
+        ]),
         variables: (r: ResolvedRecipient) => ({
           name: r.name,
           subject: `Change order #${co.number}: ${co.title}`,
@@ -389,7 +458,10 @@ const resolvers: Record<string, EventResolver> = {
       ? await tx.select().from(schema.awards).where(eq(schema.awards.tenderId, tenderId))
       : await tx.select().from(schema.awards).where(eq(schema.awards.id, event.aggregateId));
     if (!award) return [];
-    const [tender] = await tx.select().from(schema.tenders).where(eq(schema.tenders.id, award.tenderId));
+    const [tender] = await tx
+      .select()
+      .from(schema.tenders)
+      .where(eq(schema.tenders.id, award.tenderId));
     if (!tender) return [];
     const recipients = [
       ...strings(payload['recipientUserIds']).map((userId) => ({ userId })),
@@ -464,7 +536,11 @@ const resolvers: Record<string, EventResolver> = {
         category: 'transactional',
         channels: EMAIL_APP,
         recipients,
-        variables: (r: ResolvedRecipient) => ({ name: r.name, title: task.title, taskUrl: `${env.appUrl}${linkPath}` }),
+        variables: (r: ResolvedRecipient) => ({
+          name: r.name,
+          title: task.title,
+          taskUrl: `${env.appUrl}${linkPath}`,
+        }),
         dedupeScope: scope,
         inApp: { linkPath },
         relatedEntity: { type: 'task', id: task.id },
@@ -476,7 +552,10 @@ const resolvers: Record<string, EventResolver> = {
 
   'message.posted': async ({ tx, event, payload, scope }) => {
     const conversationId = str(payload['conversationId']) ?? event.aggregateId;
-    const [conversation] = await tx.select().from(schema.conversations).where(eq(schema.conversations.id, conversationId));
+    const [conversation] = await tx
+      .select()
+      .from(schema.conversations)
+      .where(eq(schema.conversations.id, conversationId));
     if (!conversation) return [];
     const recipients = strings(payload['recipientUserIds'])
       .filter((u) => u !== (str(payload['senderUserId']) ?? event.actorUserId))
@@ -507,8 +586,13 @@ const resolvers: Record<string, EventResolver> = {
         templateKey: 'project_status_changed',
         category: 'transactional',
         channels: ['in_app'],
-        recipients: await customerRecipients(tx, project.organizationId, [project.customerContactUserId]),
-        variables: { projectName: project.name, statusLabel: statusLabel(str(payload['to']) ?? project.status) },
+        recipients: await customerRecipients(tx, project.organizationId, [
+          project.customerContactUserId,
+        ]),
+        variables: {
+          projectName: project.name,
+          statusLabel: statusLabel(str(payload['to']) ?? project.status),
+        },
         dedupeScope: scope,
         inApp: { linkPath: `/portal/projects/${project.id}` },
         relatedEntity: { type: 'project', id: project.id },
@@ -552,7 +636,12 @@ async function appointmentRequest(
   if (!appt) return [];
   const recipient: RecipientSpec = appt.customerUserId
     ? { userId: appt.customerUserId, timeZone: appt.customerTimeZone }
-    : { email: appt.guestEmail, phone: appt.guestPhoneE164, name: appt.guestName, timeZone: appt.customerTimeZone };
+    : {
+        email: appt.guestEmail,
+        phone: appt.guestPhoneE164,
+        name: appt.guestName,
+        timeZone: appt.customerTimeZone,
+      };
   const manageUrl = `${env.appUrl}/bookings/${appt.manageToken ?? appt.id}`;
   return [
     {
@@ -579,12 +668,21 @@ async function appointmentRequest(
   ];
 }
 
-async function reportRequest({ tx, event, payload, env, scope }: ResolverContext): Promise<NotificationRequest[]> {
+async function reportRequest({
+  tx,
+  event,
+  payload,
+  env,
+  scope,
+}: ResolverContext): Promise<NotificationRequest[]> {
   const id = str(payload['reportId']) ?? event.aggregateId;
   const [report] = await tx.select().from(schema.reports).where(eq(schema.reports.id, id));
   if (!report || !report.customerVisible) return [];
   const [project] = report.projectId
-    ? await tx.select({ customerContactUserId: schema.projects.customerContactUserId }).from(schema.projects).where(eq(schema.projects.id, report.projectId))
+    ? await tx
+        .select({ customerContactUserId: schema.projects.customerContactUserId })
+        .from(schema.projects)
+        .where(eq(schema.projects.id, report.projectId))
     : [];
   const reportUrl = `${env.appUrl}/portal/reports/${report.id}`;
   return [
@@ -592,7 +690,9 @@ async function reportRequest({ tx, event, payload, env, scope }: ResolverContext
       templateKey: 'report_ready',
       category: 'transactional',
       channels: ALL,
-      recipients: await customerRecipients(tx, report.organizationId, [project?.customerContactUserId]),
+      recipients: await customerRecipients(tx, report.organizationId, [
+        project?.customerContactUserId,
+      ]),
       variables: (r: ResolvedRecipient) => ({ name: r.name, reportTitle: report.title, reportUrl }),
       dedupeScope: scope,
       inApp: { linkPath: `/portal/reports/${report.id}` },
@@ -619,19 +719,35 @@ export async function dispatchOutboxEvent(
   const env = resolveEnv(options);
   const resolver = resolvers[event.type];
   if (!resolver) {
-    env.log.info({ eventType: event.type, outboxId: event.id }, 'no notification mapping for event; ignored');
+    env.log.info(
+      { eventType: event.type, outboxId: event.id },
+      'no notification mapping for event; ignored',
+    );
     return { handled: false, requests: 0, outcomes: [], retryable: false };
   }
   const payload =
-    event.payload && typeof event.payload === 'object' ? (event.payload as Record<string, unknown>) : {};
+    event.payload && typeof event.payload === 'object'
+      ? (event.payload as Record<string, unknown>)
+      : {};
   const scope = `outbox:${event.id}`;
-  const requests = await withActor(db, systemContext(event.correlationId ?? 'notifications'), (tx) =>
-    resolver({ tx, event, payload, env, scope }),
+  const requests = await withActor(
+    db,
+    systemContext(event.correlationId ?? 'notifications'),
+    (tx) => resolver({ tx, event, payload, env, scope }),
   );
   const outcomes: EventDispatchResult['outcomes'] = [];
   for (const request of requests) {
-    const result = await dispatchRequest(db, { organizationId: event.organizationId ?? null, ...request }, options);
+    const result = await dispatchRequest(
+      db,
+      { organizationId: event.organizationId ?? null, ...request },
+      options,
+    );
     outcomes.push(...result.outcomes);
   }
-  return { handled: true, requests: requests.length, outcomes, retryable: outcomes.some((o) => o.retryable) };
+  return {
+    handled: true,
+    requests: requests.length,
+    outcomes,
+    retryable: outcomes.some((o) => o.retryable),
+  };
 }

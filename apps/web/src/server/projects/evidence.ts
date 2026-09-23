@@ -13,7 +13,15 @@ import { kindForMime } from '@simplexd/domain/evidence';
 import { recordAudit } from '@/lib/audit';
 import type { RequestIdentity } from '@/lib/auth/session';
 import { PROJECT_READ_CHECKS, isCustomerOf, requireProject, type ProjectAccess } from './access';
-import { ctxFor, decodeCursor, iso, notFound, pageSlice, userIdOf, type ServiceOptions } from './shared';
+import {
+  ctxFor,
+  decodeCursor,
+  iso,
+  notFound,
+  pageSlice,
+  userIdOf,
+  type ServiceOptions,
+} from './shared';
 
 type EvidenceRow = typeof schema.evidence.$inferSelect;
 type FileRow = typeof schema.fileObjects.$inferSelect;
@@ -26,7 +34,10 @@ const EVIDENCE_LINK_CHECKS = [
   { partner: 'partner.evidence.upload' as const },
 ];
 
-export function toEvidenceDto(e: EvidenceRow, file: Pick<FileRow, 'originalName' | 'declaredMime' | 'sizeBytes' | 'status'> | null): EvidenceDto {
+export function toEvidenceDto(
+  e: EvidenceRow,
+  file: Pick<FileRow, 'originalName' | 'declaredMime' | 'sizeBytes' | 'status'> | null,
+): EvidenceDto {
   return {
     id: e.id,
     organizationId: e.organizationId,
@@ -51,13 +62,28 @@ export function toEvidenceDto(e: EvidenceRow, file: Pick<FileRow, 'originalName'
     offlineClientId: e.offlineClientId,
     createdAt: e.createdAt.toISOString(),
     // Storage keys are never exposed.
-    file: file ? { originalName: file.originalName, declaredMime: file.declaredMime, sizeBytes: file.sizeBytes, status: file.status } : null,
+    file: file
+      ? {
+          originalName: file.originalName,
+          declaredMime: file.declaredMime,
+          sizeBytes: file.sizeBytes,
+          status: file.status,
+        }
+      : null,
   };
 }
 
 /** Validates that an uploaded file may be linked as evidence of this project. */
-export async function requireLinkableFile(tx: Transaction, access: ProjectAccess, fileId: string, uploaderUserId: string): Promise<FileRow> {
-  const [file] = await tx.select().from(schema.fileObjects).where(eq(schema.fileObjects.id, fileId));
+export async function requireLinkableFile(
+  tx: Transaction,
+  access: ProjectAccess,
+  fileId: string,
+  uploaderUserId: string,
+): Promise<FileRow> {
+  const [file] = await tx
+    .select()
+    .from(schema.fileObjects)
+    .where(eq(schema.fileObjects.id, fileId));
   if (!file) throw notFound('file');
   const sameOrg = file.organizationId === access.project.organizationId;
   const ownUnattached = file.organizationId === null && file.ownerUserId === uploaderUserId;
@@ -70,17 +96,29 @@ export async function requireLinkableFile(tx: Transaction, access: ProjectAccess
     case 'pending_upload':
     case 'uploaded':
     case 'scanning':
-      throw new ApiError('file_quarantined', 'the file has not passed malware scanning yet; retry after it is scanned', {
-        details: { fileId, status: file.status },
-        retryable: true,
-      });
+      throw new ApiError(
+        'file_quarantined',
+        'the file has not passed malware scanning yet; retry after it is scanned',
+        {
+          details: { fileId, status: file.status },
+          retryable: true,
+        },
+      );
     default:
-      throw new ApiError('file_rejected', `the file is ${file.status} and cannot be used as evidence`, {
-        details: { fileId, status: file.status },
-      });
+      throw new ApiError(
+        'file_rejected',
+        `the file is ${file.status} and cannot be used as evidence`,
+        {
+          details: { fileId, status: file.status },
+        },
+      );
   }
   if (!file.checksumSha256) {
-    throw new ApiError('file_quarantined', 'the file has no checksum yet; finalise the upload first', { details: { fileId } });
+    throw new ApiError(
+      'file_quarantined',
+      'the file has no checksum yet; finalise the upload first',
+      { details: { fileId } },
+    );
   }
   return file;
 }
@@ -101,27 +139,45 @@ export async function linkEvidenceInTx(
 ): Promise<LinkEvidenceResult> {
   const actorId = userIdOf(identity);
   if (input.offlineClientId) {
-    const [existing] = await tx.select().from(schema.evidence).where(eq(schema.evidence.offlineClientId, input.offlineClientId));
+    const [existing] = await tx
+      .select()
+      .from(schema.evidence)
+      .where(eq(schema.evidence.offlineClientId, input.offlineClientId));
     if (existing) {
       if (existing.uploaderUserId !== actorId) {
         throw new ApiError('conflict', 'this offline id was already used by another user');
       }
-      const [file] = await tx.select().from(schema.fileObjects).where(eq(schema.fileObjects.id, existing.fileId));
+      const [file] = await tx
+        .select()
+        .from(schema.fileObjects)
+        .where(eq(schema.fileObjects.id, existing.fileId));
       return { row: existing, file: file!, idempotentReplay: true };
     }
   }
   const file = await requireLinkableFile(tx, access, input.fileId, actorId);
   if (input.siteVisitId) {
-    const [v] = await tx.select({ projectId: schema.siteVisits.projectId }).from(schema.siteVisits).where(eq(schema.siteVisits.id, input.siteVisitId));
-    if (!v || v.projectId !== access.project.id) throw new ApiError('validation_failed', 'siteVisitId does not belong to this project');
+    const [v] = await tx
+      .select({ projectId: schema.siteVisits.projectId })
+      .from(schema.siteVisits)
+      .where(eq(schema.siteVisits.id, input.siteVisitId));
+    if (!v || v.projectId !== access.project.id)
+      throw new ApiError('validation_failed', 'siteVisitId does not belong to this project');
   }
   if (input.reportId) {
-    const [r] = await tx.select({ projectId: schema.reports.projectId }).from(schema.reports).where(eq(schema.reports.id, input.reportId));
-    if (!r || r.projectId !== access.project.id) throw new ApiError('validation_failed', 'reportId does not belong to this project');
+    const [r] = await tx
+      .select({ projectId: schema.reports.projectId })
+      .from(schema.reports)
+      .where(eq(schema.reports.id, input.reportId));
+    if (!r || r.projectId !== access.project.id)
+      throw new ApiError('validation_failed', 'reportId does not belong to this project');
   }
   if (input.defectId) {
-    const [d] = await tx.select({ projectId: schema.defects.projectId }).from(schema.defects).where(eq(schema.defects.id, input.defectId));
-    if (!d || d.projectId !== access.project.id) throw new ApiError('validation_failed', 'defectId does not belong to this project');
+    const [d] = await tx
+      .select({ projectId: schema.defects.projectId })
+      .from(schema.defects)
+      .where(eq(schema.defects.id, input.defectId));
+    if (!d || d.projectId !== access.project.id)
+      throw new ApiError('validation_failed', 'defectId does not belong to this project');
   }
   const [row] = await tx
     .insert(schema.evidence)
@@ -149,7 +205,14 @@ export async function linkEvidenceInTx(
     entityType: 'evidence',
     entityId: row!.id,
     organizationId: access.project.organizationId,
-    after: { projectId: access.project.id, fileId: file.id, kind: row!.kind, siteVisitId: input.siteVisitId ?? null, reportId: input.reportId ?? null, defectId: input.defectId ?? null },
+    after: {
+      projectId: access.project.id,
+      fileId: file.id,
+      kind: row!.kind,
+      siteVisitId: input.siteVisitId ?? null,
+      reportId: input.reportId ?? null,
+      defectId: input.defectId ?? null,
+    },
     correlationId: options.correlationId,
   });
   return { row: row!, file, idempotentReplay: false };
@@ -179,16 +242,22 @@ export async function setEvidencePublication(
 ): Promise<EvidenceDto> {
   const actorId = userIdOf(identity);
   return withActor(getDb(), ctxFor(identity, options), async (tx) => {
-    const [row] = await tx.select().from(schema.evidence).where(and(eq(schema.evidence.id, evidenceId), eq(schema.evidence.projectId, projectId)));
+    const [row] = await tx
+      .select()
+      .from(schema.evidence)
+      .where(and(eq(schema.evidence.id, evidenceId), eq(schema.evidence.projectId, projectId)));
     if (!row) throw notFound('evidence');
-    const access = await requireProject(tx, identity, projectId, [{ staff: 'evidence.approve' }], { createdBy: row.uploaderUserId });
+    const access = await requireProject(tx, identity, projectId, [{ staff: 'evidence.approve' }], {
+      createdBy: row.uploaderUserId,
+    });
     if (input.redactedFileId) await requireLinkableFile(tx, access, input.redactedFileId, actorId);
     const approving = input.publication !== 'restricted';
     const [updated] = await tx
       .update(schema.evidence)
       .set({
         publication: input.publication,
-        redactedFileId: input.publication === 'redacted_public' ? (input.redactedFileId ?? null) : null,
+        redactedFileId:
+          input.publication === 'redacted_public' ? (input.redactedFileId ?? null) : null,
         approvedBy: approving ? actorId : null,
         approvedAt: approving ? new Date() : null,
       })
@@ -209,10 +278,18 @@ export async function setEvidencePublication(
       aggregateId: evidenceId,
       organizationId: access.project.organizationId,
       actorUserId: actorId,
-      payload: { projectId, evidenceId, publication: input.publication, customerContactUserId: access.project.customerContactUserId },
+      payload: {
+        projectId,
+        evidenceId,
+        publication: input.publication,
+        customerContactUserId: access.project.customerContactUserId,
+      },
       correlationId: options.correlationId ?? null,
     });
-    const [file] = await tx.select().from(schema.fileObjects).where(eq(schema.fileObjects.id, updated!.fileId));
+    const [file] = await tx
+      .select()
+      .from(schema.fileObjects)
+      .where(eq(schema.fileObjects.id, updated!.fileId));
     return toEvidenceDto(updated!, file ?? null);
   });
 }
@@ -241,16 +318,28 @@ export async function listEvidence(
           query.kind ? eq(schema.evidence.kind, query.kind) : undefined,
           query.publication ? eq(schema.evidence.publication, query.publication) : undefined,
           customer
-            ? or(inArray(schema.evidence.publication, ['approved', 'redacted_public']), eq(schema.evidence.uploaderUserId, actorId))
+            ? or(
+                inArray(schema.evidence.publication, ['approved', 'redacted_public']),
+                eq(schema.evidence.uploaderUserId, actorId),
+              )
             : undefined,
           cursor
-            ? or(lt(schema.evidence.createdAt, cursor.createdAt), and(eq(schema.evidence.createdAt, cursor.createdAt), lt(schema.evidence.id, cursor.id)))
+            ? or(
+                lt(schema.evidence.createdAt, cursor.createdAt),
+                and(
+                  eq(schema.evidence.createdAt, cursor.createdAt),
+                  lt(schema.evidence.id, cursor.id),
+                ),
+              )
             : undefined,
         ),
       )
       .orderBy(desc(schema.evidence.createdAt), desc(schema.evidence.id))
       .limit(query.limit + 1);
-    const page = pageSlice(rows.map((r) => ({ ...r, createdAt: r.e.createdAt, id: r.e.id })), query.limit);
+    const page = pageSlice(
+      rows.map((r) => ({ ...r, createdAt: r.e.createdAt, id: r.e.id })),
+      query.limit,
+    );
     return { items: page.items.map((r) => toEvidenceDto(r.e, r.f)), nextCursor: page.nextCursor };
   });
 }

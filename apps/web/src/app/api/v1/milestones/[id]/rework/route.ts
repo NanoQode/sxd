@@ -9,5 +9,8 @@ export const dynamic = 'force-dynamic';
 export const POST = route<{ params: Promise<{ id: string }> }>(async (_req, ctx) => {
   const identity = await getIdentity();
   const { id } = await params(ctx, z.object({ id: uuidSchema }));
-  return json(await reworkMilestone(identity, id, { correlationId: ctx.correlationId }), { status: 200, correlationId: ctx.correlationId });
+  return json(await reworkMilestone(identity, id, { correlationId: ctx.correlationId }), {
+    status: 200,
+    correlationId: ctx.correlationId,
+  });
 });

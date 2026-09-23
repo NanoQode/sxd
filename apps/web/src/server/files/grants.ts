@@ -4,7 +4,7 @@ import { ApiError, type FileGrantCreate, type FileGrantDto } from '@simplexd/con
 import { getDb, schema, withActor } from '@simplexd/db';
 import { recordAudit } from '@/lib/audit';
 import type { RequestIdentity } from '@/lib/auth/session';
-import { requireFileAccess } from './access';
+import { elevated, requireFileAccess } from './access';
 import { ctxFor, isSensitivePurpose, toGrantDto, userIdOf, type ServiceOptions } from './shared';
 
 /**
@@ -42,17 +42,19 @@ export async function createGrant(
         .where(eq(schema.organization.id, input.organizationId));
       if (!o) throw new ApiError('not_found', 'organisation not found');
     }
-    const [grant] = await tx
-      .insert(schema.fileAccessGrants)
-      .values({
-        fileId,
-        userId: input.userId ?? null,
-        organizationId: input.organizationId ?? null,
-        level: input.level,
-        grantedBy: userId,
-        expiresAt,
-      })
-      .returning();
+    const [grant] = await elevated(tx, ctx, () =>
+      tx
+        .insert(schema.fileAccessGrants)
+        .values({
+          fileId,
+          userId: input.userId ?? null,
+          organizationId: input.organizationId ?? null,
+          level: input.level,
+          grantedBy: userId,
+          expiresAt,
+        })
+        .returning(),
+    );
     await recordAudit(tx, identity, {
       action: 'file.grant_created',
       entityType: 'file',
@@ -74,17 +76,21 @@ export async function revokeGrant(
   const ctx = ctxFor(identity, options);
   return withActor(getDb(), ctx, async (tx) => {
     const { file } = await requireFileAccess(tx, identity, ctx, fileId, 'manage');
-    const [grant] = await tx
-      .select()
-      .from(schema.fileAccessGrants)
-      .where(and(eq(schema.fileAccessGrants.id, grantId), eq(schema.fileAccessGrants.fileId, fileId)));
+    const [grant] = await elevated(tx, ctx, () =>
+      tx
+        .select()
+        .from(schema.fileAccessGrants)
+        .where(and(eq(schema.fileAccessGrants.id, grantId), eq(schema.fileAccessGrants.fileId, fileId))),
+    );
     if (!grant) throw new ApiError('not_found', 'grant not found');
     if (grant.revokedAt) return toGrantDto(grant);
-    const [updated] = await tx
-      .update(schema.fileAccessGrants)
-      .set({ revokedAt: new Date() })
-      .where(eq(schema.fileAccessGrants.id, grantId))
-      .returning();
+    const [updated] = await elevated(tx, ctx, () =>
+      tx
+        .update(schema.fileAccessGrants)
+        .set({ revokedAt: new Date() })
+        .where(eq(schema.fileAccessGrants.id, grantId))
+        .returning(),
+    );
     await recordAudit(tx, identity, {
       action: 'file.grant_revoked',
       entityType: 'file',
@@ -105,11 +111,13 @@ export async function listGrants(
   const ctx = ctxFor(identity, options);
   return withActor(getDb(), ctx, async (tx) => {
     await requireFileAccess(tx, identity, ctx, fileId, 'manage');
-    const rows = await tx
-      .select()
-      .from(schema.fileAccessGrants)
-      .where(eq(schema.fileAccessGrants.fileId, fileId))
-      .orderBy(desc(schema.fileAccessGrants.createdAt));
+    const rows = await elevated(tx, ctx, () =>
+      tx
+        .select()
+        .from(schema.fileAccessGrants)
+        .where(eq(schema.fileAccessGrants.fileId, fileId))
+        .orderBy(desc(schema.fileAccessGrants.createdAt)),
+    );
     return rows.map(toGrantDto);
   });
 }

@@ -21,8 +21,18 @@ import {
 import { changeOrderMachine, evaluateTransition, findRule } from '@simplexd/domain/workflow';
 import { recordAudit } from '@/lib/audit';
 import type { RequestIdentity } from '@/lib/auth/session';
-import { PROJECT_READ_CHECKS, requireProject, type AccessCheck, type ProjectAccess } from './access';
-import { approvalsForEntity, assertPendingApproval, toApprovalDto, type ApprovalRow } from './approvals';
+import {
+  PROJECT_READ_CHECKS,
+  requireProject,
+  type AccessCheck,
+  type ProjectAccess,
+} from './access';
+import {
+  approvalsForEntity,
+  assertPendingApproval,
+  toApprovalDto,
+  type ApprovalRow,
+} from './approvals';
 import { nextBudgetVersion } from './budgets';
 import {
   assertVersion,
@@ -78,10 +88,17 @@ async function withApprovals(tx: Transaction, co: CoRow): Promise<ChangeOrderDto
   return toDto(co, await approvalsForEntity(tx, 'change_order', co.id));
 }
 
-async function loadChangeOrder(tx: Transaction, identity: RequestIdentity, id: string, checks: AccessCheck[]) {
+async function loadChangeOrder(
+  tx: Transaction,
+  identity: RequestIdentity,
+  id: string,
+  checks: AccessCheck[],
+) {
   const [co] = await tx.select().from(schema.changeOrders).where(eq(schema.changeOrders.id, id));
   if (!co) throw notFound('change order');
-  const access = await requireProject(tx, identity, co.projectId, checks, { createdBy: co.createdBy });
+  const access = await requireProject(tx, identity, co.projectId, checks, {
+    createdBy: co.createdBy,
+  });
   return { co, access };
 }
 
@@ -121,14 +138,22 @@ export async function createChangeOrder(
       entityType: 'change_order',
       entityId: row!.id,
       organizationId: access.project.organizationId,
-      after: { projectId, number: row!.number, amountDeltaKobo: input.amountDeltaKobo, scheduleDeltaDays: input.scheduleDeltaDays },
+      after: {
+        projectId,
+        number: row!.number,
+        amountDeltaKobo: input.amountDeltaKobo,
+        scheduleDeltaDays: input.scheduleDeltaDays,
+      },
       correlationId: options.correlationId,
     });
     return withApprovals(tx, row!);
   });
 }
 
-export async function getChangeOrder(identity: RequestIdentity, id: string): Promise<ChangeOrderDto> {
+export async function getChangeOrder(
+  identity: RequestIdentity,
+  id: string,
+): Promise<ChangeOrderDto> {
   userIdOf(identity);
   return withActor(getDb(), ctxFor(identity), async (tx) => {
     const { co } = await loadChangeOrder(tx, identity, id, PROJECT_READ_CHECKS);
@@ -152,7 +177,15 @@ export async function listChangeOrders(
         and(
           eq(schema.changeOrders.projectId, projectId),
           query.status ? eq(schema.changeOrders.status, query.status) : undefined,
-          cursor ? or(lt(schema.changeOrders.createdAt, cursor.createdAt), and(eq(schema.changeOrders.createdAt, cursor.createdAt), lt(schema.changeOrders.id, cursor.id))) : undefined,
+          cursor
+            ? or(
+                lt(schema.changeOrders.createdAt, cursor.createdAt),
+                and(
+                  eq(schema.changeOrders.createdAt, cursor.createdAt),
+                  lt(schema.changeOrders.id, cursor.id),
+                ),
+              )
+            : undefined,
         ),
       )
       .orderBy(desc(schema.changeOrders.createdAt), desc(schema.changeOrders.id))
@@ -183,7 +216,8 @@ export async function updateChangeOrder(
     if (policyError) throw new ApiError('validation_failed', policyError);
     const { expectedVersion: _v, amountDeltaKobo, ...fields } = input;
     const patch: Partial<typeof schema.changeOrders.$inferInsert> = { version: co.version + 1 };
-    for (const [k, v] of Object.entries(fields)) if (v !== undefined) (patch as Record<string, unknown>)[k] = v;
+    for (const [k, v] of Object.entries(fields))
+      if (v !== undefined) (patch as Record<string, unknown>)[k] = v;
     if (amountDeltaKobo !== undefined) patch.amountDeltaKobo = toKobo(amountDeltaKobo);
     const [updated] = await tx
       .update(schema.changeOrders)
@@ -196,17 +230,36 @@ export async function updateChangeOrder(
       entityType: 'change_order',
       entityId: id,
       organizationId: access.project.organizationId,
-      before: { amountDeltaKobo: co.amountDeltaKobo.toString(), scheduleDeltaDays: co.scheduleDeltaDays, title: co.title },
-      after: { amountDeltaKobo: updated.amountDeltaKobo.toString(), scheduleDeltaDays: updated.scheduleDeltaDays, title: updated.title },
+      before: {
+        amountDeltaKobo: co.amountDeltaKobo.toString(),
+        scheduleDeltaDays: co.scheduleDeltaDays,
+        title: co.title,
+      },
+      after: {
+        amountDeltaKobo: updated.amountDeltaKobo.toString(),
+        scheduleDeltaDays: updated.scheduleDeltaDays,
+        title: updated.title,
+      },
       correlationId: options.correlationId,
     });
     return withApprovals(tx, updated);
   });
 }
 
-function assertMachine(co: CoRow, to: CoRow['status'], actor: 'staff' | 'customer' | 'partner' | 'system', reason?: string | null) {
-  const result = evaluateTransition(changeOrderMachine, { from: co.status, to, actor, reason: reason ?? null });
-  if (!result.ok) throw invalidTransition(result.message, { code: result.code, from: co.status, to });
+function assertMachine(
+  co: CoRow,
+  to: CoRow['status'],
+  actor: 'staff' | 'customer' | 'partner' | 'system',
+  reason?: string | null,
+) {
+  const result = evaluateTransition(changeOrderMachine, {
+    from: co.status,
+    to,
+    actor,
+    reason: reason ?? null,
+  });
+  if (!result.ok)
+    throw invalidTransition(result.message, { code: result.code, from: co.status, to });
 }
 
 /** draft → submitted; pending approval rows are created per policy and the outstanding review state is set. */
@@ -222,7 +275,9 @@ export async function submitChangeOrder(
     assertVersion(co.version, input.expectedVersion);
     assertMachine(co, 'submitted', 'staff');
     if (!access.project.approvedBudgetVersionId) {
-      throw invalidTransition('the project has no approved budget to change; approve a baseline first');
+      throw invalidTransition(
+        'the project has no approved budget to change; approve a baseline first',
+      );
     }
     for (const role of requiredApprovers(co)) {
       await tx.insert(schema.approvals).values({
@@ -299,7 +354,9 @@ export async function decideChangeOrder(
   }
   return withActor(getDb(), ctxFor(identity, options), async (tx) => {
     const checks: AccessCheck[] =
-      input.approverRole === 'staff' ? [{ staff: 'change_orders.staff_approve' }] : [{ org: 'org.change_orders.approve' }];
+      input.approverRole === 'staff'
+        ? [{ staff: 'change_orders.staff_approve' }]
+        : [{ org: 'org.change_orders.approve' }];
     const { co, access } = await loadChangeOrder(tx, identity, id, checks);
     if (input.approverRole === 'staff' && co.createdBy === actorId) {
       throw new ApiError('forbidden', 'the creator of a change order cannot approve it as staff');
@@ -309,7 +366,9 @@ export async function decideChangeOrder(
       throw invalidTransition(`change order is ${co.status}; no decision is pending`);
     }
     if (!requiredApprovers(co).includes(input.approverRole)) {
-      throw invalidTransition(`the approval policy does not require a ${input.approverRole} decision`);
+      throw invalidTransition(
+        `the approval policy does not require a ${input.approverRole} decision`,
+      );
     }
     const approvals = await approvalsForEntity(tx, 'change_order', co.id);
     const mine = assertPendingApproval(
@@ -318,7 +377,12 @@ export async function decideChangeOrder(
     );
     await tx
       .update(schema.approvals)
-      .set({ status: input.decision, approverUserId: actorId, decidedAt: new Date(), decisionNote: input.note ?? null })
+      .set({
+        status: input.decision,
+        approverUserId: actorId,
+        decidedAt: new Date(),
+        decisionNote: input.note ?? null,
+      })
       .where(eq(schema.approvals.id, mine.id));
     const after = await approvalsForEntity(tx, 'change_order', co.id);
     const evaluation = evaluateApprovalPolicy(co, after);
@@ -332,11 +396,16 @@ export async function decideChangeOrder(
       // customer_review → approved is the machine's customer transition; a staff approval that
       // completes the policy (customer already approved, or no customer approval required) is the
       // documented policy extension.
-      if (co.status === 'customer_review' && actorKind === 'customer') assertMachine(co, 'approved', 'customer');
+      if (co.status === 'customer_review' && actorKind === 'customer')
+        assertMachine(co, 'approved', 'customer');
       nextStatus = 'approved';
     } else {
       nextStatus = pendingChangeOrderStatus(co, after);
-      if (co.status === 'staff_review' && nextStatus === 'customer_review' && actorKind === 'staff') {
+      if (
+        co.status === 'staff_review' &&
+        nextStatus === 'customer_review' &&
+        actorKind === 'staff'
+      ) {
         assertMachine(co, 'customer_review', 'staff');
       }
     }
@@ -354,7 +423,8 @@ export async function decideChangeOrder(
       .returning();
     if (!updated) throw versionConflict(co.version);
     let final = updated;
-    if (nextStatus === 'approved') final = await applyApprovedChangeOrder(tx, identity, access, updated, after, options);
+    if (nextStatus === 'approved')
+      final = await applyApprovedChangeOrder(tx, identity, access, updated, after, options);
 
     await recordAudit(tx, identity, {
       action: `change_order.${input.approverRole}_${input.decision}`,
@@ -398,7 +468,10 @@ async function applyApprovedChangeOrder(
   const p = access.project;
   const currentId = p.approvedBudgetVersionId;
   if (!currentId) throw invalidTransition('the project has no approved budget to change');
-  const [base] = await tx.select().from(schema.budgetVersions).where(eq(schema.budgetVersions.id, currentId));
+  const [base] = await tx
+    .select()
+    .from(schema.budgetVersions)
+    .where(eq(schema.budgetVersions.id, currentId));
   if (!base) throw invalidTransition('the approved budget version is missing');
   let total: bigint;
   try {
@@ -430,11 +503,21 @@ async function applyApprovedChangeOrder(
       createdBy: identity.session?.user.id ?? null,
     })
     .returning();
-  await tx.update(schema.budgetVersions).set({ status: 'superseded' }).where(eq(schema.budgetVersions.id, base.id));
-  const forecast = shiftIsoDate(p.forecastCompletionDate ?? p.targetCompletionDate, co.scheduleDeltaDays);
+  await tx
+    .update(schema.budgetVersions)
+    .set({ status: 'superseded' })
+    .where(eq(schema.budgetVersions.id, base.id));
+  const forecast = shiftIsoDate(
+    p.forecastCompletionDate ?? p.targetCompletionDate,
+    co.scheduleDeltaDays,
+  );
   const [project] = await tx
     .update(schema.projects)
-    .set({ approvedBudgetVersionId: created!.id, forecastCompletionDate: forecast, version: p.version + 1 })
+    .set({
+      approvedBudgetVersionId: created!.id,
+      forecastCompletionDate: forecast,
+      version: p.version + 1,
+    })
     .where(and(eq(schema.projects.id, p.id), eq(schema.projects.version, p.version)))
     .returning();
   if (!project) throw versionConflict(p.version);
@@ -448,8 +531,17 @@ async function applyApprovedChangeOrder(
     entityType: 'project',
     entityId: p.id,
     organizationId: p.organizationId,
-    before: { approvedBudgetVersionId: base.id, totalKobo: base.totalKobo.toString(), forecastCompletionDate: p.forecastCompletionDate },
-    after: { approvedBudgetVersionId: created!.id, totalKobo: total.toString(), forecastCompletionDate: forecast, changeOrderId: co.id },
+    before: {
+      approvedBudgetVersionId: base.id,
+      totalKobo: base.totalKobo.toString(),
+      forecastCompletionDate: p.forecastCompletionDate,
+    },
+    after: {
+      approvedBudgetVersionId: created!.id,
+      totalKobo: total.toString(),
+      forecastCompletionDate: forecast,
+      changeOrderId: co.id,
+    },
     correlationId: options.correlationId,
   });
   return applied!;
@@ -466,19 +558,31 @@ export async function withdrawChangeOrder(
   return withActor(getDb(), ctxFor(identity, options), async (tx) => {
     const { co, access } = await loadChangeOrder(tx, identity, id, [{ staff: 'projects.manage' }]);
     assertVersion(co.version, input.expectedVersion);
-    if (co.createdBy !== actorId) throw new ApiError('forbidden', 'only the creator can withdraw a change order');
+    if (co.createdBy !== actorId)
+      throw new ApiError('forbidden', 'only the creator can withdraw a change order');
     const approvals = await approvalsForEntity(tx, 'change_order', co.id);
     if (approvals.some((a) => a.status !== 'pending')) {
-      throw invalidTransition('a decision was already recorded; the change order can no longer be withdrawn');
+      throw invalidTransition(
+        'a decision was already recorded; the change order can no longer be withdrawn',
+      );
     }
-    if (!findRule(changeOrderMachine, co.status, 'withdrawn')) throw invalidTransition(`change order is ${co.status}`);
+    if (!findRule(changeOrderMachine, co.status, 'withdrawn'))
+      throw invalidTransition(`change order is ${co.status}`);
     assertMachine(co, 'withdrawn', 'staff', input.reason);
     for (const a of approvals) {
-      await tx.update(schema.approvals).set({ status: 'withdrawn', decidedAt: new Date() }).where(eq(schema.approvals.id, a.id));
+      await tx
+        .update(schema.approvals)
+        .set({ status: 'withdrawn', decidedAt: new Date() })
+        .where(eq(schema.approvals.id, a.id));
     }
     const [updated] = await tx
       .update(schema.changeOrders)
-      .set({ status: 'withdrawn', decidedAt: new Date(), decisionNote: input.reason, version: co.version + 1 })
+      .set({
+        status: 'withdrawn',
+        decidedAt: new Date(),
+        decisionNote: input.reason,
+        version: co.version + 1,
+      })
       .where(and(eq(schema.changeOrders.id, id), eq(schema.changeOrders.version, co.version)))
       .returning();
     if (!updated) throw versionConflict(co.version);

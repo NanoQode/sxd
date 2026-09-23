@@ -74,7 +74,10 @@ export async function listNotifications(
           cursor
             ? or(
                 lt(schema.notifications.createdAt, cursor.createdAt),
-                and(eq(schema.notifications.createdAt, cursor.createdAt), lt(schema.notifications.id, cursor.id)),
+                and(
+                  eq(schema.notifications.createdAt, cursor.createdAt),
+                  lt(schema.notifications.id, cursor.id),
+                ),
               )
             : undefined,
         ),
@@ -91,7 +94,10 @@ export async function listNotifications(
   });
 }
 
-async function countUnread(tx: Parameters<Parameters<typeof withActor>[2]>[0], userId: string): Promise<number> {
+async function countUnread(
+  tx: Parameters<Parameters<typeof withActor>[2]>[0],
+  userId: string,
+): Promise<number> {
   const [row] = await tx
     .select({ n: sql<string>`count(*)::text` })
     .from(schema.notifications)
@@ -104,7 +110,11 @@ export async function unreadCount(db: Db, ctx: ActorContext): Promise<number> {
   return withActor(db, ctx, (tx) => countUnread(tx, ctx.userId!));
 }
 
-export async function markNotificationRead(db: Db, ctx: ActorContext, id: string): Promise<NotificationDto | null> {
+export async function markNotificationRead(
+  db: Db,
+  ctx: ActorContext,
+  id: string,
+): Promise<NotificationDto | null> {
   if (!ctx.userId) return null;
   return withActor(db, ctx, async (tx) => {
     const [row] = await tx

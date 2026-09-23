@@ -131,7 +131,7 @@ export async function createPaymentAttempt(
     return row!;
   });
 
-  const [user] = await rt.db.select({ email: schema.user.email }).from(schema.user).where(eq(schema.user.id, userId));
+  const [user] = await withActor(rt.db, fa.ctx, (tx) => tx.select({ email: schema.user.email }).from(schema.user).where(eq(schema.user.id, userId)));
   const callbackUrl = new URL(CALLBACK_PATH, rt.appUrl);
   callbackUrl.searchParams.set('reference', attempt.reference);
   try {
@@ -236,10 +236,13 @@ export async function applyVerification(
   });
   const envMismatch = verification.environment !== 'unknown' && verification.environment !== attempt.environment;
   const common = { attemptId: attempt.id, verification, source: options.source, actorUserId: options.actorUserId ?? null, correlationId: options.correlationId };
-  const invoiceStatus = async () => {
-    const [inv] = await rt.db.select({ status: schema.invoices.status }).from(schema.invoices).where(eq(schema.invoices.id, attempt.invoiceId));
-    return inv?.status ?? 'issued';
-  };
+  const system = systemFinanceActor(options.correlationId);
+  const invoiceStatus = async () =>
+    withActor(rt.db, system.ctx, async (tx) => {
+      const [inv] = await tx.select({ status: schema.invoices.status }).from(schema.invoices).where(eq(schema.invoices.id, attempt.invoiceId));
+      if (!inv) throw new ApiError('not_found', 'invoice not found');
+      return inv.status;
+    });
   if (envMismatch && (outcome.decision === 'settle' || outcome.decision === 'no_change')) {
     const updated = await recordAttemptOutcome(rt, {
       ...common,
@@ -282,11 +285,13 @@ export async function applyVerification(
     }
     case 'no_change':
     default: {
-      const receipt = await rt.db
-        .select({ number: schema.receipts.number })
-        .from(schema.receipts)
-        .innerJoin(schema.allocations, eq(schema.allocations.id, schema.receipts.allocationId))
-        .where(eq(schema.allocations.paymentAttemptId, attempt.id));
+      const receipt = await withActor(rt.db, system.ctx, (tx) =>
+        tx
+          .select({ number: schema.receipts.number })
+          .from(schema.receipts)
+          .innerJoin(schema.allocations, eq(schema.allocations.id, schema.receipts.allocationId))
+          .where(eq(schema.allocations.paymentAttemptId, attempt.id)),
+      );
       return { attempt, outcome, receiptNumber: receipt[0]?.number ?? null, invoiceStatus: await invoiceStatus() };
     }
   }

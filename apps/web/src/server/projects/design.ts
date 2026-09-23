@@ -13,14 +13,32 @@ import {
 import { appendOutbox, getDb, schema, withActor, type Transaction } from '@simplexd/db';
 import { recordAudit } from '@/lib/audit';
 import type { RequestIdentity } from '@/lib/auth/session';
-import { PROJECT_READ_CHECKS, requireProject, type AccessCheck, type ProjectAccess } from './access';
+import {
+  PROJECT_READ_CHECKS,
+  requireProject,
+  type AccessCheck,
+  type ProjectAccess,
+} from './access';
 import { requireLinkableFile } from './evidence';
-import { assertUpdatedAt, ctxFor, invalidTransition, iso, notFound, userIdOf, type ServiceOptions } from './shared';
+import {
+  assertUpdatedAt,
+  ctxFor,
+  invalidTransition,
+  iso,
+  notFound,
+  userIdOf,
+  type ServiceOptions,
+} from './shared';
 
 type OptionRow = typeof schema.designOptions.$inferSelect;
 type CommentRow = typeof schema.designComments.$inferSelect;
 
-const COMMENT_CHECKS: AccessCheck[] = [{ staff: 'projects.manage' }, { staff: 'reports.draft' }, { org: 'org.comment' }, { partner: 'partner.reports.draft' }];
+const COMMENT_CHECKS: AccessCheck[] = [
+  { staff: 'projects.manage' },
+  { staff: 'reports.draft' },
+  { org: 'org.comment' },
+  { partner: 'partner.reports.draft' },
+];
 
 function statusOf(o: OptionRow): DesignOptionDto['status'] {
   return o.status === 'signed_off' || o.status === 'superseded' ? o.status : 'draft';
@@ -36,7 +54,9 @@ async function toDto(tx: Transaction, o: OptionRow): Promise<DesignOptionDto> {
   const [latest] = await tx
     .select({ max: sql<number>`max(${schema.designOptions.version})::int` })
     .from(schema.designOptions)
-    .where(and(eq(schema.designOptions.projectId, o.projectId), eq(schema.designOptions.title, o.title)));
+    .where(
+      and(eq(schema.designOptions.projectId, o.projectId), eq(schema.designOptions.title, o.title)),
+    );
   return {
     id: o.id,
     projectId: o.projectId,
@@ -68,18 +88,33 @@ function toCommentDto(c: CommentRow, authorName: string | null): DesignCommentDt
   };
 }
 
-async function loadOption(tx: Transaction, identity: RequestIdentity, id: string, checks: AccessCheck[]) {
+async function loadOption(
+  tx: Transaction,
+  identity: RequestIdentity,
+  id: string,
+  checks: AccessCheck[],
+) {
   const [o] = await tx.select().from(schema.designOptions).where(eq(schema.designOptions.id, id));
   if (!o) throw notFound('design option');
   const access = await requireProject(tx, identity, o.projectId, checks);
   return { o, access };
 }
 
-async function checkDrawings(tx: Transaction, access: ProjectAccess, fileIds: string[], actorId: string): Promise<void> {
+async function checkDrawings(
+  tx: Transaction,
+  access: ProjectAccess,
+  fileIds: string[],
+  actorId: string,
+): Promise<void> {
   for (const id of fileIds) await requireLinkableFile(tx, access, id, actorId);
 }
 
-export async function createDesignOption(identity: RequestIdentity, projectId: string, input: DesignOptionCreate, options: ServiceOptions = {}): Promise<DesignOptionDto> {
+export async function createDesignOption(
+  identity: RequestIdentity,
+  projectId: string,
+  input: DesignOptionCreate,
+  options: ServiceOptions = {},
+): Promise<DesignOptionDto> {
   const actorId = userIdOf(identity);
   return withActor(getDb(), ctxFor(identity, options), async (tx) => {
     const access = await requireProject(tx, identity, projectId, [{ staff: 'projects.manage' }]);
@@ -87,11 +122,28 @@ export async function createDesignOption(identity: RequestIdentity, projectId: s
     const [dup] = await tx
       .select({ id: schema.designOptions.id })
       .from(schema.designOptions)
-      .where(and(eq(schema.designOptions.projectId, projectId), eq(schema.designOptions.title, input.title)));
-    if (dup) throw new ApiError('conflict', 'an option with this title exists; add a new version to it instead');
+      .where(
+        and(
+          eq(schema.designOptions.projectId, projectId),
+          eq(schema.designOptions.title, input.title),
+        ),
+      );
+    if (dup)
+      throw new ApiError(
+        'conflict',
+        'an option with this title exists; add a new version to it instead',
+      );
     const [row] = await tx
       .insert(schema.designOptions)
-      .values({ projectId, title: input.title, description: input.description ?? null, drawingFileIds: input.drawingFileIds, version: 1, status: 'draft', createdBy: actorId })
+      .values({
+        projectId,
+        title: input.title,
+        description: input.description ?? null,
+        drawingFileIds: input.drawingFileIds,
+        version: 1,
+        status: 'draft',
+        createdBy: actorId,
+      })
       .returning();
     await recordAudit(tx, identity, {
       action: 'design_option.created',
@@ -105,7 +157,10 @@ export async function createDesignOption(identity: RequestIdentity, projectId: s
   });
 }
 
-export async function listDesignOptions(identity: RequestIdentity, projectId: string): Promise<{ items: DesignOptionDto[] }> {
+export async function listDesignOptions(
+  identity: RequestIdentity,
+  projectId: string,
+): Promise<{ items: DesignOptionDto[] }> {
   userIdOf(identity);
   return withActor(getDb(), ctxFor(identity), async (tx) => {
     await requireProject(tx, identity, projectId, PROJECT_READ_CHECKS);
@@ -120,7 +175,10 @@ export async function listDesignOptions(identity: RequestIdentity, projectId: st
   });
 }
 
-export async function getDesignOption(identity: RequestIdentity, id: string): Promise<DesignOptionDto> {
+export async function getDesignOption(
+  identity: RequestIdentity,
+  id: string,
+): Promise<DesignOptionDto> {
   userIdOf(identity);
   return withActor(getDb(), ctxFor(identity), async (tx) => {
     const { o } = await loadOption(tx, identity, id, PROJECT_READ_CHECKS);
@@ -129,11 +187,21 @@ export async function getDesignOption(identity: RequestIdentity, id: string): Pr
 }
 
 function assertMutable(o: OptionRow): void {
-  if (o.status === 'signed_off') throw new ApiError('conflict', 'this option version was signed off and is immutable; create a new version');
-  if (o.status === 'superseded') throw new ApiError('conflict', 'this option version was superseded; edit the current version');
+  if (o.status === 'signed_off')
+    throw new ApiError(
+      'conflict',
+      'this option version was signed off and is immutable; create a new version',
+    );
+  if (o.status === 'superseded')
+    throw new ApiError('conflict', 'this option version was superseded; edit the current version');
 }
 
-export async function updateDesignOption(identity: RequestIdentity, id: string, input: DesignOptionUpdate, options: ServiceOptions = {}): Promise<DesignOptionDto> {
+export async function updateDesignOption(
+  identity: RequestIdentity,
+  id: string,
+  input: DesignOptionUpdate,
+  options: ServiceOptions = {},
+): Promise<DesignOptionDto> {
   const actorId = userIdOf(identity);
   return withActor(getDb(), ctxFor(identity, options), async (tx) => {
     const { o, access } = await loadOption(tx, identity, id, [{ staff: 'projects.manage' }]);
@@ -161,14 +229,25 @@ export async function updateDesignOption(identity: RequestIdentity, id: string, 
   });
 }
 
-export async function addDesignComment(identity: RequestIdentity, optionId: string, input: DesignCommentCreate, options: ServiceOptions = {}): Promise<DesignCommentDto> {
+export async function addDesignComment(
+  identity: RequestIdentity,
+  optionId: string,
+  input: DesignCommentCreate,
+  options: ServiceOptions = {},
+): Promise<DesignCommentDto> {
   const actorId = userIdOf(identity);
   return withActor(getDb(), ctxFor(identity, options), async (tx) => {
     const { o, access } = await loadOption(tx, identity, optionId, COMMENT_CHECKS);
-    if (o.status === 'superseded') throw new ApiError('conflict', 'comment on the current version of this option');
+    if (o.status === 'superseded')
+      throw new ApiError('conflict', 'comment on the current version of this option');
     const [row] = await tx
       .insert(schema.designComments)
-      .values({ designOptionId: optionId, authorUserId: actorId, body: input.body, anchor: input.anchor ?? null })
+      .values({
+        designOptionId: optionId,
+        authorUserId: actorId,
+        body: input.body,
+        anchor: input.anchor ?? null,
+      })
       .returning();
     await recordAudit(tx, identity, {
       action: 'design_comment.created',
@@ -184,24 +263,50 @@ export async function addDesignComment(identity: RequestIdentity, optionId: stri
       aggregateId: optionId,
       organizationId: access.project.organizationId,
       actorUserId: actorId,
-      payload: { projectId: o.projectId, designOptionId: optionId, commentId: row!.id, pmUserId: access.project.pmUserId },
+      payload: {
+        projectId: o.projectId,
+        designOptionId: optionId,
+        commentId: row!.id,
+        pmUserId: access.project.pmUserId,
+      },
       correlationId: options.correlationId ?? null,
     });
-    const [u] = await tx.select({ name: schema.user.name }).from(schema.user).where(eq(schema.user.id, actorId));
+    const [u] = await tx
+      .select({ name: schema.user.name })
+      .from(schema.user)
+      .where(eq(schema.user.id, actorId));
     return toCommentDto(row!, u?.name ?? null);
   });
 }
 
-export async function resolveDesignComment(identity: RequestIdentity, optionId: string, commentId: string, options: ServiceOptions = {}): Promise<DesignCommentDto> {
+export async function resolveDesignComment(
+  identity: RequestIdentity,
+  optionId: string,
+  commentId: string,
+  options: ServiceOptions = {},
+): Promise<DesignCommentDto> {
   const actorId = userIdOf(identity);
   return withActor(getDb(), ctxFor(identity, options), async (tx) => {
     const { access } = await loadOption(tx, identity, optionId, COMMENT_CHECKS);
-    const [c] = await tx.select().from(schema.designComments).where(and(eq(schema.designComments.id, commentId), eq(schema.designComments.designOptionId, optionId)));
+    const [c] = await tx
+      .select()
+      .from(schema.designComments)
+      .where(
+        and(
+          eq(schema.designComments.id, commentId),
+          eq(schema.designComments.designOptionId, optionId),
+        ),
+      );
     if (!c) throw notFound('comment');
     const staff = identity.actor.staffRoles.length > 0;
-    if (!staff && c.authorUserId !== actorId) throw new ApiError('forbidden', 'only staff or the comment author can resolve a comment');
+    if (!staff && c.authorUserId !== actorId)
+      throw new ApiError('forbidden', 'only staff or the comment author can resolve a comment');
     if (c.resolvedAt) return toCommentDto(c, null);
-    const [updated] = await tx.update(schema.designComments).set({ resolvedAt: new Date() }).where(eq(schema.designComments.id, commentId)).returning();
+    const [updated] = await tx
+      .update(schema.designComments)
+      .set({ resolvedAt: new Date() })
+      .where(eq(schema.designComments.id, commentId))
+      .returning();
     await recordAudit(tx, identity, {
       action: 'design_comment.resolved',
       entityType: 'design_comment',
@@ -209,25 +314,39 @@ export async function resolveDesignComment(identity: RequestIdentity, optionId: 
       organizationId: access.project.organizationId,
       correlationId: options.correlationId,
     });
-    const [u] = await tx.select({ name: schema.user.name }).from(schema.user).where(eq(schema.user.id, c.authorUserId));
+    const [u] = await tx
+      .select({ name: schema.user.name })
+      .from(schema.user)
+      .where(eq(schema.user.id, c.authorUserId));
     return toCommentDto(updated!, u?.name ?? null);
   });
 }
 
 /** Customer sign-off on this exact version (`org.change_orders.approve`); immutable afterwards. */
-export async function signOffDesignOption(identity: RequestIdentity, id: string, input: DesignSignOff, options: ServiceOptions = {}): Promise<DesignOptionDto> {
+export async function signOffDesignOption(
+  identity: RequestIdentity,
+  id: string,
+  input: DesignSignOff,
+  options: ServiceOptions = {},
+): Promise<DesignOptionDto> {
   const actorId = userIdOf(identity);
   return withActor(getDb(), ctxFor(identity, options), async (tx) => {
-    const { o, access } = await loadOption(tx, identity, id, [{ org: 'org.change_orders.approve' }]);
-    if (o.status === 'signed_off') throw new ApiError('conflict', 'this version was already signed off');
-    if (o.status === 'superseded') throw invalidTransition('a superseded version cannot be signed off');
-    if (!input.confirm) throw new ApiError('validation_failed', 'explicit confirmation is required');
+    const { o, access } = await loadOption(tx, identity, id, [
+      { org: 'org.change_orders.approve' },
+    ]);
+    if (o.status === 'signed_off')
+      throw new ApiError('conflict', 'this version was already signed off');
+    if (o.status === 'superseded')
+      throw invalidTransition('a superseded version cannot be signed off');
+    if (!input.confirm)
+      throw new ApiError('validation_failed', 'explicit confirmation is required');
     const [updated] = await tx
       .update(schema.designOptions)
       .set({ status: 'signed_off', customerSignoffBy: actorId, customerSignoffAt: new Date() })
       .where(and(eq(schema.designOptions.id, id), eq(schema.designOptions.status, o.status)))
       .returning();
-    if (!updated) throw new ApiError('version_conflict', 'the option changed while signing off; reload');
+    if (!updated)
+      throw new ApiError('version_conflict', 'the option changed while signing off; reload');
     await recordAudit(tx, identity, {
       action: 'design_option.signed_off',
       entityType: 'design_option',
@@ -243,7 +362,12 @@ export async function signOffDesignOption(identity: RequestIdentity, id: string,
       aggregateId: id,
       organizationId: access.project.organizationId,
       actorUserId: actorId,
-      payload: { projectId: o.projectId, designOptionId: id, version: o.version, pmUserId: access.project.pmUserId },
+      payload: {
+        projectId: o.projectId,
+        designOptionId: id,
+        version: o.version,
+        pmUserId: access.project.pmUserId,
+      },
       correlationId: options.correlationId ?? null,
     });
     return toDto(tx, updated);
@@ -251,7 +375,12 @@ export async function signOffDesignOption(identity: RequestIdentity, id: string,
 }
 
 /** A new version supersedes the current one; a signed-off version keeps its sign-off record untouched. */
-export async function createDesignOptionVersion(identity: RequestIdentity, id: string, input: DesignOptionNewVersion, options: ServiceOptions = {}): Promise<DesignOptionDto> {
+export async function createDesignOptionVersion(
+  identity: RequestIdentity,
+  id: string,
+  input: DesignOptionNewVersion,
+  options: ServiceOptions = {},
+): Promise<DesignOptionDto> {
   const actorId = userIdOf(identity);
   return withActor(getDb(), ctxFor(identity, options), async (tx) => {
     const { o, access } = await loadOption(tx, identity, id, [{ staff: 'projects.manage' }]);
@@ -259,10 +388,18 @@ export async function createDesignOptionVersion(identity: RequestIdentity, id: s
     const [latest] = await tx
       .select({ max: sql<number>`max(${schema.designOptions.version})::int` })
       .from(schema.designOptions)
-      .where(and(eq(schema.designOptions.projectId, o.projectId), eq(schema.designOptions.title, o.title)));
+      .where(
+        and(
+          eq(schema.designOptions.projectId, o.projectId),
+          eq(schema.designOptions.title, o.title),
+        ),
+      );
     const version = Number(latest?.max ?? o.version) + 1;
     if (o.status !== 'signed_off') {
-      await tx.update(schema.designOptions).set({ status: 'superseded' }).where(eq(schema.designOptions.id, o.id));
+      await tx
+        .update(schema.designOptions)
+        .set({ status: 'superseded' })
+        .where(eq(schema.designOptions.id, o.id));
     }
     const [row] = await tx
       .insert(schema.designOptions)

@@ -26,12 +26,7 @@ import {
 import { evaluateTransition } from '@simplexd/domain/workflow';
 import { recordAudit } from '@/lib/audit';
 import type { RequestIdentity } from '@/lib/auth/session';
-import {
-  PROJECT_READ_CHECKS,
-  assignedProjectIds,
-  requireProject,
-  type ProjectRow,
-} from './access';
+import { PROJECT_READ_CHECKS, assignedProjectIds, requireProject, type ProjectRow } from './access';
 import {
   assertVersion,
   ctxFor,
@@ -73,7 +68,10 @@ export function toProjectDto(p: ProjectRow): ProjectDto {
 }
 
 async function assertUserExists(tx: Transaction, id: string, label: string): Promise<void> {
-  const rows = await tx.select({ id: schema.user.id }).from(schema.user).where(eq(schema.user.id, id));
+  const rows = await tx
+    .select({ id: schema.user.id })
+    .from(schema.user)
+    .where(eq(schema.user.id, id));
   if (rows.length === 0) throw new ApiError('validation_failed', `${label} does not exist`);
 }
 
@@ -88,7 +86,10 @@ async function assertSameOrganization(
       .from(schema.serviceRequests)
       .where(eq(schema.serviceRequests.id, input.serviceRequestId));
     if (!sr || sr.organizationId !== organizationId) {
-      throw new ApiError('validation_failed', 'serviceRequestId must belong to the same organisation');
+      throw new ApiError(
+        'validation_failed',
+        'serviceRequestId must belong to the same organisation',
+      );
     }
   }
   if (input.propertyId) {
@@ -142,7 +143,10 @@ export async function createProject(
           ),
         );
       if (!member) {
-        throw new ApiError('validation_failed', 'customerContactUserId must be a member of the organisation');
+        throw new ApiError(
+          'validation_failed',
+          'customerContactUserId must be a member of the organisation',
+        );
       }
     }
     const [row] = await tx
@@ -167,14 +171,24 @@ export async function createProject(
       await tx
         .update(schema.serviceRequests)
         .set({ projectId: row!.id })
-        .where(and(eq(schema.serviceRequests.id, input.serviceRequestId), isNull(schema.serviceRequests.projectId)));
+        .where(
+          and(
+            eq(schema.serviceRequests.id, input.serviceRequestId),
+            isNull(schema.serviceRequests.projectId),
+          ),
+        );
     }
     await recordAudit(tx, identity, {
       action: 'project.created',
       entityType: 'project',
       entityId: row!.id,
       organizationId: input.organizationId,
-      after: { name: input.name, kind: input.kind, pmUserId, serviceRequestId: input.serviceRequestId ?? null },
+      after: {
+        name: input.name,
+        kind: input.kind,
+        pmUserId,
+        serviceRequestId: input.serviceRequestId ?? null,
+      },
       correlationId: options.correlationId,
     });
     await appendOutbox(tx, {
@@ -219,11 +233,14 @@ export async function listProjects(
       const listsAll = actor.staffRoles.some((r) =>
         ['super_admin', 'operations_manager', 'finance'].includes(r),
       );
-      const projectScoped = actor.staffRoles.some((r) => r === 'project_manager' || r === 'inspector');
+      const projectScoped = actor.staffRoles.some(
+        (r) => r === 'project_manager' || r === 'inspector',
+      );
       if (!listsAll && !projectScoped) {
         throw new ApiError('forbidden', 'your staff role has no project access');
       }
-      if (query.organizationId) conditions.push(eq(schema.projects.organizationId, query.organizationId));
+      if (query.organizationId)
+        conditions.push(eq(schema.projects.organizationId, query.organizationId));
       if (!listsAll) {
         const ids = await assignedProjectIds(tx, actorId);
         conditions.push(
@@ -299,7 +316,10 @@ export async function updateProject(
           ),
         );
       if (!member) {
-        throw new ApiError('validation_failed', 'customerContactUserId must be a member of the organisation');
+        throw new ApiError(
+          'validation_failed',
+          'customerContactUserId must be a member of the organisation',
+        );
       }
     }
     const { expectedVersion: _v, ...fields } = input;
@@ -350,7 +370,11 @@ export async function transitionProject(
       reason: input.reason ?? null,
     });
     if (!decision.ok) {
-      throw invalidTransition(decision.message, { code: decision.code, from: p.status, to: input.to });
+      throw invalidTransition(decision.message, {
+        code: decision.code,
+        from: p.status,
+        to: input.to,
+      });
     }
     const [updated] = await tx
       .update(schema.projects)
@@ -428,7 +452,9 @@ export async function getProjectOverview(
       .where(eq(schema.changeOrders.projectId, id))
       .groupBy(schema.changeOrders.status);
     const sumWhere = (statuses: string[]) =>
-      coRows.filter((r) => statuses.includes(r.status)).reduce((acc, r) => acc + BigInt(r.delta), 0n);
+      coRows
+        .filter((r) => statuses.includes(r.status))
+        .reduce((acc, r) => acc + BigInt(r.delta), 0n);
     const countWhere = (statuses: string[]) =>
       coRows.filter((r) => statuses.includes(r.status)).reduce((acc, r) => acc + Number(r.n), 0);
     const pendingStatuses = ['submitted', 'staff_review', 'customer_review'];
@@ -464,13 +490,21 @@ export async function getProjectOverview(
       .from(schema.milestones)
       .where(eq(schema.milestones.projectId, id));
     const milestoneSummary = summarizeMilestones(
-      milestoneRows.map((m) => ({ status: m.status as MilestoneState, plannedDate: m.plannedDate })),
+      milestoneRows.map((m) => ({
+        status: m.status as MilestoneState,
+        plannedDate: m.plannedDate,
+      })),
     );
 
     const defectRows = await tx
       .select({ severity: schema.defects.severity, n: sql<number>`count(*)::int` })
       .from(schema.defects)
-      .where(and(eq(schema.defects.projectId, id), inArray(schema.defects.status, [...UNRESOLVED_DEFECT_STATES])))
+      .where(
+        and(
+          eq(schema.defects.projectId, id),
+          inArray(schema.defects.status, [...UNRESOLVED_DEFECT_STATES]),
+        ),
+      )
       .groupBy(schema.defects.severity);
     const bySeverity: Record<string, number> = {};
     let openDefects = 0;
@@ -562,7 +596,10 @@ export async function getProjectOverview(
         byStatus: milestoneSummary.byStatus,
         nextPlannedDate: milestoneSummary.nextPlannedDate,
       },
-      defects: { open: openDefects, bySeverity: bySeverity as ProjectOverviewDto['defects']['bySeverity'] },
+      defects: {
+        open: openDefects,
+        bySeverity: bySeverity as ProjectOverviewDto['defects']['bySeverity'],
+      },
       changeOrders: { pending: countWhere(pendingStatuses), approved: countWhere(['approved']) },
       latestReleasedReport:
         latestReport && latestReport.releasedVersion !== null

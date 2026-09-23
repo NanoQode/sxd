@@ -13,8 +13,21 @@ import { appendOutbox, getDb, schema, withActor, type Transaction } from '@simpl
 import { evaluateMilestoneAction, type MilestoneAction } from '@simplexd/domain/projects';
 import { recordAudit } from '@/lib/audit';
 import type { RequestIdentity } from '@/lib/auth/session';
-import { PROJECT_READ_CHECKS, requireProject, type AccessCheck, type ProjectAccess } from './access';
-import { assertUpdatedAt, ctxFor, invalidTransition, iso, notFound, userIdOf, type ServiceOptions } from './shared';
+import {
+  PROJECT_READ_CHECKS,
+  requireProject,
+  type AccessCheck,
+  type ProjectAccess,
+} from './access';
+import {
+  assertUpdatedAt,
+  ctxFor,
+  invalidTransition,
+  iso,
+  notFound,
+  userIdOf,
+  type ServiceOptions,
+} from './shared';
 
 type MilestoneRow = typeof schema.milestones.$inferSelect;
 
@@ -86,7 +99,10 @@ export async function createMilestone(
   });
 }
 
-export async function listMilestones(identity: RequestIdentity, projectId: string): Promise<{ items: MilestoneDto[] }> {
+export async function listMilestones(
+  identity: RequestIdentity,
+  projectId: string,
+): Promise<{ items: MilestoneDto[] }> {
   userIdOf(identity);
   return withActor(getDb(), ctxFor(identity), async (tx) => {
     await requireProject(tx, identity, projectId, PROJECT_READ_CHECKS);
@@ -94,7 +110,11 @@ export async function listMilestones(identity: RequestIdentity, projectId: strin
       .select()
       .from(schema.milestones)
       .where(eq(schema.milestones.projectId, projectId))
-      .orderBy(asc(schema.milestones.sortOrder), asc(schema.milestones.plannedDate), asc(schema.milestones.createdAt));
+      .orderBy(
+        asc(schema.milestones.sortOrder),
+        asc(schema.milestones.plannedDate),
+        asc(schema.milestones.createdAt),
+      );
     return { items: rows.map(toMilestoneDto) };
   });
 }
@@ -120,14 +140,21 @@ export async function updateMilestone(
     if (m.status === 'accepted') throw invalidTransition('an accepted milestone cannot be edited');
     const { expectedUpdatedAt: _e, ...fields } = input;
     const patch: Partial<typeof schema.milestones.$inferInsert> = {};
-    for (const [k, v] of Object.entries(fields)) if (v !== undefined) (patch as Record<string, unknown>)[k] = v;
-    const [updated] = await tx.update(schema.milestones).set(patch).where(eq(schema.milestones.id, id)).returning();
+    for (const [k, v] of Object.entries(fields))
+      if (v !== undefined) (patch as Record<string, unknown>)[k] = v;
+    const [updated] = await tx
+      .update(schema.milestones)
+      .set(patch)
+      .where(eq(schema.milestones.id, id))
+      .returning();
     await recordAudit(tx, identity, {
       action: 'milestone.updated',
       entityType: 'milestone',
       entityId: id,
       organizationId: access.project.organizationId,
-      before: Object.fromEntries(Object.keys(fields).map((k) => [k, (m as Record<string, unknown>)[k] ?? null])),
+      before: Object.fromEntries(
+        Object.keys(fields).map((k) => [k, (m as Record<string, unknown>)[k] ?? null]),
+      ),
       after: fields,
       correlationId: options.correlationId,
     });
@@ -153,7 +180,8 @@ async function applyAction(
     financeAuthorizedAt: m.financeAuthorizedAt,
   });
   if (!decision.ok) {
-    if (decision.code === 'validation_failed') throw new ApiError('validation_failed', decision.message);
+    if (decision.code === 'validation_failed')
+      throw new ApiError('validation_failed', decision.message);
     throw invalidTransition(decision.message, { from: m.status, action });
   }
   const [updated] = await tx
@@ -161,7 +189,8 @@ async function applyAction(
     .set({ ...patch, status: decision.nextStatus })
     .where(and(eq(schema.milestones.id, m.id), eq(schema.milestones.status, m.status)))
     .returning();
-  if (!updated) throw new ApiError('version_conflict', 'the milestone changed while you were deciding; reload');
+  if (!updated)
+    throw new ApiError('version_conflict', 'the milestone changed while you were deciding; reload');
   await recordAudit(tx, identity, {
     action: `milestone.${action}`,
     entityType: 'milestone',
@@ -207,14 +236,20 @@ export async function recordMilestoneProgress(
 ): Promise<MilestoneDto> {
   const actorId = userIdOf(identity);
   return withActor(getDb(), ctxFor(identity, options), async (tx) => {
-    const { m, access } = await loadMilestone(tx, identity, id, [{ staff: 'milestones.record_progress' }]);
+    const { m, access } = await loadMilestone(tx, identity, id, [
+      { staff: 'milestones.record_progress' },
+    ]);
     const updated = await applyAction(
       tx,
       identity,
       m,
       access,
       'record_progress',
-      { inspectorProgressPct: input.percentComplete, inspectorProgressBy: actorId, inspectorProgressAt: new Date() },
+      {
+        inspectorProgressPct: input.percentComplete,
+        inspectorProgressBy: actorId,
+        inspectorProgressAt: new Date(),
+      },
       { percentComplete: input.percentComplete, reason: input.note ?? null },
       options,
       null,
@@ -232,7 +267,17 @@ export async function submitMilestone(
   userIdOf(identity);
   return withActor(getDb(), ctxFor(identity, options), async (tx) => {
     const { m, access } = await loadMilestone(tx, identity, id, [{ staff: 'projects.manage' }]);
-    const updated = await applyAction(tx, identity, m, access, 'submit', {}, {}, options, 'project.milestone.submitted');
+    const updated = await applyAction(
+      tx,
+      identity,
+      m,
+      access,
+      'submit',
+      {},
+      {},
+      options,
+      'project.milestone.submitted',
+    );
     return toMilestoneDto(updated);
   });
 }
@@ -255,7 +300,11 @@ export async function decideMilestone(
             m,
             access,
             'accept',
-            { customerAcceptedBy: actorId, customerAcceptedAt: new Date(), customerRejectedReason: null },
+            {
+              customerAcceptedBy: actorId,
+              customerAcceptedAt: new Date(),
+              customerRejectedReason: null,
+            },
             {},
             options,
             'project.milestone.accepted',
@@ -276,7 +325,11 @@ export async function decideMilestone(
 }
 
 /** Staff restart work after a customer rejection. */
-export async function reworkMilestone(identity: RequestIdentity, id: string, options: ServiceOptions = {}): Promise<MilestoneDto> {
+export async function reworkMilestone(
+  identity: RequestIdentity,
+  id: string,
+  options: ServiceOptions = {},
+): Promise<MilestoneDto> {
   userIdOf(identity);
   return withActor(getDb(), ctxFor(identity, options), async (tx) => {
     const { m, access } = await loadMilestone(tx, identity, id, [{ staff: 'projects.manage' }]);
@@ -297,18 +350,24 @@ export async function authorizeMilestonePayment(
   options: ServiceOptions = {},
 ): Promise<MilestoneDto> {
   const actorId = userIdOf(identity);
-  if (!identity.actor.mfaVerified) {
-    throw new ApiError('mfa_required', 'payment authorisation requires a verified authenticator');
-  }
   return withActor(getDb(), ctxFor(identity, options), async (tx) => {
-    const { m, access } = await loadMilestone(tx, identity, id, [{ staff: 'milestones.finance_authorize' }]);
+    const { m, access } = await loadMilestone(tx, identity, id, [
+      { staff: 'milestones.finance_authorize' },
+    ]);
+    if (!identity.actor.mfaVerified) {
+      throw new ApiError('mfa_required', 'payment authorisation requires a verified authenticator');
+    }
     const updated = await applyAction(
       tx,
       identity,
       m,
       access,
       'finance_authorize',
-      { financeAuthorizedBy: actorId, financeAuthorizedAt: new Date(), paymentInvoiceId: input.paymentInvoiceId ?? m.paymentInvoiceId },
+      {
+        financeAuthorizedBy: actorId,
+        financeAuthorizedAt: new Date(),
+        paymentInvoiceId: input.paymentInvoiceId ?? m.paymentInvoiceId,
+      },
       { reason: input.note ?? null },
       options,
       'project.milestone.payment_authorized',

@@ -72,11 +72,12 @@ export async function requestRefund(rt: FinanceRuntime, fa: FinanceActor, input:
     if (amountKobo <= 0n || amountKobo > attempt.amountKobo) {
       throw new ApiError('validation_failed', 'refund amount must be positive and no more than the payment');
     }
-    const [{ refunded }] = await tx
+    const [sum] = await tx
       .select({ refunded: sql<string>`coalesce(sum(${schema.refunds.amountKobo}), 0)::text` })
       .from(schema.refunds)
       .where(and(eq(schema.refunds.paymentAttemptId, attempt.id), sql`${schema.refunds.status} not in ('rejected','failed')`));
-    if (BigInt(refunded ?? '0') + amountKobo > attempt.amountKobo) {
+    const refunded = sum?.refunded ?? '0';
+    if (BigInt(refunded) + amountKobo > attempt.amountKobo) {
       throw new ApiError('validation_failed', 'refunds requested exceed the amount paid', { details: { alreadyRequestedKobo: refunded } });
     }
     const [refund] = await tx
@@ -414,7 +415,7 @@ export async function pollPendingRefunds(rt: FinanceRuntime, options: { correlat
   );
   let touched = 0;
   for (const refund of pending) {
-    const [attempt] = await rt.db.select().from(schema.paymentAttempts).where(eq(schema.paymentAttempts.id, refund.paymentAttemptId));
+    const [attempt] = await withActor(rt.db, system.ctx, (tx) => tx.select().from(schema.paymentAttempts).where(eq(schema.paymentAttempts.id, refund.paymentAttemptId)));
     if (!attempt) continue;
     try {
       const resolved = await providerForAttempt(rt, attempt);

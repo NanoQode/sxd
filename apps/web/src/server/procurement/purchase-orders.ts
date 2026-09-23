@@ -16,6 +16,7 @@ import { recordAudit } from '@/lib/audit';
 import type { RequestIdentity } from '@/lib/auth/session';
 import { decodeCursor, encodeCursor } from '@/server/portal/elevate';
 import { allocateCommercialReference, dbNow } from '@/server/tenders/shared';
+import { toItemSpecs } from './rfqs';
 import {
   assertVersion,
   ctxFor,
@@ -59,7 +60,7 @@ export async function createPurchaseOrder(identity: RequestIdentity, input: Purc
     const overrides = new Map(input.lineConversions.map((c) => [c.itemId, c.declaredConversion]));
     const lines = stored.lines.map((l) => ({ ...l, declaredConversion: overrides.get(l.itemId) ?? l.declaredConversion ?? null }));
     const comparison = compareDeliveredCost(
-      items,
+      toItemSpecs(items),
       [{ responseId: response.id, supplierLabel: response.supplierName ?? response.supplierUserId ?? response.id, currency: response.currency, deliveryKobo: stored.deliveryKobo, lines }],
       { currency: response.currency },
     );
@@ -123,7 +124,7 @@ export async function createPurchaseOrder(identity: RequestIdentity, input: Purc
 
 async function detailInTx(tx: DbExecutor, po: PurchaseOrderRow): Promise<PurchaseOrderDetail> {
   const deliveries = await tx.select().from(schema.deliveries).where(eq(schema.deliveries.purchaseOrderId, po.id));
-  const ordered = purchaseOrderLines(po).lines.map((l) => ({ lineId: l.lineId, quantity: l.quantity, unitPriceKobo: l.lineTotalKobo === null ? null : null }));
+  const ordered = purchaseOrderLines(po).lines.map((l) => ({ lineId: l.lineId, quantity: l.quantity }));
   const received = deliveries.flatMap((d) => deliveryLines(d).map((l) => ({ lineId: l.lineId, quantityReceived: l.quantityReceived })));
   const variance = deliveryVariance(ordered, received);
   return { ...toPurchaseOrderDto(po), deliveryProgress: variance };

@@ -15,13 +15,12 @@ import {
 } from '@simplexd/contracts';
 import { appendOutbox, getDb, schema, withActor, type DbExecutor, type Transaction } from '@simplexd/db';
 import { assertAllowed, authorizeOrg, authorizeStaff } from '@simplexd/domain/authz';
-import { compareDeliveredCost, type ResponseInput } from '@simplexd/domain/procurement';
+import { compareDeliveredCost, type ResponseInput, type RfqItemSpec } from '@simplexd/domain/procurement';
 import { recordAudit } from '@/lib/audit';
 import type { RequestIdentity } from '@/lib/auth/session';
 import { decodeCursor, encodeCursor } from '@/server/portal/elevate';
 import { allocateCommercialReference, dbNow } from '@/server/tenders/shared';
 import {
-  assertVersion as _assertVersion,
   ctxFor,
   isStaffIdentity,
   loadRfqAccess,
@@ -68,6 +67,10 @@ async function assertLinks(tx: DbExecutor, input: { organizationId: string; proj
   }
 }
 
+export function toItemSpecs(items: RfqItemDto[]): RfqItemSpec[] {
+  return items.map((i) => ({ itemId: i.id, material: i.material, specification: i.specification, unit: i.unit, quantity: i.quantity }));
+}
+
 function toResponseInput(row: ResponseRow, items: RfqItemDto[]): ResponseInput {
   const lines = responseLines(row);
   const known = new Set(items.map((i) => i.id));
@@ -84,7 +87,7 @@ function toResponseInput(row: ResponseRow, items: RfqItemDto[]): ResponseInput {
 
 /** Goods + delivery in the RFQ's units, or null when a line's unit conversion is unknown. */
 export function totalDeliveredFor(items: RfqItemDto[], row: ResponseRow): bigint | null {
-  const result = compareDeliveredCost(items, [toResponseInput(row, items)], { currency: row.currency });
+  const result = compareDeliveredCost(toItemSpecs(items), [toResponseInput(row, items)], { currency: row.currency });
   const entry = result.entries[0];
   return entry?.totalDeliveredKobo ? BigInt(entry.totalDeliveredKobo) : null;
 }
@@ -555,9 +558,7 @@ export async function getRfqComparison(identity: RequestIdentity, rfqId: string,
       .from(schema.rfqResponses)
       .where(and(eq(schema.rfqResponses.rfqId, rfqId), inArray(schema.rfqResponses.status, ['submitted', 'selected'])))
       .orderBy(asc(schema.rfqResponses.submittedAt));
-    const result = compareDeliveredCost(items, responses.map((r) => toResponseInput(r, items)), { currency: 'NGN' });
-    return { rfqId, ...result };
+    const result = compareDeliveredCost(toItemSpecs(items), responses.map((r) => toResponseInput(r, items)), { currency: 'NGN' });
+    return { rfqId, currency: result.currency, items, entries: result.entries, ranked: result.ranked, note: result.note };
   });
 }
-
-export { _assertVersion as assertRfqVersion };

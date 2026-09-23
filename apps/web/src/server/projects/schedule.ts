@@ -18,7 +18,13 @@ import {
 import { recordAudit } from '@/lib/audit';
 import type { RequestIdentity } from '@/lib/auth/session';
 import { PROJECT_READ_CHECKS, requireProject, type ProjectAccess } from './access';
-import { ctxFor, invalidTransition, userIdOf, versionConflict, type ServiceOptions } from './shared';
+import {
+  ctxFor,
+  invalidTransition,
+  userIdOf,
+  versionConflict,
+  type ServiceOptions,
+} from './shared';
 
 type TaskRow = typeof schema.scheduleTasks.$inferSelect;
 type DepRow = typeof schema.taskDependencies.$inferSelect;
@@ -65,12 +71,22 @@ async function loadCurrent(tx: Transaction, access: ProjectAccess) {
   const tasks = await tx
     .select()
     .from(schema.scheduleTasks)
-    .where(and(eq(schema.scheduleTasks.projectId, access.project.id), eq(schema.scheduleTasks.scheduleVersion, version)))
+    .where(
+      and(
+        eq(schema.scheduleTasks.projectId, access.project.id),
+        eq(schema.scheduleTasks.scheduleVersion, version),
+      ),
+    )
     .orderBy(asc(schema.scheduleTasks.sortOrder), asc(schema.scheduleTasks.key));
   const deps = await tx
     .select()
     .from(schema.taskDependencies)
-    .where(and(eq(schema.taskDependencies.projectId, access.project.id), eq(schema.taskDependencies.scheduleVersion, version)));
+    .where(
+      and(
+        eq(schema.taskDependencies.projectId, access.project.id),
+        eq(schema.taskDependencies.scheduleVersion, version),
+      ),
+    );
   const baselines = await tx
     .select()
     .from(schema.scheduleBaselines)
@@ -152,11 +168,16 @@ function buildDto(
 }
 
 function calendarOf(baseline: BaselineRow | null | undefined) {
-  const snap = baseline?.snapshot as { workingCalendar?: { weekend: number[]; holidays: string[] } } | null;
+  const snap = baseline?.snapshot as {
+    workingCalendar?: { weekend: number[]; holidays: string[] };
+  } | null;
   return snap?.workingCalendar ?? null;
 }
 
-export async function getSchedule(identity: RequestIdentity, projectId: string): Promise<ScheduleDto> {
+export async function getSchedule(
+  identity: RequestIdentity,
+  projectId: string,
+): Promise<ScheduleDto> {
   userIdOf(identity);
   return withActor(getDb(), ctxFor(identity), async (tx) => {
     const access = await requireProject(tx, identity, projectId, PROJECT_READ_CHECKS);
@@ -194,7 +215,11 @@ export async function replaceSchedule(
     const p = access.project;
     if (p.status === 'archived') throw invalidTransition('archived projects are read-only');
     const startDate = input.startDate ?? p.startDate;
-    if (!startDate) throw new ApiError('validation_failed', 'startDate is required: the project has no start date');
+    if (!startDate)
+      throw new ApiError(
+        'validation_failed',
+        'startDate is required: the project has no start date',
+      );
     const taskRecords: ScheduleTaskRecord[] = input.tasks.map((t) => ({
       key: t.key,
       name: t.name,
@@ -220,9 +245,13 @@ export async function replaceSchedule(
       workingCalendar: input.workingCalendar ?? null,
     });
     if (!computation.result.ok) {
-      throw new ApiError('validation_failed', computation.result.error.code === 'invalid_input'
-        ? computation.result.error.message
-        : 'schedule could not be built', { details: computation.result.error });
+      throw new ApiError(
+        'validation_failed',
+        computation.result.error.code === 'invalid_input'
+          ? computation.result.error.message
+          : 'schedule could not be built',
+        { details: computation.result.error },
+      );
     }
     const previousVersion = p.currentScheduleVersion;
     const hasCurrent =
@@ -230,7 +259,12 @@ export async function replaceSchedule(
         await tx
           .select({ id: schema.scheduleTasks.id })
           .from(schema.scheduleTasks)
-          .where(and(eq(schema.scheduleTasks.projectId, projectId), eq(schema.scheduleTasks.scheduleVersion, previousVersion)))
+          .where(
+            and(
+              eq(schema.scheduleTasks.projectId, projectId),
+              eq(schema.scheduleTasks.scheduleVersion, previousVersion),
+            ),
+          )
           .limit(1)
       ).length > 0;
     const version = hasCurrent ? previousVersion + 1 : previousVersion;
@@ -271,7 +305,11 @@ export async function replaceSchedule(
       );
     }
     const snapshot = computation.result.canComputeCompletionDate
-      ? { workingCalendar: computation.workingCalendar, calendarSource: computation.calendarSource, schedule: computation.result.schedule }
+      ? {
+          workingCalendar: computation.workingCalendar,
+          calendarSource: computation.calendarSource,
+          schedule: computation.result.schedule,
+        }
       : {
           workingCalendar: computation.workingCalendar,
           calendarSource: computation.calendarSource,
@@ -306,7 +344,10 @@ export async function replaceSchedule(
       entityType: 'project',
       entityId: projectId,
       organizationId: p.organizationId,
-      before: { scheduleVersion: previousVersion, forecastCompletionDate: p.forecastCompletionDate },
+      before: {
+        scheduleVersion: previousVersion,
+        forecastCompletionDate: p.forecastCompletionDate,
+      },
       after: {
         scheduleVersion: version,
         forecastCompletionDate: computation.completionDate,
@@ -318,7 +359,15 @@ export async function replaceSchedule(
     });
     const refreshed = { ...access, project: updated };
     const { tasks, deps, baselines } = await loadCurrent(tx, refreshed);
-    return buildDto(refreshed, version, tasks, deps, baselines.length ? baselines : [baseline!], computation, startDate);
+    return buildDto(
+      refreshed,
+      version,
+      tasks,
+      deps,
+      baselines.length ? baselines : [baseline!],
+      computation,
+      startDate,
+    );
   });
 }
 
@@ -345,13 +394,14 @@ export async function recordTaskActuals(
     if (actualStart && actualFinish && actualFinish < actualStart) {
       throw new ApiError('validation_failed', 'actualFinish must not be before actualStart');
     }
-    const percentComplete =
-      input.percentComplete ?? (actualFinish ? 100 : task.percentComplete);
+    const percentComplete = input.percentComplete ?? (actualFinish ? 100 : task.percentComplete);
     await tx
       .update(schema.scheduleTasks)
       .set({ actualStart, actualFinish, percentComplete })
       .where(eq(schema.scheduleTasks.id, task.id));
-    const updatedTasks = tasks.map((t) => (t.id === task.id ? { ...t, actualStart, actualFinish, percentComplete } : t));
+    const updatedTasks = tasks.map((t) =>
+      t.id === task.id ? { ...t, actualStart, actualFinish, percentComplete } : t,
+    );
     let computation: ProjectScheduleComputation | null = null;
     if (p.startDate) {
       const { taskRecords, depRecords } = toRecords(updatedTasks, deps);
@@ -363,7 +413,10 @@ export async function recordTaskActuals(
       });
       for (const t of updatedTasks) {
         const planned = computation.planned.get(t.key);
-        if (planned && (planned.plannedStart !== t.plannedStart || planned.plannedFinish !== t.plannedFinish)) {
+        if (
+          planned &&
+          (planned.plannedStart !== t.plannedStart || planned.plannedFinish !== t.plannedFinish)
+        ) {
           await tx
             .update(schema.scheduleTasks)
             .set({ plannedStart: planned.plannedStart, plannedFinish: planned.plannedFinish })
@@ -377,7 +430,11 @@ export async function recordTaskActuals(
           .update(schema.projects)
           .set({ forecastCompletionDate: computation.completionDate, version: p.version + 1 })
           .where(and(eq(schema.projects.id, projectId), eq(schema.projects.version, p.version)));
-        access.project = { ...p, forecastCompletionDate: computation.completionDate, version: p.version + 1 };
+        access.project = {
+          ...p,
+          forecastCompletionDate: computation.completionDate,
+          version: p.version + 1,
+        };
       }
     }
     await recordAudit(tx, identity, {
@@ -385,7 +442,11 @@ export async function recordTaskActuals(
       entityType: 'schedule_task',
       entityId: task.id,
       organizationId: p.organizationId,
-      before: { actualStart: task.actualStart, actualFinish: task.actualFinish, percentComplete: task.percentComplete },
+      before: {
+        actualStart: task.actualStart,
+        actualFinish: task.actualFinish,
+        percentComplete: task.percentComplete,
+      },
       after: { actualStart, actualFinish, percentComplete },
       correlationId: options.correlationId,
     });

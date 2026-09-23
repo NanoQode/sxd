@@ -20,10 +20,12 @@ export function isBroadStaff(identity: RequestIdentity): boolean {
 
 export const iso = (d: Date | null | undefined): string | null => (d ? d.toISOString() : null);
 
-export const kobo = (v: bigint | null | undefined): string | null => (v == null ? null : v.toString());
+export const kobo = (v: bigint | null | undefined): string | null =>
+  v == null ? null : v.toString();
 
 export function toKobo(value: string): bigint {
-  if (!/^-?\d+$/.test(value)) throw new ApiError('validation_failed', `invalid kobo amount "${value}"`);
+  if (!/^-?\d+$/.test(value))
+    throw new ApiError('validation_failed', `invalid kobo amount "${value}"`);
   return BigInt(value);
 }
 

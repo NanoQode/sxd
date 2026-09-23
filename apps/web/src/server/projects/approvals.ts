@@ -46,7 +46,9 @@ export async function approvalsForEntity(
   return tx
     .select()
     .from(schema.approvals)
-    .where(and(eq(schema.approvals.entityType, entityType), eq(schema.approvals.entityId, entityId)))
+    .where(
+      and(eq(schema.approvals.entityType, entityType), eq(schema.approvals.entityId, entityId)),
+    )
     .orderBy(schema.approvals.requestedAt, schema.approvals.id);
 }
 
@@ -70,7 +72,10 @@ async function locateEntity(
     }
     case 'budget_version': {
       const [row] = await tx
-        .select({ projectId: schema.budgetVersions.projectId, version: schema.budgetVersions.version })
+        .select({
+          projectId: schema.budgetVersions.projectId,
+          version: schema.budgetVersions.version,
+        })
         .from(schema.budgetVersions)
         .where(eq(schema.budgetVersions.id, entityId));
       return row ? { projectId: row.projectId, title: `Budget version ${row.version}` } : null;
@@ -126,7 +131,9 @@ export async function listPendingApprovals(
         const rows = await tx
           .select()
           .from(schema.approvals)
-          .where(and(eq(schema.approvals.status, 'pending'), eq(schema.approvals.approverRole, 'staff')))
+          .where(
+            and(eq(schema.approvals.status, 'pending'), eq(schema.approvals.approverRole, 'staff')),
+          )
           .orderBy(desc(schema.approvals.requestedAt))
           .limit(500);
         items.push(...(await filterByProjectAccess(tx, identity, rows, 'staff')));
@@ -135,8 +142,12 @@ export async function listPendingApprovals(
       const orgId = identity.ctx.organizationId;
       if (orgId) {
         const allowed =
-          authorizeOrg(actor, 'org.change_orders.approve', { type: 'project', organizationId: orgId }).allowed ||
-          authorizeOrg(actor, 'org.milestones.accept', { type: 'project', organizationId: orgId }).allowed;
+          authorizeOrg(actor, 'org.change_orders.approve', {
+            type: 'project',
+            organizationId: orgId,
+          }).allowed ||
+          authorizeOrg(actor, 'org.milestones.accept', { type: 'project', organizationId: orgId })
+            .allowed;
         if (allowed) {
           actingAs.push('customer');
           const rows = await tx
@@ -174,9 +185,14 @@ async function filterByProjectAccess(
       if (l) located.set(key, l);
     }
   }
-  const projectIds = [...new Set([...located.values()].map((l) => l.projectId).filter((x): x is string => !!x))];
+  const projectIds = [
+    ...new Set([...located.values()].map((l) => l.projectId).filter((x): x is string => !!x)),
+  ];
   if (projectIds.length === 0) return [];
-  const projects = await tx.select().from(schema.projects).where(inArray(schema.projects.id, projectIds));
+  const projects = await tx
+    .select()
+    .from(schema.projects)
+    .where(inArray(schema.projects.id, projectIds));
   const assignments = await tx
     .select()
     .from(schema.assignments)
@@ -232,7 +248,8 @@ async function filterByProjectAccess(
 
 /** Guard used by services that record decisions: the row must be pending. */
 export function assertPendingApproval(row: ApprovalRow | undefined, role: string): ApprovalRow {
-  if (!row) throw new ApiError('invalid_transition', `no ${role} approval is pending for this record`);
+  if (!row)
+    throw new ApiError('invalid_transition', `no ${role} approval is pending for this record`);
   if (row.status !== 'pending') {
     throw new ApiError('invalid_transition', `the ${role} approval was already ${row.status}`);
   }

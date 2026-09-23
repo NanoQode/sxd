@@ -75,8 +75,7 @@ export interface RenderedInAppMessage {
 export type RenderedMessage = RenderedEmailMessage | RenderedSmsMessage | RenderedInAppMessage;
 
 export type RenderOutcome =
-  | { ok: true; message: RenderedMessage }
-  | { ok: false; reason: string; missing?: string[] };
+  { ok: true; message: RenderedMessage } | { ok: false; reason: string; missing?: string[] };
 
 const DRAFT_LABEL = '[DRAFT TEMPLATE] ';
 

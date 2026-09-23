@@ -30,7 +30,12 @@ import {
 import { recordAudit } from '@/lib/audit';
 import type { RequestIdentity } from '@/lib/auth/session';
 import { PROJECT_READ_CHECKS, requireProject, type ProjectAccess } from './access';
-import { approvalsForEntity, assertPendingApproval, toApprovalDto, type ApprovalRow } from './approvals';
+import {
+  approvalsForEntity,
+  assertPendingApproval,
+  toApprovalDto,
+  type ApprovalRow,
+} from './approvals';
 import {
   ctxFor,
   decodeCursor,
@@ -151,7 +156,8 @@ export async function createBudgetVersion(
   const actorId = userIdOf(identity);
   return withActor(getDb(), ctxFor(identity, options), async (tx) => {
     const access = await requireProject(tx, identity, projectId, [{ staff: 'projects.manage' }]);
-    if (access.project.status === 'archived') throw invalidTransition('archived projects are read-only');
+    if (access.project.status === 'archived')
+      throw invalidTransition('archived projects are read-only');
     const contingency = input.contingencyKobo ? toKobo(input.contingencyKobo) : 0n;
     let total: bigint;
     let buildRate: bigint | null = null;
@@ -161,7 +167,10 @@ export async function createBudgetVersion(
       case 'area_rate': {
         area = input.areaM2 ?? access.project.grossFloorAreaM2;
         if (!area) {
-          throw new ApiError('validation_failed', 'areaM2 is required: the project has no gross floor area');
+          throw new ApiError(
+            'validation_failed',
+            'areaM2 is required: the project has no gross floor area',
+          );
         }
         buildRate = toKobo(input.buildRateKoboPerM2);
         total = areaRateAmount(area, buildRate);
@@ -173,7 +182,10 @@ export async function createBudgetVersion(
         break;
       case 'quote': {
         const [qv] = await tx
-          .select({ totalKobo: schema.quoteVersions.totalKobo, orgId: schema.quotes.organizationId })
+          .select({
+            totalKobo: schema.quoteVersions.totalKobo,
+            orgId: schema.quotes.organizationId,
+          })
           .from(schema.quoteVersions)
           .innerJoin(schema.quotes, eq(schema.quotes.id, schema.quoteVersions.quoteId))
           .where(eq(schema.quoteVersions.id, input.quoteVersionId));
@@ -204,7 +216,8 @@ export async function createBudgetVersion(
         createdBy: actorId,
       })
       .returning();
-    if (items.length > 0) await tx.insert(schema.boqItems).values(computeItems(items, row!.id).rows);
+    if (items.length > 0)
+      await tx.insert(schema.boqItems).values(computeItems(items, row!.id).rows);
     for (const role of requiredApprovers(BASELINE_BUDGET_POLICY)) {
       await tx.insert(schema.approvals).values({
         organizationId: access.project.organizationId,
@@ -220,7 +233,13 @@ export async function createBudgetVersion(
       entityType: 'budget_version',
       entityId: row!.id,
       organizationId: access.project.organizationId,
-      after: { projectId, version, source: input.source, totalKobo: total.toString(), contingencyKobo: contingency.toString() },
+      after: {
+        projectId,
+        version,
+        source: input.source,
+        totalKobo: total.toString(),
+        contingencyKobo: contingency.toString(),
+      },
       correlationId: options.correlationId,
     });
     await appendOutbox(tx, {
@@ -229,21 +248,37 @@ export async function createBudgetVersion(
       aggregateId: row!.id,
       organizationId: access.project.organizationId,
       actorUserId: actorId,
-      payload: { projectId, budgetVersionId: row!.id, version, customerContactUserId: access.project.customerContactUserId },
+      payload: {
+        projectId,
+        budgetVersionId: row!.id,
+        version,
+        customerContactUserId: access.project.customerContactUserId,
+      },
       correlationId: options.correlationId ?? null,
     });
     return toBudgetVersionDto(tx, row!);
   });
 }
 
-async function loadVersion(tx: Transaction, identity: RequestIdentity, versionId: string, checks = PROJECT_READ_CHECKS) {
-  const [v] = await tx.select().from(schema.budgetVersions).where(eq(schema.budgetVersions.id, versionId));
+async function loadVersion(
+  tx: Transaction,
+  identity: RequestIdentity,
+  versionId: string,
+  checks = PROJECT_READ_CHECKS,
+) {
+  const [v] = await tx
+    .select()
+    .from(schema.budgetVersions)
+    .where(eq(schema.budgetVersions.id, versionId));
   if (!v) throw notFound('budget version');
   const access = await requireProject(tx, identity, v.projectId, checks);
   return { v, access };
 }
 
-export async function getBudgetVersion(identity: RequestIdentity, versionId: string): Promise<BudgetVersionDto> {
+export async function getBudgetVersion(
+  identity: RequestIdentity,
+  versionId: string,
+): Promise<BudgetVersionDto> {
   userIdOf(identity);
   return withActor(getDb(), ctxFor(identity), async (tx) => {
     const { v } = await loadVersion(tx, identity, versionId);
@@ -251,7 +286,10 @@ export async function getBudgetVersion(identity: RequestIdentity, versionId: str
   });
 }
 
-export async function listBudgetVersions(identity: RequestIdentity, projectId: string): Promise<{ items: BudgetVersionDto[] }> {
+export async function listBudgetVersions(
+  identity: RequestIdentity,
+  projectId: string,
+): Promise<{ items: BudgetVersionDto[] }> {
   userIdOf(identity);
   return withActor(getDb(), ctxFor(identity), async (tx) => {
     await requireProject(tx, identity, projectId, PROJECT_READ_CHECKS);
@@ -275,11 +313,17 @@ export async function replaceBoqItems(
 ): Promise<BudgetVersionDto> {
   userIdOf(identity);
   return withActor(getDb(), ctxFor(identity, options), async (tx) => {
-    const { v, access } = await loadVersion(tx, identity, versionId, [{ staff: 'projects.manage' }]);
-    if (v.status !== 'draft') throw invalidTransition(`budget version ${v.version} is ${v.status} and cannot be edited`);
+    const { v, access } = await loadVersion(tx, identity, versionId, [
+      { staff: 'projects.manage' },
+    ]);
+    if (v.status !== 'draft')
+      throw invalidTransition(`budget version ${v.version} is ${v.status} and cannot be edited`);
     const approvals = await approvalsForEntity(tx, 'budget_version', v.id);
     if (approvals.some((a) => a.status !== 'pending')) {
-      throw new ApiError('conflict', 'this version already has a decision; create a new version instead');
+      throw new ApiError(
+        'conflict',
+        'this version already has a decision; create a new version instead',
+      );
     }
     const computed = computeItems(input.items, v.id);
     await tx.delete(schema.boqItems).where(eq(schema.boqItems.budgetVersionId, v.id));
@@ -322,7 +366,8 @@ export async function decideBudgetVersion(
       versionId,
       role === 'staff' ? [{ staff: 'projects.manage' }] : [{ org: 'org.change_orders.approve' }],
     );
-    if (v.status !== 'draft') throw invalidTransition(`budget version ${v.version} is already ${v.status}`);
+    if (v.status !== 'draft')
+      throw invalidTransition(`budget version ${v.version} is already ${v.status}`);
     const policy = await policyForVersion(tx, v);
     if (!requiredApprovers(policy).includes(role)) {
       throw invalidTransition(`the approval policy does not require a ${role} decision`);
@@ -334,7 +379,12 @@ export async function decideBudgetVersion(
     );
     await tx
       .update(schema.approvals)
-      .set({ status: input.decision, approverUserId: actorId, decidedAt: new Date(), decisionNote: input.note ?? null })
+      .set({
+        status: input.decision,
+        approverUserId: actorId,
+        decidedAt: new Date(),
+        decisionNote: input.note ?? null,
+      })
       .where(eq(schema.approvals.id, mine.id));
     const after = await approvalsForEntity(tx, 'budget_version', v.id);
     const evaluation = evaluateApprovalPolicy(policy, after);
@@ -352,7 +402,10 @@ export async function decideBudgetVersion(
       current = await applyApprovedVersion(tx, identity, access, v, after, options);
     }
     await appendOutbox(tx, {
-      eventType: evaluation.outcome === 'approved' ? 'project.budget.approved' : `project.budget.${role}_${input.decision}`,
+      eventType:
+        evaluation.outcome === 'approved'
+          ? 'project.budget.approved'
+          : `project.budget.${role}_${input.decision}`,
       aggregateType: 'budget_version',
       aggregateId: v.id,
       organizationId: access.project.organizationId,
@@ -386,7 +439,9 @@ export async function applyApprovedVersion(
     await tx
       .update(schema.budgetVersions)
       .set({ status: 'superseded' })
-      .where(and(eq(schema.budgetVersions.id, previousId), eq(schema.budgetVersions.status, 'approved')));
+      .where(
+        and(eq(schema.budgetVersions.id, previousId), eq(schema.budgetVersions.status, 'approved')),
+      );
   }
   const [approved] = await tx
     .update(schema.budgetVersions)
@@ -401,7 +456,9 @@ export async function applyApprovedVersion(
   await tx
     .update(schema.projects)
     .set({ approvedBudgetVersionId: v.id, version: access.project.version + 1 })
-    .where(and(eq(schema.projects.id, v.projectId), eq(schema.projects.version, access.project.version)));
+    .where(
+      and(eq(schema.projects.id, v.projectId), eq(schema.projects.version, access.project.version)),
+    );
   await recordAudit(tx, identity, {
     action: 'project.budget_approved',
     entityType: 'project',
@@ -447,13 +504,20 @@ export async function addCommitment(
       const [item] = await tx
         .select({ projectId: schema.budgetVersions.projectId })
         .from(schema.boqItems)
-        .innerJoin(schema.budgetVersions, eq(schema.budgetVersions.id, schema.boqItems.budgetVersionId))
+        .innerJoin(
+          schema.budgetVersions,
+          eq(schema.budgetVersions.id, schema.boqItems.budgetVersionId),
+        )
         .where(eq(schema.boqItems.id, input.boqItemId));
-      if (!item || item.projectId !== projectId) throw new ApiError('validation_failed', 'boqItemId does not belong to this project');
+      if (!item || item.projectId !== projectId)
+        throw new ApiError('validation_failed', 'boqItemId does not belong to this project');
     }
     if (input.evidenceFileId) {
       const [file] = await tx
-        .select({ organizationId: schema.fileObjects.organizationId, status: schema.fileObjects.status })
+        .select({
+          organizationId: schema.fileObjects.organizationId,
+          status: schema.fileObjects.status,
+        })
         .from(schema.fileObjects)
         .where(eq(schema.fileObjects.id, input.evidenceFileId));
       if (!file || (file.organizationId && file.organizationId !== access.project.organizationId)) {
@@ -482,7 +546,12 @@ export async function addCommitment(
       entityType: 'budget_commitment',
       entityId: row!.id,
       organizationId: access.project.organizationId,
-      after: { projectId, kind: input.kind, amountKobo: input.amountKobo, reference: input.reference ?? null },
+      after: {
+        projectId,
+        kind: input.kind,
+        amountKobo: input.amountKobo,
+        reference: input.reference ?? null,
+      },
       correlationId: options.correlationId,
     });
     return toCommitmentDto(row!);
@@ -508,7 +577,10 @@ export async function listCommitments(
           cursor
             ? or(
                 lt(schema.budgetCommitments.createdAt, cursor.createdAt),
-                and(eq(schema.budgetCommitments.createdAt, cursor.createdAt), lt(schema.budgetCommitments.id, cursor.id)),
+                and(
+                  eq(schema.budgetCommitments.createdAt, cursor.createdAt),
+                  lt(schema.budgetCommitments.id, cursor.id),
+                ),
               )
             : undefined,
         ),
@@ -521,7 +593,10 @@ export async function listCommitments(
 }
 
 /** Approved budget vs commitments vs actuals vs forecast, from the domain calculator. */
-export async function getBudgetVariance(identity: RequestIdentity, projectId: string): Promise<BudgetVarianceDto> {
+export async function getBudgetVariance(
+  identity: RequestIdentity,
+  projectId: string,
+): Promise<BudgetVarianceDto> {
   userIdOf(identity);
   return withActor(getDb(), ctxFor(identity), async (tx) => {
     const access = await requireProject(tx, identity, projectId, PROJECT_READ_CHECKS);
@@ -529,10 +604,18 @@ export async function getBudgetVariance(identity: RequestIdentity, projectId: st
   });
 }
 
-export async function computeVarianceFor(tx: Transaction, access: ProjectAccess): Promise<BudgetVarianceDto> {
+export async function computeVarianceFor(
+  tx: Transaction,
+  access: ProjectAccess,
+): Promise<BudgetVarianceDto> {
   const p = access.project;
   const approved = p.approvedBudgetVersionId
-    ? (await tx.select().from(schema.budgetVersions).where(eq(schema.budgetVersions.id, p.approvedBudgetVersionId)))[0]
+    ? (
+        await tx
+          .select()
+          .from(schema.budgetVersions)
+          .where(eq(schema.budgetVersions.id, p.approvedBudgetVersionId))
+      )[0]
     : undefined;
   const totals = await tx
     .select({
@@ -555,7 +638,12 @@ export async function computeVarianceFor(tx: Transaction, access: ProjectAccess)
   const tasks = await tx
     .select({ percentComplete: schema.scheduleTasks.percentComplete })
     .from(schema.scheduleTasks)
-    .where(and(eq(schema.scheduleTasks.projectId, p.id), eq(schema.scheduleTasks.scheduleVersion, p.currentScheduleVersion)));
+    .where(
+      and(
+        eq(schema.scheduleTasks.projectId, p.id),
+        eq(schema.scheduleTasks.scheduleVersion, p.currentScheduleVersion),
+      ),
+    );
   const variance = computeBudgetVariance({
     approvedBaseKobo: approved ? approved.totalKobo : null,
     contingencyKobo: approved ? approved.contingencyKobo : 0n,
@@ -567,4 +655,3 @@ export async function computeVarianceFor(tx: Transaction, access: ProjectAccess)
   });
   return budgetVarianceToJson(variance) as BudgetVarianceDto;
 }
-

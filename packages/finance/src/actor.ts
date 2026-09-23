@@ -1,3 +1,4 @@
+import { sql } from 'drizzle-orm';
 import { ApiError } from '@simplexd/contracts';
 import { applyActorContext, systemContext, type ActorContext, type Transaction } from '@simplexd/db';
 import {
@@ -95,8 +96,14 @@ export async function elevated<T>(
 ): Promise<T> {
   if (fa.ctx.bypass) return fn();
   await applyActorContext(tx, { ...fa.ctx, bypass: true });
+  // Journal balance checks are deferred constraint triggers. They must run
+  // while the transaction is still privileged (journal_lines are hidden from
+  // the caller's own context), so they are forced before demotion.
+  await tx.execute(sql`SET CONSTRAINTS ALL DEFERRED`);
   try {
-    return await fn();
+    const result = await fn();
+    await tx.execute(sql`SET CONSTRAINTS ALL IMMEDIATE`);
+    return result;
   } finally {
     await applyActorContext(tx, { ...fa.ctx, bypass: false });
   }

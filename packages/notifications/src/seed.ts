@@ -20,7 +20,8 @@ export const extraNotificationTemplates: Array<{
     key: 'booking_confirmation',
     channel: 'in_app',
     subject: 'Your {{kind}} is confirmed',
-    bodyText: '{{startsAtCustomer}} ({{customerTimeZone}}). Manage or reschedule from your bookings.',
+    bodyText:
+      '{{startsAtCustomer}} ({{customerTimeZone}}). Manage or reschedule from your bookings.',
     variables: ['kind', 'startsAtCustomer', 'customerTimeZone'],
   },
   {
@@ -122,7 +123,8 @@ export const extraNotificationTemplates: Array<{
     key: 'task_assigned',
     channel: 'email',
     subject: 'Task assigned: {{title}}',
-    bodyText: 'Hello {{name}},\n\nA task needs your attention: {{title}}.\n\nOpen: {{taskUrl}}\n\nSimplexD',
+    bodyText:
+      'Hello {{name}},\n\nA task needs your attention: {{title}}.\n\nOpen: {{taskUrl}}\n\nSimplexD',
     variables: ['name', 'title', 'taskUrl'],
   },
   {
@@ -143,7 +145,8 @@ export const extraNotificationTemplates: Array<{
     key: 'work_order',
     channel: 'email',
     subject: 'Work order {{title}} is {{statusLabel}}',
-    bodyText: 'Hello {{name}},\n\nWork order "{{title}}" is now {{statusLabel}}.\n\nView: {{workOrderUrl}}\n\nSimplexD',
+    bodyText:
+      'Hello {{name}},\n\nWork order "{{title}}" is now {{statusLabel}}.\n\nView: {{workOrderUrl}}\n\nSimplexD',
     variables: ['name', 'title', 'statusLabel', 'workOrderUrl'],
   },
   {
@@ -165,7 +168,8 @@ export const extraNotificationTemplates: Array<{
     key: 'award_published',
     channel: 'email',
     subject: 'Award decision: {{tenderTitle}}',
-    bodyText: 'Hello {{name}},\n\nThe award for "{{tenderTitle}}" has been published.\n\nView: {{tenderUrl}}\n\nSimplexD',
+    bodyText:
+      'Hello {{name}},\n\nThe award for "{{tenderTitle}}" has been published.\n\nView: {{tenderUrl}}\n\nSimplexD',
     variables: ['name', 'tenderTitle', 'tenderUrl'],
   },
   {

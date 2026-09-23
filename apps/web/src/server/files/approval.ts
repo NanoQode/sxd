@@ -28,6 +28,8 @@ export async function setPublicApproval(
     const access = await loadFileAccess(tx, ctx, fileId);
     if (!access) throw notFound();
     const { file } = access;
+    // Separation of duties for both permissions: nobody publishes their own upload.
+    if (file.ownerUserId === userId) throw new ApiError('forbidden', 'you cannot approve your own upload for public use');
     assertAllowed(
       authorizeAny(
         identity.actor,
@@ -36,6 +38,11 @@ export async function setPublicApproval(
       ),
     );
     if (input.approved) {
+      if (!input.altText || input.rightsConfirmed !== true) {
+        throw new ApiError('validation_failed', 'approving for public use requires altText and rightsConfirmed=true', {
+          details: [{ path: 'rightsConfirmed', message: 'alt text and a rights confirmation are required' }],
+        });
+      }
       if (isSensitivePurpose(file.purpose)) throw new ApiError('forbidden', 'sensitive documents can never be approved for public use');
       if (file.status !== 'clean') throw new ApiError('file_quarantined', 'only files that passed malware scanning can be approved', { details: { status: file.status } });
       const mime = file.detectedMime ?? file.declaredMime;
@@ -51,7 +58,7 @@ export async function setPublicApproval(
     let asset = existing ?? null;
     if (input.approved) {
       const values = {
-        altText: input.altText!,
+        altText: input.altText,
         caption: input.caption ?? existing?.caption ?? null,
         rightsNote: input.rightsNote ?? existing?.rightsNote ?? null,
         rightsConfirmed: true,
@@ -59,15 +66,17 @@ export async function setPublicApproval(
         approvedBy: userId,
       };
       if (existing) {
-        [asset] = await tx.update(schema.mediaAssets).set(values).where(eq(schema.mediaAssets.id, existing.id)).returning();
+        const rows = await tx.update(schema.mediaAssets).set(values).where(eq(schema.mediaAssets.id, existing.id)).returning();
+        asset = rows[0] ?? null;
       } else {
-        [asset] = await tx
+        const rows = await tx
           .insert(schema.mediaAssets)
           .values({ fileId, uploadedBy: file.ownerUserId, ...values })
           .returning();
+        asset = rows[0] ?? null;
       }
     } else if (existing) {
-      [asset] = await tx
+      const rows = await tx
         .update(schema.mediaAssets)
         .set({
           approvedForPublic: false,
@@ -79,6 +88,7 @@ export async function setPublicApproval(
         })
         .where(eq(schema.mediaAssets.id, existing.id))
         .returning();
+      asset = rows[0] ?? null;
     }
     await recordAudit(tx, identity, {
       action: input.approved ? 'file.public_approved' : 'file.public_revoked',

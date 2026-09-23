@@ -270,25 +270,6 @@ export async function createUploadIntent(
     }
     const multipart = input.multipart === true || input.sizeBytes > MULTIPART_THRESHOLD_BYTES;
     const plan = multipart ? planMultipartUpload(input.sizeBytes) : null;
-    await tx.insert(schema.fileObjects).values({
-      id: fileId,
-      organizationId,
-      ownerUserId: userId,
-      bucket: 'quarantine',
-      storageKey,
-      originalName: input.fileName,
-      declaredMime: mime,
-      sizeBytes: input.sizeBytes,
-      // Client-declared checksum is recorded as user-provided metadata until verified.
-      checksumSha256: null,
-      scanResult: input.sha256 ? { declaredSha256: input.sha256 } : null,
-      status: 'pending_upload',
-      uploadKind: multipart ? 'multipart' : 'single',
-      purpose: input.purpose,
-      entityType: input.entityType ?? null,
-      entityId: input.entityId ?? null,
-      retentionUntil: new Date(Date.now() + PENDING_RETENTION_MS),
-    });
     let intent;
     try {
       intent = await storage.createUploadIntent({
@@ -305,11 +286,31 @@ export async function createUploadIntent(
         throw new ApiError('validation_failed', err.message);
       throw new ApiError('provider_unavailable', 'the storage provider refused the upload request', { retryable: true });
     }
-    if (intent.kind === 'multipart') {
-      await tx
-        .update(schema.fileObjects)
-        .set({ multipartUploadId: intent.uploadId })
-        .where(eq(schema.fileObjects.id, fileId));
+    try {
+      await tx.insert(schema.fileObjects).values({
+        id: fileId,
+        organizationId,
+        ownerUserId: userId,
+        bucket: 'quarantine',
+        storageKey,
+        originalName: input.fileName,
+        declaredMime: mime,
+        sizeBytes: input.sizeBytes,
+        // Client-declared checksum is recorded as user-provided metadata until verified.
+        checksumSha256: null,
+        scanResult: input.sha256 ? { declaredSha256: input.sha256 } : null,
+        status: 'pending_upload',
+        uploadKind: multipart ? 'multipart' : 'single',
+        multipartUploadId: intent.kind === 'multipart' ? intent.uploadId : null,
+        purpose: input.purpose,
+        entityType: input.entityType ?? null,
+        entityId: input.entityId ?? null,
+        retentionUntil: new Date(Date.now() + PENDING_RETENTION_MS),
+      });
+    } catch (err) {
+      if (intent.kind === 'multipart')
+        await storage.abortMultipart({ bucket: 'quarantine', key: storageKey, uploadId: intent.uploadId }).catch(() => undefined);
+      throw err;
     }
     await recordAudit(tx, identity, {
       action: 'file.upload_intent_created',

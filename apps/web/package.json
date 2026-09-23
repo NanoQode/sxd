@@ -21,6 +21,7 @@
     "@simplexd/domain": "workspace:*",
     "@simplexd/finance": "workspace:*",
     "@simplexd/integrations": "workspace:*",
+    "@simplexd/notifications": "workspace:*",
     "@simplexd/ui": "workspace:*",
     "@tanstack/react-query": "5.103.2",
     "@tanstack/react-table": "8.21.3",

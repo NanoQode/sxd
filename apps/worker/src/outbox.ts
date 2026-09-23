@@ -38,17 +38,25 @@ const routes: Record<string, OutboxRoute> = {
   ],
   'payment.event_received': () => [{ type: 'payments.process_provider_event', queue: 'payments' }],
   'refund.approved': () => [{ type: 'payments.submit_refund', queue: 'payments' }],
-  'appointment.confirmed': () => [
-    { type: 'calendar.sync_appointment', queue: 'calendar' },
+  // Calendar jobs are enqueued inside the booking transaction (see
+  // apps/web/src/server/appointments/jobs.ts); outbox events only fan out notifications.
+  'appointment.booked': () => [
     { type: 'notifications.booking_confirmation', queue: 'notifications' },
   ],
-  'appointment.rescheduled': () => [
-    { type: 'calendar.sync_appointment', queue: 'calendar' },
-    { type: 'notifications.visit_change', queue: 'notifications' },
+  'appointment.confirmed': () => [
+    { type: 'notifications.booking_confirmation', queue: 'notifications' },
   ],
-  'appointment.cancelled': () => [
-    { type: 'calendar.cancel_appointment', queue: 'calendar' },
-    { type: 'notifications.visit_change', queue: 'notifications' },
+  'appointment.rescheduled': () => [{ type: 'notifications.visit_change', queue: 'notifications' }],
+  'appointment.cancelled': () => [{ type: 'notifications.visit_change', queue: 'notifications' }],
+  'appointment.sync_conflict': () => [
+    { type: 'notifications.urgent_decision', queue: 'notifications' },
+  ],
+  'appointment.reminder_due': (e) => [
+    {
+      type: 'notifications.send_due_reminders',
+      queue: 'notifications',
+      payload: { reminder: { ...(e.payload as object) } },
+    },
   ],
   'report.released': () => [{ type: 'notifications.report_ready', queue: 'notifications' }],
   'change_order.submitted': () => [
@@ -63,6 +71,14 @@ const routes: Record<string, OutboxRoute> = {
   'work_order.transitioned': () => [{ type: 'notifications.work_order', queue: 'notifications' }],
   'invitation.created': () => [{ type: 'notifications.invitation', queue: 'notifications' }],
   'setup_token.issued': () => [{ type: 'notifications.admin_setup', queue: 'notifications' }],
+  // Consumed by @simplexd/notifications (event registry); one dispatch job per event.
+  'lead.invited': () => [{ type: 'notifications.dispatch', queue: 'notifications' }],
+  'engagement.transitioned': () => [{ type: 'notifications.dispatch', queue: 'notifications' }],
+  'payment.settled': () => [{ type: 'notifications.dispatch', queue: 'notifications' }],
+  'project.report.released': () => [{ type: 'notifications.dispatch', queue: 'notifications' }],
+  'project.status_changed': () => [{ type: 'notifications.dispatch', queue: 'notifications' }],
+  'task.assigned': () => [{ type: 'notifications.dispatch', queue: 'notifications' }],
+  'message.posted': () => [{ type: 'notifications.dispatch', queue: 'notifications' }],
 };
 
 export function routeOutboxEvent(event: OutboxRow): ReturnType<OutboxRoute> {

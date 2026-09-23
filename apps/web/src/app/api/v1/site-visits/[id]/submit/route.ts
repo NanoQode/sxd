@@ -11,5 +11,8 @@ export const POST = route<{ params: Promise<{ id: string }> }>(async (req, ctx) 
   const { id } = await params(ctx, z.object({ id: uuidSchema }));
   const body = await parseJson(req, siteVisitSubmitSchema);
   const result = await submitSiteVisit(identity, id, body, { correlationId: ctx.correlationId });
-  return json(result, { status: result.idempotentReplay ? 200 : 201, correlationId: ctx.correlationId });
+  return json(result, {
+    status: result.idempotentReplay ? 200 : 201,
+    correlationId: ctx.correlationId,
+  });
 });

@@ -6,5 +6,8 @@ export const dynamic = 'force-dynamic';
 
 export const GET = route(async (_req, ctx) => {
   const identity = await getIdentity();
-  return json(await listPendingApprovals(identity), { status: 200, correlationId: ctx.correlationId });
+  return json(await listPendingApprovals(identity), {
+    status: 200,
+    correlationId: ctx.correlationId,
+  });
 });

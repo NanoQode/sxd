@@ -71,18 +71,39 @@ export async function processTermiiWebhook(
   };
   if (signature === 'invalid') {
     await log('webhook.rejected', 'signature mismatch');
-    return { status: 401, accepted: false, signature, eventType: 'unknown', action: 'rejected', reason: 'invalid_signature' };
+    return {
+      status: 401,
+      accepted: false,
+      signature,
+      eventType: 'unknown',
+      action: 'rejected',
+      reason: 'invalid_signature',
+    };
   }
   if (signature === 'unchecked' && env.production) {
     await log('webhook.rejected', 'no webhook secret configured; refused in production');
-    return { status: 403, accepted: false, signature, eventType: 'unknown', action: 'rejected', reason: 'signature_unchecked' };
+    return {
+      status: 403,
+      accepted: false,
+      signature,
+      eventType: 'unknown',
+      action: 'rejected',
+      reason: 'signature_unchecked',
+    };
   }
   let payload: unknown;
   try {
     payload = parseTermiiJson(rawBody);
   } catch {
     await log('webhook.rejected', 'body is not JSON');
-    return { status: 400, accepted: false, signature, eventType: 'unknown', action: 'rejected', reason: 'invalid_json' };
+    return {
+      status: 400,
+      accepted: false,
+      signature,
+      eventType: 'unknown',
+      action: 'rejected',
+      reason: 'invalid_json',
+    };
   }
   const event = parseTermiiWebhookPayload(payload);
   const now = env.now();
@@ -110,7 +131,10 @@ export async function processTermiiWebhook(
           status: nextStatus,
           providerStatus: event.providerStatus ?? attempt.providerStatus,
           deliveredAt: nextStatus === 'delivered' ? (event.occurredAt ?? now) : attempt.deliveredAt,
-          failedAt: nextStatus === 'failed' || nextStatus === 'rejected' ? (event.occurredAt ?? now) : attempt.failedAt,
+          failedAt:
+            nextStatus === 'failed' || nextStatus === 'rejected'
+              ? (event.occurredAt ?? now)
+              : attempt.failedAt,
           errorSanitized:
             nextStatus === 'failed' || nextStatus === 'rejected'
               ? (event.providerStatus ?? nextStatus).slice(0, 500)
@@ -119,7 +143,9 @@ export async function processTermiiWebhook(
         .where(eq(schema.deliveryAttempts.id, attempt.id));
       return attempt.id;
     });
-    await log('webhook.receipt', `delivery state ${event.deliveryState}`, { matched: Boolean(updated) });
+    await log('webhook.receipt', `delivery state ${event.deliveryState}`, {
+      matched: Boolean(updated),
+    });
     return {
       status: 200,
       accepted: true,
@@ -148,7 +174,12 @@ export async function processTermiiWebhook(
 }
 
 /** STOP: opt out of every SMS category and suppress the number for all campaigns. */
-export async function recordSmsOptOut(db: Db, phoneE164: string, source: string, userId: string | null = null): Promise<void> {
+export async function recordSmsOptOut(
+  db: Db,
+  phoneE164: string,
+  source: string,
+  userId: string | null = null,
+): Promise<void> {
   await withActor(db, systemContext('sms-consent'), async (tx) => {
     const owner = userId ?? (await userIdForPhone(tx, phoneE164));
     await tx.insert(schema.smsConsents).values(
@@ -171,7 +202,12 @@ export async function recordSmsOptOut(db: Db, phoneE164: string, source: string,
 }
 
 /** START: lifts a STOP suppression and records opt-in for transactional and marketing SMS. */
-export async function recordSmsOptIn(db: Db, phoneE164: string, source: string, userId: string | null = null): Promise<void> {
+export async function recordSmsOptIn(
+  db: Db,
+  phoneE164: string,
+  source: string,
+  userId: string | null = null,
+): Promise<void> {
   await withActor(db, systemContext('sms-consent'), async (tx) => {
     const owner = userId ?? (await userIdForPhone(tx, phoneE164));
     await tx.insert(schema.smsConsents).values(
@@ -195,7 +231,10 @@ export async function recordSmsOptIn(db: Db, phoneE164: string, source: string, 
   });
 }
 
-async function userIdForPhone(tx: Parameters<Parameters<typeof withActor>[2]>[0], phoneE164: string): Promise<string | null> {
+async function userIdForPhone(
+  tx: Parameters<Parameters<typeof withActor>[2]>[0],
+  phoneE164: string,
+): Promise<string | null> {
   const [profile] = await tx
     .select({ userId: schema.userProfiles.userId })
     .from(schema.userProfiles)
@@ -218,7 +257,11 @@ export interface BounceInput {
  * matching attempt `bounced` and suppresses the address for hard bounces and
  * complaints; soft bounces are recorded on the attempt only.
  */
-export async function processBounce(db: Db, input: BounceInput, options: PipelineOptions = {}): Promise<{ attemptId: string | null; suppressed: boolean }> {
+export async function processBounce(
+  db: Db,
+  input: BounceInput,
+  options: PipelineOptions = {},
+): Promise<{ attemptId: string | null; suppressed: boolean }> {
   const env = resolveEnv(options);
   const email = input.email.trim().toLowerCase();
   const now = env.now();

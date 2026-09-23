@@ -136,12 +136,6 @@ async function invitedPartnerIds(tx: DbExecutor, tenderId: string): Promise<stri
   return rows.map((r) => r.partnerUserId);
 }
 
-async function loadTenderDto(tx: DbExecutor, id: string): Promise<TenderDto> {
-  const [row] = await tx.select().from(schema.tenders).where(eq(schema.tenders.id, id));
-  if (!row) throw new ApiError('not_found', 'tender not found');
-  return toTenderDto(row, await loadRevisions(tx, id));
-}
-
 /* -------------------------------------------------------------------------- */
 /* Create and edit                                                            */
 /* -------------------------------------------------------------------------- */

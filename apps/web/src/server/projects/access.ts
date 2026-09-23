@@ -47,7 +47,10 @@ export async function loadProjectAccess(
   tx: Transaction,
   projectId: string,
 ): Promise<ProjectAccess | null> {
-  const [project] = await tx.select().from(schema.projects).where(eq(schema.projects.id, projectId));
+  const [project] = await tx
+    .select()
+    .from(schema.projects)
+    .where(eq(schema.projects.id, projectId));
   if (!project) return null;
   const assignments = await tx
     .select()
@@ -88,8 +91,9 @@ export function projectRef(access: ProjectAccess, overrides: RefOverrides = {}):
     type: 'project',
     id: access.project.id,
     organizationId: access.project.organizationId,
+    // The policy's project-manager rule accepts either an assignee match or an id in
+    // assignedProjectIds; only the assignee list is populated so an unassigned PM is denied.
     assigneeUserIds,
-    assignedProjectIds: [access.project.id],
     ...rest,
   };
 }
@@ -135,27 +139,39 @@ export function decideProjectAccess(
   overrides: RefOverrides = {},
 ): Decision {
   const actor = identity.actor;
-  let last: Decision = { allowed: false, code: 'no_permission', reason: 'no applicable permission' };
   const ref = projectRef(access, overrides);
   const pRef = partnerRef(access, overrides);
+  // The denial reported is the one from the caller's own kind of check (staff, customer or partner).
+  const kind: 'staff' | 'org' | 'partner' =
+    actor.staffRoles.length > 0 ? 'staff' : actor.memberships.length > 0 ? 'org' : 'partner';
+  let last: Decision = {
+    allowed: false,
+    code: 'no_permission',
+    reason: 'no applicable permission',
+  };
+  let own: Decision | null = null;
+  const consider = (d: Decision, k: 'staff' | 'org' | 'partner') => {
+    last = d;
+    if (k === kind && !own) own = d;
+  };
   for (const c of checks) {
     if (c.staff) {
       const d = authorizeStaff(actor, c.staff, ref);
       if (d.allowed) return d;
-      last = d;
+      consider(d, 'staff');
     }
     if (c.org) {
       const d = authorizeOrg(actor, c.org, ref);
       if (d.allowed) return d;
-      last = d;
+      consider(d, 'org');
     }
     if (c.partner) {
       const d = authorizePartner(actor, c.partner, pRef);
       if (d.allowed) return d;
-      last = d;
+      consider(d, 'partner');
     }
   }
-  return last;
+  return own ?? last;
 }
 
 export function assertProjectAccess(

@@ -117,16 +117,8 @@ export async function createBid(identity: RequestIdentity, tenderId: string, opt
       if (existing.status === 'withdrawn') throw new ApiError('conflict', 'a withdrawn bid cannot be reopened');
       return bidDtoInTx(tx, existing, identity.session?.user.name ?? null);
     }
-    // The bids policy is self-referencing (can_access_bid(id)) and cannot see a
-    // row being inserted; the row is written elevated once access is proven.
-    await elevate(tx, ctx);
-    let bid: BidRow;
-    try {
-      const [row] = await tx.insert(schema.bids).values({ tenderId, partnerUserId: userId, status: 'draft' }).returning();
-      bid = row!;
-    } finally {
-      await demote(tx, ctx);
-    }
+    const [row] = await tx.insert(schema.bids).values({ tenderId, partnerUserId: userId, status: 'draft' }).returning();
+    const bid = row!;
     await recordAudit(tx, identity, {
       action: 'bid.created',
       entityType: 'bid',

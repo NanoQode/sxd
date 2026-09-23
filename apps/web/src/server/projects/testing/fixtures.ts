@@ -57,18 +57,30 @@ export async function createFixtures(owner: Database): Promise<ProjectFixtures> 
   };
   const orgA = `org_a_${sfx}`;
   const orgB = `org_b_${sfx}`;
-  await owner.insert(schema.user).values(
-    Object.values(users).map((u) => ({ id: u.id, name: u.name, email: `${u.id}@example.test` })),
-  );
+  await owner
+    .insert(schema.user)
+    .values(
+      Object.values(users).map((u) => ({ id: u.id, name: u.name, email: `${u.id}@example.test` })),
+    );
   await owner.insert(schema.organization).values([
     { id: orgA, name: 'Org A', slug: orgA },
     { id: orgB, name: 'Org B', slug: orgB },
   ]);
   await owner.insert(schema.member).values([
     { id: `m_${users.ownerA.id}`, organizationId: orgA, userId: users.ownerA.id, role: 'owner' },
-    { id: `m_${users.approverA.id}`, organizationId: orgA, userId: users.approverA.id, role: 'approver' },
+    {
+      id: `m_${users.approverA.id}`,
+      organizationId: orgA,
+      userId: users.approverA.id,
+      role: 'approver',
+    },
     { id: `m_${users.memberA.id}`, organizationId: orgA, userId: users.memberA.id, role: 'member' },
-    { id: `m_${users.adviserA.id}`, organizationId: orgA, userId: users.adviserA.id, role: 'adviser' },
+    {
+      id: `m_${users.adviserA.id}`,
+      organizationId: orgA,
+      userId: users.adviserA.id,
+      role: 'adviser',
+    },
     { id: `m_${users.ownerB.id}`, organizationId: orgB, userId: users.ownerB.id, role: 'owner' },
   ]);
   const roles: Array<[FixtureUser, StaffRole]> = [
@@ -110,7 +122,12 @@ export async function createFixtures(owner: Database): Promise<ProjectFixtures> 
   };
 }
 
-function file(orgId: string, ownerUserId: string, status: 'clean' | 'scanning' | 'infected', key: string) {
+function file(
+  orgId: string,
+  ownerUserId: string,
+  status: 'clean' | 'scanning' | 'infected',
+  key: string,
+) {
   return {
     organizationId: orgId,
     ownerUserId,
@@ -138,7 +155,8 @@ export interface IdentityOptions {
 export function identityFor(user: FixtureUser, options: IdentityOptions = {}): RequestIdentity {
   const staffRoles = options.staffRoles ?? [];
   const memberships = options.memberships ?? [];
-  const activeOrganizationId = options.activeOrganizationId ?? memberships[0]?.organizationId ?? null;
+  const activeOrganizationId =
+    options.activeOrganizationId ?? memberships[0]?.organizationId ?? null;
   const actor: Actor = {
     userId: user.id,
     staffRoles,
@@ -175,17 +193,34 @@ export function identityFor(user: FixtureUser, options: IdentityOptions = {}): R
   return {
     session,
     actor,
-    ctx: { userId: user.id, organizationId: activeOrganizationId, staff: staffRoles.length > 0, anonymousToken: null },
+    ctx: {
+      userId: user.id,
+      organizationId: activeOrganizationId,
+      staff: staffRoles.length > 0,
+      anonymousToken: null,
+    },
     profile: null,
     featureFlags: {},
   };
 }
 
-export function customerIdentity(f: ProjectFixtures, user: FixtureUser, role: OrgRole, orgId = f.orgA): RequestIdentity {
-  return identityFor(user, { memberships: [{ organizationId: orgId, role }], activeOrganizationId: orgId });
+export function customerIdentity(
+  f: ProjectFixtures,
+  user: FixtureUser,
+  role: OrgRole,
+  orgId = f.orgA,
+): RequestIdentity {
+  return identityFor(user, {
+    memberships: [{ organizationId: orgId, role }],
+    activeOrganizationId: orgId,
+  });
 }
 
-export function staffIdentity(user: FixtureUser, role: StaffRole, mfaVerified = false): RequestIdentity {
+export function staffIdentity(
+  user: FixtureUser,
+  role: StaffRole,
+  mfaVerified = false,
+): RequestIdentity {
   return identityFor(user, { staffRoles: [role], mfaVerified });
 }
 
@@ -199,7 +234,12 @@ export async function errorCode(p: Promise<unknown>): Promise<string> {
     await p;
     return 'ok';
   } catch (err) {
-    const e = err as { code?: string; decision?: { code: string }; name?: string; message?: string };
+    const e = err as {
+      code?: string;
+      decision?: { code: string };
+      name?: string;
+      message?: string;
+    };
     if (e.name === 'AuthorizationError') return `forbidden:${e.decision?.code ?? ''}`;
     return e.code ?? `error:${e.message ?? ''}`;
   }

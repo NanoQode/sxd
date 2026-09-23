@@ -13,5 +13,8 @@ export const GET = route<{ params: Promise<{ id: string }> }>(async (req, ctx) =
   const query = parseQuery(req, evidenceListQuerySchema);
   const visit = await getSiteVisit(identity, id);
   if (!visit.projectId) throw new ApiError('not_found', 'site visit not found');
-  return json(await listEvidence(identity, visit.projectId, { ...query, siteVisitId: id }), { status: 200, correlationId: ctx.correlationId });
+  return json(await listEvidence(identity, visit.projectId, { ...query, siteVisitId: id }), {
+    status: 200,
+    correlationId: ctx.correlationId,
+  });
 });

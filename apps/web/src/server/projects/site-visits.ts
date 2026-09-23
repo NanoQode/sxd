@@ -15,9 +15,23 @@ import { appendOutbox, getDb, schema, withActor, type Transaction } from '@simpl
 import { AuthorizationError, authorizePartner, authorizeStaff } from '@simplexd/domain/authz';
 import { recordAudit } from '@/lib/audit';
 import type { RequestIdentity } from '@/lib/auth/session';
-import { PROJECT_READ_CHECKS, loadProjectAccess, requireProject, type ProjectAccess } from './access';
+import {
+  PROJECT_READ_CHECKS,
+  loadProjectAccess,
+  requireProject,
+  type ProjectAccess,
+} from './access';
 import { linkEvidenceInTx } from './evidence';
-import { ctxFor, decodeCursor, invalidTransition, iso, notFound, pageSlice, userIdOf, type ServiceOptions } from './shared';
+import {
+  ctxFor,
+  decodeCursor,
+  invalidTransition,
+  iso,
+  notFound,
+  pageSlice,
+  userIdOf,
+  type ServiceOptions,
+} from './shared';
 
 type VisitRow = typeof schema.siteVisits.$inferSelect;
 
@@ -31,7 +45,12 @@ async function evidenceCount(tx: Transaction, visitId: string): Promise<number> 
 
 async function toDto(tx: Transaction, v: VisitRow): Promise<SiteVisitDto> {
   const inspector = v.inspectorUserId
-    ? (await tx.select({ name: schema.user.name }).from(schema.user).where(eq(schema.user.id, v.inspectorUserId)))[0]
+    ? (
+        await tx
+          .select({ name: schema.user.name })
+          .from(schema.user)
+          .where(eq(schema.user.id, v.inspectorUserId))
+      )[0]
     : undefined;
   return {
     id: v.id,
@@ -61,12 +80,22 @@ async function toDto(tx: Transaction, v: VisitRow): Promise<SiteVisitDto> {
 }
 
 /** The inspector named on the visit may perform it: staff `site_visits.perform` or a partner inspector. */
-function assertAssignedInspector(identity: RequestIdentity, access: ProjectAccess, v: VisitRow): void {
+function assertAssignedInspector(
+  identity: RequestIdentity,
+  access: ProjectAccess,
+  v: VisitRow,
+): void {
   const actorId = userIdOf(identity);
   if (v.inspectorUserId !== actorId) {
     throw new ApiError('forbidden', 'only the inspector assigned to this visit can perform it');
   }
-  const ref = { type: 'site_visit', id: v.id, organizationId: access.project.organizationId, assigneeUserIds: [actorId], createdBy: actorId };
+  const ref = {
+    type: 'site_visit',
+    id: v.id,
+    organizationId: access.project.organizationId,
+    assigneeUserIds: [actorId],
+    createdBy: actorId,
+  };
   if (identity.actor.staffRoles.length > 0) {
     const d = authorizeStaff(identity.actor, 'site_visits.perform', ref);
     if (!d.allowed) throw new AuthorizationError(d);
@@ -77,20 +106,32 @@ function assertAssignedInspector(identity: RequestIdentity, access: ProjectAcces
 }
 
 async function assertInspectorUser(tx: Transaction, inspectorUserId: string): Promise<void> {
-  const [u] = await tx.select({ id: schema.user.id }).from(schema.user).where(eq(schema.user.id, inspectorUserId));
+  const [u] = await tx
+    .select({ id: schema.user.id })
+    .from(schema.user)
+    .where(eq(schema.user.id, inspectorUserId));
   if (!u) throw new ApiError('validation_failed', 'inspectorUserId does not exist');
   const roles = await tx
     .select({ id: schema.staffRoles.id })
     .from(schema.staffRoles)
     .where(and(eq(schema.staffRoles.userId, inspectorUserId), isNull(schema.staffRoles.revokedAt)));
-  const partner = await tx.select({ id: schema.partnerProfiles.id }).from(schema.partnerProfiles).where(eq(schema.partnerProfiles.userId, inspectorUserId));
+  const partner = await tx
+    .select({ id: schema.partnerProfiles.id })
+    .from(schema.partnerProfiles)
+    .where(eq(schema.partnerProfiles.userId, inspectorUserId));
   if (roles.length === 0 && partner.length === 0) {
     throw new ApiError('validation_failed', 'inspectorUserId must be a staff member or a partner');
   }
 }
 
-async function findByOfflineId(tx: Transaction, offlineClientId: string): Promise<VisitRow | undefined> {
-  const [row] = await tx.select().from(schema.siteVisits).where(eq(schema.siteVisits.offlineClientId, offlineClientId));
+async function findByOfflineId(
+  tx: Transaction,
+  offlineClientId: string,
+): Promise<VisitRow | undefined> {
+  const [row] = await tx
+    .select()
+    .from(schema.siteVisits)
+    .where(eq(schema.siteVisits.offlineClientId, offlineClientId));
   return row;
 }
 
@@ -107,7 +148,8 @@ export async function scheduleSiteVisit(
     if (input.offlineClientId) {
       const existing = await findByOfflineId(tx, input.offlineClientId);
       if (existing) {
-        if (existing.projectId !== projectId) throw new ApiError('conflict', 'this offline id was already used elsewhere');
+        if (existing.projectId !== projectId)
+          throw new ApiError('conflict', 'this offline id was already used elsewhere');
         return { ...(await toDto(tx, existing)), idempotentReplay: true };
       }
     }
@@ -141,7 +183,12 @@ export async function scheduleSiteVisit(
       aggregateId: row!.id,
       organizationId: access.project.organizationId,
       actorUserId: actorId,
-      payload: { projectId, siteVisitId: row!.id, inspectorUserId: input.inspectorUserId, customerContactUserId: access.project.customerContactUserId },
+      payload: {
+        projectId,
+        siteVisitId: row!.id,
+        inspectorUserId: input.inspectorUserId,
+        customerContactUserId: access.project.customerContactUserId,
+      },
       correlationId: options.correlationId ?? null,
     });
     return { ...(await toDto(tx, row!)), idempotentReplay: false };
@@ -183,7 +230,15 @@ export async function listSiteVisits(
         and(
           eq(schema.siteVisits.projectId, projectId),
           query.status ? eq(schema.siteVisits.status, query.status) : undefined,
-          cursor ? or(lt(schema.siteVisits.createdAt, cursor.createdAt), and(eq(schema.siteVisits.createdAt, cursor.createdAt), lt(schema.siteVisits.id, cursor.id))) : undefined,
+          cursor
+            ? or(
+                lt(schema.siteVisits.createdAt, cursor.createdAt),
+                and(
+                  eq(schema.siteVisits.createdAt, cursor.createdAt),
+                  lt(schema.siteVisits.id, cursor.id),
+                ),
+              )
+            : undefined,
         ),
       )
       .orderBy(desc(schema.siteVisits.createdAt), desc(schema.siteVisits.id))
@@ -206,10 +261,14 @@ export async function startSiteVisit(
     const { v, access } = await loadVisit(tx, identity, id);
     assertAssignedInspector(identity, access, v);
     if (v.status === 'in_progress') return { ...(await toDto(tx, v)), idempotentReplay: true };
-    if (v.status !== 'scheduled') throw invalidTransition(`visit is ${v.status} and cannot be started`);
+    if (v.status !== 'scheduled')
+      throw invalidTransition(`visit is ${v.status} and cannot be started`);
     const [updated] = await tx
       .update(schema.siteVisits)
-      .set({ status: 'in_progress', startedAt: input.startedAt ? new Date(input.startedAt) : new Date() })
+      .set({
+        status: 'in_progress',
+        startedAt: input.startedAt ? new Date(input.startedAt) : new Date(),
+      })
       .where(and(eq(schema.siteVisits.id, id), eq(schema.siteVisits.status, 'scheduled')))
       .returning();
     if (!updated) throw invalidTransition('the visit changed while starting; reload');
@@ -244,18 +303,29 @@ async function submitInTx(
   if (input.offlineClientId) {
     const existing = await findByOfflineId(tx, input.offlineClientId);
     if (existing) {
-      if (existing.inspectorUserId !== actorId) throw new ApiError('conflict', 'this offline id was already used by another user');
-      if (existing.id !== v.id) throw new ApiError('conflict', 'this offline id belongs to a different visit');
+      if (existing.inspectorUserId !== actorId)
+        throw new ApiError('conflict', 'this offline id was already used by another user');
+      if (existing.id !== v.id)
+        throw new ApiError('conflict', 'this offline id belongs to a different visit');
       if (existing.status === 'submitted' || existing.status === 'reviewed') {
-        return { row: existing, idempotentReplay: true, evidence: await linkAll(tx, identity, access, existing, input, options) };
+        return {
+          row: existing,
+          idempotentReplay: true,
+          evidence: await linkAll(tx, identity, access, existing, input, options),
+        };
       }
     }
   }
   if (v.status === 'submitted' || v.status === 'reviewed') {
     // No offline id: a repeated submission of an already submitted visit is not an error either.
-    return { row: v, idempotentReplay: true, evidence: await linkAll(tx, identity, access, v, input, options) };
+    return {
+      row: v,
+      idempotentReplay: true,
+      evidence: await linkAll(tx, identity, access, v, input, options),
+    };
   }
-  if (v.status !== 'scheduled' && v.status !== 'in_progress') throw invalidTransition(`visit is ${v.status} and cannot be submitted`);
+  if (v.status !== 'scheduled' && v.status !== 'in_progress')
+    throw invalidTransition(`visit is ${v.status} and cannot be submitted`);
   const submittedAt = input.submittedAt ? new Date(input.submittedAt) : new Date();
   const [updated] = await tx
     .update(schema.siteVisits)
@@ -278,7 +348,11 @@ async function submitInTx(
     entityType: 'site_visit',
     entityId: v.id,
     organizationId: access.project.organizationId,
-    after: { submittedAt: submittedAt.toISOString(), offlineClientId: input.offlineClientId ?? null, evidenceLinked: evidence.length },
+    after: {
+      submittedAt: submittedAt.toISOString(),
+      offlineClientId: input.offlineClientId ?? null,
+      evidenceLinked: evidence.length,
+    },
     correlationId: options.correlationId,
   });
   await appendOutbox(tx, {
@@ -287,7 +361,12 @@ async function submitInTx(
     aggregateId: v.id,
     organizationId: access.project.organizationId,
     actorUserId: actorId,
-    payload: { projectId: access.project.id, siteVisitId: v.id, inspectorUserId: actorId, pmUserId: access.project.pmUserId },
+    payload: {
+      projectId: access.project.id,
+      siteVisitId: v.id,
+      inspectorUserId: actorId,
+      pmUserId: access.project.pmUserId,
+    },
     correlationId: options.correlationId ?? null,
   });
   return { row: updated, idempotentReplay: false, evidence };
@@ -311,14 +390,28 @@ async function linkAll(
         tx,
         identity,
         access,
-        { fileId, siteVisitId: v.id, offlineClientId: `${input.offlineClientId ?? v.id}:${fileId}`.slice(0, 128) },
+        {
+          fileId,
+          siteVisitId: v.id,
+          offlineClientId: `${input.offlineClientId ?? v.id}:${fileId}`.slice(0, 128),
+        },
         options,
       );
       await tx.execute(sql.raw(`RELEASE SAVEPOINT ${savepoint}`));
-      out.push({ fileId, outcome: r.idempotentReplay ? 'replayed' : 'created', evidenceId: r.row.id, reason: null });
+      out.push({
+        fileId,
+        outcome: r.idempotentReplay ? 'replayed' : 'created',
+        evidenceId: r.row.id,
+        reason: null,
+      });
     } catch (err) {
       await tx.execute(sql.raw(`ROLLBACK TO SAVEPOINT ${savepoint}`));
-      out.push({ fileId, outcome: 'rejected', evidenceId: null, reason: err instanceof Error ? err.message : 'evidence link failed' });
+      out.push({
+        fileId,
+        outcome: 'rejected',
+        evidenceId: null,
+        reason: err instanceof Error ? err.message : 'evidence link failed',
+      });
     }
   }
   return out;
@@ -329,12 +422,18 @@ export async function submitSiteVisit(
   id: string,
   input: SiteVisitSubmit,
   options: ServiceOptions = {},
-): Promise<SiteVisitDto & { idempotentReplay: boolean; evidence: SiteVisitSyncResult['evidence'] }> {
+): Promise<
+  SiteVisitDto & { idempotentReplay: boolean; evidence: SiteVisitSyncResult['evidence'] }
+> {
   userIdOf(identity);
   return withActor(getDb(), ctxFor(identity, options), async (tx) => {
     const { v, access } = await loadVisit(tx, identity, id);
     const outcome = await submitInTx(tx, identity, v, access, input, options);
-    return { ...(await toDto(tx, outcome.row)), idempotentReplay: outcome.idempotentReplay, evidence: outcome.evidence };
+    return {
+      ...(await toDto(tx, outcome.row)),
+      idempotentReplay: outcome.idempotentReplay,
+      evidence: outcome.evidence,
+    };
   });
 }
 
@@ -348,9 +447,13 @@ export async function reviewSiteVisit(
   const actorId = userIdOf(identity);
   return withActor(getDb(), ctxFor(identity, options), async (tx) => {
     const { v, access } = await loadVisit(tx, identity, id);
-    await requireProject(tx, identity, access.project.id, [{ staff: 'reports.review' }], { createdBy: v.inspectorUserId });
-    if (v.inspectorUserId === actorId) throw new ApiError('forbidden', 'an inspector cannot review their own visit');
-    if (v.status !== 'submitted') throw invalidTransition(`visit is ${v.status}; only submitted visits can be reviewed`);
+    await requireProject(tx, identity, access.project.id, [{ staff: 'reports.review' }], {
+      createdBy: v.inspectorUserId,
+    });
+    if (v.inspectorUserId === actorId)
+      throw new ApiError('forbidden', 'an inspector cannot review their own visit');
+    if (v.status !== 'submitted')
+      throw invalidTransition(`visit is ${v.status}; only submitted visits can be reviewed`);
     const [updated] = await tx
       .update(schema.siteVisits)
       .set({ status: 'reviewed', reviewedBy: actorId, reviewedAt: new Date() })
@@ -404,7 +507,12 @@ export async function cancelSiteVisit(
       aggregateId: id,
       organizationId: access.project.organizationId,
       actorUserId: actorId,
-      payload: { projectId: access.project.id, siteVisitId: id, inspectorUserId: v.inspectorUserId, customerContactUserId: access.project.customerContactUserId },
+      payload: {
+        projectId: access.project.id,
+        siteVisitId: id,
+        inspectorUserId: v.inspectorUserId,
+        customerContactUserId: access.project.customerContactUserId,
+      },
       correlationId: options.correlationId ?? null,
     });
     return toDto(tx, updated!);
@@ -431,7 +539,12 @@ export async function syncSiteVisits(
         offlineClientId: item.offlineClientId,
         outcome: 'rejected',
         siteVisitId: item.siteVisitId ?? null,
-        code: err instanceof ApiError ? err.code : err instanceof AuthorizationError ? 'forbidden' : 'internal_error',
+        code:
+          err instanceof ApiError
+            ? err.code
+            : err instanceof AuthorizationError
+              ? 'forbidden'
+              : 'internal_error',
         reason: err instanceof Error ? err.message : 'sync failed',
         evidence: [],
       });
@@ -463,8 +576,14 @@ async function syncOne(
       v = loaded.v;
       access = loaded.access;
     } else {
-      if (!item.projectId) throw new ApiError('validation_failed', 'projectId is required to create a visit from the field');
-      access = await requireProject(tx, identity, item.projectId, [{ staff: 'site_visits.perform' }]);
+      if (!item.projectId)
+        throw new ApiError(
+          'validation_failed',
+          'projectId is required to create a visit from the field',
+        );
+      access = await requireProject(tx, identity, item.projectId, [
+        { staff: 'site_visits.perform' },
+      ]);
       const [row] = await tx
         .insert(schema.siteVisits)
         .values({
@@ -472,7 +591,11 @@ async function syncOne(
           projectId: access.project.id,
           propertyId: access.project.propertyId,
           serviceRequestId: access.project.serviceRequestId,
-          scheduledAt: item.scheduledAt ? new Date(item.scheduledAt) : (item.startedAt ? new Date(item.startedAt) : new Date()),
+          scheduledAt: item.scheduledAt
+            ? new Date(item.scheduledAt)
+            : item.startedAt
+              ? new Date(item.startedAt)
+              : new Date(),
           inspectorUserId: actorId,
           status: 'in_progress',
           startedAt: item.startedAt ? new Date(item.startedAt) : new Date(),
@@ -489,15 +612,22 @@ async function syncOne(
         correlationId: options.correlationId,
       });
     }
-    const outcome = await submitInTx(tx, identity, v, access, {
-      findingsMarkdown: item.findingsMarkdown,
-      checklist: item.checklist,
-      weather: item.weather,
-      accessNote: item.accessNote,
-      submittedAt: item.submittedAt,
-      offlineClientId: item.offlineClientId,
-      evidenceFileIds: item.evidenceFileIds,
-    }, options);
+    const outcome = await submitInTx(
+      tx,
+      identity,
+      v,
+      access,
+      {
+        findingsMarkdown: item.findingsMarkdown,
+        checklist: item.checklist,
+        weather: item.weather,
+        accessNote: item.accessNote,
+        submittedAt: item.submittedAt,
+        offlineClientId: item.offlineClientId,
+        evidenceFileIds: item.evidenceFileIds,
+      },
+      options,
+    );
     return {
       offlineClientId: item.offlineClientId,
       outcome: outcome.idempotentReplay ? 'replayed' : 'created',
