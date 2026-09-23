@@ -41,7 +41,7 @@ export const availabilityRoute = ensure({
   tags: ['appointments'],
   operationId: 'appointments.availability',
   auth: 'public',
-  request: { query: availabilityQuerySchema.innerType() as z.ZodObject },
+  request: { query: availabilityQuerySchema },
   responses: { 200: { description: 'Slots', body: availabilityResponseSchema }, 429: { description: 'Rate limited' } },
 });
 

@@ -38,7 +38,8 @@ export async function setPublicApproval(
       ),
     );
     if (input.approved) {
-      if (!input.altText || input.rightsConfirmed !== true) {
+      const altText = input.altText;
+      if (!altText || input.rightsConfirmed !== true) {
         throw new ApiError('validation_failed', 'approving for public use requires altText and rightsConfirmed=true', {
           details: [{ path: 'rightsConfirmed', message: 'alt text and a rights confirmation are required' }],
         });
@@ -58,7 +59,7 @@ export async function setPublicApproval(
     let asset = existing ?? null;
     if (input.approved) {
       const values = {
-        altText: input.altText,
+        altText,
         caption: input.caption ?? existing?.caption ?? null,
         rightsNote: input.rightsNote ?? existing?.rightsNote ?? null,
         rightsConfirmed: true,

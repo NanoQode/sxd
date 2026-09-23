@@ -55,12 +55,13 @@ export async function freshMemberships(tx: Transaction, userId: string): Promise
 
 /**
  * Runs `fn` with the transaction elevated (bypass) and restores the caller's
- * context afterwards. Used for the file/grant reads that back an explicit
- * policy decision, and for writes that follow one: organisation-level grants
- * are invisible to a member under the `file_access_grants` policy, and the
- * `file_objects` ⇄ `file_access_grants` policies reference each other, which
- * PostgreSQL refuses as recursive for non-privileged sessions. Every
- * decision (`decideFileAccess`) runs before the write it authorises.
+ * context afterwards. Reserved for what the row policies cannot express:
+ * - the access-proving read: memberships are re-read from `member` instead of
+ *   trusting the session's organisation (`app.org_id()`), and organisation
+ *   grants are matched against those fresh memberships;
+ * - listing/revoking grants as the file owner when staff created them (the
+ *   grants policy lets only the grantor or staff write a grant).
+ * Every decision (`decideFileAccess`) runs before the write it authorises.
  */
 export async function elevated<T>(tx: Transaction, ctx: ActorContext, fn: () => Promise<T>): Promise<T> {
   await applyActorContext(tx, { ...ctx, bypass: true });

@@ -92,9 +92,9 @@ export async function finalizeUpload(
   options: ServiceOptions = {},
 ): Promise<FileFinalizeResponse> {
   const userId = userIdOf(identity);
-  // The owner check below is explicit; the transactions run elevated because the
-  // file_objects read policy (via file_access_grants) is recursive for non-privileged sessions.
-  const ctx = { ...ctxFor(identity, options), bypass: true };
+  // Runs under the owner's own context: the file_objects policies let the owner
+  // read and update the row, and the explicit owner check below is the application rule.
+  const ctx = ctxFor(identity, options);
   const db = getDb();
   const storage = getStorage();
 

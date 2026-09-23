@@ -116,7 +116,9 @@ export async function getAppointment(viewer: Viewer, id: string): Promise<Appoin
       settings,
       sync,
       provider: providerFor(sync),
-      includeManagePath: viewer.kind === 'guest' || row.customerUserId === (viewer.kind === 'guest' ? null : viewer.userId),
+      includeManagePath:
+        viewer.kind === 'guest' ||
+        (viewer.kind === 'customer' && row.customerUserId === viewer.userId),
     });
   });
 }

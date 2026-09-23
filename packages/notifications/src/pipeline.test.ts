@@ -190,15 +190,13 @@ describe('notification pipeline', () => {
         .insert(schema.notificationPreferences)
         .values({ userId: p.userId, channel: 'sms', category: 'marketing', enabled: true });
     }
-    await dbs.owner
-      .insert(schema.smsConsents)
-      .values({
-        phoneE164: optedOut.phone,
-        userId: optedOut.userId,
-        category: 'marketing',
-        status: 'opted_out',
-        source: 'test',
-      });
+    await dbs.owner.insert(schema.smsConsents).values({
+      phoneE164: optedOut.phone,
+      userId: optedOut.userId,
+      category: 'marketing',
+      status: 'opted_out',
+      source: 'test',
+    });
     await dbs.owner.insert(schema.templates).values({
       key: 'promo',
       channel: 'sms',
@@ -489,15 +487,13 @@ describe('notification pipeline', () => {
 
   it('digest preferences bundle in-app items into one email', async () => {
     const person = await createPerson();
-    await dbs.owner
-      .insert(schema.notificationPreferences)
-      .values({
-        userId: person.userId,
-        channel: 'email',
-        category: 'transactional',
-        enabled: true,
-        digest: 'daily',
-      });
+    await dbs.owner.insert(schema.notificationPreferences).values({
+      userId: person.userId,
+      channel: 'email',
+      category: 'transactional',
+      enabled: true,
+      digest: 'daily',
+    });
     for (const n of [1, 2]) {
       const result = await dispatchRequest(dbs.app, {
         templateKey: 'invoice_due',

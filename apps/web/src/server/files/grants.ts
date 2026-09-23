@@ -42,19 +42,18 @@ export async function createGrant(
         .where(eq(schema.organization.id, input.organizationId));
       if (!o) throw new ApiError('not_found', 'organisation not found');
     }
-    const [grant] = await elevated(tx, ctx, () =>
-      tx
-        .insert(schema.fileAccessGrants)
-        .values({
-          fileId,
-          userId: input.userId ?? null,
-          organizationId: input.organizationId ?? null,
-          level: input.level,
-          grantedBy: userId,
-          expiresAt,
-        })
-        .returning(),
-    );
+    // Inserted as the grantor under the caller's own context (grants policy: granted_by = app.user_id()).
+    const [grant] = await tx
+      .insert(schema.fileAccessGrants)
+      .values({
+        fileId,
+        userId: input.userId ?? null,
+        organizationId: input.organizationId ?? null,
+        level: input.level,
+        grantedBy: userId,
+        expiresAt,
+      })
+      .returning();
     await recordAudit(tx, identity, {
       action: 'file.grant_created',
       entityType: 'file',
@@ -84,6 +83,7 @@ export async function revokeGrant(
     );
     if (!grant) throw new ApiError('not_found', 'grant not found');
     if (grant.revokedAt) return toGrantDto(grant);
+    // The owner may revoke a grant staff created; the policy only lets the grantor write it.
     const [updated] = await elevated(tx, ctx, () =>
       tx
         .update(schema.fileAccessGrants)
