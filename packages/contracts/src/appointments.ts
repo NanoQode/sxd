@@ -327,3 +327,51 @@ export const connectStartResponseSchema = z.object({
   authorizationUrl: z.string(),
   adapter: z.enum(['google', 'dev']),
 });
+
+// Staff availability (working windows and time off).
+
+const hhmmSchema = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'HH:mm (24-hour)');
+
+export const availabilityWindowSchema = z
+  .object({
+    /** ISO weekday: 1 = Monday … 7 = Sunday. */
+    weekday: z.number().int().min(1).max(7),
+    start: hhmmSchema,
+    end: hhmmSchema,
+    timeZone: timeZoneSchema.default('Africa/Lagos'),
+    /** Appointment kinds this window serves; empty means all kinds. */
+    kinds: z.array(appointmentKindSchema).default([]),
+  })
+  .refine((w) => w.start < w.end, { message: 'start must be before end', path: ['end'] });
+export type AvailabilityWindow = z.infer<typeof availabilityWindowSchema>;
+
+export const availabilityReplaceSchema = z.object({
+  windows: z.array(availabilityWindowSchema).max(50),
+});
+
+export const staffAvailabilityDtoSchema = z.object({
+  staffUserId: z.string(),
+  windows: z.array(availabilityWindowSchema),
+  timeOff: z.array(
+    z.object({
+      id: uuidSchema,
+      kind: z.enum(['leave', 'block']),
+      startsAt: isoDateTimeSchema,
+      endsAt: isoDateTimeSchema,
+      note: z.string().nullable(),
+    }),
+  ),
+});
+export type StaffAvailabilityDto = z.infer<typeof staffAvailabilityDtoSchema>;
+
+export const timeOffCreateSchema = z
+  .object({
+    kind: z.enum(['leave', 'block']).default('leave'),
+    startsAt: isoDateTimeSchema,
+    endsAt: isoDateTimeSchema,
+    note: z.string().max(300).optional(),
+  })
+  .refine((t) => new Date(t.startsAt) < new Date(t.endsAt), {
+    message: 'startsAt must be before endsAt',
+    path: ['endsAt'],
+  });
