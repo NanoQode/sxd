@@ -19,8 +19,9 @@
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json",
-    "lint": "eslint src",
-    "test": "vitest run"
+    "lint": "eslint src scripts",
+    "test": "vitest run",
+    "docs:generate": "tsx scripts/generate-docs.ts"
   },
   "dependencies": {
     "luxon": "3.7.2",

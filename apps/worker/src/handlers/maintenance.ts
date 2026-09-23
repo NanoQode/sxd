@@ -73,9 +73,29 @@ export function registerMaintenanceHandlers(runner: JobRunner): void {
       log.info({ count: rows.length }, 'expired quarantined files marked deleted');
   });
 
+  runner.register('maintenance.purge_expired_keys', async ({ db, log }) => {
+    const now = new Date();
+    const [keys, buckets] = await withActor(db, systemContext(), async (tx) => {
+      const removedKeys = await tx
+        .delete(schema.idempotencyKeys)
+        .where(lt(schema.idempotencyKeys.expiresAt, now))
+        .returning({ key: schema.idempotencyKeys.key });
+      const dayAgo = new Date(now.getTime() - 24 * 60 * 60_000);
+      const removedBuckets = await tx
+        .delete(schema.rateLimitBuckets)
+        .where(lt(schema.rateLimitBuckets.windowStart, dayAgo))
+        .returning({ key: schema.rateLimitBuckets.key });
+      return [removedKeys.length, removedBuckets.length];
+    });
+    if (keys > 0 || buckets > 0) log.info({ keys, buckets }, 'expired idempotency keys purged');
+  });
+
   runner.register('monitoring.snapshot', async ({ db, log }) => {
-    const depth = await db.execute<{ status: string; n: string }>(
-      sql`select status, count(*)::text as n from jobs group by status`,
+    // Jobs are privileged-only under row-level security, so read as the system actor.
+    const depth = await withActor(db, systemContext(), (tx) =>
+      tx.execute<{ status: string; n: string }>(
+        sql`select status, count(*)::text as n from jobs group by status`,
+      ),
     );
     log.info(
       { jobs: Object.fromEntries(depth.rows.map((r) => [r.status, Number(r.n)])) },

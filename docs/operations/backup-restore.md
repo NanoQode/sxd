@@ -2,11 +2,11 @@
 
 ## Objectives
 
-| Objective | Initial value | Notes |
-| --- | --- | --- |
+| Objective            | Initial value                                                           | Notes                                                                           |
+| -------------------- | ----------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
 | Recovery point (RPO) | 24 hours with nightly dumps; minutes with WAL archiving copied off-site | The database container archives WAL; ship `wal_archive` off-site to shorten RPO |
-| Recovery time (RTO) | 4 hours | Restore drill below is timed each quarter |
-| Availability | 99.5% monthly | Verify the hosting can meet it; single-server deployments have no redundancy |
+| Recovery time (RTO)  | 4 hours                                                                 | Restore drill below is timed each quarter                                       |
+| Availability         | 99.5% monthly                                                           | Verify the hosting can meet it; single-server deployments have no redundancy    |
 
 ## What is backed up
 
@@ -34,6 +34,12 @@ Backups can be encrypted with `age` (`BACKUP_ENCRYPTION_RECIPIENT`) and uploaded
    a project page opens, an invoice shows the same balance, and a private file download
    resolves against the bucket (object references intact).
 5. Record the drill (date, archive, duration, issues) in the operations log.
+
+### Drill log
+
+| Date (UTC) | Source                                                                                                                          | Archive                                     | Result                                                                                                                                                                                                    | Notes                                                                                                                                                                                                           |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-09-23 | Local development database (seeded: 15 demo users, 2 organisations, 50 markets, 16 observations, 17 audit events, 2 migrations) | `simplexd-20260923T020959Z.tar.gz` (148 KB) | `[restore] VERIFIED` in under one minute; every count and the ledger totals matched the manifest; `check-rls` on the restored database reported `rlsEnforced: true` with no warnings for the runtime role | Ledger and project counts were zero because no financial records existed yet; repeat the drill once sandbox payments have posted journals. Object storage reconciliation was not exercised (no files uploaded). |
 
 ## Disaster recovery steps
 

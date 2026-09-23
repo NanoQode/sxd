@@ -20,6 +20,7 @@ import {
   type StaffRole,
   type TenantPermission,
 } from '@simplexd/domain/authz';
+import { evaluateFeatureFlags, type FeatureFlagRow } from '../features';
 import { auth, type Session } from './server';
 
 export const ANON_COOKIE = 'sx_anon';
@@ -33,11 +34,14 @@ export interface RequestIdentity {
   featureFlags: Record<string, boolean>;
 }
 
-const loadFlags = cache(async (): Promise<Record<string, boolean>> => {
-  const rows = await getDb()
-    .select({ key: schema.featureFlags.key, enabled: schema.featureFlags.enabled })
+const loadFlagRows = cache(async (): Promise<FeatureFlagRow[]> => {
+  return getDb()
+    .select({
+      key: schema.featureFlags.key,
+      enabled: schema.featureFlags.enabled,
+      rollout: schema.featureFlags.rollout,
+    })
     .from(schema.featureFlags);
-  return Object.fromEntries(rows.map((r) => [r.key, r.enabled]));
 });
 
 export const getSession = cache(async (): Promise<Session | null> => {
@@ -53,8 +57,9 @@ export const getIdentity = cache(async (): Promise<RequestIdentity> => {
   const session = await getSession();
   const cookieStore = await cookies();
   const anonymousToken = cookieStore.get(ANON_COOKIE)?.value ?? null;
-  const featureFlags = await loadFlags();
+  const flagRows = await loadFlagRows();
   if (!session) {
+    const featureFlags = evaluateFeatureFlags(flagRows, { staff: false, organizationId: null });
     return {
       session: null,
       actor: { ...anonymousActor, flags: featureFlags },
@@ -100,6 +105,10 @@ export const getIdentity = cache(async (): Promise<RequestIdentity> => {
   );
   const impersonatedBy =
     (session.session as { impersonatedBy?: string | null }).impersonatedBy ?? null;
+  const featureFlags = evaluateFeatureFlags(flagRows, {
+    staff: staffRoles.length > 0,
+    organizationId: activeOrganizationId,
+  });
   const actor: Actor = {
     userId,
     staffRoles,

@@ -23,6 +23,7 @@ const schedules: Schedule[] = [
   { type: 'market_data.expire_stale', queue: 'default', everyMs: 6 * 60 * 60_000 },
   { type: 'files.purge_expired', queue: 'media', everyMs: 60 * 60_000 },
   { type: 'monitoring.snapshot', queue: 'default', everyMs: 5 * 60_000 },
+  { type: 'maintenance.purge_expired_keys', queue: 'default', everyMs: 30 * 60_000 },
 ];
 
 export function startScheduler(opts: { db: Database; log: Logger }): () => void {

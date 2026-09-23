@@ -55,15 +55,63 @@ function csp(n: string, isDev: boolean): string {
   return directives.join('; ');
 }
 
+const STATE_CHANGING = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
+/** Provider callbacks are authenticated by signature, not by cookie. */
+const CSRF_EXEMPT_PREFIXES = ['/api/v1/webhooks/'];
+
+/**
+ * Cross-site request forgery guard for cookie-authenticated JSON APIs. Browsers
+ * send `Sec-Fetch-Site` (and `Origin` on state-changing requests); a value other
+ * than same-origin/none, or an Origin that is not this deployment, is refused.
+ * Requests without either header come from non-browser clients, which cannot
+ * carry the victim's cookies, so they pass through to normal authentication.
+ */
+function isCrossSite(request: NextRequest): boolean {
+  const site = request.headers.get('sec-fetch-site');
+  if (site && site !== 'same-origin' && site !== 'none') return true;
+  const origin = request.headers.get('origin');
+  if (!origin) return false;
+  const allowed = new Set([request.nextUrl.origin]);
+  if (process.env.APP_URL) {
+    try {
+      allowed.add(new URL(process.env.APP_URL).origin);
+    } catch {
+      /* ignore malformed APP_URL; the request origin still counts */
+    }
+  }
+  return !allowed.has(origin);
+}
+
 export default function proxy(request: NextRequest) {
   const isDev = process.env.NODE_ENV !== 'production';
   const n = nonce();
   const policy = csp(n, isDev);
+
+  if (
+    STATE_CHANGING.has(request.method) &&
+    request.nextUrl.pathname.startsWith('/api/') &&
+    !CSRF_EXEMPT_PREFIXES.some((p) => request.nextUrl.pathname.startsWith(p)) &&
+    isCrossSite(request)
+  ) {
+    return NextResponse.json(
+      {
+        error: {
+          code: 'forbidden',
+          message: 'cross-site request blocked',
+          correlationId: request.headers.get('x-correlation-id') ?? 'csrf',
+        },
+      },
+      { status: 403 },
+    );
+  }
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set('x-nonce', n);
   requestHeaders.set('content-security-policy', policy);
 
   const { pathname } = request.nextUrl;
+  // Lets the not-found boundary look up migrated-site redirects for the
+  // requested path without a database query on every navigation.
+  requestHeaders.set('x-pathname', pathname);
   const secure = request.nextUrl.protocol === 'https:';
   const sessionCookie = request.cookies.get(
     secure ? '__Secure-sx.session_token' : 'sx.session_token',

@@ -31,6 +31,7 @@
     "db:bootstrap-admin": "pnpm --filter @simplexd/db bootstrap-admin",
     "db:check-rls": "pnpm --filter @simplexd/db check-rls",
     "openapi": "pnpm --filter @simplexd/web openapi",
+    "docs:generate": "pnpm --filter @simplexd/domain docs:generate",
     "backup": "bash ops/backup/backup.sh",
     "restore": "bash ops/backup/restore.sh",
     "ci": "pnpm typecheck && pnpm lint && pnpm test && pnpm build"
