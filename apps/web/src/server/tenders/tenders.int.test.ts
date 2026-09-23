@@ -91,7 +91,7 @@ function tenderInput(overrides: Record<string, unknown> = {}) {
 async function setDeadline(tenderId: string, when: Date): Promise<void> {
   await dbs.owner
     .update(schema.tenders)
-    .set({ submissionDeadlineAt: when })
+    .set({ submissionDeadlineAt: when, questionCutoffAt: when })
     .where(eq(schema.tenders.id, tenderId));
 }
 
