@@ -50,4 +50,3 @@ export function isCurrent(item: TenantNavItem, pathname: string): boolean {
   if (pathname === item.href || pathname.startsWith(`${item.href}/`)) return true;
   return item.alsoMatches?.some((p) => pathname.startsWith(p)) ?? false;
 }
-

@@ -18,17 +18,17 @@ A signed-in account with no active tenancy sees an explanation of how to get inv
 
 ## Pages
 
-| Page | What it shows |
-| --- | --- |
-| `/tenant` | Current lease (active first, then the latest), balance due and overdue part, next charge, open maintenance requests, upcoming appointments, the latest notices. Every figure links to its records. |
-| `/tenant/lease/{id}` | Terms (rent, deposit, dates, type, notice period, academic terms), the tenant's own party record, the rent schedule, the signed lease document and move-in inventory photos when shared with the tenant, and the move-in inventory. `/tenant/leases/{id}` redirects here. |
-| `/tenant/balances?lease=` | Outstanding, overdue, next charge, paid to date, deposit held; arrears ageing (not yet due, 1–30, 31–60, 61–90, over 90 days); invoices issued to the tenant for the lease; every charge with paid and outstanding amounts. |
-| `/tenant/receipts` | Receipts for confirmed payments on the tenant's invoices. |
-| `/tenant/tickets` | Maintenance requests the tenant reported, open first. |
-| `/tenant/tickets/new` | Report a problem: lease (when there are several), category, short title, description and priority, with the response target of each priority. |
-| `/tenant/tickets/{id}` | Status in plain words, progress steps, the dates the record holds, the contractor's name once assigned, photos from the work if shared. **Cancel this request** (reason required) while the request is received, reviewed, assigned or awaiting owner approval. Costs and estimates are owner matters and are not shown. |
-| `/tenant/appointments` | Visits booked with the tenant, upcoming first, in Lagos time and in the tenant's own time zone when it differs. |
-| `/tenant/notices` | Notices from the landlord or SimplexD, newest first, with **Mark as read**. |
+| Page                      | What it shows                                                                                                                                                                                                                                                                                                            |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `/tenant`                 | Current lease (active first, then the latest), balance due and overdue part, next charge, open maintenance requests, upcoming appointments, the latest notices. Every figure links to its records.                                                                                                                       |
+| `/tenant/lease/{id}`      | Terms (rent, deposit, dates, type, notice period, academic terms), the tenant's own party record, the rent schedule, the signed lease document and move-in inventory photos when shared with the tenant, and the move-in inventory. `/tenant/leases/{id}` redirects here.                                                |
+| `/tenant/balances?lease=` | Outstanding, overdue, next charge, paid to date, deposit held; arrears ageing (not yet due, 1–30, 31–60, 61–90, over 90 days); invoices issued to the tenant for the lease; every charge with paid and outstanding amounts.                                                                                              |
+| `/tenant/receipts`        | Receipts for confirmed payments on the tenant's invoices.                                                                                                                                                                                                                                                                |
+| `/tenant/tickets`         | Maintenance requests the tenant reported, open first.                                                                                                                                                                                                                                                                    |
+| `/tenant/tickets/new`     | Report a problem: lease (when there are several), category, short title, description and priority, with the response target of each priority.                                                                                                                                                                            |
+| `/tenant/tickets/{id}`    | Status in plain words, progress steps, the dates the record holds, the contractor's name once assigned, photos from the work if shared. **Cancel this request** (reason required) while the request is received, reviewed, assigned or awaiting owner approval. Costs and estimates are owner matters and are not shown. |
+| `/tenant/appointments`    | Visits booked with the tenant, upcoming first, in Lagos time and in the tenant's own time zone when it differs.                                                                                                                                                                                                          |
+| `/tenant/notices`         | Notices from the landlord or SimplexD, newest first, with **Mark as read**.                                                                                                                                                                                                                                              |
 
 ## Behaviour you can rely on
 

@@ -19,12 +19,12 @@ import { NoticeList } from '@/components/tenant/notice-list';
 import { TicketList } from '@/components/tenant/ticket-list';
 import { requireSignedIn } from '@/lib/auth/session';
 import {
-  formatDay,
   formatMoney,
   isLiveLease,
   isOpenTicket,
   isPositiveKobo,
   leaseTitle,
+  nextDueCopy,
   overdueKobo,
   pickCurrentLease,
   splitAppointments,
@@ -134,6 +134,7 @@ export default async function TenantHomePage({
   const openTickets = tickets.ok ? tickets.data.filter(isOpenTicket) : [];
   const upcoming = appointments.ok ? splitAppointments(appointments.data).upcoming : [];
   const latestNotices = notices.ok ? notices.data.slice(0, 3) : [];
+  const nextDue = balance.ok ? nextDueCopy(balance.data.nextDue, balance.data.arrears.asOf) : null;
 
   return (
     <div className="space-y-6">
@@ -149,10 +150,7 @@ export default async function TenantHomePage({
         </Alert>
       ) : null}
 
-      <LeaseCard
-        summary={current}
-        heading={others.length > 0 ? 'Current lease' : 'Your lease'}
-      />
+      <LeaseCard summary={current} heading={others.length > 0 ? 'Current lease' : 'Your lease'} />
       {others.length > 0 ? (
         <Card>
           <CardHeader>
@@ -185,20 +183,22 @@ export default async function TenantHomePage({
                 ? `${formatMoney(overdueKobo(balance.data.arrears), balance.data.currency)} of this is past its due date.`
                 : isPositiveKobo(balance.data.outstandingKobo)
                   ? 'Nothing is overdue.'
-                  : 'You owe nothing on this lease right now.'
+                  : 'No rent or other charges are unpaid on this lease.'
             }
             href={`/tenant/balances?lease=${current.lease.id}`}
             linkLabel="See charges and arrears"
           >
             <p className="text-sm">
-              <span className="text-fg-muted">Next charge: </span>
-              {balance.data.nextDue ? (
-                <strong>
-                  {formatMoney(balance.data.nextDue.amountKobo, balance.data.currency)} due{' '}
-                  {formatDay(balance.data.nextDue.dueDate)}
-                </strong>
+              {nextDue ? (
+                <>
+                  <span className="text-fg-muted">{nextDue.label}: </span>
+                  <strong>
+                    {formatMoney(balance.data.nextDue!.amountKobo, balance.data.currency)}{' '}
+                    {nextDue.when}
+                  </strong>
+                </>
               ) : (
-                'none scheduled'
+                <span className="text-fg-muted">No further charge is scheduled.</span>
               )}
             </p>
           </Section>

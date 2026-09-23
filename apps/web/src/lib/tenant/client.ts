@@ -12,7 +12,8 @@ export { newIdempotencyKey, portalFetch as tenantFetch } from '@/lib/portal/clie
 export function describeTenantError(err: unknown, fallback?: string): DescribedError {
   if (err instanceof TypeError && typeof navigator !== 'undefined' && !navigator.onLine) {
     return {
-      message: 'You appear to be offline. Nothing was sent; your input is kept here, try again when you are connected.',
+      message:
+        'You appear to be offline. Nothing was sent; your input is kept here, try again when you are connected.',
       code: 'offline',
       correlationId: null,
       status: null,

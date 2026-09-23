@@ -159,6 +159,31 @@ export function overdueKobo(arrears: Pick<ArrearsDto, 'buckets'>): string {
   return total.toString();
 }
 
+/**
+ * How to label the balance's `nextDue`: the API returns the next unpaid
+ * period due today or later, or else the oldest unpaid one already past due.
+ */
+export function nextDueCopy(
+  nextDue: { dueDate: string } | null,
+  asOf: string,
+): { label: string; when: string; overdue: boolean } | null {
+  if (!nextDue) return null;
+  const overdue = nextDue.dueDate < asOf;
+  return overdue
+    ? { label: 'Oldest unpaid period', when: `was due ${formatDay(nextDue.dueDate)}`, overdue }
+    : { label: 'Next charge', when: `due ${formatDay(nextDue.dueDate)}`, overdue };
+}
+
+/** Unpaid deposit (the balance endpoint keeps the deposit out of rent arrears). */
+export function depositOutstandingKobo(
+  charges: Array<{ kind: string; outstandingKobo: string }>,
+): string {
+  let total = 0n;
+  for (const c of charges)
+    if (c.kind === 'deposit' && /^\d+$/.test(c.outstandingKobo)) total += BigInt(c.outstandingKobo);
+  return total.toString();
+}
+
 export const CHARGE_KIND_LABELS: Record<string, string> = {
   rent: 'Rent',
   service_charge: 'Service charge',
@@ -194,7 +219,11 @@ export const TICKET_PRIORITIES = [
   { value: 'low', label: 'Low', target: 'response within 7 days' },
   { value: 'normal', label: 'Normal', target: 'response within 72 hours' },
   { value: 'high', label: 'High', target: 'response within 24 hours' },
-  { value: 'urgent', label: 'Urgent (safety, flooding, no power)', target: 'response within 4 hours' },
+  {
+    value: 'urgent',
+    label: 'Urgent (safety, flooding, no power)',
+    target: 'response within 4 hours',
+  },
 ] as const;
 
 const TERMINAL: ReadonlySet<WorkOrderStatus> = new Set(['closed', 'rejected', 'cancelled']);
@@ -222,7 +251,8 @@ export const TICKET_STATUS_COPY: Record<WorkOrderStatus, string> = {
   requested:
     'Received. The maintenance team reviews new requests and sets a response target from the priority.',
   triaged: 'Reviewed by the maintenance team, who are arranging a contractor.',
-  assigned: 'A contractor has been assigned and will arrange access with you or the property manager.',
+  assigned:
+    'A contractor has been assigned and will arrange access with you or the property manager.',
   in_progress: 'Work has started.',
   awaiting_approval:
     'The contractor sent an estimate that the property owner must approve before work continues.',
@@ -301,11 +331,17 @@ export function ticketEvents(
     'id' | 'status' | 'createdAt' | 'updatedAt' | 'approvedAt' | 'completedAt' | 'verifiedAt'
   >,
 ): TicketEvent[] {
-  const events: TicketEvent[] = [{ id: 'reported', title: 'You reported it', at: ticket.createdAt }];
+  const events: TicketEvent[] = [
+    { id: 'reported', title: 'You reported it', at: ticket.createdAt },
+  ];
   if (ticket.approvedAt)
     events.push({ id: 'approved', title: 'Owner approved the work', at: ticket.approvedAt });
   if (ticket.completedAt)
-    events.push({ id: 'completed', title: 'Contractor completed the work', at: ticket.completedAt });
+    events.push({
+      id: 'completed',
+      title: 'Contractor completed the work',
+      at: ticket.completedAt,
+    });
   if (ticket.verifiedAt)
     events.push({ id: 'verified', title: 'Work checked', at: ticket.verifiedAt });
   const ending: Partial<Record<WorkOrderStatus, string>> = {
@@ -357,7 +393,8 @@ export function maskEmail(email: string): string {
   return `${local.slice(0, 2)}***@${domain}`;
 }
 
-export type InvitationFailure = 'used_or_revoked' | 'expired' | 'wrong_email' | 'conflict' | 'error';
+export type InvitationFailure =
+  'used_or_revoked' | 'expired' | 'wrong_email' | 'conflict' | 'error';
 
 /** Maps the accept endpoint's answer to what the person should do next. */
 export function classifyInvitationError(code: string | null, message: string): InvitationFailure {

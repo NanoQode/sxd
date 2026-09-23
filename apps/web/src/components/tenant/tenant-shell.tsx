@@ -88,7 +88,6 @@ export function TenantShell({
             <ThemeToggle compact />
             <Button
               variant="ghost"
-              size="sm"
               onClick={() => void signOut()}
               loading={signingOut}
               loadingLabel="Signing out"
@@ -139,7 +138,11 @@ export function TenantShell({
             </p>
           </div>
         </nav>
-        <main id="tenant-main" tabIndex={-1} className="min-w-0 flex-1 space-y-6 focus:outline-none">
+        <main
+          id="tenant-main"
+          tabIndex={-1}
+          className="min-w-0 flex-1 space-y-6 focus:outline-none"
+        >
           {children}
           <div className="border-t border-border pt-4 md:hidden">
             <ReduceMotionToggle />

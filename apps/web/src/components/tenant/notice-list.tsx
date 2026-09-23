@@ -96,7 +96,6 @@ export function NoticeList({
                 <div className="mt-3">
                   <Button
                     type="button"
-                    size="sm"
                     variant="secondary"
                     onClick={() => void markRead(n.id)}
                     loading={busyId === n.id}

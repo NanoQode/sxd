@@ -139,8 +139,8 @@ export default async function AcceptTenantInvitationPage({
           ) : !p.emailMatches ? (
             <div className="space-y-3">
               <Alert tone="warning" title={INVITATION_FAILURE_COPY.wrong_email.title}>
-                This invitation was sent to {p.invitedEmail}, but you are signed in as {email}.
-                Sign out and sign in (or create an account) with the invited address.
+                This invitation was sent to {p.invitedEmail}, but you are signed in as {email}. Sign
+                out and sign in (or create an account) with the invited address.
               </Alert>
               <SwitchAccount />
             </div>

@@ -13,7 +13,6 @@ import {
   PageHeader,
   StatusBadge,
   buttonVariants,
-  formatDateTimeLabel,
   humanize,
 } from '@simplexd/ui';
 import { requireStaffPage } from '@/lib/auth/session';
@@ -408,16 +407,13 @@ export default async function AppointmentsPage({
 
         <Section
           title="Staff availability"
-          description="Weekly windows used to generate bookable slots."
-        >
-          <Alert tone="info" title="Read-only">
-            There is no availability write endpoint yet; windows are managed in the database seed.
-            Booking rules (durations, buffers, notice) live in{' '}
-            <Link href="/admin/settings" className="underline">
-              Settings
+          description="Weekly windows generate bookable slots; time off blocks them. Durations, buffers and notice are platform settings."
+          actions={
+            <Link href="/admin/appointments/availability" className="text-sm underline">
+              Edit availability and time off
             </Link>
-            .
-          </Alert>
+          }
+        >
           {windows.length === 0 ? (
             <p className="text-fg-muted">No availability configured, so no slots can be offered.</p>
           ) : (
@@ -427,7 +423,18 @@ export default async function AppointmentsPage({
               rowKey={(w) => w.id}
               rowLabel={(w) => `${w.staffName} ${WEEKDAYS[w.weekday] ?? w.weekday}`}
               columns={[
-                { key: 'who', header: 'Staff', cell: (w) => w.staffName },
+                {
+                  key: 'who',
+                  header: 'Staff',
+                  cell: (w) => (
+                    <Link
+                      href={`/admin/appointments/availability?staff=${encodeURIComponent(w.staffUserId)}`}
+                      className="underline"
+                    >
+                      {w.staffName}
+                    </Link>
+                  ),
+                },
                 {
                   key: 'day',
                   header: 'Day',
@@ -450,9 +457,6 @@ export default async function AppointmentsPage({
           )}
         </Section>
       </div>
-      <p className="text-xs text-fg-muted">
-        Updated {formatDateTimeLabel(new Date().toISOString())}.
-      </p>
     </div>
   );
 }

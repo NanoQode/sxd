@@ -13,7 +13,6 @@ export function RefreshButton({ label = 'Try again' }: { label?: string }) {
     <Button
       type="button"
       variant="secondary"
-      size="sm"
       loading={pending}
       loadingLabel="Loading"
       onClick={() => startTransition(() => router.refresh())}

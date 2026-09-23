@@ -39,7 +39,11 @@ const summary: TenantLeaseSummary = {
     createdAt: '2026-08-20T10:00:00.000Z',
     updatedAt: '2026-08-20T10:00:00.000Z',
   },
-  property: { id: '22222222-2222-4222-8222-222222222222', name: 'Palm Court', address: { city: 'Lekki', state: 'Lagos' } },
+  property: {
+    id: '22222222-2222-4222-8222-222222222222',
+    name: 'Palm Court',
+    address: { city: 'Lekki', state: 'Lagos' },
+  },
   unit: { id: '33333333-3333-4333-8333-333333333333', label: 'Flat 2B' },
   myRole: 'tenant',
 };

@@ -8,6 +8,12 @@ import { VerificationBadge } from './verification-badge';
 import { ApiClientError } from '@/lib/api/client-fetch';
 import { partnerFetch, serverClockKnown, serverNow } from '@/lib/partner/api';
 import { partnerModules } from '@/lib/partner/nav';
+import {
+  blankWindow,
+  validateTimeOff,
+  validateWindows,
+  windowsToForm,
+} from '@/lib/partner/availability';
 import { syncStateLabel, syncStateTone } from './visits/sync-state';
 
 /** SSR inserts comment markers between adjacent text nodes; strip them for substring assertions. */
@@ -236,5 +242,58 @@ describe('partnerFetch', () => {
       status: 409,
     });
     expect(calls[1]!.headers['content-type']).toBe('application/json');
+  });
+});
+
+describe('availability editor helpers', () => {
+  it('round-trips server windows and builds the PUT payload', () => {
+    const rows = windowsToForm([
+      { weekday: 3, start: '13:00', end: '17:00', timeZone: 'Africa/Lagos', kinds: [] },
+      {
+        weekday: 1,
+        start: '09:00:00',
+        end: '12:00:00',
+        timeZone: 'Africa/Lagos',
+        kinds: ['site_visit'],
+      },
+    ]);
+    expect(rows.map((r) => [r.weekday, r.start, r.end])).toEqual([
+      [1, '09:00', '12:00'],
+      [3, '13:00', '17:00'],
+    ]);
+    const v = validateWindows(rows);
+    expect(v.errors).toEqual([]);
+    expect(v.windows?.[0]).toEqual({
+      weekday: 1,
+      start: '09:00',
+      end: '12:00',
+      timeZone: 'Africa/Lagos',
+      kinds: ['site_visit'],
+    });
+  });
+
+  it('rejects inverted and overlapping windows with readable messages', () => {
+    const a = { ...blankWindow('Africa/Lagos', 2), start: '10:00', end: '09:00' };
+    expect(validateWindows([a]).errors[0]).toMatch(/start must be before the end/);
+    const b = { ...blankWindow('Africa/Lagos', 2), start: '09:00', end: '12:00' };
+    const c = { ...blankWindow('Africa/Lagos', 2), start: '11:00', end: '14:00' };
+    const v = validateWindows([b, c]);
+    expect(v.windows).toBeNull();
+    expect(v.errors[0]).toMatch(/overlap on Tuesday/);
+    // Same hours in a different zone are not flagged.
+    expect(validateWindows([b, { ...c, timeZone: 'Europe/London' }]).errors).toEqual([]);
+  });
+
+  it('validates time off against the clock and converts to UTC', () => {
+    const now = new Date('2026-09-23T10:00:00Z');
+    expect(validateTimeOff('', '', now)).toEqual({ error: 'Enter both a start and an end.' });
+    expect(validateTimeOff('2026-10-02T12:00', '2026-10-01T12:00', now)).toEqual({
+      error: 'The start must be before the end.',
+    });
+    expect(validateTimeOff('2026-09-01T08:00', '2026-09-02T08:00', now)).toEqual({
+      error: 'The period is already over.',
+    });
+    const ok = validateTimeOff('2026-10-01T08:00', '2026-10-03T18:00', now);
+    expect('startsAt' in ok && ok.startsAt.endsWith('Z')).toBe(true);
   });
 });

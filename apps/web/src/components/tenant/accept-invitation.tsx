@@ -99,7 +99,11 @@ export function AcceptTenantInvitation({ token }: { token: string }) {
 }
 
 /** Signs out and returns to sign-in with the invitation link as the destination. */
-export function SwitchAccount({ label = 'Sign out and use the invited email' }: { label?: string }) {
+export function SwitchAccount({
+  label = 'Sign out and use the invited email',
+}: {
+  label?: string;
+}) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [busy, setBusy] = useState(false);

@@ -19,8 +19,8 @@ export default function TenantError({
     <div role="alert" className="space-y-3 rounded-lg border border-danger/40 bg-danger-soft p-5">
       <h1 className="font-display text-2xl font-semibold">This page could not be shown</h1>
       <p className="max-w-prose text-sm text-fg-muted">
-        The server reported an error while loading your tenant information. Nothing has been
-        guessed or filled in its place. Try again, or go back to your tenant home.
+        The server reported an error while loading your tenant information. Nothing has been guessed
+        or filled in its place. Try again, or go back to your tenant home.
       </p>
       {error.digest ? (
         <p className="text-xs text-fg-subtle">

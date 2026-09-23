@@ -108,12 +108,7 @@ export function CancelTicket({
               )}
             </Field>
             <DialogFooter>
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={() => setOpen(false)}
-                disabled={busy}
-              >
+              <Button type="button" variant="ghost" onClick={() => setOpen(false)} disabled={busy}>
                 Keep the request
               </Button>
               <Button type="submit" variant="danger" loading={busy} loadingLabel="Cancelling">

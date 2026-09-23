@@ -102,9 +102,8 @@ export function loadReceipts(identity: RequestIdentity): Promise<Loaded<TenantRe
   return safeLoad('your receipts', () => listMyReceipts(identity));
 }
 
-export const loadNotices = cache(
-  (identity: RequestIdentity): Promise<Loaded<TenantNoticeDto[]>> =>
-    safeLoad('your notices', () => listMyNotices(identity)),
+export const loadNotices = cache((identity: RequestIdentity): Promise<Loaded<TenantNoticeDto[]>> =>
+  safeLoad('your notices', () => listMyNotices(identity)),
 );
 
 export function loadTickets(identity: RequestIdentity): Promise<Loaded<WorkOrderDto[]>> {

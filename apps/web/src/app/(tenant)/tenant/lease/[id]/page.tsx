@@ -92,7 +92,8 @@ export default async function TenantLeasePage({ params }: { params: Promise<{ id
   }
   const { lease } = summary.data;
   const terms = lease.terms ?? null;
-  const inventory: MoveInInventoryDto | null = (terms?.moveInInventory as MoveInInventoryDto) ?? null;
+  const inventory: MoveInInventoryDto | null =
+    (terms?.moveInInventory as MoveInInventoryDto) ?? null;
   const inventoryPhotoIds = inventory ? inventory.items.flatMap((i) => i.photoFileIds ?? []) : [];
   const [schedule, party, termsFile, photos] = await Promise.all([
     loadSchedule(identity, id),
@@ -291,7 +292,9 @@ export default async function TenantLeasePage({ params }: { params: Promise<{ id
         </CardHeader>
         <CardContent className="space-y-4">
           {!inventory ? (
-            <p className="text-sm text-fg-muted">No move-in inventory was recorded for this lease.</p>
+            <p className="text-sm text-fg-muted">
+              No move-in inventory was recorded for this lease.
+            </p>
           ) : (
             <>
               {rooms.map(([room, items]) => (

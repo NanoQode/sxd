@@ -158,7 +158,12 @@ export function NewTicketForm({ leases }: { leases: TicketLeaseOption[] }) {
         </p>
       ) : null}
 
-      <Field label="What kind of problem?" htmlFor={FIELD_IDS.category} error={errors.category} required>
+      <Field
+        label="What kind of problem?"
+        htmlFor={FIELD_IDS.category}
+        error={errors.category}
+        required
+      >
         {({ id, describedBy, invalid }) => (
           <NativeSelect
             id={id}
@@ -260,9 +265,9 @@ export function NewTicketForm({ leases }: { leases: TicketLeaseOption[] }) {
       >
         <Camera aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0" />
         <p>
-          <span className="font-medium text-fg">Photo attachments are not available yet.</span>{' '}
-          The maintenance service only accepts photos from the assigned contractor or staff, so
-          describe the problem in words; the contractor photographs it on the visit.
+          <span className="font-medium text-fg">Photo attachments are not available yet.</span> The
+          maintenance service only accepts photos from the assigned contractor or staff, so describe
+          the problem in words; the contractor photographs it on the visit.
         </p>
       </div>
 

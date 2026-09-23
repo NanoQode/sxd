@@ -31,7 +31,9 @@ export function LeaseSwitcher({
               >
                 {l.title}
                 {l.status !== 'active' ? (
-                  <span className="ml-1 text-xs text-fg-muted">({l.status.replace(/_/g, ' ')})</span>
+                  <span className="ml-1 text-xs text-fg-muted">
+                    ({l.status.replace(/_/g, ' ')})
+                  </span>
                 ) : null}
               </Link>
             </li>

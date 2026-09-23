@@ -1,7 +1,12 @@
 import { CheckCircle2, Circle, CircleDot, XCircle } from 'lucide-react';
 import type { WorkOrderDto } from '@simplexd/contracts';
 import { cn, formatDateTimeLabel } from '@simplexd/ui';
-import { TICKET_STATUS_COPY, ticketEvents, ticketProgress, type StepState } from '@/lib/tenant/model';
+import {
+  TICKET_STATUS_COPY,
+  ticketEvents,
+  ticketProgress,
+  type StepState,
+} from '@/lib/tenant/model';
 
 const STATE_WORDS: Record<StepState, string> = {
   done: 'done',

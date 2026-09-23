@@ -6,13 +6,13 @@ Code: `apps/web/src/app/(partner)`, `apps/web/src/components/partner`, `apps/web
 
 ## Who sees what
 
-| Account                                           | Modules                                                       |
-| ------------------------------------------------- | ------------------------------------------------------------- |
-| Contractor, architect, quantity surveyor          | Tenders & bids (when `expansion.contractor_tendering` is on)  |
-| Vendor                                            | RFQs & orders (when `expansion.materials_procurement` is on)  |
-| Inspector, surveyor, valuer, architect, QS; staff `inspector` role | Visits (field capture), Evidence, Reports      |
-| Legal partner                                     | Evidence, Reports                                             |
-| Everyone                                          | Home, Assignments, Messages, Notifications, Availability      |
+| Account                                                            | Modules                                                      |
+| ------------------------------------------------------------------ | ------------------------------------------------------------ |
+| Contractor, architect, quantity surveyor                           | Tenders & bids (when `expansion.contractor_tendering` is on) |
+| Vendor                                                             | RFQs & orders (when `expansion.materials_procurement` is on) |
+| Inspector, surveyor, valuer, architect, QS; staff `inspector` role | Visits (field capture), Evidence, Reports                    |
+| Legal partner                                                      | Evidence, Reports                                            |
+| Everyone                                                           | Home, Assignments, Messages, Notifications, Availability     |
 
 `other`-type partners see every module. The rules live in `lib/partner/nav.ts`. A contractor's awarded work arrives as an assignment, and each accepted assignment card links to that project's visits, evidence and reports.
 
@@ -61,6 +61,7 @@ The header badge shows what was verified, as recorded on the partner profile: st
    4. Photos of a visit created in the field are linked once the server has returned the visit id.
 
    Retrying never duplicates anything: visits replay on their offline id and evidence on its link key. A photo whose malware scan is still running stays "Uploaded, scan pending" and the draft is "Partly synced"; sync again later. Only an actual API refusal (a 4xx response) marks a photo or visit rejected. Network errors, 401, 408, 429 and 5xx leave everything on the device.
+
 6. **Clearing.** A draft is removed from the device only when the server has confirmed the visit and every photo is linked. A photo the server refuses keeps the draft and shows the reason until you remove that photo.
 7. **Unscheduled visits.** Staff inspectors can start one from a project ("Start a field visit"); the visit is created when you sync. Partners cannot: the server lets only staff create visits in the field, and the page says so.
 8. **Reports.** Report drafts are kept on the device and encrypted the same way.
@@ -82,7 +83,7 @@ The header badge shows what was verified, as recorded on the partner profile: st
 
 - **Messages.** Reply in conversations you take part in. Attachments open through signed links. Starting a new conversation is not available to partners: the API needs participant ids and a linked entity, so staff open threads, and the page says so.
 - **Notifications.** A feed of your notifications, with unread-only filter, mark read, mark all read and deep links.
-- **Availability.** Read-only view of your weekly windows (ISO weekdays, in the zone recorded) and your partner-profile status. No API lets partners edit `staff_availability` yet, so the page says that and offers no dead form.
+- **Availability.** Edit your weekly windows: ISO weekday (Monday = 1), `HH:mm` start and end in a chosen time zone, and optionally the appointment kinds a window serves (none ticked means any). Saving sends `PUT /api/v1/appointments/staff/{yourUserId}`; overlapping or inverted windows are caught before sending. You can add leave or a block (`POST …/time-off`) and remove it with confirmation (`DELETE …/time-off/{id}`). A period that overlaps an appointment, hold or other time off is refused with `slot_unavailable`, and the page says so. Partners can edit only their own availability (`partner.availability.manage`). The partner-profile status (set by staff) is shown alongside.
 
 ## Known gaps (API side)
 

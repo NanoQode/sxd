@@ -1,14 +1,32 @@
 import type { LeaseBalanceDto } from '@simplexd/contracts';
-import { ageingRows, formatDay, formatMoney, isPositiveKobo, overdueKobo } from '@/lib/tenant/model';
+import {
+  ageingRows,
+  formatDay,
+  formatMoney,
+  isPositiveKobo,
+  nextDueCopy,
+  overdueKobo,
+} from '@/lib/tenant/model';
 
-/** Headline figures of the caller's balance on one lease, exactly as the API computed them. */
-export function BalanceFigures({ balance }: { balance: LeaseBalanceDto }) {
+/**
+ * Headline figures of the caller's balance on one lease, exactly as the API
+ * computed them. The API keeps the deposit out of rent arrears, so an unpaid
+ * deposit (summed from the deposit charges) is stated beside the deposit.
+ */
+export function BalanceFigures({
+  balance,
+  depositOutstandingKobo,
+}: {
+  balance: LeaseBalanceDto;
+  depositOutstandingKobo?: string;
+}) {
   const overdue = overdueKobo(balance.arrears);
+  const next = nextDueCopy(balance.nextDue, balance.arrears.asOf);
   const figures = [
     {
       label: 'Outstanding',
       value: formatMoney(balance.outstandingKobo, balance.currency),
-      note: 'Every unpaid charge raised so far, including periods not yet due.',
+      note: 'Unpaid rent and other charges raised so far, including periods not yet due. The deposit is shown separately.',
     },
     {
       label: 'Overdue',
@@ -16,21 +34,23 @@ export function BalanceFigures({ balance }: { balance: LeaseBalanceDto }) {
       note: isPositiveKobo(overdue) ? 'Past its due date.' : 'Nothing is past its due date.',
     },
     {
-      label: 'Next charge',
+      label: next?.label ?? 'Next charge',
       value: balance.nextDue ? formatMoney(balance.nextDue.amountKobo, balance.currency) : '—',
-      note: balance.nextDue
-        ? `Due ${formatDay(balance.nextDue.dueDate)}.`
+      note: next
+        ? `${next.when.charAt(0).toUpperCase()}${next.when.slice(1)}.`
         : 'No further charge is scheduled.',
     },
     {
       label: 'Paid to date',
       value: formatMoney(balance.paidKobo, balance.currency),
-      note: `Of ${formatMoney(balance.chargedKobo, balance.currency)} charged. Settled money only.`,
+      note: `Of ${formatMoney(balance.chargedKobo, balance.currency)} of rent and charges. Settled money only.`,
     },
     {
       label: 'Deposit held',
       value: formatMoney(balance.depositHeldKobo, balance.currency),
-      note: 'Deposit received and held under the lease.',
+      note: isPositiveKobo(depositOutstandingKobo)
+        ? `${formatMoney(depositOutstandingKobo, balance.currency)} of the deposit is still unpaid.`
+        : 'Deposit received and held under the lease.',
     },
   ];
   return (

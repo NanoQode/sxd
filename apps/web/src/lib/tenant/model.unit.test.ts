@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { TenantLeaseSummary, WorkOrderDto } from '@simplexd/contracts';
 import {
   ageingRows,
+  depositOutstandingKobo,
   canTenantCancel,
   classifyInvitationError,
   formatAddress,
@@ -9,6 +10,7 @@ import {
   formatMoney,
   isOpenTicket,
   maskEmail,
+  nextDueCopy,
   overdueKobo,
   pickCurrentLease,
   splitAppointments,
@@ -83,6 +85,22 @@ describe('money and dates', () => {
     expect(overdueKobo(arrears)).toBe('250');
   });
 
+  it('labels an overdue nextDue honestly and sums only unpaid deposit charges', () => {
+    expect(nextDueCopy({ dueDate: '2026-09-01' }, '2026-09-23')).toEqual({
+      label: 'Oldest unpaid period',
+      when: 'was due 1 Sep 2026',
+      overdue: true,
+    });
+    expect(nextDueCopy({ dueDate: '2026-10-01' }, '2026-09-23')?.label).toBe('Next charge');
+    expect(nextDueCopy(null, '2026-09-23')).toBeNull();
+    expect(
+      depositOutstandingKobo([
+        { kind: 'deposit', outstandingKobo: '50000000' },
+        { kind: 'rent', outstandingKobo: '240000000' },
+      ]),
+    ).toBe('50000000');
+  });
+
   it('builds an address from known keys only', () => {
     expect(formatAddress({ line1: '4 Palm Rd', city: 'Lekki', state: 'Lagos', secret: 'x' })).toBe(
       '4 Palm Rd, Lekki, Lagos',
@@ -152,9 +170,9 @@ describe('invitations', () => {
     expect(classifyInvitationError('not_found', 'invitation not found or already used')).toBe(
       'used_or_revoked',
     );
-    expect(classifyInvitationError('conflict', 'this invitation has expired; ask for a new one')).toBe(
-      'expired',
-    );
+    expect(
+      classifyInvitationError('conflict', 'this invitation has expired; ask for a new one'),
+    ).toBe('expired');
     expect(classifyInvitationError('conflict', 'invitation was redeemed concurrently')).toBe(
       'conflict',
     );

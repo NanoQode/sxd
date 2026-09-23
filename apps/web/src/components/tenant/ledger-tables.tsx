@@ -10,7 +10,13 @@ import {
 } from '@/lib/tenant/model';
 
 /** Charges on the caller's lease with what has been settled against each. */
-export function ChargesTable({ charges, currency }: { charges: RentChargeDto[]; currency: string }) {
+export function ChargesTable({
+  charges,
+  currency,
+}: {
+  charges: RentChargeDto[];
+  currency: string;
+}) {
   const rows = [...charges].sort((a, b) => b.chargedAt.localeCompare(a.chargedAt));
   return (
     <DataTable
@@ -129,7 +135,14 @@ export function InvoicesTable({
         },
         { key: 'status', header: 'Status', cell: (i) => <StatusBadge status={i.status} /> },
         ...(payAction
-          ? [{ key: 'pay', header: <span className="sr-only">Actions</span>, mobileLabel: 'Pay', cell: payAction }]
+          ? [
+              {
+                key: 'pay',
+                header: <span className="sr-only">Actions</span>,
+                mobileLabel: 'Pay',
+                cell: payAction,
+              },
+            ]
           : []),
       ]}
     />

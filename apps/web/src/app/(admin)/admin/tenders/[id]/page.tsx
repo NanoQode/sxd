@@ -575,9 +575,12 @@ export default async function TenderPage({
           }
         >
           {!w.comparison.ok ? (
-            w.comparison.code === 'invalid_transition' || w.comparison.code === 'not_found' ? (
+            !POST_CLOSE.has(t.status) ||
+            w.comparison.code === 'invalid_transition' ||
+            w.comparison.code === 'not_found' ? (
               <p className="text-fg-muted">
-                The comparison is available once bids are opened. {w.comparison.message}
+                The comparison is available once bidding has closed and the sealed bids are opened
+                (server: {w.comparison.message}).
               </p>
             ) : (
               <LoadError

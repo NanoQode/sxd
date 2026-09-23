@@ -18,6 +18,7 @@ import { NoTenancy } from '@/components/tenant/no-tenancy';
 import { requireSignedIn } from '@/lib/auth/session';
 import {
   INVOICE_PAYABLE_STATUSES,
+  depositOutstandingKobo,
   formatMoney,
   isPositiveKobo,
   leaseTitle,
@@ -115,7 +116,10 @@ export default async function TenantBalancesPage({
           Summary
         </h2>
         {balance.ok ? (
-          <BalanceFigures balance={balance.data} />
+          <BalanceFigures
+            balance={balance.data}
+            depositOutstandingKobo={charges.ok ? depositOutstandingKobo(charges.data) : undefined}
+          />
         ) : (
           <LoadError title="Your balance could not be loaded" error={balance.error} />
         )}
@@ -170,7 +174,8 @@ export default async function TenantBalancesPage({
                     : undefined
                 }
               />
-              {!canPay && (anyPayable || (balance.ok && isPositiveKobo(balance.data.outstandingKobo))) ? (
+              {!canPay &&
+              (anyPayable || (balance.ok && isPositiveKobo(balance.data.outstandingKobo))) ? (
                 <div
                   role="note"
                   className="flex gap-3 rounded-md border border-dashed border-border bg-bg-sunken p-3 text-sm text-fg-muted"
@@ -195,8 +200,8 @@ export default async function TenantBalancesPage({
         <CardHeader>
           <CardTitle>Charges</CardTitle>
           <CardDescription>
-            Every charge on this lease with what has been settled against it (settled money only;
-            a declared transfer counts once it clears).
+            Every charge on this lease with what has been settled against it (settled money only; a
+            declared transfer counts once it clears).
           </CardDescription>
         </CardHeader>
         <CardContent>

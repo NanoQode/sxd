@@ -113,7 +113,8 @@ export async function attempt<T>(fn: () => Promise<T>): Promise<Loaded<T>> {
     if (err instanceof ApiError) return { ok: false, code: err.code, message: err.message };
     if (err instanceof AuthorizationError) {
       const code = err.decision.code;
-      const passthrough = code === 'mfa_required' || code === 'feature_disabled' || code === 'unauthenticated';
+      const passthrough =
+        code === 'mfa_required' || code === 'feature_disabled' || code === 'unauthenticated';
       return { ok: false, code: passthrough ? code : 'forbidden', message: err.message };
     }
     throw err;

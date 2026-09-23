@@ -19,13 +19,7 @@ import { PriorityBadge, TicketStatusBadge } from '@/components/tenant/status';
 import { TicketProgress } from '@/components/tenant/ticket-progress';
 import { requireSignedIn } from '@/lib/auth/session';
 import { canTenantCancel, categoryLabel, isOpenTicket, leaseTitle } from '@/lib/tenant/model';
-import {
-  loadMyLeases,
-  loadTicket,
-  userIdOf,
-  visibleFiles,
-  zoneOf,
-} from '@/lib/tenant/server/data';
+import { loadMyLeases, loadTicket, userIdOf, visibleFiles, zoneOf } from '@/lib/tenant/server/data';
 import { isNotFound } from '@/lib/tenant/server/load';
 
 export const metadata: Metadata = { title: 'Maintenance request' };
@@ -88,7 +82,13 @@ export default async function TenantTicketPage({ params }: { params: Promise<{ i
   }
   const t = ticket.data;
   const lease = leases.data.find((l) => l.lease.id === t.leaseId);
-  const evidence = t.evidence.length > 0 ? await visibleFiles(identity, t.evidence.map((e) => e.fileId)) : null;
+  const evidence =
+    t.evidence.length > 0
+      ? await visibleFiles(
+          identity,
+          t.evidence.map((e) => e.fileId),
+        )
+      : null;
   const cancellable = canTenantCancel(t, userIdOf(identity));
 
   return (
@@ -101,7 +101,11 @@ export default async function TenantTicketPage({ params }: { params: Promise<{ i
         }
         title={t.title}
         description={lease ? leaseTitle(lease) : undefined}
-        actions={cancellable ? <CancelTicket ticketId={t.id} version={t.version} title={t.title} /> : undefined}
+        actions={
+          cancellable ? (
+            <CancelTicket ticketId={t.id} version={t.version} title={t.title} />
+          ) : undefined
+        }
       />
       <div className="flex flex-wrap items-center gap-2">
         <TicketStatusBadge status={t.status} />
@@ -181,8 +185,8 @@ export default async function TenantTicketPage({ params }: { params: Promise<{ i
             ) : null}
             {evidence.hidden > 0 ? (
               <p className="text-fg-muted">
-                {evidence.hidden} file{evidence.hidden === 1 ? ' is' : 's are'} kept by the
-                property owner and not shared with your account.
+                {evidence.hidden} file{evidence.hidden === 1 ? ' is' : 's are'} kept by the property
+                owner and not shared with your account.
               </p>
             ) : null}
           </CardContent>

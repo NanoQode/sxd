@@ -1,13 +1,7 @@
 import { MapPin } from 'lucide-react';
 import Link from 'next/link';
 import type { TenantLeaseSummary } from '@simplexd/contracts';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@simplexd/ui';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@simplexd/ui';
 import {
   LEASE_KIND_LABELS,
   LEASE_STATUS_COPY,

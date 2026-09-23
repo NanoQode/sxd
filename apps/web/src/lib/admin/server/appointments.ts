@@ -1,5 +1,5 @@
 import 'server-only';
-import { asc, eq } from 'drizzle-orm';
+import { and, asc, eq, gte, lte } from 'drizzle-orm';
 import type { AppointmentDto, AppointmentListQuery, CalendarStatusDto } from '@simplexd/contracts';
 import { schema } from '@simplexd/db';
 import type { RequestIdentity } from '@/lib/auth/session';
@@ -21,7 +21,7 @@ export interface AvailabilityWindow {
   active: boolean;
 }
 
-/** staff_availability rows with names (read-only; there is no write endpoint yet). */
+/** staff_availability rows with names (edited through /api/v1/appointments/staff/{id}). */
 export async function listAvailabilityWindows(
   identity: RequestIdentity,
 ): Promise<AvailabilityWindow[]> {
@@ -31,6 +31,10 @@ export async function listAvailabilityWindows(
       .select({ a: schema.staffAvailability, name: schema.user.name })
       .from(schema.staffAvailability)
       .innerJoin(schema.user, eq(schema.user.id, schema.staffAvailability.staffUserId))
+      // ISO weekdays only; other rows are not weekly windows.
+      .where(
+        and(gte(schema.staffAvailability.weekday, 1), lte(schema.staffAvailability.weekday, 7)),
+      )
       .orderBy(
         asc(schema.user.name),
         asc(schema.staffAvailability.weekday),
