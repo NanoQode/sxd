@@ -10,7 +10,14 @@ import {
   type UploadIntentCreate,
   type UploadIntentResponse,
 } from '@simplexd/contracts';
-import { applyActorContext, getDb, schema, withActor, type ActorContext, type Transaction } from '@simplexd/db';
+import {
+  applyActorContext,
+  getDb,
+  schema,
+  withActor,
+  type ActorContext,
+  type Transaction,
+} from '@simplexd/db';
 import {
   assertAllowed,
   authorizeOrg,
@@ -62,7 +69,10 @@ async function resolveEntity(
   try {
     const assignmentsFor = async (where: ReturnType<typeof eq>) => {
       const rows = await tx
-        .select({ assigneeUserId: schema.assignments.assigneeUserId, status: schema.assignments.status })
+        .select({
+          assigneeUserId: schema.assignments.assigneeUserId,
+          status: schema.assignments.status,
+        })
         .from(schema.assignments)
         .where(and(where, inArray(schema.assignments.status, ['proposed', 'accepted', 'active'])));
       return {
@@ -76,10 +86,18 @@ async function resolveEntity(
         if (!p) return null;
         const a = await assignmentsFor(eq(schema.assignments.projectId, entityId));
         if (p.pmUserId) a.staff.push(p.pmUserId);
-        return { organizationId: p.organizationId, resourceType: 'project', staffAssigneeIds: a.staff, partnerAssigneeIds: a.partner };
+        return {
+          organizationId: p.organizationId,
+          resourceType: 'project',
+          staffAssigneeIds: a.staff,
+          partnerAssigneeIds: a.partner,
+        };
       }
       case 'site_visit': {
-        const [v] = await tx.select().from(schema.siteVisits).where(eq(schema.siteVisits.id, entityId));
+        const [v] = await tx
+          .select()
+          .from(schema.siteVisits)
+          .where(eq(schema.siteVisits.id, entityId));
         if (!v) return null;
         const a = v.projectId
           ? await assignmentsFor(eq(schema.assignments.projectId, v.projectId))
@@ -90,7 +108,12 @@ async function resolveEntity(
           a.staff.push(v.inspectorUserId);
           a.partner.push(v.inspectorUserId);
         }
-        return { organizationId: v.organizationId, resourceType: 'site_visit', staffAssigneeIds: a.staff, partnerAssigneeIds: a.partner };
+        return {
+          organizationId: v.organizationId,
+          resourceType: 'site_visit',
+          staffAssigneeIds: a.staff,
+          partnerAssigneeIds: a.partner,
+        };
       }
       case 'service_request': {
         const [r] = await tx
@@ -99,25 +122,54 @@ async function resolveEntity(
           .where(eq(schema.serviceRequests.id, entityId));
         if (!r) return null;
         const a = await assignmentsFor(eq(schema.assignments.serviceRequestId, entityId));
-        return { organizationId: r.organizationId, resourceType: 'service_request', staffAssigneeIds: a.staff, partnerAssigneeIds: a.partner };
+        return {
+          organizationId: r.organizationId,
+          resourceType: 'service_request',
+          staffAssigneeIds: a.staff,
+          partnerAssigneeIds: a.partner,
+        };
       }
       case 'invoice': {
         const [i] = await tx
           .select({ organizationId: schema.invoices.organizationId })
           .from(schema.invoices)
           .where(eq(schema.invoices.id, entityId));
-        return i ? { organizationId: i.organizationId, resourceType: 'invoice', staffAssigneeIds: [], partnerAssigneeIds: [] } : null;
+        return i
+          ? {
+              organizationId: i.organizationId,
+              resourceType: 'invoice',
+              staffAssigneeIds: [],
+              partnerAssigneeIds: [],
+            }
+          : null;
       }
       case 'property': {
         const [p] = await tx
           .select({ organizationId: schema.properties.organizationId })
           .from(schema.properties)
           .where(eq(schema.properties.id, entityId));
-        return p ? { organizationId: p.organizationId, resourceType: 'property', staffAssigneeIds: [], partnerAssigneeIds: [] } : null;
+        return p
+          ? {
+              organizationId: p.organizationId,
+              resourceType: 'property',
+              staffAssigneeIds: [],
+              partnerAssigneeIds: [],
+            }
+          : null;
       }
       case 'content_page': {
-        const [c] = await tx.select({ id: schema.contentPages.id }).from(schema.contentPages).where(eq(schema.contentPages.id, entityId));
-        return c ? { organizationId: null, resourceType: 'content_page', staffAssigneeIds: [], partnerAssigneeIds: [] } : null;
+        const [c] = await tx
+          .select({ id: schema.contentPages.id })
+          .from(schema.contentPages)
+          .where(eq(schema.contentPages.id, entityId));
+        return c
+          ? {
+              organizationId: null,
+              resourceType: 'content_page',
+              staffAssigneeIds: [],
+              partnerAssigneeIds: [],
+            }
+          : null;
       }
       default:
         return null;
@@ -127,7 +179,11 @@ async function resolveEntity(
   }
 }
 
-function withFreshMemberships(identity: RequestIdentity, memberships: Actor['memberships'], organizationId: string | null): Actor {
+function withFreshMemberships(
+  identity: RequestIdentity,
+  memberships: Actor['memberships'],
+  organizationId: string | null,
+): Actor {
   return { ...identity.actor, memberships, activeOrganizationId: organizationId };
 }
 
@@ -144,17 +200,28 @@ async function authorizeIntent(
   const userId = userIdOf(identity);
   const policy = FILE_PURPOSE_POLICIES[input.purpose];
   if (policy.requiresEntity && !input.entityType) {
-    throw new ApiError('validation_failed', `${input.purpose} uploads must name the entity they belong to`, {
-      details: [{ path: 'entityType', message: 'required for this purpose' }],
-    });
+    throw new ApiError(
+      'validation_failed',
+      `${input.purpose} uploads must name the entity they belong to`,
+      {
+        details: [{ path: 'entityType', message: 'required for this purpose' }],
+      },
+    );
   }
-  const entity = input.entityType && input.entityId ? await resolveEntity(tx, ctx, input.entityType, input.entityId) : null;
+  const entity =
+    input.entityType && input.entityId
+      ? await resolveEntity(tx, ctx, input.entityType, input.entityId)
+      : null;
   if (input.entityType && !entity) throw new ApiError('not_found', `${input.entityType} not found`);
   const memberships = await freshMemberships(tx, userId);
   const orgOf = (fallback: string | null) => entity?.organizationId ?? fallback;
 
-  const orgCheck = (permission: 'org.documents.upload' | 'org.invoices.pay', organizationId: string | null): Decision => {
-    if (!organizationId) return { allowed: false, code: 'no_permission', reason: 'no active organisation' };
+  const orgCheck = (
+    permission: 'org.documents.upload' | 'org.invoices.pay',
+    organizationId: string | null,
+  ): Decision => {
+    if (!organizationId)
+      return { allowed: false, code: 'no_permission', reason: 'no active organisation' };
     return authorizeOrg(withFreshMemberships(identity, memberships, organizationId), permission, {
       type: entity?.resourceType ?? 'organization',
       id: input.entityId,
@@ -185,7 +252,11 @@ async function authorizeIntent(
         organizationId: e.organizationId,
         assigneeUserIds: e.staffAssigneeIds,
       };
-      let last: Decision = { allowed: false, code: 'no_permission', reason: 'not allowed to upload evidence here' };
+      let last: Decision = {
+        allowed: false,
+        code: 'no_permission',
+        reason: 'not allowed to upload evidence here',
+      };
       if (isStaffIdentity(identity)) {
         for (const permission of ['site_visits.perform', 'projects.manage'] as const) {
           last = authorizeStaff(identity.actor, permission, ref);
@@ -207,7 +278,12 @@ async function authorizeIntent(
       return { organizationId: e.organizationId };
     }
     case 'content_media': {
-      assertAllowed(authorizeStaff(identity.actor, 'content.media.manage', { type: 'content_page', id: input.entityId }));
+      assertAllowed(
+        authorizeStaff(identity.actor, 'content.media.manage', {
+          type: 'content_page',
+          id: input.entityId,
+        }),
+      );
       return { organizationId: null };
     }
     case 'bank_receipt': {
@@ -217,7 +293,8 @@ async function authorizeIntent(
     }
     case 'identity': {
       // Personal document: owned by the user, never shared with an organisation.
-      if (input.entityType) throw new ApiError('validation_failed', 'identity documents are not attached to entities');
+      if (input.entityType)
+        throw new ApiError('validation_failed', 'identity documents are not attached to entities');
       return { organizationId: null };
     }
     default:
@@ -237,8 +314,16 @@ export function validateDeclaredUpload(input: UploadIntentCreate): { mime: strin
   const mime = normalizeContentType(input.declaredMime);
   const familyMax = policy.maxBytesByFamily[familyOf(mime)];
   const decision = evaluateUpload(
-    { fileName: input.fileName, declaredMime: mime, sizeBytes: input.sizeBytes, purpose: input.purpose },
-    { allowedMime: policy.allowedMime, maxBytes: Math.min(policy.maxBytes, familyMax > 0 ? familyMax : policy.maxBytes) },
+    {
+      fileName: input.fileName,
+      declaredMime: mime,
+      sizeBytes: input.sizeBytes,
+      purpose: input.purpose,
+    },
+    {
+      allowedMime: policy.allowedMime,
+      maxBytes: Math.min(policy.maxBytes, familyMax > 0 ? familyMax : policy.maxBytes),
+    },
   );
   if (!decision.ok) {
     throw new ApiError('file_rejected', decision.reason, {
@@ -262,7 +347,12 @@ export async function createUploadIntent(
     const fileId = randomUUID();
     let storageKey: string;
     try {
-      storageKey = buildStorageKey({ organizationId, purpose: input.purpose, fileId, ext: extensionOf(input.fileName) || null });
+      storageKey = buildStorageKey({
+        organizationId,
+        purpose: input.purpose,
+        fileId,
+        ext: extensionOf(input.fileName) || null,
+      });
     } catch (err) {
       if (err instanceof StorageError)
         throw new ApiError('file_rejected', err.message, { details: { fileName: input.fileName } });
@@ -284,7 +374,11 @@ export async function createUploadIntent(
     } catch (err) {
       if (err instanceof StorageError && err.code === 'invalid_request')
         throw new ApiError('validation_failed', err.message);
-      throw new ApiError('provider_unavailable', 'the storage provider refused the upload request', { retryable: true });
+      throw new ApiError(
+        'provider_unavailable',
+        'the storage provider refused the upload request',
+        { retryable: true },
+      );
     }
     try {
       await tx.insert(schema.fileObjects).values({
@@ -309,7 +403,9 @@ export async function createUploadIntent(
       });
     } catch (err) {
       if (intent.kind === 'multipart')
-        await storage.abortMultipart({ bucket: 'quarantine', key: storageKey, uploadId: intent.uploadId }).catch(() => undefined);
+        await storage
+          .abortMultipart({ bucket: 'quarantine', key: storageKey, uploadId: intent.uploadId })
+          .catch(() => undefined);
       throw err;
     }
     await recordAudit(tx, identity, {
@@ -317,7 +413,12 @@ export async function createUploadIntent(
       entityType: 'file',
       entityId: fileId,
       organizationId,
-      after: { purpose: input.purpose, declaredMime: mime, sizeBytes: input.sizeBytes, uploadKind: intent.kind },
+      after: {
+        purpose: input.purpose,
+        declaredMime: mime,
+        sizeBytes: input.sizeBytes,
+        uploadKind: intent.kind,
+      },
       correlationId: options.correlationId,
     });
     return {

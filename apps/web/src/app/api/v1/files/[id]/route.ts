@@ -12,5 +12,7 @@ export const GET = route<{ params: Promise<{ id: string }> }>(async (_req, ctx) 
   const identity = await getIdentity();
   if (!identity.session) throw new ApiError('unauthenticated', 'sign in required');
   const { id } = await params(ctx, z.object({ id: uuidSchema }));
-  return json(await getFile(identity, id, { correlationId: ctx.correlationId }), { correlationId: ctx.correlationId });
+  return json(await getFile(identity, id, { correlationId: ctx.correlationId }), {
+    correlationId: ctx.correlationId,
+  });
 });

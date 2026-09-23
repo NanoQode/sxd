@@ -27,7 +27,9 @@ function refuse(status: number, message: string, correlationId: string): NextRes
   );
 }
 
-type Resolved = { error: NextResponse; provider?: undefined } | { provider: LocalDevStorageProvider; error?: undefined };
+type Resolved =
+  | { error: NextResponse; provider?: undefined }
+  | { provider: LocalDevStorageProvider; error?: undefined };
 
 function devProvider(correlationId: string): Resolved {
   const e = env();
@@ -35,7 +37,8 @@ function devProvider(correlationId: string): Resolved {
     return { error: refuse(404, 'not found', correlationId) };
   }
   const provider = getDevStorage();
-  if (!provider) return { error: refuse(404, 'development storage route is disabled', correlationId) };
+  if (!provider)
+    return { error: refuse(404, 'development storage route is disabled', correlationId) };
   return { provider };
 }
 
@@ -47,16 +50,24 @@ export async function PUT(req: Request): Promise<Response> {
   const verified = provider.verifySignedRequest(new URL(req.url));
   if (!verified.ok) return refuse(403, `signed URL rejected: ${verified.reason}`, correlationId);
   const { params } = verified;
-  if (params.op !== 'upload' && params.op !== 'part') return refuse(403, 'signed URL is not an upload URL', correlationId);
-  if (params.bucket !== 'quarantine') return refuse(403, 'direct uploads may only target quarantine', correlationId);
+  if (params.op !== 'upload' && params.op !== 'part')
+    return refuse(403, 'signed URL is not an upload URL', correlationId);
+  if (params.bucket !== 'quarantine')
+    return refuse(403, 'direct uploads may only target quarantine', correlationId);
   const body = req.body ? Readable.fromWeb(req.body as never) : Buffer.alloc(0);
   try {
     if (params.op === 'upload') {
       const result = await provider.writeUploadedObject(params, body);
-      return new NextResponse(null, { status: 200, headers: { etag: result.etag, 'cache-control': 'no-store' } });
+      return new NextResponse(null, {
+        status: 200,
+        headers: { etag: result.etag, 'cache-control': 'no-store' },
+      });
     }
     const result = await provider.writeUploadedPart(params, body);
-    return new NextResponse(null, { status: 200, headers: { etag: result.etag, 'cache-control': 'no-store' } });
+    return new NextResponse(null, {
+      status: 200,
+      headers: { etag: result.etag, 'cache-control': 'no-store' },
+    });
   } catch (err) {
     if (err instanceof StorageError) {
       return NextResponse.json(
@@ -65,7 +76,10 @@ export async function PUT(req: Request): Promise<Response> {
       );
     }
     logger().error({ err, correlationId }, 'dev storage upload failed');
-    return NextResponse.json({ error: { code: 'internal_error', message: 'upload failed', correlationId } }, { status: 500 });
+    return NextResponse.json(
+      { error: { code: 'internal_error', message: 'upload failed', correlationId } },
+      { status: 500 },
+    );
   }
 }
 
@@ -77,9 +91,11 @@ export async function GET(req: Request): Promise<Response> {
   const verified = provider.verifySignedRequest(new URL(req.url));
   if (!verified.ok) return refuse(403, `signed URL rejected: ${verified.reason}`, correlationId);
   const { params } = verified;
-  if (params.op !== 'download') return refuse(403, 'signed URL is not a download URL', correlationId);
+  if (params.op !== 'download')
+    return refuse(403, 'signed URL is not a download URL', correlationId);
   // Quarantined objects are never served, even with a valid signature.
-  if (params.bucket === 'quarantine') return refuse(403, 'objects in quarantine cannot be downloaded', correlationId);
+  if (params.bucket === 'quarantine')
+    return refuse(403, 'objects in quarantine cannot be downloaded', correlationId);
   try {
     const head = await provider.headObject({ bucket: params.bucket, key: params.key });
     if (!head) return refuse(404, 'object not found', correlationId);
@@ -88,8 +104,12 @@ export async function GET(req: Request): Promise<Response> {
     headers.set('content-length', String(head.sizeBytes));
     return new NextResponse(Readable.toWeb(stream) as never, { status: 200, headers });
   } catch (err) {
-    if (err instanceof StorageError && err.code === 'not_found') return refuse(404, 'object not found', correlationId);
+    if (err instanceof StorageError && err.code === 'not_found')
+      return refuse(404, 'object not found', correlationId);
     logger().error({ err, correlationId }, 'dev storage download failed');
-    return NextResponse.json({ error: { code: 'internal_error', message: 'download failed', correlationId } }, { status: 500 });
+    return NextResponse.json(
+      { error: { code: 'internal_error', message: 'download failed', correlationId } },
+      { status: 500 },
+    );
   }
 }

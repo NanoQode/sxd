@@ -92,7 +92,10 @@ export const filesRoutes = [
     request: { params: idParams, query: fileDownloadQuerySchema },
     responses: {
       302: { description: 'Redirect to the signed URL' },
-      200: { description: 'Signed URL (Accept: application/json)', body: fileDownloadResponseSchema },
+      200: {
+        description: 'Signed URL (Accept: application/json)',
+        body: fileDownloadResponseSchema,
+      },
       422: { description: 'Infected or rejected (file_rejected)' },
       423: { description: 'Not scanned yet or scanner failed (file_quarantined)' },
     },
@@ -105,13 +108,16 @@ export const filesRoutes = [
     operationId: 'listFileGrants',
     auth: 'session',
     request: { params: idParams },
-    responses: { 200: { description: 'Grants', body: z.object({ items: z.array(fileGrantDtoSchema) }) } },
+    responses: {
+      200: { description: 'Grants', body: z.object({ items: z.array(fileGrantDtoSchema) }) },
+    },
   }),
   ensure({
     method: 'post',
     path: '/api/v1/files/{id}/grants',
     summary: 'Grant a user or organisation access to a file',
-    description: 'Owner or staff with files.read_all. Sensitive documents can only be granted to users.',
+    description:
+      'Owner or staff with files.read_all. Sensitive documents can only be granted to users.',
     tags: ['Files'],
     operationId: 'createFileGrant',
     auth: 'session',
@@ -138,6 +144,8 @@ export const filesRoutes = [
     operationId: 'setFilePublicApproval',
     auth: 'staff',
     request: { params: idParams, body: filePublicApprovalSchema },
-    responses: { 200: { description: 'Updated file and media asset', body: filePublicApprovalResponseSchema } },
+    responses: {
+      200: { description: 'Updated file and media asset', body: filePublicApprovalResponseSchema },
+    },
   }),
 ];

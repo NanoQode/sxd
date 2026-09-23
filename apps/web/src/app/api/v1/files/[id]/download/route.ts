@@ -1,6 +1,11 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { ApiError, correlationIdHeader, fileDownloadQuerySchema, uuidSchema } from '@simplexd/contracts';
+import {
+  ApiError,
+  correlationIdHeader,
+  fileDownloadQuerySchema,
+  uuidSchema,
+} from '@simplexd/contracts';
 import { json, params, parseQuery, route } from '@/lib/api/respond';
 import { getIdentity } from '@/lib/auth/session';
 import { clientIp, hashIp } from '@/lib/rate-limit';

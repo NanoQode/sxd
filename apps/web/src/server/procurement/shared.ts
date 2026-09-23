@@ -142,7 +142,8 @@ export async function loadPurchaseOrderAccess(
     assertAllowed(authorizeAny(identity.actor, perms.map((p) => ({ staff: p })), { type: 'purchase_order', id: po.id, organizationId: po.organizationId }));
     return { po, role: 'staff' };
   }
-  if (po.supplierUserId === userId && identity.actor.isPartner) {
+  // Suppliers learn about an order only once it is issued.
+  if (po.supplierUserId === userId && identity.actor.isPartner && po.status !== 'draft') {
     assertAllowed(
       authorizePartner(identity.actor, options.supplier ?? 'partner.deliveries.view', { type: 'purchase_order', id: po.id, assigneeUserIds: [userId] }),
     );

@@ -71,6 +71,28 @@ const routes: Record<string, OutboxRoute> = {
   'work_order.transitioned': () => [{ type: 'notifications.work_order', queue: 'notifications' }],
   'invitation.created': () => [{ type: 'notifications.invitation', queue: 'notifications' }],
   'setup_token.issued': () => [{ type: 'notifications.admin_setup', queue: 'notifications' }],
+  // Engagement, invoicing and payment orchestration (@simplexd/finance).
+  'engagement.transitioned': (e) => [
+    {
+      type: 'notifications.engagement_transition',
+      queue: 'notifications',
+      payload: { ...(e.payload as object) },
+    },
+  ],
+  'quote.accepted': () => [{ type: 'notifications.dispatch', queue: 'notifications' }],
+  'quote.expired': () => [{ type: 'notifications.dispatch', queue: 'notifications' }],
+  'invoice.paid': () => [{ type: 'notifications.dispatch', queue: 'notifications' }],
+  'invoice.partially_paid': () => [{ type: 'notifications.dispatch', queue: 'notifications' }],
+  'invoice.voided': () => [{ type: 'notifications.dispatch', queue: 'notifications' }],
+  'payment.settled': () => [{ type: 'notifications.payment_receipt', queue: 'notifications' }],
+  'payment.reversed': () => [{ type: 'notifications.dispatch', queue: 'notifications' }],
+  'bank_transfer.declared': () => [{ type: 'notifications.dispatch', queue: 'notifications' }],
+  'bank_transfer.rejected': () => [{ type: 'notifications.dispatch', queue: 'notifications' }],
+  'refund.requested': () => [{ type: 'notifications.dispatch', queue: 'notifications' }],
+  'refund.settled': () => [{ type: 'notifications.dispatch', queue: 'notifications' }],
+  'refund.failed': () => [{ type: 'notifications.dispatch', queue: 'notifications' }],
+  'credit_note.issued': () => [{ type: 'notifications.dispatch', queue: 'notifications' }],
+  'chargeback.opened': () => [{ type: 'notifications.dispatch', queue: 'notifications' }],
   // Consumed by @simplexd/notifications (event registry); one dispatch job per event.
   'lead.invited': () => [{ type: 'notifications.dispatch', queue: 'notifications' }],
   'engagement.transitioned': () => [{ type: 'notifications.dispatch', queue: 'notifications' }],

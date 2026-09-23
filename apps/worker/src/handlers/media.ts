@@ -2,7 +2,14 @@ import type { Readable } from 'node:stream';
 import { eq } from 'drizzle-orm';
 import type { Logger } from 'pino';
 import sharp from 'sharp';
-import { enqueueJob, schema, systemContext, withActor, type Database, type Transaction } from '@simplexd/db';
+import {
+  enqueueJob,
+  schema,
+  systemContext,
+  withActor,
+  type Database,
+  type Transaction,
+} from '@simplexd/db';
 import {
   createMalwareScanner,
   scannerConfigFromEnv,
@@ -78,7 +85,9 @@ interface ScanRecord {
 }
 
 function scanRecordOf(file: FileRow): ScanRecord {
-  return file.scanResult && typeof file.scanResult === 'object' ? (file.scanResult as ScanRecord) : {};
+  return file.scanResult && typeof file.scanResult === 'object'
+    ? (file.scanResult as ScanRecord)
+    : {};
 }
 
 export type ScanOutcome =
@@ -89,7 +98,10 @@ export type ScanOutcome =
 
 async function loadFile(db: Database, fileId: string): Promise<FileRow | null> {
   return withActor(db, systemContext(), async (tx) => {
-    const [row] = await tx.select().from(schema.fileObjects).where(eq(schema.fileObjects.id, fileId));
+    const [row] = await tx
+      .select()
+      .from(schema.fileObjects)
+      .where(eq(schema.fileObjects.id, fileId));
     return row ?? null;
   });
 }
@@ -126,7 +138,8 @@ export async function scanFileObject(
   if (file.status !== 'scanning' && file.status !== 'scan_failed') {
     return { status: 'skipped', reason: `file is ${file.status}` };
   }
-  if (file.bucket !== 'quarantine') return { status: 'skipped', reason: `file is in the ${file.bucket} bucket` };
+  if (file.bucket !== 'quarantine')
+    return { status: 'skipped', reason: `file is in the ${file.bucket} bucket` };
   const previous = scanRecordOf(file);
   if (file.status === 'scan_failed' && previous.exhausted) {
     return { status: 'skipped', reason: 'scan retry budget exhausted; file remains quarantined' };
@@ -137,10 +150,19 @@ export async function scanFileObject(
   let result: ScanResult;
   try {
     const stream = await storage.getObjectStream(location);
-    result = await scanner.scan(stream, { fileName: file.originalName, sizeBytes: file.sizeBytes ?? 0 });
+    result = await scanner.scan(stream, {
+      fileName: file.originalName,
+      sizeBytes: file.sizeBytes ?? 0,
+    });
   } catch (err) {
     const message = err instanceof StorageError ? `storage: ${err.code}` : 'scanner threw';
-    result = { verdict: 'error', signature: null, engine: scanner.id, durationMs: 0, error: message };
+    result = {
+      verdict: 'error',
+      signature: null,
+      engine: scanner.id,
+      durationMs: 0,
+      error: message,
+    };
   }
 
   const scannedAt = new Date();
@@ -152,40 +174,55 @@ export async function scanFileObject(
     const mime = file.detectedMime ?? file.declaredMime;
     const isImage = mime.startsWith('image/');
     const isVideo = mime.startsWith('video/');
-    const derivativesQueued = await withActor(db, systemContext(correlationId ?? undefined), async (tx) => {
-      await tx
-        .update(schema.fileObjects)
-        .set({
-          bucket: 'private',
-          status: 'clean',
-          scannedAt,
-          scanResult: {
-            ...previous,
-            verdict: 'clean',
-            signature: null,
-            engine: result.engine,
-            durationMs: result.durationMs,
-            attempts,
-            exhausted: false,
-          },
-          derivatives: isVideo ? { ...(file.derivatives ?? {}), video: 'original' } : (file.derivatives ?? null),
-          retentionUntil: null,
-        })
-        .where(eq(schema.fileObjects.id, fileId));
-      await audit(tx, file, 'file.scan_clean', { engine: result.engine, attempts }, correlationId);
-      if (!isImage) return false;
-      await enqueueJob(tx, {
-        type: FILE_DERIVE_JOB,
-        queue: 'media',
-        payload: { fileId },
-        organizationId: file.organizationId,
-        actorUserId: file.ownerUserId,
-        dedupeKey: `${FILE_DERIVE_JOB}:${fileId}`,
-        correlationId,
-      });
-      return true;
-    });
-    log.info({ fileId, engine: result.engine, ms: result.durationMs, derivativesQueued }, 'file scan clean');
+    const derivativesQueued = await withActor(
+      db,
+      systemContext(correlationId ?? undefined),
+      async (tx) => {
+        await tx
+          .update(schema.fileObjects)
+          .set({
+            bucket: 'private',
+            status: 'clean',
+            scannedAt,
+            scanResult: {
+              ...previous,
+              verdict: 'clean',
+              signature: null,
+              engine: result.engine,
+              durationMs: result.durationMs,
+              attempts,
+              exhausted: false,
+            },
+            derivatives: isVideo
+              ? { ...(file.derivatives ?? {}), video: 'original' }
+              : (file.derivatives ?? null),
+            retentionUntil: null,
+          })
+          .where(eq(schema.fileObjects.id, fileId));
+        await audit(
+          tx,
+          file,
+          'file.scan_clean',
+          { engine: result.engine, attempts },
+          correlationId,
+        );
+        if (!isImage) return false;
+        await enqueueJob(tx, {
+          type: FILE_DERIVE_JOB,
+          queue: 'media',
+          payload: { fileId },
+          organizationId: file.organizationId,
+          actorUserId: file.ownerUserId,
+          dedupeKey: `${FILE_DERIVE_JOB}:${fileId}`,
+          correlationId,
+        });
+        return true;
+      },
+    );
+    log.info(
+      { fileId, engine: result.engine, ms: result.durationMs, derivativesQueued },
+      'file scan clean',
+    );
     return { status: 'clean', derivativesQueued };
   }
 
@@ -209,9 +246,18 @@ export async function scanFileObject(
           retentionUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
         })
         .where(eq(schema.fileObjects.id, fileId));
-      await audit(tx, file, 'file.scan_infected', { engine: result.engine, signature: result.signature }, correlationId);
+      await audit(
+        tx,
+        file,
+        'file.scan_infected',
+        { engine: result.engine, signature: result.signature },
+        correlationId,
+      );
     });
-    log.warn({ fileId, signature: result.signature, engine: result.engine }, 'file scan infected; left in quarantine');
+    log.warn(
+      { fileId, signature: result.signature, engine: result.engine },
+      'file scan infected; left in quarantine',
+    );
     return { status: 'infected', signature: result.signature };
   }
 
@@ -240,7 +286,13 @@ export async function scanFileObject(
         retentionUntil: exhausted ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) : null,
       })
       .where(eq(schema.fileObjects.id, fileId));
-    await audit(tx, file, 'file.scan_failed', { engine: result.engine, attempts, exhausted, error: result.error ?? null }, correlationId);
+    await audit(
+      tx,
+      file,
+      'file.scan_failed',
+      { engine: result.engine, attempts, exhausted, error: result.error ?? null },
+      correlationId,
+    );
     if (!exhausted) {
       await enqueueJob(tx, {
         type: FILE_SCAN_JOB,
@@ -254,7 +306,10 @@ export async function scanFileObject(
       });
     }
   });
-  log.warn({ fileId, attempts, exhausted, error: result.error }, 'file scan failed; object stays quarantined');
+  log.warn(
+    { fileId, attempts, exhausted, error: result.error },
+    'file scan failed; object stays quarantined',
+  );
   return { status: 'scan_failed', attempts, exhausted, reason };
 }
 
@@ -265,7 +320,8 @@ export type DeriveOutcome =
 
 async function collect(stream: Readable): Promise<Buffer> {
   const chunks: Buffer[] = [];
-  for await (const chunk of stream) chunks.push(typeof chunk === 'string' ? Buffer.from(chunk) : Buffer.from(chunk as Uint8Array));
+  for await (const chunk of stream)
+    chunks.push(typeof chunk === 'string' ? Buffer.from(chunk) : Buffer.from(chunk as Uint8Array));
   return Buffer.concat(chunks);
 }
 
@@ -274,35 +330,50 @@ export async function deriveFileObject(deps: MediaDeps, fileId: string): Promise
   const { db, storage, log } = deps;
   const file = await loadFile(db, fileId);
   if (!file || file.deletedAt) return { status: 'skipped', reason: 'file not found' };
-  if (file.status !== 'clean' || file.bucket !== 'private') return { status: 'skipped', reason: `file is ${file.status} in ${file.bucket}` };
+  if (file.status !== 'clean' || file.bucket !== 'private')
+    return { status: 'skipped', reason: `file is ${file.status} in ${file.bucket}` };
   const mime = file.detectedMime ?? file.declaredMime;
-  if (!mime.startsWith('image/')) return { status: 'skipped', reason: `${mime} has no derivatives` };
+  if (!mime.startsWith('image/'))
+    return { status: 'skipped', reason: `${mime} has no derivatives` };
   const existing = file.derivatives ?? {};
   if (typeof existing['web'] === 'string' && typeof existing['thumb'] === 'string') {
     return { status: 'done', variants: ['web', 'thumb'] };
   }
   let derivatives: Record<string, string>;
   try {
-    const original = await collect(await storage.getObjectStream({ bucket: 'private', key: file.storageKey }));
+    const original = await collect(
+      await storage.getObjectStream({ bucket: 'private', key: file.storageKey }),
+    );
     // sharp drops EXIF/GPS/ICC unless withMetadata() is called; rotate() applies the orientation first.
     const base = sharp(original, { failOn: 'error', limitInputPixels: 80_000_000 }).rotate();
     const webKey = deriveVariantKey(file.storageKey, 'web', '.webp');
     const thumbKey = deriveVariantKey(file.storageKey, 'thumb', '.webp');
     const web = await base
       .clone()
-      .resize({ width: WEB_VARIANT_MAX_PX, height: WEB_VARIANT_MAX_PX, fit: 'inside', withoutEnlargement: true })
+      .resize({
+        width: WEB_VARIANT_MAX_PX,
+        height: WEB_VARIANT_MAX_PX,
+        fit: 'inside',
+        withoutEnlargement: true,
+      })
       .webp({ quality: 82 })
       .toBuffer();
     const thumb = await base
       .clone()
-      .resize({ width: THUMB_VARIANT_MAX_PX, height: THUMB_VARIANT_MAX_PX, fit: 'inside', withoutEnlargement: true })
+      .resize({
+        width: THUMB_VARIANT_MAX_PX,
+        height: THUMB_VARIANT_MAX_PX,
+        fit: 'inside',
+        withoutEnlargement: true,
+      })
       .webp({ quality: 75 })
       .toBuffer();
     await storage.putObject({ bucket: 'derivatives', key: webKey }, web, 'image/webp');
     await storage.putObject({ bucket: 'derivatives', key: thumbKey }, thumb, 'image/webp');
     derivatives = { ...existing, web: webKey, thumb: thumbKey };
   } catch (err) {
-    const reason = err instanceof Error ? err.message.slice(0, 300) : 'derivative generation failed';
+    const reason =
+      err instanceof Error ? err.message.slice(0, 300) : 'derivative generation failed';
     await withActor(db, systemContext(), (tx) =>
       tx
         .update(schema.fileObjects)
@@ -333,7 +404,9 @@ export function registerMediaHandlers(runner: JobRunner): void {
       log.warn('scan job without fileId');
       return;
     }
-    const outcome = await scanFileObject({ db, log, ...mediaAdaptersFromEnv() }, fileId, { correlationId: job.correlationId });
+    const outcome = await scanFileObject({ db, log, ...mediaAdaptersFromEnv() }, fileId, {
+      correlationId: job.correlationId,
+    });
     log.info({ fileId, outcome: outcome.status }, 'scan job finished');
   };
   runner.register(FILE_SCAN_JOB, scan);

@@ -13,7 +13,15 @@ import {
 import { recordAudit } from '@/lib/audit';
 import type { RequestIdentity } from '@/lib/auth/session';
 import { logger } from '@/lib/logger';
-import { ctxFor, notFound, toFileDto, userIdOf, type FileRow, type FileScanRecord, type ServiceOptions } from './shared';
+import {
+  ctxFor,
+  notFound,
+  toFileDto,
+  userIdOf,
+  type FileRow,
+  type FileScanRecord,
+  type ServiceOptions,
+} from './shared';
 import { getStorage } from './storage';
 
 /**
@@ -48,18 +56,30 @@ interface InspectionOutcome {
   activeContent: string | null;
 }
 
-async function inspectObject(location: ObjectLocation, file: FileRow, declaredSha256: string | null): Promise<InspectionOutcome> {
+async function inspectObject(
+  location: ObjectLocation,
+  file: FileRow,
+  declaredSha256: string | null,
+): Promise<InspectionOutcome> {
   const storage = getStorage();
   const head = await storage.headObject(location);
   if (!head) {
-    throw new ApiError('conflict', 'the upload has not reached storage yet; upload the bytes first, then finalise', {
-      retryable: true,
-      details: { fileId: file.id },
-    });
+    throw new ApiError(
+      'conflict',
+      'the upload has not reached storage yet; upload the bytes first, then finalise',
+      {
+        retryable: true,
+        details: { fileId: file.id },
+      },
+    );
   }
   const base = { sizeBytes: head.sizeBytes, sha256: '', detectedMime: null, activeContent: null };
   if (file.sizeBytes !== null && head.sizeBytes !== file.sizeBytes) {
-    return { ...base, reject: true, reason: `uploaded size ${head.sizeBytes} does not match the declared size ${file.sizeBytes}` };
+    return {
+      ...base,
+      reject: true,
+      reason: `uploaded size ${head.sizeBytes} does not match the declared size ${file.sizeBytes}`,
+    };
   }
   const sha256 = await sha256Hex(await storage.getObjectStream(location));
   if (declaredSha256) {
@@ -69,7 +89,10 @@ async function inspectObject(location: ObjectLocation, file: FileRow, declaredSh
         ...base,
         sha256,
         reject: true,
-        reason: check.reason === 'mismatch' ? 'the uploaded content does not match the declared SHA-256 checksum' : 'the declared SHA-256 checksum is malformed',
+        reason:
+          check.reason === 'mismatch'
+            ? 'the uploaded content does not match the declared SHA-256 checksum'
+            : 'the declared SHA-256 checksum is malformed',
       };
     }
   }
@@ -99,11 +122,15 @@ export async function finalizeUpload(
   const storage = getStorage();
 
   const file = await withActor(db, ctx, async (tx) => {
-    const [row] = await tx.select().from(schema.fileObjects).where(eq(schema.fileObjects.id, fileId));
+    const [row] = await tx
+      .select()
+      .from(schema.fileObjects)
+      .where(eq(schema.fileObjects.id, fileId));
     return row ?? null;
   });
   if (!file || file.deletedAt) throw notFound();
-  if (file.ownerUserId !== userId) throw new ApiError('forbidden', 'only the uploader can finalise an upload');
+  if (file.ownerUserId !== userId)
+    throw new ApiError('forbidden', 'only the uploader can finalise an upload');
   if (file.status === 'scanning') return { file: toFileDto(file), outcome: 'scanning' };
   if (file.status !== 'pending_upload' && file.status !== 'uploaded') {
     throw new ApiError('invalid_transition', `the file is ${file.status} and cannot be finalised`, {
@@ -114,26 +141,41 @@ export async function finalizeUpload(
 
   if (file.uploadKind === 'multipart') {
     if (!input.parts?.length) {
-      throw new ApiError('validation_failed', 'multipart uploads must be finalised with the uploaded part ETags', {
-        details: [{ path: 'parts', message: 'required' }],
-      });
+      throw new ApiError(
+        'validation_failed',
+        'multipart uploads must be finalised with the uploaded part ETags',
+        {
+          details: [{ path: 'parts', message: 'required' }],
+        },
+      );
     }
-    if (!file.multipartUploadId) throw new ApiError('conflict', 'the multipart upload was not initialised');
+    if (!file.multipartUploadId)
+      throw new ApiError('conflict', 'the multipart upload was not initialised');
     try {
-      await storage.completeMultipart({ ...location, uploadId: file.multipartUploadId, parts: input.parts });
+      await storage.completeMultipart({
+        ...location,
+        uploadId: file.multipartUploadId,
+        parts: input.parts,
+      });
     } catch (err) {
-      if (err instanceof StorageError && (err.code === 'invalid_request' || err.code === 'not_found')) {
+      if (
+        err instanceof StorageError &&
+        (err.code === 'invalid_request' || err.code === 'not_found')
+      ) {
         throw new ApiError('validation_failed', err.message, { details: { fileId } });
       }
-      throw new ApiError('provider_unavailable', 'the storage provider could not complete the upload', { retryable: true });
+      throw new ApiError(
+        'provider_unavailable',
+        'the storage provider could not complete the upload',
+        { retryable: true },
+      );
     }
   } else if (input.parts?.length) {
     throw new ApiError('validation_failed', 'this upload is not multipart');
   }
 
   const declaredSha256 =
-    input.sha256 ??
-    ((file.scanResult as { declaredSha256?: string } | null)?.declaredSha256 ?? null);
+    input.sha256 ?? (file.scanResult as { declaredSha256?: string } | null)?.declaredSha256 ?? null;
   const outcome = await inspectObject(location, file, declaredSha256);
   const log = logger();
 
@@ -172,7 +214,15 @@ export async function finalizeUpload(
         after: { detectedMime: outcome.detectedMime, activeContent: outcome.activeContent },
         correlationId: options.correlationId,
       });
-      log.warn({ fileId, purpose: file.purpose, reason: scanResult.reason, correlationId: options.correlationId }, 'upload rejected at finalisation');
+      log.warn(
+        {
+          fileId,
+          purpose: file.purpose,
+          reason: scanResult.reason,
+          correlationId: options.correlationId,
+        },
+        'upload rejected at finalisation',
+      );
       return { file: toFileDto(updated), outcome: 'rejected' };
     }
     const scanResult: FileScanRecord = {
@@ -206,7 +256,11 @@ export async function finalizeUpload(
       entityType: 'file',
       entityId: fileId,
       organizationId: file.organizationId,
-      after: { sizeBytes: outcome.sizeBytes, detectedMime: outcome.detectedMime, checksumVerified: Boolean(declaredSha256) },
+      after: {
+        sizeBytes: outcome.sizeBytes,
+        detectedMime: outcome.detectedMime,
+        checksumVerified: Boolean(declaredSha256),
+      },
       correlationId: options.correlationId,
     });
     return { file: toFileDto(updated), outcome: 'scanning' };

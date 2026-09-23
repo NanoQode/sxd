@@ -140,7 +140,7 @@ describe('tender lifecycle and sealed bids (acceptance scenario 4)', () => {
     expect(revised.revisions[0]?.deadlineExtendedTo).not.toBeNull();
 
     // Bids before the deadline.
-    await expect(createBid(customerA, tender.id)).rejects.toMatchObject({ code: 'forbidden' });
+    await expect(createBid(customerA, tender.id)).rejects.toMatchObject({ code: 'not_found' });
     const bidA = await createBid(contractorA, tender.id);
     expect(bidA.status).toBe('draft');
     expect((await createBid(contractorA, tender.id)).id).toBe(bidA.id);
@@ -173,7 +173,7 @@ describe('tender lifecycle and sealed bids (acceptance scenario 4)', () => {
       expect('revisions' in b).toBe(false);
     }
     await expect(getBid(admin, bidA.id)).rejects.toMatchObject({ code: 'not_found' });
-    await expect(openTenderBids(admin, tender.id, { reason: 'curiosity' })).rejects.toMatchObject({ code: 'not_found' });
+    await expect(openTenderBids(admin, tender.id, { reason: 'curiosity' })).rejects.toMatchObject({ code: 'invalid_transition' });
     expect(await listTenderBids(customerA, tender.id)).toEqual([]);
     await expect(getTenderComparison(admin, tender.id)).rejects.toMatchObject({ code: 'not_found' });
 

@@ -1,5 +1,5 @@
 import 'server-only';
-import { and, asc, desc, eq, inArray, lt, or } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, lt, or, sql } from 'drizzle-orm';
 import {
   ApiError,
   type Page,
@@ -271,6 +271,8 @@ export async function listPurchaseOrders(identity: RequestIdentity, query: Purch
         and(
           organizationId ? eq(schema.purchaseOrders.organizationId, organizationId) : undefined,
           supplierUserId ? eq(schema.purchaseOrders.supplierUserId, supplierUserId) : undefined,
+          // Suppliers learn about an order only once it is issued.
+          supplierUserId ? sql`${schema.purchaseOrders.status} <> 'draft'` : undefined,
           query.status ? eq(schema.purchaseOrders.status, query.status) : undefined,
           query.rfqId ? eq(schema.purchaseOrders.rfqId, query.rfqId) : undefined,
           query.projectId ? eq(schema.purchaseOrders.projectId, query.projectId) : undefined,

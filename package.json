@@ -26,7 +26,7 @@
     "test:a11y": "pnpm --filter @simplexd/e2e test:a11y",
     "db:generate": "pnpm --filter @simplexd/db generate",
     "db:migrate": "pnpm --filter @simplexd/db migrate",
-    "db:seed": "pnpm --filter @simplexd/db seed",
+    "db:seed": "pnpm --filter @simplexd/db seed && pnpm --filter @simplexd/worker seed:templates",
     "db:import-markets": "pnpm --filter @simplexd/db import-markets",
     "db:bootstrap-admin": "pnpm --filter @simplexd/db bootstrap-admin",
     "db:check-rls": "pnpm --filter @simplexd/db check-rls",

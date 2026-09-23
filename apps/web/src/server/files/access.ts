@@ -12,7 +12,13 @@ import {
   type OrgRole,
 } from '@simplexd/domain/authz';
 import type { RequestIdentity } from '@/lib/auth/session';
-import { isSensitivePurpose, isStaffIdentity, notFound, type FileGrantRow, type FileRow } from './shared';
+import {
+  isSensitivePurpose,
+  isStaffIdentity,
+  notFound,
+  type FileGrantRow,
+  type FileRow,
+} from './shared';
 
 /**
  * File access policy. Every decision is made against rows read in the same
@@ -63,7 +69,11 @@ export async function freshMemberships(tx: Transaction, userId: string): Promise
  *   grants policy lets only the grantor or staff write a grant).
  * Every decision (`decideFileAccess`) runs before the write it authorises.
  */
-export async function elevated<T>(tx: Transaction, ctx: ActorContext, fn: () => Promise<T>): Promise<T> {
+export async function elevated<T>(
+  tx: Transaction,
+  ctx: ActorContext,
+  fn: () => Promise<T>,
+): Promise<T> {
   await applyActorContext(tx, { ...ctx, bypass: true });
   try {
     return await fn();
@@ -79,14 +89,19 @@ export async function loadFileAccess(
   fileId: string,
 ): Promise<FileAccessContext | null> {
   return elevated(tx, ctx, async () => {
-    const [file] = await tx.select().from(schema.fileObjects).where(eq(schema.fileObjects.id, fileId));
+    const [file] = await tx
+      .select()
+      .from(schema.fileObjects)
+      .where(eq(schema.fileObjects.id, fileId));
     if (!file || file.deletedAt) return null;
     const memberships = ctx.userId ? await freshMemberships(tx, ctx.userId) : [];
     const now = Date.now();
     const rows = await tx
       .select()
       .from(schema.fileAccessGrants)
-      .where(and(eq(schema.fileAccessGrants.fileId, fileId), isNull(schema.fileAccessGrants.revokedAt)));
+      .where(
+        and(eq(schema.fileAccessGrants.fileId, fileId), isNull(schema.fileAccessGrants.revokedAt)),
+      );
     const orgIds = new Set(memberships.map((m) => m.organizationId));
     const grants = rows.filter(
       (g) =>
@@ -128,14 +143,17 @@ export function decideFileAccess(
     // Staff without file permissions fall through to grants; never to org membership.
     if (level === 'manage') return decision;
     const grant = bestGrant(grants);
-    if (grant && GRANT_RANK[grant] >= GRANT_RANK[level]) return { allowed: true, via: `grant:${grant}` };
+    if (grant && GRANT_RANK[grant] >= GRANT_RANK[level])
+      return { allowed: true, via: `grant:${grant}` };
     return decision;
   }
   if (level === 'manage') return deny('only the file owner or staff can manage access');
   // Explicit grants (user grants, or organisation grants for a current member).
   const grant = bestGrant(grants);
-  if (grant && GRANT_RANK[grant] >= GRANT_RANK[level]) return { allowed: true, via: `grant:${grant}` };
-  if (sensitive) return deny('sensitive documents are available to their owner and authorised staff only');
+  if (grant && GRANT_RANK[grant] >= GRANT_RANK[level])
+    return { allowed: true, via: `grant:${grant}` };
+  if (sensitive)
+    return deny('sensitive documents are available to their owner and authorised staff only');
   if (!file.organizationId) return deny('the file is not shared with you');
   // Organisation membership, evaluated against the membership rows read just now.
   const actor: Actor = {
@@ -180,7 +198,8 @@ export async function requireFileAccess(
   if (!decision.allowed) {
     const visible = decideFileAccess(identity, access, 'view').allowed;
     if (!visible) throw notFound();
-    if (decision.code === 'unauthenticated') throw new ApiError('unauthenticated', 'sign in required');
+    if (decision.code === 'unauthenticated')
+      throw new ApiError('unauthenticated', 'sign in required');
     throw new AuthorizationError(decision);
   }
   return access;

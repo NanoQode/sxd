@@ -53,7 +53,10 @@ export async function issueDownload(
       location = { bucket: file.bucket, key: file.storageKey };
       contentType = file.detectedMime ?? file.declaredMime;
     }
-    const expiresInSeconds = Math.min(query.expiresIn ?? DOWNLOAD_URL_DEFAULT_SECONDS, DOWNLOAD_URL_MAX_SECONDS);
+    const expiresInSeconds = Math.min(
+      query.expiresIn ?? DOWNLOAD_URL_DEFAULT_SECONDS,
+      DOWNLOAD_URL_MAX_SECONDS,
+    );
     let signed;
     try {
       signed = await storage.createSignedDownloadUrl({
@@ -65,8 +68,13 @@ export async function issueDownload(
         expiresInSeconds,
       });
     } catch (err) {
-      if (err instanceof StorageError && err.code === 'quarantined') throw unavailableError({ ...file, status: 'scanning' });
-      throw new ApiError('provider_unavailable', 'the storage provider could not sign the download', { retryable: true });
+      if (err instanceof StorageError && err.code === 'quarantined')
+        throw unavailableError({ ...file, status: 'scanning' });
+      throw new ApiError(
+        'provider_unavailable',
+        'the storage provider could not sign the download',
+        { retryable: true },
+      );
     }
     await tx.insert(schema.fileDownloadLog).values({
       fileId,
@@ -76,7 +84,13 @@ export async function issueDownload(
     });
     // Logs carry ids and sizes only: never the signed URL or file contents.
     logger().info(
-      { fileId, userId, variant: query.variant ?? null, expiresInSeconds, correlationId: options.correlationId },
+      {
+        fileId,
+        userId,
+        variant: query.variant ?? null,
+        expiresInSeconds,
+        correlationId: options.correlationId,
+      },
       'signed download issued',
     );
     return {

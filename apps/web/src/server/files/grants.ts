@@ -24,7 +24,10 @@ export async function createGrant(
   return withActor(getDb(), ctx, async (tx) => {
     const { file } = await requireFileAccess(tx, identity, ctx, fileId, 'manage');
     if (input.organizationId && isSensitivePurpose(file.purpose)) {
-      throw new ApiError('validation_failed', 'sensitive documents can only be granted to individual users');
+      throw new ApiError(
+        'validation_failed',
+        'sensitive documents can only be granted to individual users',
+      );
     }
     const expiresAt = input.expiresAt ? new Date(input.expiresAt) : null;
     if (expiresAt && expiresAt.getTime() <= Date.now()) {
@@ -33,7 +36,10 @@ export async function createGrant(
       });
     }
     if (input.userId) {
-      const [u] = await tx.select({ id: schema.user.id }).from(schema.user).where(eq(schema.user.id, input.userId));
+      const [u] = await tx
+        .select({ id: schema.user.id })
+        .from(schema.user)
+        .where(eq(schema.user.id, input.userId));
       if (!u) throw new ApiError('not_found', 'user not found');
     } else if (input.organizationId) {
       const [o] = await tx
@@ -59,7 +65,13 @@ export async function createGrant(
       entityType: 'file',
       entityId: fileId,
       organizationId: file.organizationId,
-      after: { grantId: grant!.id, userId: input.userId ?? null, organizationId: input.organizationId ?? null, level: input.level, expiresAt },
+      after: {
+        grantId: grant!.id,
+        userId: input.userId ?? null,
+        organizationId: input.organizationId ?? null,
+        level: input.level,
+        expiresAt,
+      },
       correlationId: options.correlationId,
     });
     return toGrantDto(grant!);
@@ -79,7 +91,9 @@ export async function revokeGrant(
       tx
         .select()
         .from(schema.fileAccessGrants)
-        .where(and(eq(schema.fileAccessGrants.id, grantId), eq(schema.fileAccessGrants.fileId, fileId))),
+        .where(
+          and(eq(schema.fileAccessGrants.id, grantId), eq(schema.fileAccessGrants.fileId, fileId)),
+        ),
     );
     if (!grant) throw new ApiError('not_found', 'grant not found');
     if (grant.revokedAt) return toGrantDto(grant);
@@ -96,7 +110,12 @@ export async function revokeGrant(
       entityType: 'file',
       entityId: fileId,
       organizationId: file.organizationId,
-      before: { grantId, userId: grant.userId, organizationId: grant.organizationId, level: grant.level },
+      before: {
+        grantId,
+        userId: grant.userId,
+        organizationId: grant.organizationId,
+        level: grant.level,
+      },
       correlationId: options.correlationId,
     });
     return toGrantDto(updated!);

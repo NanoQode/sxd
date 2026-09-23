@@ -1,5 +1,10 @@
 import 'server-only';
-import { ApiError, SENSITIVE_FILE_PURPOSES, type FileDto, type FileGrantDto } from '@simplexd/contracts';
+import {
+  ApiError,
+  SENSITIVE_FILE_PURPOSES,
+  type FileDto,
+  type FileGrantDto,
+} from '@simplexd/contracts';
 import type { schema } from '@simplexd/db';
 import type { RequestIdentity } from '@/lib/auth/session';
 
@@ -65,7 +70,11 @@ export function statusReasonOf(file: Pick<FileRow, 'status' | 'scanResult'>): st
     case 'infected':
       return `malware detected${scan.signature ? ` (${scan.signature})` : ''}; the file stays quarantined`;
     case 'scan_failed':
-      return scan.reason ?? scan.error ?? 'the malware scanner could not scan the file; it stays quarantined';
+      return (
+        scan.reason ??
+        scan.error ??
+        'the malware scanner could not scan the file; it stays quarantined'
+      );
     default:
       return null;
   }
@@ -141,9 +150,13 @@ export function unavailableError(file: Pick<FileRow, 'id' | 'status' | 'scanResu
         { details, retryable: true },
       );
     case 'infected':
-      return new ApiError('file_rejected', 'the file failed malware scanning and is not available', {
-        details,
-      });
+      return new ApiError(
+        'file_rejected',
+        'the file failed malware scanning and is not available',
+        {
+          details,
+        },
+      );
     case 'rejected':
       return new ApiError('file_rejected', statusReasonOf(file) ?? 'the file was rejected', {
         details,

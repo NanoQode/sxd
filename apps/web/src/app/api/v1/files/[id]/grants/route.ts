@@ -14,7 +14,10 @@ export const GET = route<{ params: Promise<{ id: string }> }>(async (_req, ctx) 
   const identity = await getIdentity();
   if (!identity.session) throw new ApiError('unauthenticated', 'sign in required');
   const { id } = await params(ctx, idParams);
-  return json({ items: await listGrants(identity, id, { correlationId: ctx.correlationId }) }, { correlationId: ctx.correlationId });
+  return json(
+    { items: await listGrants(identity, id, { correlationId: ctx.correlationId }) },
+    { correlationId: ctx.correlationId },
+  );
 });
 
 /** POST /api/v1/files/:id/grants — grant a user or organisation view/download access. */

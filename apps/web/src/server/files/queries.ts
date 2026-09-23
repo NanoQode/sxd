@@ -8,7 +8,11 @@ import { ctxFor, toFileDto, userIdOf, type FileGrantRow, type ServiceOptions } f
 
 /** Read models: a single file (view access) and files attached to an entity. */
 
-export async function getFile(identity: RequestIdentity, fileId: string, options: ServiceOptions = {}): Promise<FileDto> {
+export async function getFile(
+  identity: RequestIdentity,
+  fileId: string,
+  options: ServiceOptions = {},
+): Promise<FileDto> {
   const ctx = ctxFor(identity, options);
   return withActor(getDb(), ctx, async (tx) => {
     const { file } = await requireFileAccess(tx, identity, ctx, fileId, 'view');
@@ -84,14 +88,20 @@ export async function listFilesForEntity(
       for (const g of grantRows) {
         const applies =
           (!g.expiresAt || g.expiresAt.getTime() > now) &&
-          ((g.userId !== null && g.userId === userId) || (g.organizationId !== null && orgIds.has(g.organizationId)));
+          ((g.userId !== null && g.userId === userId) ||
+            (g.organizationId !== null && orgIds.has(g.organizationId)));
         if (!applies) continue;
         const list = grantsByFile.get(g.fileId) ?? [];
         list.push(g);
         grantsByFile.set(g.fileId, list);
       }
-      const visible = rows.filter((file) =>
-        decideFileAccess(identity, { file, grants: grantsByFile.get(file.id) ?? [], memberships }, 'view').allowed,
+      const visible = rows.filter(
+        (file) =>
+          decideFileAccess(
+            identity,
+            { file, grants: grantsByFile.get(file.id) ?? [], memberships },
+            'view',
+          ).allowed,
       );
       const cursor = decodeCursor(query.cursor);
       const after = cursor
@@ -105,7 +115,8 @@ export async function listFilesForEntity(
       const tail = items[items.length - 1];
       return {
         items: items.map(toFileDto),
-        nextCursor: after.length > query.limit && tail ? encodeCursor(tail.createdAt, tail.id) : null,
+        nextCursor:
+          after.length > query.limit && tail ? encodeCursor(tail.createdAt, tail.id) : null,
         total: visible.length,
       };
     }),

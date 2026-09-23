@@ -18,6 +18,7 @@ await build({
     { in: 'src/main.ts', out: 'main' },
     { in: '../../packages/db/src/cli/migrate.ts', out: 'cli/migrate' },
     { in: '../../packages/db/src/cli/seed.ts', out: 'cli/seed' },
+    { in: 'src/cli/seed-templates.ts', out: 'cli/seed-templates' },
     { in: '../../packages/db/src/cli/import-markets.ts', out: 'cli/import-markets' },
     { in: '../../packages/db/src/cli/bootstrap-admin.ts', out: 'cli/bootstrap-admin' },
     { in: '../../packages/db/src/cli/check-rls.ts', out: 'cli/check-rls' },
