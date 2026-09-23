@@ -1,5 +1,5 @@
 import 'server-only';
-import { and, desc, eq, ilike, inArray, isNull, lt, or, sql } from 'drizzle-orm';
+import { and, desc, eq, ilike, inArray, isNull, or, sql } from 'drizzle-orm';
 import type { z } from 'zod';
 import {
   ApiError,
@@ -17,7 +17,7 @@ import { appendOutbox, getDb, schema, withActor, type Transaction } from '@simpl
 import { recordAudit } from '@/lib/audit';
 import type { RequestIdentity } from '@/lib/auth/session';
 import { env } from '@/lib/env';
-import { decodeCursor, encodeCursor } from '@/server/portal/pagination';
+import { decodeCursor, encodeCursor, keysetAfter } from '@/server/portal/pagination';
 import { createServiceRequestRecord } from '@/server/requests/create';
 import { toNoteDto } from '@/server/requests/queries';
 
@@ -100,12 +100,7 @@ export async function listLeads(
                 ilike(schema.leads.email, `%${parsed.q}%`),
               )
             : undefined,
-          cursor
-            ? or(
-                lt(schema.leads.createdAt, cursor.createdAt),
-                and(eq(schema.leads.createdAt, cursor.createdAt), lt(schema.leads.id, cursor.id)),
-              )
-            : undefined,
+          cursor ? keysetAfter(schema.leads.createdAt, schema.leads.id, cursor) : undefined,
         ),
       )
       .orderBy(desc(schema.leads.createdAt), desc(schema.leads.id))
