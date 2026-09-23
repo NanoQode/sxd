@@ -4,6 +4,7 @@ import {
   appointmentListQuerySchema,
   appointmentPageSchema,
   availabilityQuerySchema,
+  availabilityReplaceSchema,
   availabilityResponseSchema,
   bookingCreateSchema,
   calendarConnectionDtoSchema,
@@ -15,7 +16,9 @@ import {
   listRoutes,
   registerRoute,
   rescheduleSchema,
+  staffAvailabilityDtoSchema,
   testBookingResultSchema,
+  timeOffCreateSchema,
   uuidSchema,
   type RouteSpec,
 } from '@simplexd/contracts';
@@ -308,4 +311,59 @@ export const calendarTestBookingRoute = ensure({
   operationId: 'admin.calendar.testBooking',
   auth: 'staff',
   responses: { 200: { description: 'Result', body: testBookingResultSchema } },
+});
+
+const staffParams = z.object({ staffUserId: z.string() });
+
+export const staffAvailabilityGetRoute = ensure({
+  method: 'get',
+  path: '/api/v1/appointments/staff/{staffUserId}',
+  summary: 'Working windows and upcoming time off',
+  description:
+    'The person themselves (staff, or a partner with partner.availability.manage) or staff with appointments.manage_all.',
+  tags: ['appointments'],
+  operationId: 'appointments.staffAvailability.get',
+  auth: 'session',
+  request: { params: staffParams },
+  responses: { 200: { description: 'Availability', body: staffAvailabilityDtoSchema } },
+});
+
+export const staffAvailabilityPutRoute = ensure({
+  method: 'put',
+  path: '/api/v1/appointments/staff/{staffUserId}',
+  summary: 'Replace weekly working windows',
+  description:
+    'ISO weekdays (1 = Monday) with local start/end times and a time zone; optional appointment kinds per window. Audited.',
+  tags: ['appointments'],
+  operationId: 'appointments.staffAvailability.replace',
+  auth: 'session',
+  request: { params: staffParams, body: availabilityReplaceSchema },
+  responses: { 200: { description: 'Availability', body: staffAvailabilityDtoSchema } },
+});
+
+export const timeOffCreateRoute = ensure({
+  method: 'post',
+  path: '/api/v1/appointments/staff/{staffUserId}/time-off',
+  summary: 'Block a period (leave or block)',
+  description:
+    'Refused with slot_unavailable when the period overlaps an appointment, hold or other time off (database exclusion constraint).',
+  tags: ['appointments'],
+  operationId: 'appointments.timeOff.create',
+  auth: 'session',
+  request: { params: staffParams, body: timeOffCreateSchema },
+  responses: {
+    201: { description: 'Availability', body: staffAvailabilityDtoSchema },
+    409: { description: 'Overlaps a booking' },
+  },
+});
+
+export const timeOffDeleteRoute = ensure({
+  method: 'delete',
+  path: '/api/v1/appointments/staff/{staffUserId}/time-off/{reservationId}',
+  summary: 'Remove a time-off entry',
+  tags: ['appointments'],
+  operationId: 'appointments.timeOff.delete',
+  auth: 'session',
+  request: { params: z.object({ staffUserId: z.string(), reservationId: uuidSchema }) },
+  responses: { 200: { description: 'Availability', body: staffAvailabilityDtoSchema } },
 });

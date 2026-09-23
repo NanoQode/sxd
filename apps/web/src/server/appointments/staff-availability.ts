@@ -7,7 +7,7 @@ import {
   type StaffAvailabilityDto,
 } from '@simplexd/contracts';
 import { getDb, schema, systemContext, withActor, type DbExecutor } from '@simplexd/db';
-import { hasStaffPermission } from '@simplexd/domain/authz';
+import { assertAllowed, authorizePartner, hasStaffPermission } from '@simplexd/domain/authz';
 import type { z } from 'zod';
 import { recordAudit } from '@/lib/audit';
 import type { RequestIdentity } from '@/lib/auth/session';
@@ -31,22 +31,24 @@ interface Access {
   privileged: boolean;
 }
 
-function access(identity: RequestIdentity, staffUserId: string, write: boolean): Access {
+function access(identity: RequestIdentity, staffUserId: string): Access {
   const userId = identity.session?.user.id;
   if (!userId) throw new ApiError('unauthenticated', 'sign in required');
-  const isStaff = identity.actor.staffRoles.length > 0;
   if (hasStaffPermission(identity.actor, 'appointments.manage_all')) {
     return { userId, privileged: true };
   }
   if (staffUserId !== userId) {
     throw new ApiError('forbidden', 'you can only manage your own availability');
   }
-  if (isStaff) return { userId, privileged: true };
-  if (identity.actor.isPartner) {
-    if (!write) return { userId, privileged: false };
-    return { userId, privileged: false };
-  }
-  throw new ApiError('forbidden', 'only staff and partners have working availability');
+  if (identity.actor.staffRoles.length > 0) return { userId, privileged: true };
+  assertAllowed(
+    authorizePartner(identity.actor, 'partner.availability.manage', {
+      type: 'staff_availability',
+      id: staffUserId,
+      assigneeUserIds: [userId],
+    }),
+  );
+  return { userId, privileged: false };
 }
 
 function hhmm(value: unknown): string {
@@ -100,7 +102,9 @@ async function load(tx: DbExecutor, staffUserId: string): Promise<StaffAvailabil
       start: hhmm(r.startTime),
       end: hhmm(r.endTime),
       timeZone: r.timeZone,
-      kinds: (Array.isArray(r.kinds) ? r.kinds : []) as StaffAvailabilityDto['windows'][number]['kinds'],
+      kinds: (Array.isArray(r.kinds)
+        ? r.kinds
+        : []) as StaffAvailabilityDto['windows'][number]['kinds'],
     })),
     timeOff: timeOff.rows.map((t) => ({
       id: t.id,
@@ -120,7 +124,7 @@ export async function getStaffAvailability(
   identity: RequestIdentity,
   staffUserId: string,
 ): Promise<StaffAvailabilityDto> {
-  const a = access(identity, staffUserId, false);
+  const a = access(identity, staffUserId);
   return withActor(getDb(), contextFor(identity, a), (tx) => load(tx, staffUserId));
 }
 
@@ -130,7 +134,7 @@ export async function replaceStaffAvailability(
   input: z.input<typeof availabilityReplaceSchema>,
   options: { correlationId?: string } = {},
 ): Promise<StaffAvailabilityDto> {
-  const a = access(identity, staffUserId, true);
+  const a = access(identity, staffUserId);
   const { windows } = availabilityReplaceSchema.parse(input);
   return withActor(getDb(), contextFor(identity, a, options.correlationId), async (tx) => {
     if (!(await isBookableUser(tx, staffUserId))) {
@@ -171,7 +175,7 @@ export async function addTimeOff(
   input: z.input<typeof timeOffCreateSchema>,
   options: { correlationId?: string } = {},
 ): Promise<StaffAvailabilityDto> {
-  const a = access(identity, staffUserId, true);
+  const a = access(identity, staffUserId);
   const t = timeOffCreateSchema.parse(input);
   return withActor(getDb(), contextFor(identity, a, options.correlationId), async (tx) => {
     if (!(await isBookableUser(tx, staffUserId))) {
@@ -187,7 +191,8 @@ export async function addTimeOff(
       await tx.execute(sql`RELEASE SAVEPOINT time_off_insert`);
     } catch (err) {
       await tx.execute(sql`ROLLBACK TO SAVEPOINT time_off_insert`);
-      const code = (err as { cause?: { code?: string }; code?: string }).cause?.code ??
+      const code =
+        (err as { cause?: { code?: string }; code?: string }).cause?.code ??
         (err as { code?: string }).code;
       if (code === '23P01') {
         throw new ApiError(
@@ -214,7 +219,7 @@ export async function removeTimeOff(
   reservationId: string,
   options: { correlationId?: string } = {},
 ): Promise<StaffAvailabilityDto> {
-  const a = access(identity, staffUserId, true);
+  const a = access(identity, staffUserId);
   return withActor(getDb(), contextFor(identity, a, options.correlationId), async (tx) => {
     const removed = await tx
       .delete(schema.slotReservations)
@@ -247,7 +252,9 @@ export async function listConfiguredStaff(identity: RequestIdentity): Promise<st
     tx
       .selectDistinct({ staffUserId: schema.staffAvailability.staffUserId })
       .from(schema.staffAvailability)
-      .where(and(eq(schema.staffAvailability.active, true), gt(schema.staffAvailability.weekday, 0))),
+      .where(
+        and(eq(schema.staffAvailability.active, true), gt(schema.staffAvailability.weekday, 0)),
+      ),
   );
   return rows.map((r) => r.staffUserId);
 }

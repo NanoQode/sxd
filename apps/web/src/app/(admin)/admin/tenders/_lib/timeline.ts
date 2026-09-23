@@ -43,12 +43,13 @@ export function isoToWallClock(iso: string | null | undefined, zone: string): st
 export function timelineMessages(
   values: Partial<Record<keyof TenderStageTimestamps, string | null>>,
 ): string[] {
+  // Blank required stages are passed as missing (not as an invalid string) so the message says "required".
   const result = validateTenderTimeline({
-    releaseAt: values.releaseAt ?? '',
+    releaseAt: (values.releaseAt ?? null) as string,
     siteVisitAt: values.siteVisitAt ?? null,
     questionCutoffAt: values.questionCutoffAt ?? null,
     answersPublishedAt: values.answersPublishedAt ?? null,
-    submissionDeadlineAt: values.submissionDeadlineAt ?? '',
+    submissionDeadlineAt: (values.submissionDeadlineAt ?? null) as string,
     evaluationCompleteAt: values.evaluationCompleteAt ?? null,
     awardTargetAt: values.awardTargetAt ?? null,
   });

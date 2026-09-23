@@ -223,7 +223,7 @@ export async function visibleFiles(
 ): Promise<{ visible: VisibleFile[]; hidden: number }> {
   const unique = [...new Set(fileIds)];
   const results = await Promise.all(
-    unique.map(async (id) => {
+    unique.map(async (id): Promise<VisibleFile | null> => {
       try {
         const file = await getFile(identity, id);
         return { id: file.id, name: file.originalName, status: file.status };

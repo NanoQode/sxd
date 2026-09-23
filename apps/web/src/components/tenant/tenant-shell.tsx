@@ -1,17 +1,7 @@
 'use client';
 
 import { useQueryClient } from '@tanstack/react-query';
-import {
-  Bell,
-  CalendarDays,
-  FileText,
-  Home,
-  LogOut,
-  ReceiptText,
-  ShieldAlert,
-  Wallet,
-  Wrench,
-} from 'lucide-react';
+import { LogOut, ShieldAlert } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useState, type ReactNode } from 'react';
@@ -24,43 +14,7 @@ import {
   formatDateTimeLabel,
 } from '@simplexd/ui';
 import { authClient } from '@/lib/auth/client';
-
-export interface TenantNavItem {
-  href: string;
-  label: string;
-  icon: typeof Home;
-  exact?: boolean;
-  /** Paths that also mark this item current (e.g. the notification alias for leases). */
-  alsoMatches?: string[];
-  count?: number;
-}
-
-export function tenantNav(currentLeaseId: string | null, unreadNotices: number): TenantNavItem[] {
-  return [
-    { href: '/tenant', label: 'Home', icon: Home, exact: true },
-    ...(currentLeaseId
-      ? [
-          {
-            href: `/tenant/lease/${currentLeaseId}`,
-            label: 'My lease',
-            icon: FileText,
-            alsoMatches: ['/tenant/lease/', '/tenant/leases/'],
-          },
-        ]
-      : []),
-    { href: '/tenant/balances', label: 'Balances', icon: Wallet },
-    { href: '/tenant/receipts', label: 'Receipts', icon: ReceiptText },
-    { href: '/tenant/tickets', label: 'Maintenance', icon: Wrench },
-    { href: '/tenant/appointments', label: 'Appointments', icon: CalendarDays },
-    { href: '/tenant/notices', label: 'Notices', icon: Bell, count: unreadNotices },
-  ];
-}
-
-export function isCurrent(item: TenantNavItem, pathname: string): boolean {
-  if (item.exact) return pathname === item.href;
-  if (pathname === item.href || pathname.startsWith(`${item.href}/`)) return true;
-  return item.alsoMatches?.some((p) => pathname.startsWith(p)) ?? false;
-}
+import { isCurrent, tenantNav } from '@/lib/tenant/nav';
 
 /**
  * Tenant shell: restricted navigation (lease, balances, receipts,

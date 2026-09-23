@@ -3,6 +3,7 @@ import { inArray } from 'drizzle-orm';
 import { ApiError } from '@simplexd/contracts';
 import { getDb, schema, withActor, type Transaction } from '@simplexd/db';
 import {
+  AuthorizationError,
   authorizeStaff,
   hasStaffPermission,
   type ResourceRef,
@@ -110,6 +111,11 @@ export async function attempt<T>(fn: () => Promise<T>): Promise<Loaded<T>> {
     return { ok: true, value: await fn() };
   } catch (err) {
     if (err instanceof ApiError) return { ok: false, code: err.code, message: err.message };
+    if (err instanceof AuthorizationError) {
+      const code = err.decision.code;
+      const passthrough = code === 'mfa_required' || code === 'feature_disabled' || code === 'unauthenticated';
+      return { ok: false, code: passthrough ? code : 'forbidden', message: err.message };
+    }
     throw err;
   }
 }

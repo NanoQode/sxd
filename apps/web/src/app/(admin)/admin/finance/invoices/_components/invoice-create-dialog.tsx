@@ -19,15 +19,10 @@ import {
   useToast,
 } from '@simplexd/ui';
 import { adminFetch, errorMessage, isMfaError } from '@/lib/admin/client';
+import { lineProblem, percentToBps, type InvoiceLineDraft } from '@/lib/admin/invoice-lines';
 import { lineAmountKobo, parseNairaToKobo, sumKobo } from '@/lib/admin/money';
 
-interface LineDraft {
-  description: string;
-  quantity: string;
-  unitNaira: string;
-  taxPercent: string;
-  accountCode: string;
-}
+type LineDraft = InvoiceLineDraft;
 
 const EMPTY_LINE: LineDraft = {
   description: '',
@@ -36,26 +31,6 @@ const EMPTY_LINE: LineDraft = {
   taxPercent: '',
   accountCode: '',
 };
-
-/** Tax percent ("7.5") to basis points (750); null when not a valid 0–100 value. */
-export function percentToBps(value: string): number | null {
-  if (!value.trim()) return 0;
-  if (!/^\d{1,3}(\.\d{1,2})?$/.test(value.trim())) return null;
-  const bps = Math.round(Number(value) * 100);
-  return bps >= 0 && bps <= 10_000 ? bps : null;
-}
-
-/** Line validation shared with the preview total; returns a message or null. */
-export function lineProblem(line: LineDraft): string | null {
-  if (!line.description.trim()) return 'Description is required';
-  if (!/^\d+(\.\d{1,3})?$/.test(line.quantity) || Number(line.quantity) <= 0)
-    return 'Quantity must be positive (up to 3 decimals)';
-  const kobo = parseNairaToKobo(line.unitNaira);
-  if (kobo === null || BigInt(kobo) < 0n) return 'Unit amount must be a naira amount';
-  if (percentToBps(line.taxPercent) === null) return 'Tax must be a percentage between 0 and 100';
-  if (line.accountCode && !/^\d{4}$/.test(line.accountCode)) return 'Account code is four digits';
-  return null;
-}
 
 /**
  * Manual invoice (milestone, management fee, other). Tax is per line and
