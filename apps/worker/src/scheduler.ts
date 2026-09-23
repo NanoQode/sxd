@@ -29,6 +29,7 @@ const schedules: Schedule[] = [
   { type: 'integrations.health_check', queue: 'default', everyMs: 60 * 60_000 },
   { type: 'rent.generate_due_charges', queue: 'default', everyMs: 60 * 60_000 },
   { type: 'work_orders.sla_check', queue: 'default', everyMs: 15 * 60_000 },
+  { type: 'listings.expire_lapsed', queue: 'default', everyMs: 60 * 60_000 },
   // Saved-search alerts (idempotent per saved search × listing; see handlers/search.ts).
   { type: 'search.saved_search_alerts', queue: 'default', everyMs: 15 * 60_000 },
 ];

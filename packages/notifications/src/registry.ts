@@ -191,6 +191,184 @@ function activityUpdate(opts: {
   };
 }
 
+/**
+ * Listings (apps/web/src/server/listings): the owner organisation hears about
+ * moderation decisions, expiry and interest; moderators hear about
+ * submissions; offer events go to the other party named in
+ * `notifyOrganizationIds`. Inquiry notifications never carry contact details.
+ */
+function listingNotice(opts: {
+  title: (p: Record<string, unknown>) => string;
+  message: (p: Record<string, unknown>) => string;
+  link: (p: Record<string, unknown>, event: OutboxEventLike) => string;
+  recipients: 'owner' | 'named' | 'moderators';
+  entityType: 'listing' | 'offer';
+  channels?: NotificationChannel[];
+}): EventResolver {
+  return async ({ tx, event, payload, env, scope }) => {
+    let recipients: RecipientSpec[] = [];
+    if (opts.recipients === 'owner') {
+      recipients = await customerRecipients(tx, event.organizationId ?? null, []);
+    } else if (opts.recipients === 'named') {
+      for (const orgId of strings(payload['notifyOrganizationIds'])) {
+        recipients.push(...(await customerRecipients(tx, orgId, [])));
+      }
+    } else {
+      recipients = await staffWithRoles(tx, ['content_editor', 'operations_manager', 'super_admin']);
+    }
+    const seen = new Set<string>();
+    const unique = recipients.filter((r) => {
+      const key = r.userId ?? r.email ?? '';
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+    if (unique.length === 0) return [];
+    const linkPath = opts.link(payload, event);
+    return [
+      {
+        templateKey: 'activity_update',
+        category: 'transactional',
+        channels: opts.channels ?? EMAIL_APP,
+        recipients: unique,
+        variables: {
+          title: opts.title(payload),
+          message: opts.message(payload),
+          linkUrl: `${env.appUrl}${linkPath}`,
+        },
+        dedupeScope: scope,
+        inApp: { linkPath },
+        relatedEntity: {
+          type: opts.entityType,
+          id: isUuid(event.aggregateId) ? event.aggregateId : null,
+        },
+        organizationId: event.organizationId ?? null,
+        correlationId: event.correlationId ?? null,
+      },
+    ];
+  };
+}
+
+const listingTitle = (p: Record<string, unknown>) => str(p['title']) ?? str(p['listingTitle']) ?? 'your listing';
+const listingPortalLink = (p: Record<string, unknown>, e: OutboxEventLike) =>
+  `/portal/listings/${str(p['listingId']) ?? e.aggregateId}`;
+const offerPortalLink = (p: Record<string, unknown>, e: OutboxEventLike) =>
+  `/portal/listings/offers/${str(p['offerId']) ?? e.aggregateId}`;
+
+const listingResolvers: Record<string, EventResolver> = {
+  'listing.submitted': listingNotice({
+    entityType: 'listing',
+    recipients: 'moderators',
+    channels: ['in_app'],
+    title: (p) => `Listing awaiting moderation: ${listingTitle(p)}`,
+    message: (p) =>
+      p['republication'] === true
+        ? 'A live listing has changes awaiting review.'
+        : 'A new listing was submitted with a verified owner authority.',
+    link: (p, e) => `/admin/listings/${str(p['listingId']) ?? e.aggregateId}`,
+  }),
+  'listing.published': listingNotice({
+    entityType: 'listing',
+    recipients: 'owner',
+    title: (p) => `Listing published: ${listingTitle(p)}`,
+    message: (p) =>
+      `Revision ${str(p['revisionVersion']) ?? String(p['revisionVersion'] ?? '')} is live until ${formatWhen(str(p['expiresAt']))}. Re-confirm availability before then to keep it published.`,
+    link: listingPortalLink,
+  }),
+  'listing.rejected': listingNotice({
+    entityType: 'listing',
+    recipients: 'owner',
+    title: (p) => `Listing not approved: ${listingTitle(p)}`,
+    message: (p) =>
+      `${p['staysLive'] === true ? 'The submitted changes were refused; the published revision stays live. ' : ''}Reason: ${str(p['reason']) ?? 'see the listing page'}.`,
+    link: listingPortalLink,
+  }),
+  'listing.changes_requested': listingNotice({
+    entityType: 'listing',
+    recipients: 'owner',
+    title: (p) => `Changes requested: ${listingTitle(p)}`,
+    message: (p) => `Moderation asked for changes before publication: ${str(p['reason']) ?? 'see the listing page'}.`,
+    link: listingPortalLink,
+  }),
+  'listing.marked_duplicate': listingNotice({
+    entityType: 'listing',
+    recipients: 'owner',
+    title: (p) => `Listing marked as a duplicate: ${listingTitle(p)}`,
+    message: (p) => `${str(p['reason']) ?? 'The listing duplicates another one.'} It is no longer shown publicly.`,
+    link: listingPortalLink,
+  }),
+  'listing.expired': listingNotice({
+    entityType: 'listing',
+    recipients: 'owner',
+    title: (p) => `Listing expired: ${listingTitle(p)}`,
+    message: () =>
+      'The availability window lapsed without a confirmation, so the listing left the public site. Re-confirm and resubmit to publish it again.',
+    link: listingPortalLink,
+  }),
+  'listing.inquiry_received': listingNotice({
+    entityType: 'listing',
+    recipients: 'owner',
+    channels: ['in_app'],
+    title: (p) => `New inquiry about ${listingTitle(p)}`,
+    message: () =>
+      'Someone asked about your listing. SimplexD staff qualify inquiries before introducing anyone; the count is on your listing page.',
+    link: listingPortalLink,
+  }),
+  'listing.outcome_recorded': listingNotice({
+    entityType: 'listing',
+    recipients: 'moderators',
+    channels: ['in_app'],
+    title: (p) => `Listing outcome recorded: ${statusLabel(str(p['outcome']))}`,
+    message: (p) =>
+      `The outcome was recorded${str(p['serviceRequestId']) ? ' on the land sales/leasing request' : ''}. Complete the engagement with this evidence.`,
+    link: (p, e) => `/admin/listings/${str(p['listingId']) ?? e.aggregateId}`,
+  }),
+  'listing_offer.submitted': listingNotice({
+    entityType: 'offer',
+    recipients: 'named',
+    title: (p) => `New offer on ${listingTitle(p)}`,
+    message: () => 'A buyer organisation made an offer. Counter, accept or decline it from your listings.',
+    link: offerPortalLink,
+  }),
+  'listing_offer.countered': listingNotice({
+    entityType: 'offer',
+    recipients: 'named',
+    title: (p) => `Counter-offer on ${listingTitle(p)}`,
+    message: (p) => `The ${str(p['side']) ?? 'other party'} proposed a different amount. It is your move.`,
+    link: offerPortalLink,
+  }),
+  'listing_offer.accepted': listingNotice({
+    entityType: 'offer',
+    recipients: 'named',
+    title: (p) => `Offer accepted on ${listingTitle(p)}`,
+    message: () =>
+      'The amount on the table was accepted. Completion is documented through the land sales/leasing engagement.',
+    link: offerPortalLink,
+  }),
+  'listing_offer.rejected': listingNotice({
+    entityType: 'offer',
+    recipients: 'named',
+    title: (p) => `Offer declined on ${listingTitle(p)}`,
+    message: () => 'The negotiation ended. The reason is in the negotiation log.',
+    link: offerPortalLink,
+  }),
+  'listing_offer.withdrawn': listingNotice({
+    entityType: 'offer',
+    recipients: 'named',
+    title: (p) => `Offer withdrawn on ${listingTitle(p)}`,
+    message: () => 'The buyer withdrew the offer.',
+    link: offerPortalLink,
+  }),
+  'listing_offer.expired': listingNotice({
+    entityType: 'offer',
+    recipients: 'named',
+    channels: ['in_app'],
+    title: () => 'Offer expired',
+    message: () => 'An open offer passed its validity date without a decision.',
+    link: offerPortalLink,
+  }),
+};
+
 const rentalResolvers: Record<string, EventResolver> = {
   'tenant.invited': async ({ event, payload, env, scope }) => {
     const email = str(payload['email']);
@@ -576,6 +754,7 @@ const commercialResolvers: Record<string, EventResolver> = {
 
 const resolvers: Record<string, EventResolver> = {
   ...rentalResolvers,
+  ...listingResolvers,
   ...financeResolvers,
   ...commercialResolvers,
   ...searchPurchaseResolvers,
@@ -851,8 +1030,7 @@ const resolvers: Record<string, EventResolver> = {
     message: (p) =>
       `A ${(str(p['kindLabel']) ?? 'record').toLowerCase()} on request ${str(p['reference']) ?? ''} was assigned to you. Open it to record your findings and evidence.`,
     link: (p) =>
-      str(p['linkPath']) ??
-      `/partner/items?serviceRequestId=${str(p['serviceRequestId']) ?? ''}`,
+      str(p['linkPath']) ?? `/partner/items?serviceRequestId=${str(p['serviceRequestId']) ?? ''}`,
   }),
   'engagement_item.customer_action': activityUpdate({
     entityType: 'engagement_item',

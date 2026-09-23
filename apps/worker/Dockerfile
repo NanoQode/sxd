@@ -32,6 +32,7 @@ FROM ${BASE_IMAGE} AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 ENV MARKET_SEED_FILE=/app/data/seed/nigeria-50-markets.seed.json
+ENV MIGRATIONS_DIR=/app/migrations
 RUN groupadd --system app && useradd --system --gid app --home /app app
 COPY --from=build --chown=app:app /out/node_modules ./node_modules
 COPY --from=build --chown=app:app /out/package.json ./package.json

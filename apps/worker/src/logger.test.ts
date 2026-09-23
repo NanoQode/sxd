@@ -38,7 +38,9 @@ describe('worker logger redaction', () => {
     );
     const [line] = lines();
     expect(line).toBeDefined();
-    expect(line).not.toMatch(/hunter2|123456|tok_abc|key_abc|eyJ\.abc|s3cr3t|renewed|top|rt_1|wh_1/);
+    expect(line).not.toMatch(
+      /hunter2|123456|tok_abc|key_abc|eyJ\.abc|s3cr3t|renewed|top|rt_1|wh_1/,
+    );
     const parsed = JSON.parse(line!) as LogLine;
     expect(parsed.payload).toEqual({
       password: '[redacted]',

@@ -9,6 +9,7 @@ import { registerIntegrationHandlers } from './integrations';
 import { registerCommercialHandlers } from './commercial';
 import { registerRentalHandlers } from './rentals';
 import { registerSearchHandlers } from './search';
+import { registerListingHandlers } from './listings';
 
 export function registerHandlers(runner: JobRunner): void {
   registerCommercialHandlers(runner);
@@ -21,4 +22,5 @@ export function registerHandlers(runner: JobRunner): void {
   registerIntegrationHandlers(runner);
   registerRentalHandlers(runner);
   registerSearchHandlers(runner);
+  registerListingHandlers(runner);
 }
