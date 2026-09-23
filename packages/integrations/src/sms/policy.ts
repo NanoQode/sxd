@@ -149,7 +149,9 @@ export function evaluateSendPolicy(input: SendPolicyInput): SendPolicyDecision {
  * Inbound keyword handling for opt-out/opt-in replies. Returns the consent
  * change the app should record (across all campaigns) or null.
  */
-export function classifyInboundKeyword(text: string | null | undefined): 'opt_out' | 'opt_in' | null {
+export function classifyInboundKeyword(
+  text: string | null | undefined,
+): 'opt_out' | 'opt_in' | null {
   if (!text) return null;
   const word = text.trim().toUpperCase().split(/\s+/)[0] ?? '';
   if (['STOP', 'UNSUBSCRIBE', 'CANCEL', 'END', 'QUIT', 'OPTOUT', 'OPT-OUT'].includes(word)) {

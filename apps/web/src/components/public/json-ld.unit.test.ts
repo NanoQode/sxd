@@ -7,7 +7,7 @@ import {
   serializeJsonLd,
   serviceJsonLd,
   serviceOfferJsonLd,
-} from './json-ld';
+} from './structured-data';
 
 describe('serializeJsonLd', () => {
   it('escapes characters that could close the script tag', () => {
@@ -19,16 +19,42 @@ describe('serializeJsonLd', () => {
 
 describe('serviceOfferJsonLd', () => {
   it('emits offers only for published anchors with an amount', () => {
-    expect(serviceOfferJsonLd({ priceBasis: 'from', amountKobo: '15000000', publicationState: 'in_review' })).toBeNull();
-    expect(serviceOfferJsonLd({ priceBasis: 'quotation', amountKobo: null, publicationState: 'published' })).toBeNull();
-    expect(serviceOfferJsonLd({ priceBasis: 'percentage', amountKobo: null, publicationState: 'published' })).toBeNull();
-    const from = serviceOfferJsonLd({ priceBasis: 'from', amountKobo: '15000000', publicationState: 'published' });
+    expect(
+      serviceOfferJsonLd({
+        priceBasis: 'from',
+        amountKobo: '15000000',
+        publicationState: 'in_review',
+      }),
+    ).toBeNull();
+    expect(
+      serviceOfferJsonLd({
+        priceBasis: 'quotation',
+        amountKobo: null,
+        publicationState: 'published',
+      }),
+    ).toBeNull();
+    expect(
+      serviceOfferJsonLd({
+        priceBasis: 'percentage',
+        amountKobo: null,
+        publicationState: 'published',
+      }),
+    ).toBeNull();
+    const from = serviceOfferJsonLd({
+      priceBasis: 'from',
+      amountKobo: '15000000',
+      publicationState: 'published',
+    });
     expect(from).toMatchObject({
       '@type': 'Offer',
       priceCurrency: 'NGN',
       priceSpecification: { minPrice: '150000' },
     });
-    const monthly = serviceOfferJsonLd({ priceBasis: 'per_month', amountKobo: '7500000', publicationState: 'published' });
+    const monthly = serviceOfferJsonLd({
+      priceBasis: 'per_month',
+      amountKobo: '7500000',
+      publicationState: 'published',
+    });
     expect(monthly).toMatchObject({ priceSpecification: { price: '75000', unitText: 'month' } });
   });
 
@@ -41,13 +67,33 @@ describe('serviceOfferJsonLd', () => {
 
 describe('graph builders', () => {
   it('never fabricates sameAs, ratings or reviews', () => {
-    const org = organizationJsonLd({ name: 'SimplexD', url: 'https://example.test', description: 'd' });
+    const org = organizationJsonLd({
+      name: 'SimplexD',
+      url: 'https://example.test',
+      description: 'd',
+    });
     expect(org).not.toHaveProperty('sameAs');
     expect(org).not.toHaveProperty('aggregateRating');
-    const place = placeJsonLd({ name: 'Ibadan', url: 'https://example.test/locations/ng-ibadan', lat: 7.3775, lon: 3.9058, stateName: 'Oyo' });
+    const place = placeJsonLd({
+      name: 'Ibadan',
+      url: 'https://example.test/locations/ng-ibadan',
+      lat: 7.3775,
+      lon: 3.9058,
+      stateName: 'Oyo',
+    });
     expect(place).not.toHaveProperty('aggregateRating');
-    expect(place).toMatchObject({ geo: { latitude: 7.3775, longitude: 3.9058 }, address: { addressCountry: 'NG' } });
-    const svc = serviceJsonLd({ name: 'Due diligence', description: 'd', url: 'u', providerName: 'SimplexD', providerUrl: 'p', offer: null });
+    expect(place).toMatchObject({
+      geo: { latitude: 7.3775, longitude: 3.9058 },
+      address: { addressCountry: 'NG' },
+    });
+    const svc = serviceJsonLd({
+      name: 'Due diligence',
+      description: 'd',
+      url: 'u',
+      providerName: 'SimplexD',
+      providerUrl: 'p',
+      offer: null,
+    });
     expect(svc).not.toHaveProperty('offers');
   });
 
@@ -56,6 +102,8 @@ describe('graph builders', () => {
       { name: 'Home', url: 'https://example.test/' },
       { name: 'Services', url: 'https://example.test/services' },
     ]);
-    expect((crumbs.itemListElement as Array<{ position: number }>).map((i) => i.position)).toEqual([1, 2]);
+    expect((crumbs.itemListElement as Array<{ position: number }>).map((i) => i.position)).toEqual([
+      1, 2,
+    ]);
   });
 });

@@ -4,7 +4,6 @@ import { ApiError } from '@simplexd/contracts';
 import { appendOutbox, getDb, schema, withActor } from '@simplexd/db';
 import { recordAudit } from '@/lib/audit';
 import type { RequestIdentity } from '@/lib/auth/session';
-import { elevate } from './elevate';
 
 export const RETENTION_POLICY_SUMMARY =
   'Deletion requests are handled by support within 30 days. Accounting, contractual and legal records (invoices, receipts, signed acceptances, evidence linked to engagements) are retained for the statutory period even after your profile is removed; everything else is deleted or anonymised. You will receive a written outcome.';
@@ -55,7 +54,6 @@ export async function requestAccountDeletion(
         ipHash: options.ipHash,
       })
       .returning({ id: schema.leads.id });
-    await elevate(tx, identity.ctx);
     await appendOutbox(tx, {
       eventType: 'account.deletion_requested',
       aggregateType: 'user',

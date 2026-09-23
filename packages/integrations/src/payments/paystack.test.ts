@@ -81,7 +81,9 @@ describe('PaystackPaymentProvider.initialize', () => {
     await expect(p.initialize({ ...base, amountKobo: 0n })).rejects.toThrow(/positive/);
     await expect(p.initialize({ ...base, reference: 'bad ref!' })).rejects.toThrow(/reference/);
     await expect(p.initialize({ ...base, currency: 'XXX' })).rejects.toThrow(/currency/);
-    await expect(p.initialize({ ...base, callbackUrl: 'not-a-url' })).rejects.toThrow(/callbackUrl/);
+    await expect(p.initialize({ ...base, callbackUrl: 'not-a-url' })).rejects.toThrow(
+      /callbackUrl/,
+    );
     expect(fetch.calls).toHaveLength(0);
   });
 
@@ -145,7 +147,9 @@ describe('PaystackPaymentProvider.verify', () => {
   });
 
   it('returns unknown (not a failure) when the reference is not found', async () => {
-    const fetch = fakeFetch([{ status: 404, body: { status: false, message: 'Transaction reference not found' } }]);
+    const fetch = fakeFetch([
+      { status: 404, body: { status: false, message: 'Transaction reference not found' } },
+    ]);
     const result = await provider(fetch).verify('missing-ref');
     expect(result.providerStatus).toBe('unknown');
     expect(result.amountKobo).toBeNull();
@@ -166,7 +170,9 @@ describe('PaystackPaymentProvider.verify', () => {
     const fetch = fakeFetch([
       { status: 401, body: { status: false, message: `Invalid key ${SECRET} Bearer ${SECRET}` } },
     ]);
-    const error = (await provider(fetch).verify('abc').catch((e: unknown) => e)) as ProviderError;
+    const error = (await provider(fetch)
+      .verify('abc')
+      .catch((e: unknown) => e)) as ProviderError;
     expect(error).toBeInstanceOf(ProviderError);
     expect(error.code).toBe('auth');
     expect(error.message).not.toContain(SECRET);
@@ -238,7 +244,9 @@ describe('PaystackPaymentProvider refunds', () => {
 
 describe('PaystackPaymentProvider.testConnection', () => {
   it('treats a 404 for the sentinel reference as an accepted key', async () => {
-    const fetch = fakeFetch([{ status: 404, body: { status: false, message: 'Transaction reference not found' } }]);
+    const fetch = fakeFetch([
+      { status: 404, body: { status: false, message: 'Transaction reference not found' } },
+    ]);
     const result = await provider(fetch).testConnection();
     expect(result.ok).toBe(true);
     expect(result.environmentDetected).toBe('test');
@@ -271,7 +279,9 @@ describe('PaystackPaymentProvider webhooks', () => {
     expect(p.verifyWebhookSignature(body, '')).toBe(false);
     expect(p.verifyWebhookSignature(body, signature.slice(0, 127))).toBe(false);
     expect(p.verifyWebhookSignature(body, `${signature}00`)).toBe(false);
-    expect(p.verifyWebhookSignature(body, computeWebhookSignature(body, 'sk_test_other'))).toBe(false);
+    expect(p.verifyWebhookSignature(body, computeWebhookSignature(body, 'sk_test_other'))).toBe(
+      false,
+    );
     expect(p.verifyWebhookSignature(JSON.stringify(JSON.parse(body)), signature)).toBe(false);
     expect(p.verifyWebhookSignature(`${body} `, signature)).toBe(false);
   });

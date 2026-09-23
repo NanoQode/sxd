@@ -1,4 +1,5 @@
 import type {
+  ExplorerFilters,
   MetricKey,
   Objective,
   Priorities,
@@ -6,7 +7,7 @@ import type {
   RecommendationResponse,
 } from '@simplexd/contracts';
 import type { FloodStatus } from './types';
-import type { Zone } from './url-state';
+import { DEFAULT_FILTERS, type Zone } from './url-state';
 
 /**
  * Wording shared by the explorer components. Kept in one place so tests can
@@ -174,6 +175,58 @@ export function formatConfidence(value: number | null): string {
 export function priorityOrDefault(priorities: Priorities, metric: MetricKey): number {
   const value = priorities[metric];
   return typeof value === 'number' ? value : 1;
+}
+
+const FILTER_LABELS: Record<keyof ExplorerFilters, string> = {
+  objective: 'Objective',
+  totalBudgetNaira: 'Total budget (₦)',
+  landAreaM2: 'Land area (m²)',
+  floorAreaM2: 'Floor area (m²)',
+  assetType: 'Asset type',
+  bedroomsOrUnits: 'Bedrooms or units',
+  qualitySpecification: 'Quality specification',
+  targetCompletionMonths: 'Target completion (months)',
+  minProjectedNetYieldPercent: 'Minimum projected net yield (%)',
+  preferredZones: 'Preferred regions',
+  preferredStateIds: 'Preferred states',
+  riskTolerance: 'Risk tolerance',
+  evidenceFreshness: 'Evidence freshness',
+  includeUnknown: 'Include unknown',
+  power: 'Power',
+  water: 'Water',
+  internet: 'Internet',
+  transport: 'Transport',
+  schools: 'Schools',
+  hospitals: 'Hospitals',
+  floodExposure: 'Flood exposure',
+  soilInvestigation: 'Soil investigation',
+  serviceTeamAvailability: 'Service team availability',
+};
+
+/** "Label: value" lines for every filter that differs from its default (objective always listed). */
+export function describeFilters(
+  filters: ExplorerFilters,
+  stateNames: ReadonlyMap<string, string> = new Map(),
+): string[] {
+  const lines: string[] = [];
+  for (const key of Object.keys(FILTER_LABELS) as Array<keyof ExplorerFilters>) {
+    const value = filters[key];
+    const fallback = DEFAULT_FILTERS[key];
+    const isDefault = Array.isArray(value)
+      ? Array.isArray(fallback) && value.length === fallback.length
+      : value === fallback;
+    if (isDefault && key !== 'objective') continue;
+    let text: string;
+    if (key === 'objective') text = OBJECTIVE_LABELS[filters.objective];
+    else if (key === 'preferredZones') text = filters.preferredZones.map((z) => ZONE_LABELS[z]).join(', ');
+    else if (key === 'preferredStateIds')
+      text = filters.preferredStateIds.map((id) => stateNames.get(id) ?? id).join(', ');
+    else if (typeof value === 'boolean') text = value ? 'Yes' : 'No';
+    else if (typeof value === 'number') text = value.toLocaleString('en-NG');
+    else text = humanizeKey(String(value));
+    lines.push(`${FILTER_LABELS[key]}: ${text}`);
+  }
+  return lines;
 }
 
 export function describePriorities(priorities: Priorities): string {

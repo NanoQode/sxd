@@ -69,7 +69,10 @@ function substitute(
   return text.replace(PLACEHOLDER, (_match, name: string) => transform(String(variables[name])));
 }
 
-export function renderTemplate(template: TemplateSource, variables: TemplateVariables): RenderedTemplate {
+export function renderTemplate(
+  template: TemplateSource,
+  variables: TemplateVariables,
+): RenderedTemplate {
   const names = templateVariables(template);
   const missing = names.filter((name) => {
     const value = variables[name];
@@ -88,7 +91,10 @@ const URL_IN_ESCAPED_TEXT = /(https?:\/\/[^\s<]+?)([.,;:!?)]*)(?=\s|$)/g;
 
 /** Escapes text and turns paragraphs, line breaks and URLs into simple HTML. */
 export function textToHtml(text: string): string {
-  const paragraphs = text.replace(/\r\n/g, '\n').trim().split(/\n{2,}/);
+  const paragraphs = text
+    .replace(/\r\n/g, '\n')
+    .trim()
+    .split(/\n{2,}/);
   return paragraphs
     .map((paragraph) => {
       const escaped = escapeHtml(paragraph).replace(

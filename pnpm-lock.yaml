@@ -340,9 +340,15 @@ importers:
       '@simplexd/contracts':
         specifier: workspace:*
         version: link:../contracts
+      '@simplexd/db':
+        specifier: workspace:*
+        version: link:../db
       '@simplexd/domain':
         specifier: workspace:*
         version: link:../domain
+      drizzle-orm:
+        specifier: 0.45.3
+        version: 0.45.3(@prisma/client@5.22.0)(@types/pg@8.23.1)(better-sqlite3@12.11.1)(kysely@0.29.6)(pg@8.23.0)
       file-type:
         specifier: 22.1.1
         version: 22.1.1

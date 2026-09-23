@@ -37,23 +37,36 @@ import type {
 const HOSTNAME =
   /^(?=.{1,253}$)(?!-)[A-Za-z0-9-]{1,63}(?<!-)(\.(?!-)[A-Za-z0-9-]{1,63}(?<!-))*$|^\[[0-9a-fA-F:.]+\]$/;
 
-const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+/**
+ * Address syntax accepted for recipients and senders. Deliberately permits a
+ * single-label host (`no-reply@localhost`) so Mailpit works in development;
+ * production quality is enforced by the approved-sender-domain list.
+ */
+export const EMAIL_ADDRESS = /^[A-Za-z0-9._%+'-]+@(?:[A-Za-z0-9-]+\.)*[A-Za-z0-9-]+$/;
+const EMAIL = EMAIL_ADDRESS;
 const HEADER_NAME = /^[A-Za-z0-9-]+$/;
 
+const emailSchema = z.string().trim().max(254).regex(EMAIL_ADDRESS, 'invalid email address');
+
 const mailAddressSchema = z.object({
-  email: z.email(),
+  email: emailSchema,
   name: z.string().max(120).optional(),
 });
 
 export const smtpConfigSchema = z
   .object({
-    host: z.string().trim().min(1).max(253).regex(HOSTNAME, 'host must be a hostname or IP literal'),
+    host: z
+      .string()
+      .trim()
+      .min(1)
+      .max(253)
+      .regex(HOSTNAME, 'host must be a hostname or IP literal'),
     port: z.number().int().min(1).max(65535),
     security: z.enum(['implicit-tls', 'starttls', 'none']),
     username: z.string().max(256).nullish(),
     /** Plaintext only in memory; stored through the secrets envelope. */
     password: z.string().max(1024).nullish(),
-    from: z.object({ email: z.email(), name: z.string().min(1).max(120) }),
+    from: z.object({ email: emailSchema, name: z.string().min(1).max(120) }),
     replyTo: mailAddressSchema.nullish(),
     /** SSRF allow-list (exact host or `.suffix`); empty = any public host. Operator-controlled. */
     allowedHosts: z.array(z.string()).default([]),
@@ -171,7 +184,11 @@ export function smtpSecretVariants(username?: string | null, password?: string |
   const out: string[] = [];
   if (password) {
     out.push(password, base64(password));
-    if (username) out.push(base64(`\0${username}\0${password}`), base64(`${username}\0${username}\0${password}`));
+    if (username)
+      out.push(
+        base64(`\0${username}\0${password}`),
+        base64(`${username}\0${username}\0${password}`),
+      );
   }
   if (username && username.length >= 3) out.push(username, base64(username));
   return out;
@@ -220,7 +237,11 @@ export interface SanitizedMailError {
 /** Maps nodemailer/socket errors to stable codes and strips credentials. */
 export function sanitizeMailError(err: unknown, secrets: string[] = []): SanitizedMailError {
   if (err instanceof MailError) {
-    return { code: err.code, message: redactSecrets(err.message, secrets), retryable: err.retryable };
+    return {
+      code: err.code,
+      message: redactSecrets(err.message, secrets),
+      retryable: err.retryable,
+    };
   }
   const e = (err ?? {}) as {
     code?: string;
@@ -252,11 +273,21 @@ export function sanitizeMailError(err: unknown, secrets: string[] = []): Sanitiz
       retryable: false,
     };
   }
-  if (code === 'ECONNECTION' || code === 'ESOCKET' || code === 'ECONNREFUSED' || code === 'ECONNRESET') {
-    return { code: 'connection', message: `could not connect to the SMTP server: ${text}`, retryable: true };
+  if (
+    code === 'ECONNECTION' ||
+    code === 'ESOCKET' ||
+    code === 'ECONNREFUSED' ||
+    code === 'ECONNRESET'
+  ) {
+    return {
+      code: 'connection',
+      message: `could not connect to the SMTP server: ${text}`,
+      retryable: true,
+    };
   }
   if (code === 'EENVELOPE' || code === 'EENVELOPEFORMAT') {
-    const transient = typeof e.responseCode === 'number' && e.responseCode >= 400 && e.responseCode < 500;
+    const transient =
+      typeof e.responseCode === 'number' && e.responseCode >= 400 && e.responseCode < 500;
     return {
       code: 'envelope',
       message: `the server rejected the sender or a recipient: ${text}`,
@@ -264,7 +295,11 @@ export function sanitizeMailError(err: unknown, secrets: string[] = []): Sanitiz
     };
   }
   if (code === 'EMESSAGE' || code === 'ESTREAM') {
-    return { code: 'message', message: `the server rejected the message content: ${text}`, retryable: false };
+    return {
+      code: 'message',
+      message: `the server rejected the message content: ${text}`,
+      retryable: false,
+    };
   }
   return { code: 'unknown', message: text, retryable: false };
 }
@@ -283,7 +318,10 @@ export function formatMailAddress(address: { email: string; name?: string | null
 async function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
   let timer: NodeJS.Timeout | undefined;
   const timeout = new Promise<never>((_, reject) => {
-    timer = setTimeout(() => reject(new MailError('timeout', `${label} timed out after ${ms}ms`, true)), ms);
+    timer = setTimeout(
+      () => reject(new MailError('timeout', `${label} timed out after ${ms}ms`, true)),
+      ms,
+    );
     timer.unref?.();
   });
   try {
@@ -336,7 +374,8 @@ export class SmtpMailProvider implements MailProvider {
     }
     this.config = parsed.data;
     this.createTransportImpl =
-      deps.createTransport ?? ((options) => createTransport(options) as unknown as SmtpTransportLike);
+      deps.createTransport ??
+      ((options) => createTransport(options) as unknown as SmtpTransportLike);
     this.checkDestinationImpl = deps.checkDestination ?? checkDestination;
     this.secrets = smtpSecretVariants(this.config.username, this.config.password);
   }
@@ -365,7 +404,10 @@ export class SmtpMailProvider implements MailProvider {
       allowPrivate: this.config.allowPrivate,
     });
     if (!check.ok) {
-      throw new MailError('destination', `SMTP host rejected by the destination policy: ${check.reason ?? 'blocked'}`);
+      throw new MailError(
+        'destination',
+        `SMTP host rejected by the destination policy: ${check.reason ?? 'blocked'}`,
+      );
     }
     const resolved = check.resolved ?? [];
     // Prefer IPv4 so hosts with unreachable AAAA records still connect; fall back to the hostname.
@@ -395,7 +437,9 @@ export class SmtpMailProvider implements MailProvider {
       await this.withTransport((transport) =>
         withTimeout(transport.verify(), this.config.timeoutMs + 1000, 'SMTP verification'),
       );
-      const auth = this.config.username ? ` and authenticated as ${maskUsername(this.config.username)}` : ' without authentication';
+      const auth = this.config.username
+        ? ` and authenticated as ${maskUsername(this.config.username)}`
+        : ' without authentication';
       return {
         ok: true,
         message: `Connected to ${this.config.host}:${this.config.port} (${tls})${auth}`,
@@ -476,7 +520,10 @@ export class SmtpMailProvider implements MailProvider {
         providerMessageId: info.messageId ?? messageId,
         response,
         ...(rejectedCount > 0
-          ? { errorSanitized: `${rejectedCount} recipient(s) rejected by the server`, errorCode: 'envelope' as const }
+          ? {
+              errorSanitized: `${rejectedCount} recipient(s) rejected by the server`,
+              errorCode: 'envelope' as const,
+            }
           : {}),
         retryable: false,
       };
@@ -494,6 +541,9 @@ export class SmtpMailProvider implements MailProvider {
   }
 }
 
-export function createSmtpMailProvider(config: SmtpConfigInput, deps: SmtpDeps = {}): SmtpMailProvider {
+export function createSmtpMailProvider(
+  config: SmtpConfigInput,
+  deps: SmtpDeps = {},
+): SmtpMailProvider {
   return new SmtpMailProvider(config, deps);
 }

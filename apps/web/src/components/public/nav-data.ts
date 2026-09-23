@@ -90,7 +90,11 @@ export const SEARCHABLE_PAGES: Array<NavLink & { keywords: string }> = [
   { href: '/local-nigeria', label: 'For local owners', keywords: 'nigeria local professionals' },
   { href: '/about', label: 'About SimplexD', keywords: 'company evidence standards' },
   { href: '/contact', label: 'Contact', keywords: 'email phone reach us' },
-  { href: '/book', label: 'Book a consultation', keywords: 'consultation appointment call meeting' },
+  {
+    href: '/book',
+    label: 'Book a consultation',
+    keywords: 'consultation appointment call meeting',
+  },
   { href: '/policies/privacy', label: 'Privacy notice', keywords: 'privacy data protection ndpa' },
   { href: '/policies/terms', label: 'Terms of service', keywords: 'terms conditions agreement' },
 ];

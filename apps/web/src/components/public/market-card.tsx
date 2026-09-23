@@ -45,7 +45,9 @@ export function MarketCard({ market }: { market: MarketSummaryDto }) {
       </dl>
       <p className="mt-3 text-xs text-fg-subtle">
         {recommendationLabel(market.recommendationStatus)}
-        {e.lastReviewedAt ? ` · Reviewed ${formatDateLabel(e.lastReviewedAt)}` : ' · Not yet reviewed'}
+        {e.lastReviewedAt
+          ? ` · Reviewed ${formatDateLabel(e.lastReviewedAt)}`
+          : ' · Not yet reviewed'}
       </p>
       <span className="mt-auto inline-flex items-center gap-1 pt-3 text-sm font-medium text-primary">
         View evidence

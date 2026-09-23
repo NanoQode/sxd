@@ -1,10 +1,5 @@
 export type ProviderErrorCode =
-  | 'auth'
-  | 'network'
-  | 'invalid_request'
-  | 'not_found'
-  | 'rate_limited'
-  | 'provider_error';
+  'auth' | 'network' | 'invalid_request' | 'not_found' | 'rate_limited' | 'provider_error';
 
 const KEY_PATTERN = /\b[sp]k_(?:test|live)_[A-Za-z0-9]+/g;
 const BEARER_PATTERN = /Bearer\s+[A-Za-z0-9._-]+/gi;
@@ -57,7 +52,9 @@ export class ProviderError extends Error {
     super(redactSecrets(message, options.secrets));
     this.code = code;
     this.httpStatus = options.httpStatus ?? null;
-    this.providerCode = options.providerCode ? redactSecrets(options.providerCode, options.secrets) : null;
+    this.providerCode = options.providerCode
+      ? redactSecrets(options.providerCode, options.secrets)
+      : null;
     this.retryable = options.retryable ?? (code === 'network' || code === 'rate_limited');
   }
 

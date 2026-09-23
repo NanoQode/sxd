@@ -22,7 +22,10 @@ describe('sms send policy', () => {
     });
     expect(
       evaluateSendPolicy(
-        base({ category: 'marketing', consent: { transactional: 'unknown', marketing: 'opted_out' } }),
+        base({
+          category: 'marketing',
+          consent: { transactional: 'unknown', marketing: 'opted_out' },
+        }),
       ),
     ).toEqual({ allowed: false, reason: 'marketing_opted_out' });
   });
@@ -79,7 +82,9 @@ describe('sms send policy', () => {
   });
 
   it('applies the daily spend cap to transactional and marketing but not security', () => {
-    expect(evaluateSendPolicy(base({ spend: { sentTodayKobo: 1000, dailyCapKobo: 1000 } }))).toEqual({
+    expect(
+      evaluateSendPolicy(base({ spend: { sentTodayKobo: 1000, dailyCapKobo: 1000 } })),
+    ).toEqual({
       allowed: false,
       reason: 'spend_cap_reached',
     });

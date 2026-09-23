@@ -85,7 +85,9 @@ export function readPrefill(params: Record<string, ParamValue>): ConsultationPre
   const scenario = first(params.scenarioId) ?? first(params.scenario) ?? '';
   const budgetRaw = first(params.budget) ?? first(params.budgetNaira) ?? '';
   const budget = Number(budgetRaw.replace(/[,_\s]/g, ''));
-  const marketIds = [...all(params.marketIds), ...all(params.marketId)].filter((id) => UUID.test(id));
+  const marketIds = [...all(params.marketIds), ...all(params.marketId)].filter((id) =>
+    UUID.test(id),
+  );
   const marketSlug = first(params.market) ?? '';
   const listingSlug = first(params.listing) ?? '';
   return {
@@ -137,12 +139,15 @@ export function composeMessage(values: {
   listingSlug?: string | null;
 }): string | null {
   const parts: string[] = [];
-  if (values.interest) parts.push('Interest registration for a planned service (not yet bookable).');
+  if (values.interest)
+    parts.push('Interest registration for a planned service (not yet bookable).');
   if (values.marketSlug) parts.push(`Location of interest: ${values.marketSlug}`);
   if (values.listingSlug) parts.push(`Listing of interest: ${values.listingSlug}`);
   if (values.message.trim()) parts.push(values.message.trim());
   if (values.preferredTimes.trim()) {
-    parts.push(`Preferred days and times (${values.timeZone || 'time zone not given'}): ${values.preferredTimes.trim()}`);
+    parts.push(
+      `Preferred days and times (${values.timeZone || 'time zone not given'}): ${values.preferredTimes.trim()}`,
+    );
   }
   const joined = parts.join('\n\n');
   if (!joined) return null;

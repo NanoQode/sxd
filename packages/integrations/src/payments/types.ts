@@ -64,12 +64,7 @@ export interface InitializeResult {
 }
 
 export type ProviderTransactionStatus =
-  | 'success'
-  | 'failed'
-  | 'abandoned'
-  | 'reversed'
-  | 'pending'
-  | 'unknown';
+  'success' | 'failed' | 'abandoned' | 'reversed' | 'pending' | 'unknown';
 
 export interface VerifyResult {
   providerStatus: ProviderTransactionStatus;
@@ -90,11 +85,7 @@ export interface VerifyResult {
 }
 
 export type ProviderRefundStatus =
-  | 'pending'
-  | 'processing'
-  | 'processed'
-  | 'failed'
-  | 'needs_attention';
+  'pending' | 'processing' | 'processed' | 'failed' | 'needs_attention';
 
 export interface CreateRefundInput {
   /** Provider transaction reference or id (preferred). */

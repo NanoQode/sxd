@@ -8,7 +8,8 @@ import dns from 'node:dns/promises';
  * a resolver failure yields `unknown`, not a false "missing".
  */
 
-const HOSTNAME = /^(?!-)[a-z0-9-]{1,63}(?<!-)(\.(?!-)[a-z0-9-]{1,63}(?<!-))+$/;
+/** Hostname labels; a single label (`localhost`) is accepted for development senders. */
+const HOSTNAME = /^(?!-)[a-z0-9-]{1,63}(?<!-)(\.(?!-)[a-z0-9-]{1,63}(?<!-))*$/;
 
 export function normalizeDomain(input: string | null | undefined): string | null {
   if (!input) return null;
@@ -99,7 +100,9 @@ export function dnsChecklist(domainInput: string, options: DnsChecklistOptions =
         recordType: 'CNAME',
         value: options.dkimCnameTarget,
         purpose: 'Lets receivers verify the DKIM signature the provider adds to each message.',
-        notes: ['CNAME form: the provider rotates keys on its side; do not also publish a TXT record here.'],
+        notes: [
+          'CNAME form: the provider rotates keys on its side; do not also publish a TXT record here.',
+        ],
       }
     : {
         kind: 'DKIM',
@@ -134,7 +137,8 @@ export function dnsChecklist(domainInput: string, options: DnsChecklistOptions =
         host: `_dmarc.${domain}`,
         recordType: 'TXT',
         value: `v=DMARC1; p=${policy}; rua=mailto:${rua}; adkim=r; aspf=r; pct=100`,
-        purpose: 'Tells receivers what to do when SPF/DKIM alignment fails and where to send reports.',
+        purpose:
+          'Tells receivers what to do when SPF/DKIM alignment fails and where to send reports.',
         notes: [
           'Start with p=none to collect reports, then move to quarantine and finally reject.',
           'The From: header domain must align with the SPF domain or the DKIM d= domain.',

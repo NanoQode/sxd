@@ -43,11 +43,18 @@ export function actorContext(identity: RequestIdentity, options: ServiceOptions 
 }
 
 /**
- * Elevates the current transaction after every access-proving read has run
- * under the caller's own row-level security context and the application layer
- * has authorised the action. Needed because audit_events and outbox_events are
- * privileged-only tables and some WITH CHECK policies cannot see the row being
- * inserted. Never call this before the access checks.
+ * Elevates the current transaction (bypass) for the rest of its life. Audit
+ * and outbox rows are appendable by every actor (migration 0002), so this is
+ * NOT needed for them. It is reserved for the cases the row-level policies
+ * cannot express, each documented at the call site:
+ *  - inserting a `properties` row as a customer: the table's WITH CHECK policy
+ *    calls `app.can_access_property(id)`, which cannot see the row being inserted;
+ *  - inserting a `conversations` row and its first participant as a non-staff
+ *    creator: `app.can_access_conversation(id)` needs a participant row that
+ *    cannot exist before the conversation does;
+ *  - reading `tasks`/`notes` for a partner who reaches the entity through an
+ *    accepted/active assignment: those policies have no assignment clause.
+ * Every access-proving read and every policy decision must run before it.
  */
 export async function elevate(tx: Transaction, ctx: ActorContext): Promise<void> {
   await applyActorContext(tx, { ...ctx, bypass: true });

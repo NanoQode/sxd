@@ -21,7 +21,7 @@
     "format:check": "prettier --check .",
     "test": "vitest run",
     "test:unit": "vitest run --project domain --project contracts --project integrations --project ui --project web-unit",
-    "test:integration": "vitest run --project db --project web-integration --project worker",
+    "test:integration": "vitest run --project db --project finance --project notifications --project web-integration --project worker",
     "test:e2e": "pnpm --filter @simplexd/e2e test",
     "test:a11y": "pnpm --filter @simplexd/e2e test:a11y",
     "db:generate": "pnpm --filter @simplexd/db generate",

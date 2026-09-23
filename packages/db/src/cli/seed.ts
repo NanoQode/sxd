@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { createMigrationDb } from '../client';
 import { importMarketSeed, seedReferenceData } from '../seed';
+import { seedContentPages } from '../seed/content';
 import { loadEnv } from './_env';
 
 loadEnv();
@@ -19,6 +20,8 @@ const { db, pool } = createMigrationDb();
 try {
   await seedReferenceData(db);
   console.log('Reference data seeded.');
+  const pages = await seedContentPages(db);
+  console.log(`Content pages seeded (${pages} inserted; existing pages untouched).`);
   if (fs.existsSync(seedPath)) {
     const raw = JSON.parse(fs.readFileSync(seedPath, 'utf8')) as unknown;
     const summary = await importMarketSeed(db, raw);

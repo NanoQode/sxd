@@ -25,7 +25,8 @@ export const HERO = {
   ],
 } as const;
 
-export type GoalKey = 'buy_safely' | 'build_with_oversight' | 'manage_property' | 'invest_and_compare';
+export type GoalKey =
+  'buy_safely' | 'build_with_oversight' | 'manage_property' | 'invest_and_compare';
 
 export interface GoalPath {
   key: GoalKey;

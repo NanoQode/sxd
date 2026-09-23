@@ -52,9 +52,12 @@ export const CURRENCY_PATTERN = /^[A-Z]{3}$/;
 
 export function assertCurrency(currency: string): string {
   if (typeof currency !== 'string' || !CURRENCY_PATTERN.test(currency)) {
-    throw new JournalError(`currency must be a three-letter ISO code, received "${String(currency)}"`, {
-      currency,
-    });
+    throw new JournalError(
+      `currency must be a three-letter ISO code, received "${String(currency)}"`,
+      {
+        currency,
+      },
+    );
   }
   return currency;
 }
@@ -63,7 +66,8 @@ export function assertPositiveKobo(label: string, amount: Kobo): Kobo {
   if (typeof amount !== 'bigint') {
     throw new JournalError(`${label} must be a bigint of integer kobo`, { label });
   }
-  if (amount <= 0n) throw new JournalError(`${label} must be positive, received ${amount}`, { label, amount });
+  if (amount <= 0n)
+    throw new JournalError(`${label} must be positive, received ${amount}`, { label, amount });
   return amount;
 }
 
@@ -71,7 +75,8 @@ export function assertNonNegativeKobo(label: string, amount: Kobo): Kobo {
   if (typeof amount !== 'bigint') {
     throw new JournalError(`${label} must be a bigint of integer kobo`, { label });
   }
-  if (amount < 0n) throw new JournalError(`${label} cannot be negative, received ${amount}`, { label, amount });
+  if (amount < 0n)
+    throw new JournalError(`${label} cannot be negative, received ${amount}`, { label, amount });
   return amount;
 }
 
@@ -82,11 +87,19 @@ export interface LineExtras {
   organizationId?: string;
 }
 
-export function debit(accountCode: AccountCode, amount: Kobo, extras: LineExtras = {}): JournalLineDraft {
+export function debit(
+  accountCode: AccountCode,
+  amount: Kobo,
+  extras: LineExtras = {},
+): JournalLineDraft {
   return { accountCode, debitKobo: amount, ...extras };
 }
 
-export function credit(accountCode: AccountCode, amount: Kobo, extras: LineExtras = {}): JournalLineDraft {
+export function credit(
+  accountCode: AccountCode,
+  amount: Kobo,
+  extras: LineExtras = {},
+): JournalLineDraft {
   return { accountCode, creditKobo: amount, ...extras };
 }
 
@@ -110,7 +123,9 @@ export function assertBalanced(draft: JournalDraft): JournalTotals {
     throw new JournalError('journal needs a businessEventRef');
   }
   if (!draft.description || draft.description.trim().length === 0) {
-    throw new JournalError('journal needs a description', { businessEventRef: draft.businessEventRef });
+    throw new JournalError('journal needs a description', {
+      businessEventRef: draft.businessEventRef,
+    });
   }
   assertCurrency(draft.currency);
   if (draft.lines.length < 2) {
@@ -121,26 +136,35 @@ export function assertBalanced(draft: JournalDraft): JournalTotals {
   }
   draft.lines.forEach((line, index) => {
     if (!isAccountCode(line.accountCode)) {
-      throw new JournalError(`line ${index + 1} of ${draft.businessEventRef} uses unknown account ${String(line.accountCode)}`, {
-        businessEventRef: draft.businessEventRef,
-        lineNo: index + 1,
-      });
+      throw new JournalError(
+        `line ${index + 1} of ${draft.businessEventRef} uses unknown account ${String(line.accountCode)}`,
+        {
+          businessEventRef: draft.businessEventRef,
+          lineNo: index + 1,
+        },
+      );
     }
     const hasDebit = line.debitKobo !== undefined;
     const hasCredit = line.creditKobo !== undefined;
     if (hasDebit === hasCredit) {
-      throw new JournalError(`line ${index + 1} of ${draft.businessEventRef} must have exactly one of debit or credit`, {
-        businessEventRef: draft.businessEventRef,
-        lineNo: index + 1,
-      });
+      throw new JournalError(
+        `line ${index + 1} of ${draft.businessEventRef} must have exactly one of debit or credit`,
+        {
+          businessEventRef: draft.businessEventRef,
+          lineNo: index + 1,
+        },
+      );
     }
     const amount = hasDebit ? line.debitKobo! : line.creditKobo!;
     if (typeof amount !== 'bigint' || amount <= 0n) {
-      throw new JournalError(`line ${index + 1} of ${draft.businessEventRef} must carry a positive integer kobo amount`, {
-        businessEventRef: draft.businessEventRef,
-        lineNo: index + 1,
-        amount: typeof amount === 'bigint' ? amount.toString() : String(amount),
-      });
+      throw new JournalError(
+        `line ${index + 1} of ${draft.businessEventRef} must carry a positive integer kobo amount`,
+        {
+          businessEventRef: draft.businessEventRef,
+          lineNo: index + 1,
+          amount: typeof amount === 'bigint' ? amount.toString() : String(amount),
+        },
+      );
     }
   });
   const totals = journalTotals(draft);
@@ -183,7 +207,9 @@ export function reverse(journal: JournalDraft, ref: string, reason: string): Jou
   if (!reason || reason.trim().length === 0) throw new JournalError('reversal needs a reason');
   const lines: JournalLineDraft[] = journal.lines.map((line) => {
     const { debitKobo, creditKobo, ...rest } = line;
-    return debitKobo !== undefined ? { ...rest, creditKobo: debitKobo } : { ...rest, debitKobo: creditKobo! };
+    return debitKobo !== undefined
+      ? { ...rest, creditKobo: debitKobo }
+      : { ...rest, debitKobo: creditKobo! };
   });
   const reversal: JournalDraft = {
     businessEventRef: ref,

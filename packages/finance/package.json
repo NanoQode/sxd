@@ -1,0 +1,29 @@
+{
+  "name": "@simplexd/finance",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Database-backed payment and invoicing orchestration shared by the web app and the worker: payment attempts, provider event processing, allocations, receipts, refunds, reconciliation and journal posting.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "lint": "eslint src",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@simplexd/contracts": "workspace:*",
+    "@simplexd/db": "workspace:*",
+    "@simplexd/domain": "workspace:*",
+    "@simplexd/integrations": "workspace:*",
+    "drizzle-orm": "0.45.3",
+    "zod": "4.6.5"
+  },
+  "devDependencies": {
+    "eslint": "9.39.5",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.70.1",
+    "vitest": "5.0.1"
+  }
+}

@@ -12,7 +12,7 @@ import {
 import { getDb, schema, withActor, type Transaction } from '@simplexd/db';
 import { availableTransitions, engagementMachine } from '@simplexd/domain/workflow';
 import type { RequestIdentity } from '@/lib/auth/session';
-import { decodeCursor, encodeCursor } from '@/server/portal/elevate';
+import { decodeCursor, encodeCursor } from '@/server/portal/pagination';
 
 type SrRow = typeof schema.serviceRequests.$inferSelect;
 

@@ -39,8 +39,8 @@ export function SiteFooter({ services, contact, policies }: FooterData) {
           </p>
           <p className="mt-2 max-w-sm text-sm text-fg-muted">{SITE.tagline}</p>
           <p className="mt-2 max-w-sm text-xs text-fg-subtle">
-            Map coverage and service availability are separate facts: a location on the map does
-            not imply a staffed operation there.
+            Map coverage and service availability are separate facts: a location on the map does not
+            imply a staffed operation there.
           </p>
           <div className="mt-4" aria-label="Contact details">
             <h2 className="text-sm font-semibold">Contact</h2>
@@ -55,7 +55,10 @@ export function SiteFooter({ services, contact, policies }: FooterData) {
                 ) : null}
                 {phone ? (
                   <li>
-                    <a href={`tel:${phone.replace(/\s+/g, '')}`} className="hover:text-fg hover:underline">
+                    <a
+                      href={`tel:${phone.replace(/\s+/g, '')}`}
+                      className="hover:text-fg hover:underline"
+                    >
                       {phone}
                     </a>
                   </li>
@@ -77,7 +80,10 @@ export function SiteFooter({ services, contact, policies }: FooterData) {
           <ul className="mt-2 space-y-1.5">
             {services.map((s) => (
               <li key={s.slug}>
-                <Link href={`/services/${s.slug}`} className="text-fg-muted hover:text-fg hover:underline">
+                <Link
+                  href={`/services/${s.slug}`}
+                  className="text-fg-muted hover:text-fg hover:underline"
+                >
                   {s.name}
                 </Link>
               </li>
@@ -88,7 +94,10 @@ export function SiteFooter({ services, contact, policies }: FooterData) {
               </Link>
             </li>
             <li>
-              <Link href="/services#planned" className="text-fg-muted hover:text-fg hover:underline">
+              <Link
+                href="/services#planned"
+                className="text-fg-muted hover:text-fg hover:underline"
+              >
                 Planned services
               </Link>
             </li>
@@ -134,7 +143,10 @@ export function SiteFooter({ services, contact, policies }: FooterData) {
               </Link>
             </li>
             <li>
-              <Link href="/policies/privacy" className="text-fg-muted hover:text-fg hover:underline">
+              <Link
+                href="/policies/privacy"
+                className="text-fg-muted hover:text-fg hover:underline"
+              >
                 Privacy notice
               </Link>
             </li>

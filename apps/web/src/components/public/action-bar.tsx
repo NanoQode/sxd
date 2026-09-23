@@ -39,7 +39,10 @@ export function PageAction({ label, href, secondary }: BarAction) {
     ctx.setAction({
       label,
       href,
-      secondary: secondaryLabel && secondaryHref ? { label: secondaryLabel, href: secondaryHref } : undefined,
+      secondary:
+        secondaryLabel && secondaryHref
+          ? { label: secondaryLabel, href: secondaryHref }
+          : undefined,
     });
     return () => ctx.setAction(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- ctx.setAction is stable

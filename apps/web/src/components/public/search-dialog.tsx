@@ -55,17 +55,26 @@ export function SearchDialog({
     let cancelled = false;
     fetch('/api/v1/services')
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
-      .then((data: { items: Array<{ slug: string; name: string; shortDescription: string; category: 'core' | 'expansion' }> }) => {
-        if (cancelled) return;
-        setCatalog(
-          data.items.map((i) => ({
-            slug: i.slug,
-            name: i.name,
-            hint: i.shortDescription,
-            category: i.category,
-          })),
-        );
-      })
+      .then(
+        (data: {
+          items: Array<{
+            slug: string;
+            name: string;
+            shortDescription: string;
+            category: 'core' | 'expansion';
+          }>;
+        }) => {
+          if (cancelled) return;
+          setCatalog(
+            data.items.map((i) => ({
+              slug: i.slug,
+              name: i.name,
+              hint: i.shortDescription,
+              category: i.category,
+            })),
+          );
+        },
+      )
       .catch(() => {
         if (!cancelled) setCatalog(services);
       });
@@ -84,18 +93,22 @@ export function SearchDialog({
       setMarkets((m) => ({ status: 'loading', items: m.items }));
       fetch(`/api/v1/markets?q=${encodeURIComponent(q)}&limit=8`)
         .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
-        .then((data: { items?: Array<{ slug: string; name: string; stateName: string; aliases?: string[] }> }) => {
-          if (cancelled) return;
-          setMarkets({
-            status: 'ready',
-            items: (data.items ?? []).map((m) => ({
-              slug: m.slug,
-              name: m.name,
-              stateName: m.stateName,
-              aliases: m.aliases,
-            })),
-          });
-        })
+        .then(
+          (data: {
+            items?: Array<{ slug: string; name: string; stateName: string; aliases?: string[] }>;
+          }) => {
+            if (cancelled) return;
+            setMarkets({
+              status: 'ready',
+              items: (data.items ?? []).map((m) => ({
+                slug: m.slug,
+                name: m.name,
+                stateName: m.stateName,
+                aliases: m.aliases,
+              })),
+            });
+          },
+        )
         .catch(() => {
           if (!cancelled) setMarkets({ status: 'unavailable', items: [] });
         });
@@ -152,10 +165,16 @@ export function SearchDialog({
               Type at least two characters. Locations are searched among published markets only.
             </p>
           ) : null}
-          {q.length > 0 && results.length === 0 && (markets.status !== 'loading' || q.length < 2) ? (
+          {q.length > 0 &&
+          results.length === 0 &&
+          (markets.status !== 'loading' || q.length < 2) ? (
             <p className="text-sm text-fg-muted">No matches for “{query}”.</p>
           ) : null}
-          <ResultGroup title="Services" items={grouped.services} onNavigate={() => onOpenChange(false)} />
+          <ResultGroup
+            title="Services"
+            items={grouped.services}
+            onNavigate={() => onOpenChange(false)}
+          />
           <ResultGroup
             title="Locations"
             items={grouped.locations}
@@ -166,7 +185,11 @@ export function SearchDialog({
               ) : markets.status === 'unavailable' && q.length >= 2 ? (
                 <p className="text-xs text-fg-muted">
                   Location search is not available yet. Browse{' '}
-                  <Link href="/locations" className="text-primary underline" onClick={() => onOpenChange(false)}>
+                  <Link
+                    href="/locations"
+                    className="text-primary underline"
+                    onClick={() => onOpenChange(false)}
+                  >
                     all locations
                   </Link>
                   .
@@ -208,7 +231,9 @@ function ResultGroup({
                 )}
               >
                 <span className="block text-sm font-medium">{r.title}</span>
-                {r.subtitle ? <span className="block text-xs text-fg-muted">{r.subtitle}</span> : null}
+                {r.subtitle ? (
+                  <span className="block text-xs text-fg-muted">{r.subtitle}</span>
+                ) : null}
               </Link>
             </li>
           ))}

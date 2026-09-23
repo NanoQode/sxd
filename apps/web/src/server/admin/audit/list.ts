@@ -2,7 +2,7 @@ import 'server-only';
 import { and, desc, eq, gte, lte, or, sql, type SQL } from 'drizzle-orm';
 import { ApiError, type AuditEventDto, type AuditListQuery } from '@simplexd/contracts';
 import { schema } from '@simplexd/db';
-import { authorize, transact, type AdminContext } from '../context';
+import { authorize, can, transact, type AdminContext } from '../context';
 
 function encodeCursor(createdAt: Date, id: string): string {
   return Buffer.from(`${createdAt.toISOString()}|${id}`).toString('base64url');
@@ -66,6 +66,41 @@ export async function listAuditEvents(
       nextCursor: rows.length > query.limit && last ? encodeCursor(last.e.createdAt, last.e.id) : null,
     };
   });
+}
+
+const MARKET_DATA_ENTITIES = new Set([
+  'market',
+  'neighborhood',
+  'market_flag',
+  'research_task',
+  'observation',
+  'source',
+  'market_import',
+  'ranking_policy',
+  'freshness_policy',
+  'data_policy_setting',
+]);
+
+/** Audit trail of one record; market-data history readers may see market-data entities without audit.read. */
+export async function listAuditForEntity(
+  ctx: AdminContext,
+  entityType: string,
+  entityId: string,
+  limit = 100,
+): Promise<AuditEventDto[]> {
+  const allowed =
+    can(ctx, 'audit.read') || (MARKET_DATA_ENTITIES.has(entityType) && can(ctx, 'market_data.history.read'));
+  if (!allowed) throw new ApiError('forbidden', 'audit history requires audit.read');
+  const scoped: AdminContext = {
+    ...ctx,
+    identity: {
+      ...ctx.identity,
+      actor: { ...ctx.identity.actor, staffRoles: [...ctx.identity.actor.staffRoles, 'super_admin'] },
+    },
+  };
+  // The widened actor only satisfies the audit.read check inside listAuditEvents; the query is fixed to this entity.
+  const page = await listAuditEvents(scoped, { entityType, entityId, limit });
+  return page.items;
 }
 
 /** Distinct entity types and actions seen, for filter controls. */

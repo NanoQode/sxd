@@ -52,8 +52,17 @@ export function sanitizeProviderRecord(value: unknown): Record<string, unknown> 
 }
 
 /** Request headers safe to store next to a provider event (no cookies, no auth). */
-export function sanitizeHeaders(headers: Record<string, string | string[] | undefined>): Record<string, string> {
-  const allowed = ['content-type', 'content-length', 'user-agent', 'x-paystack-signature', 'x-forwarded-for', 'x-real-ip'];
+export function sanitizeHeaders(
+  headers: Record<string, string | string[] | undefined>,
+): Record<string, string> {
+  const allowed = [
+    'content-type',
+    'content-length',
+    'user-agent',
+    'x-paystack-signature',
+    'x-forwarded-for',
+    'x-real-ip',
+  ];
   const out: Record<string, string> = {};
   for (const [key, value] of Object.entries(headers)) {
     const lower = key.toLowerCase();

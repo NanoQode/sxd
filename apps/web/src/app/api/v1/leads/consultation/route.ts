@@ -19,7 +19,10 @@ export const POST = route(async (req, { correlationId }) => {
   const { source, ...input } = await parseJson(req, publicConsultationBodySchema);
   const ipHash = hashIp(clientIp(req));
   await enforceRateLimit(`lead:ip:${ipHash}`, { windowSeconds: HOUR, max: 5 });
-  const emailHash = createHash('sha256').update(input.email.toLowerCase()).digest('hex').slice(0, 24);
+  const emailHash = createHash('sha256')
+    .update(input.email.toLowerCase())
+    .digest('hex')
+    .slice(0, 24);
   await enforceRateLimit(`lead:email:${emailHash}`, { windowSeconds: HOUR, max: 3 });
 
   const identity = await getIdentity();

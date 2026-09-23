@@ -42,12 +42,18 @@ export function EvidenceStandards({ items }: { items: EvidenceStandardItem[] }) 
           </li>
         ))}
       </ul>
-      <aside className="rounded-lg border border-border bg-bg-sunken p-4" aria-label="Evidence rules">
+      <aside
+        className="rounded-lg border border-border bg-bg-sunken p-4"
+        aria-label="Evidence rules"
+      >
         <h3 className="text-sm font-semibold">Rules applied to every figure</h3>
         <ul className="mt-2 space-y-2 text-sm text-fg-muted">
           {EVIDENCE_STATEMENTS.map((s) => (
             <li key={s} className="flex gap-2">
-              <span aria-hidden="true" className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full bg-gold" />
+              <span
+                aria-hidden="true"
+                className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full bg-gold"
+              />
               <span>{s}</span>
             </li>
           ))}

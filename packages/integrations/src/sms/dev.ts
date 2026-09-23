@@ -353,8 +353,7 @@ export class DevSmsProvider implements SmsProvider {
     const balance = await this.getBalance();
     return {
       ok: true,
-      message:
-        'Development SMS adapter: messages are stored in memory and never sent to a carrier',
+      message: 'Development SMS adapter: messages are stored in memory and never sent to a carrier',
       latencyMs: 0,
       balance: balance.balance,
       currency: balance.currency,

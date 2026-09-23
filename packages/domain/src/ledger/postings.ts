@@ -37,7 +37,8 @@ export type InvoiceKind =
 /** Where the money originally went; decides which account a refund or credit note reduces. */
 export type OriginalRecognition = 'revenue' | 'unearned' | 'rent_payable';
 
-export type ProviderRefundStatusLike = 'pending' | 'processing' | 'processed' | 'failed' | 'needs_attention';
+export type ProviderRefundStatusLike =
+  'pending' | 'processing' | 'processed' | 'failed' | 'needs_attention';
 
 interface Party {
   organizationId?: string | null;
@@ -71,7 +72,10 @@ function base(
 }
 
 /** Maps an invoice kind to the revenue account it earns; rent for owners is not revenue. */
-export function revenueAccountForInvoiceKind(kind: InvoiceKind, override?: RevenueAccount): RevenueAccount {
+export function revenueAccountForInvoiceKind(
+  kind: InvoiceKind,
+  override?: RevenueAccount,
+): RevenueAccount {
   if (override) return override;
   switch (kind) {
     case 'management_fee':
@@ -90,7 +94,10 @@ function receivableAccount(isRentOnBehalfOfOwner: boolean | undefined): AccountC
     : ACCOUNTS.CUSTOMER_RECEIVABLES;
 }
 
-function recognitionAccount(source: OriginalRecognition, revenueAccount: RevenueAccount): AccountCode {
+function recognitionAccount(
+  source: OriginalRecognition,
+  revenueAccount: RevenueAccount,
+): AccountCode {
   switch (source) {
     case 'revenue':
       return revenueAccount;
@@ -139,9 +146,12 @@ export function invoiceIssued(input: InvoiceIssuedInput): JournalDraft {
   const tax = assertNonNegativeKobo('taxKobo', invoice.taxKobo ?? 0n);
   const total = assertPositiveKobo('totalKobo', invoice.totalKobo);
   if (subtotal + tax !== total) {
-    throw new JournalError(`invoice ${invoice.id}: totalKobo ${total} must equal subtotal ${subtotal} + tax ${tax}`, {
-      invoiceId: invoice.id,
-    });
+    throw new JournalError(
+      `invoice ${invoice.id}: totalKobo ${total} must equal subtotal ${subtotal} + tax ${tax}`,
+      {
+        invoiceId: invoice.id,
+      },
+    );
   }
   const label = invoice.number ?? invoice.id;
   const entity = { entityType: 'invoice', entityId: invoice.id };
@@ -150,16 +160,26 @@ export function invoiceIssued(input: InvoiceIssuedInput): JournalDraft {
 
   if (invoice.isRentOnBehalfOfOwner) {
     if (invoice.kind !== 'rent' && invoice.kind !== 'service_charge') {
-      throw new JournalError(`invoice ${invoice.id}: only rent or service-charge invoices can be collected on behalf of an owner`, {
-        invoiceId: invoice.id,
-        kind: invoice.kind,
-      });
+      throw new JournalError(
+        `invoice ${invoice.id}: only rent or service-charge invoices can be collected on behalf of an owner`,
+        {
+          invoiceId: invoice.id,
+          kind: invoice.kind,
+        },
+      );
     }
-    lines.push(debit(ACCOUNTS.RENT_RECEIVABLE_ON_BEHALF_OF_OWNERS, total, { ...entity, memo: `Rent invoice ${label}` }));
+    lines.push(
+      debit(ACCOUNTS.RENT_RECEIVABLE_ON_BEHALF_OF_OWNERS, total, {
+        ...entity,
+        memo: `Rent invoice ${label}`,
+      }),
+    );
     lines.push(
       credit(ACCOUNTS.RENT_COLLECTED_PAYABLE_TO_OWNERS, subtotal, {
         entityType: 'organization',
-        ...(invoice.ownerOrganizationId ? { entityId: invoice.ownerOrganizationId, organizationId: invoice.ownerOrganizationId } : {}),
+        ...(invoice.ownerOrganizationId
+          ? { entityId: invoice.ownerOrganizationId, organizationId: invoice.ownerOrganizationId }
+          : {}),
         memo: `Rent payable to owner for ${label}`,
       }),
     );
@@ -167,10 +187,15 @@ export function invoiceIssued(input: InvoiceIssuedInput): JournalDraft {
   } else {
     const revenueAccount = revenueAccountForInvoiceKind(invoice.kind, input.revenueAccount);
     const recogniseNow = input.recognitionPolicy === 'on_issue' && invoice.kind !== 'deposit';
-    lines.push(debit(ACCOUNTS.CUSTOMER_RECEIVABLES, total, { ...entity, memo: `Invoice ${label}` }));
+    lines.push(
+      debit(ACCOUNTS.CUSTOMER_RECEIVABLES, total, { ...entity, memo: `Invoice ${label}` }),
+    );
     lines.push(
       recogniseNow
-        ? credit(revenueAccount, subtotal, { ...entity, memo: `Revenue recognised on issue for ${label}` })
+        ? credit(revenueAccount, subtotal, {
+            ...entity,
+            memo: `Revenue recognised on issue for ${label}`,
+          })
         : credit(ACCOUNTS.CUSTOMER_DEPOSITS_AND_UNEARNED_REVENUE, subtotal, {
             ...entity,
             memo: `Unearned until delivery for ${label}`,
@@ -179,7 +204,12 @@ export function invoiceIssued(input: InvoiceIssuedInput): JournalDraft {
     description = `Invoice ${label} issued (${invoice.kind}, ${recogniseNow ? 'revenue on issue' : 'unearned until delivery'})`;
   }
   if (tax > 0n) {
-    lines.push(credit(ACCOUNTS.TAX_AND_WITHHOLDING_PAYABLE, tax, { ...entity, memo: `Tax charged on ${label}` }));
+    lines.push(
+      credit(ACCOUNTS.TAX_AND_WITHHOLDING_PAYABLE, tax, {
+        ...entity,
+        memo: `Tax charged on ${label}`,
+      }),
+    );
   }
   return base(
     `invoice:${invoice.id}:issued`,
@@ -193,7 +223,14 @@ export function invoiceIssued(input: InvoiceIssuedInput): JournalDraft {
 }
 
 export interface RevenueRecognizedInput {
-  invoice: { id: string; number?: string; organizationId: string; currency?: string; kind: InvoiceKind; estateSegment?: string | null };
+  invoice: {
+    id: string;
+    number?: string;
+    organizationId: string;
+    currency?: string;
+    kind: InvoiceKind;
+    estateSegment?: string | null;
+  };
   amountKobo: Kobo;
   revenueAccount?: RevenueAccount;
   /** Distinguishes several recognitions of one invoice (milestones). */
@@ -215,7 +252,10 @@ export function revenueRecognized(input: RevenueRecognizedInput): JournalDraft {
     input.invoice.currency,
     { organizationId: input.invoice.organizationId, estateSegment: input.invoice.estateSegment },
     [
-      debit(ACCOUNTS.CUSTOMER_DEPOSITS_AND_UNEARNED_REVENUE, amount, { ...entity, memo: `Released from unearned for ${label}` }),
+      debit(ACCOUNTS.CUSTOMER_DEPOSITS_AND_UNEARNED_REVENUE, amount, {
+        ...entity,
+        memo: `Released from unearned for ${label}`,
+      }),
       credit(revenueAccount, amount, { ...entity, memo: `Earned on delivery for ${label}` }),
     ],
   );
@@ -258,15 +298,25 @@ export function gatewayPaymentSettled(input: GatewayPaymentSettledInput): Journa
       { paymentAttemptId: attempt.id },
     );
   }
-  const fees = attempt.feesKobo === undefined || attempt.feesKobo === null ? null : assertNonNegativeKobo('feesKobo', attempt.feesKobo);
+  const fees =
+    attempt.feesKobo === undefined || attempt.feesKobo === null
+      ? null
+      : assertNonNegativeKobo('feesKobo', attempt.feesKobo);
   if (fees !== null && fees > amount) {
-    throw new JournalError(`payment attempt ${attempt.id}: fees ${fees} exceed the amount ${amount}`, {
-      paymentAttemptId: attempt.id,
-    });
+    throw new JournalError(
+      `payment attempt ${attempt.id}: fees ${fees} exceed the amount ${amount}`,
+      {
+        paymentAttemptId: attempt.id,
+      },
+    );
   }
   const label = attempt.reference ?? attempt.id;
   const lines: JournalLineDraft[] = [
-    debit(ACCOUNTS.GATEWAY_CLEARING, amount, { entityType: 'payment_attempt', entityId: attempt.id, memo: `Gateway payment ${label}` }),
+    debit(ACCOUNTS.GATEWAY_CLEARING, amount, {
+      entityType: 'payment_attempt',
+      entityId: attempt.id,
+      memo: `Gateway payment ${label}`,
+    }),
   ];
   if (allocated > 0n) {
     lines.push(
@@ -287,8 +337,20 @@ export function gatewayPaymentSettled(input: GatewayPaymentSettledInput): Journa
     );
   }
   if (fees !== null && fees > 0n) {
-    lines.push(debit(ACCOUNTS.GATEWAY_FEES, fees, { entityType: 'payment_attempt', entityId: attempt.id, memo: `Gateway fee for ${label}` }));
-    lines.push(credit(ACCOUNTS.GATEWAY_CLEARING, fees, { entityType: 'payment_attempt', entityId: attempt.id, memo: `Fee deducted by gateway for ${label}` }));
+    lines.push(
+      debit(ACCOUNTS.GATEWAY_FEES, fees, {
+        entityType: 'payment_attempt',
+        entityId: attempt.id,
+        memo: `Gateway fee for ${label}`,
+      }),
+    );
+    lines.push(
+      credit(ACCOUNTS.GATEWAY_CLEARING, fees, {
+        entityType: 'payment_attempt',
+        entityId: attempt.id,
+        memo: `Fee deducted by gateway for ${label}`,
+      }),
+    );
   }
   return base(
     `payment_attempt:${attempt.id}:settled`,
@@ -321,12 +383,17 @@ export function gatewaySettlementToBank(input: GatewaySettlementToBankInput): Jo
   const fees = settlement.feesKobo ? assertNonNegativeKobo('feesKobo', settlement.feesKobo) : 0n;
   const entity = { entityType: 'gateway_settlement', entityId: settlement.id };
   const lines: JournalLineDraft[] = [
-    debit(ACCOUNTS.BANK, amount, { ...entity, memo: `Gateway settlement ${settlement.id} received` }),
+    debit(ACCOUNTS.BANK, amount, {
+      ...entity,
+      memo: `Gateway settlement ${settlement.id} received`,
+    }),
     credit(ACCOUNTS.GATEWAY_CLEARING, amount, { ...entity, memo: `Cleared from gateway balance` }),
   ];
   if (fees > 0n) {
     lines.push(debit(ACCOUNTS.GATEWAY_FEES, fees, { ...entity, memo: 'Settlement fees' }));
-    lines.push(credit(ACCOUNTS.GATEWAY_CLEARING, fees, { ...entity, memo: 'Settlement fees deducted' }));
+    lines.push(
+      credit(ACCOUNTS.GATEWAY_CLEARING, fees, { ...entity, memo: 'Settlement fees deducted' }),
+    );
   }
   return base(
     `gateway_settlement:${settlement.id}:received`,
@@ -379,7 +446,11 @@ export function bankTransferConfirmed(input: BankTransferConfirmedInput): Journa
     );
   }
   const lines: JournalLineDraft[] = [
-    debit(ACCOUNTS.BANK, amount, { entityType: 'bank_transfer_receipt', entityId: receipt.id, memo: `Bank transfer confirmed ${receipt.id}` }),
+    debit(ACCOUNTS.BANK, amount, {
+      entityType: 'bank_transfer_receipt',
+      entityId: receipt.id,
+      memo: `Bank transfer confirmed ${receipt.id}`,
+    }),
   ];
   if (allocated > 0n) {
     lines.push(
@@ -414,7 +485,8 @@ export function bankTransferConfirmed(input: BankTransferConfirmedInput): Journa
 // Refunds, chargebacks, credit notes
 // ---------------------------------------------------------------------------
 
-export type RefundStatusLike = 'requested' | 'approved' | 'submitted' | 'pending' | 'settled' | 'failed' | 'rejected';
+export type RefundStatusLike =
+  'requested' | 'approved' | 'submitted' | 'pending' | 'settled' | 'failed' | 'rejected';
 
 export interface RefundApprovedInput {
   refund: {
@@ -435,10 +507,13 @@ export interface RefundApprovedInput {
 export function refundApproved(input: RefundApprovedInput): JournalDraft {
   const { refund } = input;
   if (refund.status !== 'approved') {
-    throw new JournalError(`refund ${refund.id} is ${refund.status}; only approved refunds create a refund liability`, {
-      refundId: refund.id,
-      status: refund.status,
-    });
+    throw new JournalError(
+      `refund ${refund.id} is ${refund.status}; only approved refunds create a refund liability`,
+      {
+        refundId: refund.id,
+        status: refund.status,
+      },
+    );
   }
   const amount = assertPositiveKobo('refund.amountKobo', refund.amountKobo);
   const from = recognitionAccount(input.source, input.revenueAccount ?? ACCOUNTS.SERVICE_REVENUE);
@@ -480,10 +555,13 @@ export function refundSettled(input: RefundSettledInput): JournalDraft {
     );
   }
   if (refund.status !== 'submitted' && refund.status !== 'pending' && refund.status !== 'settled') {
-    throw new JournalError(`refund ${refund.id} is ${refund.status}; it must be approved and submitted before it can settle`, {
-      refundId: refund.id,
-      status: refund.status,
-    });
+    throw new JournalError(
+      `refund ${refund.id} is ${refund.status}; it must be approved and submitted before it can settle`,
+      {
+        refundId: refund.id,
+        status: refund.status,
+      },
+    );
   }
   const amount = assertPositiveKobo('refund.amountKobo', refund.amountKobo);
   const entity = { entityType: 'refund', entityId: refund.id };
@@ -496,7 +574,10 @@ export function refundSettled(input: RefundSettledInput): JournalDraft {
     { organizationId: refund.organizationId, estateSegment: input.estateSegment },
     [
       debit(ACCOUNTS.REFUNDS_PAYABLE, amount, { ...entity, memo: 'Refund liability discharged' }),
-      credit(ACCOUNTS.GATEWAY_CLEARING, amount, { ...entity, memo: 'Refunded from gateway balance' }),
+      credit(ACCOUNTS.GATEWAY_CLEARING, amount, {
+        ...entity,
+        memo: 'Refunded from gateway balance',
+      }),
     ],
   );
 }
@@ -525,8 +606,14 @@ export function chargebackOpened(input: ChargebackInput): JournalDraft {
     chargeback.currency,
     { organizationId: chargeback.organizationId, estateSegment: input.estateSegment },
     [
-      debit(ACCOUNTS.CHARGEBACKS_PENDING, amount, { ...entity, memo: 'Disputed amount pending resolution' }),
-      credit(ACCOUNTS.GATEWAY_CLEARING, amount, { ...entity, memo: 'Withheld by gateway pending dispute' }),
+      debit(ACCOUNTS.CHARGEBACKS_PENDING, amount, {
+        ...entity,
+        memo: 'Disputed amount pending resolution',
+      }),
+      credit(ACCOUNTS.GATEWAY_CLEARING, amount, {
+        ...entity,
+        memo: 'Withheld by gateway pending dispute',
+      }),
     ],
   );
 }
@@ -545,7 +632,10 @@ export function chargebackLost(input: ChargebackInput): JournalDraft {
     { organizationId: chargeback.organizationId, estateSegment: input.estateSegment },
     [
       debit(ACCOUNTS.REFUND_AND_CHARGEBACK_LOSSES, amount, { ...entity, memo: 'Chargeback loss' }),
-      credit(ACCOUNTS.CHARGEBACKS_PENDING, amount, { ...entity, memo: 'Pending chargeback resolved as lost' }),
+      credit(ACCOUNTS.CHARGEBACKS_PENDING, amount, {
+        ...entity,
+        memo: 'Pending chargeback resolved as lost',
+      }),
     ],
   );
 }
@@ -553,7 +643,11 @@ export function chargebackLost(input: ChargebackInput): JournalDraft {
 /** Dispute won: reversal of the opening entry (Dr 1100 / Cr 2500). */
 export function chargebackWon(input: ChargebackInput): JournalDraft {
   const opened = chargebackOpened(input);
-  return reverse(opened, `chargeback:${input.chargeback.id}:won`, 'chargeback won; funds released by the gateway');
+  return reverse(
+    opened,
+    `chargeback:${input.chargeback.id}:won`,
+    'chargeback won; funds released by the gateway',
+  );
 }
 
 export interface CreditNoteIssuedInput {
@@ -587,7 +681,11 @@ export function creditNoteIssued(input: CreditNoteIssuedInput): JournalDraft {
     { organizationId: creditNote.organizationId, estateSegment: input.estateSegment },
     [
       debit(from, amount, { ...entity, memo: `Credit note ${label} reduces ${input.source}` }),
-      credit(receivable, amount, { entityType: 'invoice', entityId: creditNote.invoiceId, memo: `Credit note ${label} applied` }),
+      credit(receivable, amount, {
+        entityType: 'invoice',
+        entityId: creditNote.invoiceId,
+        memo: `Credit note ${label} applied`,
+      }),
     ],
   );
 }
@@ -597,7 +695,13 @@ export function creditNoteIssued(input: CreditNoteIssuedInput): JournalDraft {
 // ---------------------------------------------------------------------------
 
 export interface TaxWithheldInput {
-  invoice: { id: string; number?: string; organizationId: string; currency?: string; estateSegment?: string | null };
+  invoice: {
+    id: string;
+    number?: string;
+    organizationId: string;
+    currency?: string;
+    estateSegment?: string | null;
+  };
   /** Amount the customer withheld at source and remits to the tax authority on our behalf. */
   withheldKobo: Kobo;
   /** Customer's withholding credit note / remittance evidence reference. */
@@ -621,14 +725,26 @@ export function taxWithheld(input: TaxWithheldInput): JournalDraft {
     input.invoice.currency,
     { organizationId: input.invoice.organizationId, estateSegment: input.invoice.estateSegment },
     [
-      debit(ACCOUNTS.TAX_AND_WITHHOLDING_PAYABLE, amount, { ...entity, memo: 'Withholding credit' }),
-      credit(ACCOUNTS.CUSTOMER_RECEIVABLES, amount, { ...entity, memo: `Withheld at source on ${label}` }),
+      debit(ACCOUNTS.TAX_AND_WITHHOLDING_PAYABLE, amount, {
+        ...entity,
+        memo: 'Withholding credit',
+      }),
+      credit(ACCOUNTS.CUSTOMER_RECEIVABLES, amount, {
+        ...entity,
+        memo: `Withheld at source on ${label}`,
+      }),
     ],
   );
 }
 
 export interface TaxRemittedInput {
-  remittance: { id: string; organizationId?: string | null; currency?: string; amountKobo: Kobo; period?: string };
+  remittance: {
+    id: string;
+    organizationId?: string | null;
+    currency?: string;
+    amountKobo: Kobo;
+    period?: string;
+  };
 }
 
 /** Tax paid to the authority from the bank: Dr 2300 / Cr 1000. */
@@ -644,7 +760,10 @@ export function taxRemitted(input: TaxRemittedInput): JournalDraft {
     remittance.currency,
     { organizationId: remittance.organizationId },
     [
-      debit(ACCOUNTS.TAX_AND_WITHHOLDING_PAYABLE, amount, { ...entity, memo: 'Tax liability settled' }),
+      debit(ACCOUNTS.TAX_AND_WITHHOLDING_PAYABLE, amount, {
+        ...entity,
+        memo: 'Tax liability settled',
+      }),
       credit(ACCOUNTS.BANK, amount, { ...entity, memo: 'Paid to tax authority' }),
     ],
   );
@@ -654,9 +773,11 @@ export function taxRemitted(input: TaxRemittedInput): JournalDraft {
 // Owners, partners, payouts
 // ---------------------------------------------------------------------------
 
-export type PayoutStatusLike = 'proposed' | 'first_approved' | 'approved' | 'submitted' | 'settled' | 'failed' | 'rejected';
+export type PayoutStatusLike =
+  'proposed' | 'first_approved' | 'approved' | 'submitted' | 'settled' | 'failed' | 'rejected';
 
-export type ReconciliationStatusLike = 'open' | 'in_progress' | 'balanced' | 'exceptions' | 'closed';
+export type ReconciliationStatusLike =
+  'open' | 'in_progress' | 'balanced' | 'exceptions' | 'closed';
 
 export interface OwnerDistributionApprovedInput {
   payout: {
@@ -679,17 +800,23 @@ export interface OwnerDistributionApprovedInput {
 export function ownerDistributionApproved(input: OwnerDistributionApprovedInput): JournalDraft {
   const { payout, reconciliation } = input;
   if (payout.status !== 'approved') {
-    throw new JournalError(`payout ${payout.id} is ${payout.status}; distributions post only after both approvals (status approved)`, {
-      payoutId: payout.id,
-      status: payout.status,
-    });
+    throw new JournalError(
+      `payout ${payout.id} is ${payout.status}; distributions post only after both approvals (status approved)`,
+      {
+        payoutId: payout.id,
+        status: payout.status,
+      },
+    );
   }
   if (reconciliation.status !== 'balanced' && reconciliation.status !== 'closed') {
-    throw new JournalError(`payout ${payout.id}: reconciliation ${reconciliation.id} is ${reconciliation.status}; payouts require a balanced reconciliation`, {
-      payoutId: payout.id,
-      reconciliationId: reconciliation.id,
-      reconciliationStatus: reconciliation.status,
-    });
+    throw new JournalError(
+      `payout ${payout.id}: reconciliation ${reconciliation.id} is ${reconciliation.status}; payouts require a balanced reconciliation`,
+      {
+        payoutId: payout.id,
+        reconciliationId: reconciliation.id,
+        reconciliationStatus: reconciliation.status,
+      },
+    );
   }
   const amount = assertPositiveKobo('payout.amountKobo', payout.amountKobo);
   const entity = { entityType: 'payout', entityId: payout.id };
@@ -701,8 +828,14 @@ export function ownerDistributionApproved(input: OwnerDistributionApprovedInput)
     payout.currency,
     { organizationId: payout.organizationId, estateSegment: input.estateSegment },
     [
-      debit(ACCOUNTS.RENT_COLLECTED_PAYABLE_TO_OWNERS, amount, { ...entity, memo: 'Rent released for distribution' }),
-      credit(ACCOUNTS.PARTNER_AND_SUPPLIER_PAYABLES, amount, { ...entity, memo: 'Distribution payable to owner' }),
+      debit(ACCOUNTS.RENT_COLLECTED_PAYABLE_TO_OWNERS, amount, {
+        ...entity,
+        memo: 'Rent released for distribution',
+      }),
+      credit(ACCOUNTS.PARTNER_AND_SUPPLIER_PAYABLES, amount, {
+        ...entity,
+        memo: 'Distribution payable to owner',
+      }),
     ],
   );
 }
@@ -724,15 +857,21 @@ export interface OwnerPayoutSettledInput {
 export function ownerPayoutSettled(input: OwnerPayoutSettledInput): JournalDraft {
   const { payout } = input;
   if (!input.settlementReference || input.settlementReference.trim().length === 0) {
-    throw new JournalError(`payout ${payout.id}: a bank settlement reference is required before the payout is settled`, {
-      payoutId: payout.id,
-    });
+    throw new JournalError(
+      `payout ${payout.id}: a bank settlement reference is required before the payout is settled`,
+      {
+        payoutId: payout.id,
+      },
+    );
   }
   if (payout.status !== 'submitted' && payout.status !== 'settled') {
-    throw new JournalError(`payout ${payout.id} is ${payout.status}; it must be approved and submitted before settlement`, {
-      payoutId: payout.id,
-      status: payout.status,
-    });
+    throw new JournalError(
+      `payout ${payout.id} is ${payout.status}; it must be approved and submitted before settlement`,
+      {
+        payoutId: payout.id,
+        status: payout.status,
+      },
+    );
   }
   const amount = assertPositiveKobo('payout.amountKobo', payout.amountKobo);
   const entity = { entityType: 'payout', entityId: payout.id };
@@ -744,14 +883,26 @@ export function ownerPayoutSettled(input: OwnerPayoutSettledInput): JournalDraft
     payout.currency,
     { organizationId: payout.organizationId, estateSegment: input.estateSegment },
     [
-      debit(ACCOUNTS.PARTNER_AND_SUPPLIER_PAYABLES, amount, { ...entity, memo: 'Payable discharged' }),
-      credit(ACCOUNTS.BANK, amount, { ...entity, memo: `Paid from bank (${input.settlementReference.trim()})` }),
+      debit(ACCOUNTS.PARTNER_AND_SUPPLIER_PAYABLES, amount, {
+        ...entity,
+        memo: 'Payable discharged',
+      }),
+      credit(ACCOUNTS.BANK, amount, {
+        ...entity,
+        memo: `Paid from bank (${input.settlementReference.trim()})`,
+      }),
     ],
   );
 }
 
 export interface ManagementFeeInput {
-  statement: { id: string; organizationId: string; ownerOrganizationId?: string | null; currency?: string; period?: string };
+  statement: {
+    id: string;
+    organizationId: string;
+    ownerOrganizationId?: string | null;
+    currency?: string;
+    period?: string;
+  };
   /** Rent actually collected in the period (basis for the fee). */
   collectedRentKobo: Kobo;
   /** Agreed fee in basis points, e.g. 1000 = 10%. */
@@ -761,7 +912,11 @@ export interface ManagementFeeInput {
   estateSegment?: string | null;
 }
 
-export function computeManagementFee(collectedRentKobo: Kobo, feeBps: number, taxBps = 0): { feeKobo: Kobo; taxKobo: Kobo } {
+export function computeManagementFee(
+  collectedRentKobo: Kobo,
+  feeBps: number,
+  taxBps = 0,
+): { feeKobo: Kobo; taxKobo: Kobo } {
   const feeKobo = bpsOf(assertNonNegativeKobo('collectedRentKobo', collectedRentKobo), feeBps);
   const taxKobo = taxBps > 0 ? bpsOf(feeKobo, taxBps) : 0n;
   return { feeKobo, taxKobo };
@@ -770,11 +925,18 @@ export function computeManagementFee(collectedRentKobo: Kobo, feeBps: number, ta
 /** Agreed management fee taken from rent collected for the owner: Dr 2100 fee (+tax) / Cr 4100 fee / Cr 2300 tax. */
 export function managementFeeFromCollectedRent(input: ManagementFeeInput): JournalDraft {
   const { statement } = input;
-  const { feeKobo, taxKobo } = computeManagementFee(input.collectedRentKobo, input.feeBps, input.taxBps ?? 0);
+  const { feeKobo, taxKobo } = computeManagementFee(
+    input.collectedRentKobo,
+    input.feeBps,
+    input.taxBps ?? 0,
+  );
   if (feeKobo <= 0n) {
-    throw new JournalError(`owner statement ${statement.id}: management fee rounds to zero (${input.feeBps} bps of ${input.collectedRentKobo})`, {
-      statementId: statement.id,
-    });
+    throw new JournalError(
+      `owner statement ${statement.id}: management fee rounds to zero (${input.feeBps} bps of ${input.collectedRentKobo})`,
+      {
+        statementId: statement.id,
+      },
+    );
   }
   const entity = { entityType: 'owner_statement', entityId: statement.id };
   const lines: JournalLineDraft[] = [
@@ -783,10 +945,18 @@ export function managementFeeFromCollectedRent(input: ManagementFeeInput): Journ
       memo: `Management fee ${input.feeBps} bps deducted from rent payable`,
       ...(statement.ownerOrganizationId ? { organizationId: statement.ownerOrganizationId } : {}),
     }),
-    credit(ACCOUNTS.MANAGEMENT_FEE_REVENUE, feeKobo, { ...entity, memo: `Management fee earned${statement.period ? ` for ${statement.period}` : ''}` }),
+    credit(ACCOUNTS.MANAGEMENT_FEE_REVENUE, feeKobo, {
+      ...entity,
+      memo: `Management fee earned${statement.period ? ` for ${statement.period}` : ''}`,
+    }),
   ];
   if (taxKobo > 0n) {
-    lines.push(credit(ACCOUNTS.TAX_AND_WITHHOLDING_PAYABLE, taxKobo, { ...entity, memo: `Tax on management fee (${input.taxBps} bps)` }));
+    lines.push(
+      credit(ACCOUNTS.TAX_AND_WITHHOLDING_PAYABLE, taxKobo, {
+        ...entity,
+        memo: `Tax on management fee (${input.taxBps} bps)`,
+      }),
+    );
   }
   return base(
     `owner_statement:${statement.id}:management_fee`,
@@ -823,18 +993,28 @@ export function maintenanceExpenseRecoverable(input: MaintenanceExpenseInput): J
     workOrder.currency,
     { organizationId: workOrder.organizationId, estateSegment: input.estateSegment },
     [
-      debit(ACCOUNTS.MAINTENANCE_AND_ESTATE_EXPENSES_RECOVERABLE, amount, { ...entity, memo: 'Recoverable maintenance expense' }),
+      debit(ACCOUNTS.MAINTENANCE_AND_ESTATE_EXPENSES_RECOVERABLE, amount, {
+        ...entity,
+        memo: 'Recoverable maintenance expense',
+      }),
       credit(ACCOUNTS.PARTNER_AND_SUPPLIER_PAYABLES, amount, {
         ...entity,
         memo: 'Owed to contractor',
-        ...(workOrder.supplierOrganizationId ? { organizationId: workOrder.supplierOrganizationId } : {}),
+        ...(workOrder.supplierOrganizationId
+          ? { organizationId: workOrder.supplierOrganizationId }
+          : {}),
       }),
     ],
   );
 }
 
 export interface MaintenanceRecoveredInput {
-  workOrder: { id: string; organizationId: string; currency?: string; ownerOrganizationId?: string | null };
+  workOrder: {
+    id: string;
+    organizationId: string;
+    currency?: string;
+    ownerOrganizationId?: string | null;
+  };
   /** Amount recovered from the owner's rent balance. */
   amountKobo: Kobo;
   estateSegment?: string | null;
@@ -858,13 +1038,21 @@ export function maintenanceExpenseRecovered(input: MaintenanceRecoveredInput): J
         memo: 'Deducted from rent payable to owner',
         ...(workOrder.ownerOrganizationId ? { organizationId: workOrder.ownerOrganizationId } : {}),
       }),
-      credit(ACCOUNTS.MAINTENANCE_AND_ESTATE_EXPENSES_RECOVERABLE, amount, { ...entity, memo: 'Expense recovered' }),
+      credit(ACCOUNTS.MAINTENANCE_AND_ESTATE_EXPENSES_RECOVERABLE, amount, {
+        ...entity,
+        memo: 'Expense recovered',
+      }),
     ],
   );
 }
 
 export interface PartnerFeeAccruedInput {
-  engagement: { id: string; organizationId: string; currency?: string; partnerOrganizationId?: string | null };
+  engagement: {
+    id: string;
+    organizationId: string;
+    currency?: string;
+    partnerOrganizationId?: string | null;
+  };
   amountKobo: Kobo;
   estateSegment?: string | null;
 }
@@ -886,7 +1074,9 @@ export function partnerFeeAccrued(input: PartnerFeeAccruedInput): JournalDraft {
       credit(ACCOUNTS.PARTNER_AND_SUPPLIER_PAYABLES, amount, {
         ...entity,
         memo: 'Owed to partner',
-        ...(engagement.partnerOrganizationId ? { organizationId: engagement.partnerOrganizationId } : {}),
+        ...(engagement.partnerOrganizationId
+          ? { organizationId: engagement.partnerOrganizationId }
+          : {}),
       }),
     ],
   );

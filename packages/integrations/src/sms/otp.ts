@@ -87,11 +87,7 @@ export function createOtpChallenge(options: OtpChallengeOptions = {}): OtpChalle
 }
 
 export type OtpFailureReason =
-  | 'consumed'
-  | 'expired'
-  | 'too_many_attempts'
-  | 'invalid_code'
-  | 'malformed_record';
+  'consumed' | 'expired' | 'too_many_attempts' | 'invalid_code' | 'malformed_record';
 
 export type OtpVerification =
   | { ok: true; reason: 'verified'; countAttempt: false }
@@ -133,7 +129,8 @@ export function verifyOtpAttempt(input: OtpVerifyInput): OtpVerification {
   }
 
   const candidate = (input.code ?? '').trim();
-  if (!/^\d{4,10}$/.test(candidate)) return { ok: false, reason: 'invalid_code', countAttempt: true };
+  if (!/^\d{4,10}$/.test(candidate))
+    return { ok: false, reason: 'invalid_code', countAttempt: true };
 
   const expected = Buffer.from(hash, 'hex');
   const actual = Buffer.from(hashOtp(candidate, salt), 'hex');

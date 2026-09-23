@@ -15,7 +15,11 @@ import { listServiceCatalog } from '@/server/services/catalog';
  * empty the sitemap.
  */
 
-const STATIC_ROUTES: Array<{ path: string; priority: number; changeFrequency: 'daily' | 'weekly' | 'monthly' }> = [
+const STATIC_ROUTES: Array<{
+  path: string;
+  priority: number;
+  changeFrequency: 'daily' | 'weekly' | 'monthly';
+}> = [
   { path: '/', priority: 1, changeFrequency: 'weekly' },
   { path: '/explore', priority: 0.9, changeFrequency: 'daily' },
   { path: '/services', priority: 0.9, changeFrequency: 'weekly' },
@@ -60,7 +64,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const [markets, catalog, resources, listings] = await Promise.all([
     safe(
       'markets',
-      () => listMarkets({ evidenceStatus: 'any', includeUnpublished: false, limit: 200 }, anonymousIdentity),
+      () =>
+        listMarkets(
+          { evidenceStatus: 'any', includeUnpublished: false, limit: 200 },
+          anonymousIdentity,
+        ),
       null,
     ),
     safe('services', () => listServiceCatalog(), null),

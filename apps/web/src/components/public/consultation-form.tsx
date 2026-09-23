@@ -142,64 +142,64 @@ export function ConsultationForm({
   }, [attempted, summary.length]);
 
   const submitValues = async (values: ConsultationFormValues) => {
-      setServerError(null);
-      const now = Date.now();
-      const payload = buildConsultationPayload(values, {
-        prefill,
-        elapsedMs: now - (startedAt.current ?? now),
-        source: variant === 'book' ? 'consultation_booking' : 'website_form',
+    setServerError(null);
+    const now = Date.now();
+    const payload = buildConsultationPayload(values, {
+      prefill,
+      elapsedMs: now - (startedAt.current ?? now),
+      source: variant === 'book' ? 'consultation_booking' : 'website_form',
+    });
+    let res: Response;
+    try {
+      res = await fetch('/api/v1/leads/consultation', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(payload),
       });
-      let res: Response;
-      try {
-        res = await fetch('/api/v1/leads/consultation', {
-          method: 'POST',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify(payload),
-        });
-      } catch {
-        setServerError(
-          'We could not reach the server. Your details are still in the form; check your connection and try again.',
-        );
-        return;
-      }
-      if (res.status === 201 || res.status === 200) {
-        const data = (await res.json()) as { id: string };
-        setSubmitted({ id: data.id });
-        trackEvent('consultation_submitted', {
-          goal: values.goal,
-          service: values.serviceSlug || 'none',
-          variant,
-        });
-        return;
-      }
-      const body = (await res.json().catch(() => null)) as ApiErrorBody | null;
-      if (res.status === 400 && body?.error?.details?.length) {
-        let mapped = 0;
-        for (const d of body.error.details) {
-          const field = fieldForApiPath(d.path);
-          if (field) {
-            form.setError(field, { type: 'server', message: d.message });
-            mapped += 1;
-          }
-        }
-        setAttempted(true);
-        setServerError(
-          mapped > 0
-            ? 'Please correct the highlighted fields and send again.'
-            : (body.error.message ?? 'The request could not be validated.'),
-        );
-        return;
-      }
-      if (res.status === 429) {
-        const wait = body?.error?.retryAfterSeconds;
-        setServerError(
-          `Too many requests from this connection or email address. Please try again${wait ? ` in about ${Math.ceil(wait / 60)} minute${wait > 90 ? 's' : ''}` : ' shortly'}. Your details are kept in the form.`,
-        );
-        return;
-      }
+    } catch {
       setServerError(
-        `${body?.error?.message ?? 'Something went wrong on our side.'} Your details are kept in the form.${body?.error?.correlationId ? ` Reference: ${body.error.correlationId}.` : ''}`,
+        'We could not reach the server. Your details are still in the form; check your connection and try again.',
       );
+      return;
+    }
+    if (res.status === 201 || res.status === 200) {
+      const data = (await res.json()) as { id: string };
+      setSubmitted({ id: data.id });
+      trackEvent('consultation_submitted', {
+        goal: values.goal,
+        service: values.serviceSlug || 'none',
+        variant,
+      });
+      return;
+    }
+    const body = (await res.json().catch(() => null)) as ApiErrorBody | null;
+    if (res.status === 400 && body?.error?.details?.length) {
+      let mapped = 0;
+      for (const d of body.error.details) {
+        const field = fieldForApiPath(d.path);
+        if (field) {
+          form.setError(field, { type: 'server', message: d.message });
+          mapped += 1;
+        }
+      }
+      setAttempted(true);
+      setServerError(
+        mapped > 0
+          ? 'Please correct the highlighted fields and send again.'
+          : (body.error.message ?? 'The request could not be validated.'),
+      );
+      return;
+    }
+    if (res.status === 429) {
+      const wait = body?.error?.retryAfterSeconds;
+      setServerError(
+        `Too many requests from this connection or email address. Please try again${wait ? ` in about ${Math.ceil(wait / 60)} minute${wait > 90 ? 's' : ''}` : ' shortly'}. Your details are kept in the form.`,
+      );
+      return;
+    }
+    setServerError(
+      `${body?.error?.message ?? 'Something went wrong on our side.'} Your details are kept in the form.${body?.error?.correlationId ? ` Reference: ${body.error.correlationId}.` : ''}`,
+    );
   };
   const onInvalid = () => setAttempted(true);
 
@@ -220,10 +220,16 @@ export function ConsultationForm({
               Meet links are sent once the calendar integration is configured.
             </p>
             <div className="mt-4 flex flex-wrap gap-2">
-              <Link href="/explore" className={buttonVariants({ variant: 'secondary', size: 'sm' })}>
+              <Link
+                href="/explore"
+                className={buttonVariants({ variant: 'secondary', size: 'sm' })}
+              >
                 Explore locations
               </Link>
-              <Link href="/how-it-works" className={buttonVariants({ variant: 'ghost', size: 'sm' })}>
+              <Link
+                href="/how-it-works"
+                className={buttonVariants({ variant: 'ghost', size: 'sm' })}
+              >
                 What happens next
               </Link>
               <Button
@@ -253,9 +259,12 @@ export function ConsultationForm({
         ? `locations: ${marketNames.join(', ')}`
         : `${prefill.marketIds.length} selected location${prefill.marketIds.length > 1 ? 's' : ''}`,
     );
-  if (prefill.marketSlug && prefill.marketIds.length === 0) context.push(`location: ${prefill.marketSlug}`);
+  if (prefill.marketSlug && prefill.marketIds.length === 0)
+    context.push(`location: ${prefill.marketSlug}`);
   if (prefill.budgetNaira)
-    context.push(`budget ₦${prefill.budgetNaira.toLocaleString('en-NG', { maximumFractionDigits: 0 })}`);
+    context.push(
+      `budget ₦${prefill.budgetNaira.toLocaleString('en-NG', { maximumFractionDigits: 0 })}`,
+    );
 
   const coreServices = services.filter((s) => s.category === 'core');
   const plannedServices = services.filter((s) => s.category === 'expansion');
@@ -375,7 +384,12 @@ export function ConsultationForm({
             />
           )}
         </Field>
-        <Field label="What do you want to achieve?" htmlFor={IDS.goal} error={errors.goal?.message} required>
+        <Field
+          label="What do you want to achieve?"
+          htmlFor={IDS.goal}
+          error={errors.goal?.message}
+          required
+        >
           {({ id, describedBy, invalid }) => (
             <NativeSelect
               id={id}
@@ -429,7 +443,11 @@ export function ConsultationForm({
         </Field>
         {variant !== 'contact' ? (
           <Field
-            label={variant === 'book' ? 'Preferred days and times' : 'Preferred days and times (optional)'}
+            label={
+              variant === 'book'
+                ? 'Preferred days and times'
+                : 'Preferred days and times (optional)'
+            }
             htmlFor={IDS.times}
             hint="For example: weekday evenings after 18:00, or Saturday mornings. Given in your time zone above."
             error={errors.preferredTimes?.message}
@@ -467,7 +485,13 @@ export function ConsultationForm({
       {/* Honeypot: visually hidden and excluded from the tab order. */}
       <div aria-hidden="true" className="absolute -left-[9999px] h-px w-px overflow-hidden">
         <label htmlFor="cf-website">Website</label>
-        <input id="cf-website" type="text" tabIndex={-1} autoComplete="off" {...form.register('website')} />
+        <input
+          id="cf-website"
+          type="text"
+          tabIndex={-1}
+          autoComplete="off"
+          {...form.register('website')}
+        />
       </div>
 
       <div className="space-y-1">

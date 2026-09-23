@@ -3,37 +3,26 @@ import { applyActorContext, type ActorContext, type Transaction } from '@simplex
 
 /**
  * Customer transactions run under the customer's row-level security context so
- * every read proves access. Some tables a customer action must write are
- * deliberately privileged-only (audit_events, outbox_events) or carry a
- * self-referencing WITH CHECK policy that cannot see the row being inserted
- * (service_requests). After the reads have proven access and the application
- * layer has authorised the action, the same transaction is elevated for the
- * remaining writes. Never call this before the access checks.
+ * every read proves access, and appends to the audit and outbox logs are
+ * allowed for every actor (migration 0002), so nothing here is needed for
+ * logging.
+ *
+ * The single remaining privileged case is creating a service request:
+ *  - `service_requests` carries a self-referencing policy
+ *    (`app.can_access_service_request(id)`) whose WITH CHECK runs before the
+ *    row exists, so a customer INSERT is always refused, and
+ *  - the next reference (SR-<year>-<sequence>) must be computed across all
+ *    organisations, which the customer's own context cannot see.
+ *
+ * `elevate` is therefore called only after the application layer has
+ * authorised the action and the reads under the customer's context have
+ * proven access, and `demote` restores the customer's context immediately
+ * after the insert so every later write is policy-checked again.
  */
 export async function elevate(tx: Transaction, ctx: ActorContext): Promise<void> {
   await applyActorContext(tx, { ...ctx, bypass: true });
 }
 
-/** Restores the customer's own context after an elevated section. */
 export async function demote(tx: Transaction, ctx: ActorContext): Promise<void> {
   await applyActorContext(tx, { ...ctx, bypass: false });
-}
-
-/** Encodes a keyset cursor (timestamp + id) for stable pagination. */
-export function encodeCursor(createdAt: Date, id: string): string {
-  return Buffer.from(`${createdAt.toISOString()}|${id}`).toString('base64url');
-}
-
-export function decodeCursor(cursor: string | undefined): { createdAt: Date; id: string } | null {
-  if (!cursor) return null;
-  try {
-    const raw = Buffer.from(cursor, 'base64url').toString('utf8');
-    const [iso, id] = raw.split('|');
-    if (!iso || !id) return null;
-    const createdAt = new Date(iso);
-    if (Number.isNaN(createdAt.getTime())) return null;
-    return { createdAt, id };
-  } catch {
-    return null;
-  }
 }

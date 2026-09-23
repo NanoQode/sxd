@@ -20,16 +20,64 @@ describe('change-order approval policy matrix', () => {
   const staffOnly = { requiresCustomerApproval: false, requiresStaffApproval: true };
 
   it.each([
-    ['both required, nothing yet', both, [pending('customer'), pending('staff')], 'pending', ['customer', 'staff']],
-    ['both required, customer only', both, [approved('customer'), pending('staff')], 'pending', ['staff']],
-    ['both required, staff only', both, [pending('customer'), approved('staff')], 'pending', ['customer']],
-    ['both required, both approved', both, [approved('customer'), approved('staff')], 'approved', []],
+    [
+      'both required, nothing yet',
+      both,
+      [pending('customer'), pending('staff')],
+      'pending',
+      ['customer', 'staff'],
+    ],
+    [
+      'both required, customer only',
+      both,
+      [approved('customer'), pending('staff')],
+      'pending',
+      ['staff'],
+    ],
+    [
+      'both required, staff only',
+      both,
+      [pending('customer'), approved('staff')],
+      'pending',
+      ['customer'],
+    ],
+    [
+      'both required, both approved',
+      both,
+      [approved('customer'), approved('staff')],
+      'approved',
+      [],
+    ],
     ['customer only, customer approved', customerOnly, [approved('customer')], 'approved', []],
-    ['customer only, staff approval is not enough', customerOnly, [approved('staff')], 'pending', ['customer']],
+    [
+      'customer only, staff approval is not enough',
+      customerOnly,
+      [approved('staff')],
+      'pending',
+      ['customer'],
+    ],
     ['staff only, staff approved', staffOnly, [approved('staff')], 'approved', []],
-    ['both required, customer rejected', both, [rejected('customer'), approved('staff')], 'rejected', ['customer']],
-    ['both required, staff rejected', both, [approved('customer'), rejected('staff')], 'rejected', ['staff']],
-    ['non-required rejection is ignored', customerOnly, [approved('customer'), rejected('staff')], 'approved', []],
+    [
+      'both required, customer rejected',
+      both,
+      [rejected('customer'), approved('staff')],
+      'rejected',
+      ['customer'],
+    ],
+    [
+      'both required, staff rejected',
+      both,
+      [approved('customer'), rejected('staff')],
+      'rejected',
+      ['staff'],
+    ],
+    [
+      'non-required rejection is ignored',
+      customerOnly,
+      [approved('customer'), rejected('staff')],
+      'approved',
+      [],
+    ],
   ] as const)('%s', (_label, policy, approvals, outcome, missing) => {
     const e = evaluateApprovalPolicy(policy, [...approvals]);
     expect(e.outcome).toBe(outcome);
@@ -38,20 +86,27 @@ describe('change-order approval policy matrix', () => {
 
   it('never approves without any approval record', () => {
     expect(evaluateApprovalPolicy(both, []).outcome).toBe('pending');
-    expect(evaluateApprovalPolicy(BASELINE_BUDGET_POLICY, []).missing).toEqual(['customer', 'staff']);
+    expect(evaluateApprovalPolicy(BASELINE_BUDGET_POLICY, []).missing).toEqual([
+      'customer',
+      'staff',
+    ]);
   });
 
   it('treats a rejection as final even when a later record approves', () => {
-    const e = evaluateApprovalPolicy(both, [rejected('customer'), approved('customer'), approved('staff')]);
+    const e = evaluateApprovalPolicy(both, [
+      rejected('customer'),
+      approved('customer'),
+      approved('staff'),
+    ]);
     expect(e.outcome).toBe('rejected');
   });
 
   it('lists the required approvers and rejects an empty policy', () => {
     expect(requiredApprovers(both)).toEqual(['customer', 'staff']);
     expect(requiredApprovers(staffOnly)).toEqual(['staff']);
-    expect(validateApprovalPolicy({ requiresCustomerApproval: false, requiresStaffApproval: false })).toMatch(
-      /at least one/,
-    );
+    expect(
+      validateApprovalPolicy({ requiresCustomerApproval: false, requiresStaffApproval: false }),
+    ).toMatch(/at least one/);
     expect(validateApprovalPolicy(both)).toBeNull();
   });
 

@@ -26,6 +26,8 @@ const nextConfig: NextConfig = {
     '@simplexd/contracts',
     '@simplexd/db',
     '@simplexd/integrations',
+    '@simplexd/finance',
+    '@simplexd/notifications',
   ],
   serverExternalPackages: [
     'pg',

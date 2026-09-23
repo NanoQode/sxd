@@ -71,12 +71,14 @@ export interface GenerateAuthUrlOptions {
   code_challenge_method?: string;
   login_hint?: string;
   redirect_uri?: string;
+  /** The library's options carry a query-string index signature; keep the real client assignable. */
+  [key: string]: unknown;
 }
 
 /** Structural view of `google.auth.OAuth2` so tests can inject a stub. */
 export interface OAuthClientLike {
   credentials: OAuthCredentials;
-  generateAuthUrl(opts: GenerateAuthUrlOptions): string;
+  generateAuthUrl(opts?: GenerateAuthUrlOptions): string;
   getToken(options: {
     code: string;
     codeVerifier?: string;

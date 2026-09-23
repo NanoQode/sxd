@@ -152,14 +152,16 @@ export function isSlotAvailable(
   const end = toUtcDateTime(slot.end);
   const minutes = Math.round(end.diff(start, 'minutes').minutes);
   if (minutes <= 0) return false;
+  const startIso = start.toISO() ?? '';
+  const endIso = end.toISO() ?? '';
   const candidates = computeSlots({
     ...input,
-    from: start,
-    to: end,
+    from: startIso,
+    to: endIso,
     durationMinutes: minutes,
     stepMinutes: 1,
   });
-  return candidates.some((c) => c.start === start.toISO() && c.end === end.toISO());
+  return candidates.some((c) => c.start === startIso && c.end === endIso);
 }
 
 export interface DualZoneLabel {

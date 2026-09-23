@@ -49,7 +49,10 @@ export function ServiceCard({
         <ul className="mt-3 space-y-1 text-sm">
           {service.deliverables.slice(0, 3).map((d) => (
             <li key={d} className="flex gap-2">
-              <span aria-hidden="true" className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
+              <span
+                aria-hidden="true"
+                className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full bg-primary"
+              />
               <span>{d}</span>
             </li>
           ))}
@@ -71,7 +74,9 @@ export function ServiceCard({
           </span>
         </p>
         {!planned && pkg && pkg.publicationState === 'published' ? (
-          <p className="text-xs text-fg-subtle">Basis stated on the service page; final price by scoped quotation.</p>
+          <p className="text-xs text-fg-subtle">
+            Basis stated on the service page; final price by scoped quotation.
+          </p>
         ) : null}
         <span className="relative mt-2 inline-flex items-center gap-1 text-sm font-medium text-primary">
           {planned ? 'Register interest' : 'View service'}
@@ -84,5 +89,7 @@ export function ServiceCard({
 
 /** Position wrapper so the whole card is clickable via the title link. */
 export function ServiceCardGrid({ children }: { children: React.ReactNode }) {
-  return <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 [&>article]:relative">{children}</div>;
+  return (
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 [&>article]:relative">{children}</div>
+  );
 }

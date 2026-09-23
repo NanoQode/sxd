@@ -1,5 +1,11 @@
 import { createHash } from 'node:crypto';
-import { formatMailAddress, SmtpMailProvider, validateMailMessage, type SmtpConfigInput, type SmtpDeps } from './smtp';
+import {
+  formatMailAddress,
+  SmtpMailProvider,
+  validateMailMessage,
+  type SmtpConfigInput,
+  type SmtpDeps,
+} from './smtp';
 import type {
   MailAddress,
   MailMessage,

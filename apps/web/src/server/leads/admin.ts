@@ -17,7 +17,7 @@ import { appendOutbox, getDb, schema, withActor, type Transaction } from '@simpl
 import { recordAudit } from '@/lib/audit';
 import type { RequestIdentity } from '@/lib/auth/session';
 import { env } from '@/lib/env';
-import { decodeCursor, encodeCursor } from '@/server/portal/elevate';
+import { decodeCursor, encodeCursor } from '@/server/portal/pagination';
 import { createServiceRequestRecord } from '@/server/requests/create';
 import { toNoteDto } from '@/server/requests/queries';
 

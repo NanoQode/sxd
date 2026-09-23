@@ -47,7 +47,10 @@ const TIMESTAMP_KEYS = [
 ] as const;
 
 function hashEventIdentity(parts: Array<string | null>): string {
-  return createHash('sha256').update(parts.map((p) => p ?? '').join('|'), 'utf8').digest('hex').slice(0, 32);
+  return createHash('sha256')
+    .update(parts.map((p) => p ?? '').join('|'), 'utf8')
+    .digest('hex')
+    .slice(0, 32);
 }
 
 /**
@@ -87,8 +90,7 @@ export function parseProviderWebhookBody(
     ? (parseProviderAmount(data.refund_amount) ??
       (transaction ? parseProviderAmount(transaction.amount) : null))
     : parseProviderAmount(data.amount);
-  const currency =
-    asString(data.currency) ?? (transaction ? asString(transaction.currency) : null);
+  const currency = asString(data.currency) ?? (transaction ? asString(transaction.currency) : null);
 
   let occurredAt: string | null = null;
   for (const key of TIMESTAMP_KEYS) {

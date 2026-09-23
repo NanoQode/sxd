@@ -62,7 +62,9 @@ export function priceAnchorLabel(input: PriceAnchorInput): string | null {
         ? PRICE_REVIEW_LABEL
         : `${formatNairaString(input.amountKobo)} per month`;
     case 'from':
-      return input.amountKobo === null ? PRICE_REVIEW_LABEL : `From ${formatNairaString(input.amountKobo)}`;
+      return input.amountKobo === null
+        ? PRICE_REVIEW_LABEL
+        : `From ${formatNairaString(input.amountKobo)}`;
     case 'fixed':
       return input.amountKobo === null ? PRICE_REVIEW_LABEL : formatNairaString(input.amountKobo);
   }

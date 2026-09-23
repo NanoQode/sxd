@@ -35,7 +35,8 @@ export function validateNamedReviewer(input: {
   authorUserId: string | null;
   reviewerUserId: string | null | undefined;
 }): ReviewerCheck {
-  if (!input.reviewerUserId) return { ok: false, reason: 'a named professional reviewer is required' };
+  if (!input.reviewerUserId)
+    return { ok: false, reason: 'a named professional reviewer is required' };
   if (input.authorUserId && input.authorUserId === input.reviewerUserId) {
     return { ok: false, reason: 'the named reviewer must not be the author of the report' };
   }

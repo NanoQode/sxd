@@ -1,0 +1,31 @@
+{
+  "name": "@simplexd/notifications",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Database-backed notification delivery shared by the web app and the worker: template rendering, channel selection, consent and quiet-hour policy, provider sends, delivery attempts, suppressions and digests.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "lint": "eslint src",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@simplexd/contracts": "workspace:*",
+    "@simplexd/db": "workspace:*",
+    "@simplexd/domain": "workspace:*",
+    "@simplexd/integrations": "workspace:*",
+    "drizzle-orm": "0.45.3",
+    "luxon": "3.7.2",
+    "zod": "4.6.5"
+  },
+  "devDependencies": {
+    "@types/luxon": "3.7.5",
+    "eslint": "9.39.5",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.70.1",
+    "vitest": "5.0.1"
+  }
+}

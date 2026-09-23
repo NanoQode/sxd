@@ -138,6 +138,7 @@ describe('computeBudgetVariance', () => {
     expect(json['approvedTotalKobo']).toBe('10');
     expect(json['varianceKobo']).toBe('0');
     expect(json['pendingChangeOrderDeltaKobo']).toBe('0');
-    expect(JSON.stringify(json)).not.toContain('n"');
+    expect(Object.values(json).some((value) => typeof value === 'bigint')).toBe(false);
+    expect(() => JSON.stringify(json)).not.toThrow();
   });
 });

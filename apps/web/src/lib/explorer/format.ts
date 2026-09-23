@@ -53,3 +53,38 @@ export function formatMultiplier(value: number): string {
   const percent = Math.round((value - 1) * 100);
   return percent === 0 ? 'base' : `${percent > 0 ? '+' : ''}${percent}%`;
 }
+
+/** A comparison/metric cell value with its unit; null is "Unknown", never a number. */
+export function formatMetricValue(value: number | null, unit: string | null): string {
+  if (value === null || !Number.isFinite(value)) return 'Unknown';
+  const u = (unit ?? '').trim();
+  const lower = u.toLowerCase();
+  if (lower.startsWith('ngn') || u.startsWith('₦')) {
+    const suffix = lower.includes('/') ? ` ${u.slice(u.indexOf('/'))}` : '';
+    return `${formatWholeNaira(value)}${suffix}`;
+  }
+  if (lower === '%' || lower === 'percent') return formatPercent(value);
+  if (lower === 'days' || lower === 'day') return `${formatNumber(value, Number.isInteger(value) ? 0 : 1)} days`;
+  if (lower === 'months' || lower === 'month') return `${formatNumber(value, Number.isInteger(value) ? 0 : 1)} months`;
+  const digits = Number.isInteger(value) ? 0 : 2;
+  return u === '' ? formatNumber(value, digits) : `${formatNumber(value, digits)} ${u}`;
+}
+
+/** Plain-text paragraphs from markdown, for profiles rendered without HTML. */
+export function plainParagraphs(markdown: string | null | undefined): string[] {
+  if (!markdown) return [];
+  return markdown
+    .replace(/\r\n/g, '\n')
+    .split(/\n\s*\n/)
+    .map((block) =>
+      block
+        .replace(/!\[[^\]]*\]\([^)]*\)/g, '')
+        .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
+        .replace(/^#{1,6}\s+/gm, '')
+        .replace(/^[-*+]\s+/gm, '• ')
+        .replace(/[*_`~]+/g, '')
+        .replace(/\s*\n\s*/g, ' ')
+        .trim(),
+    )
+    .filter((p) => p !== '');
+}

@@ -14,7 +14,8 @@
     "./scanner": "./src/scanner/index.ts",
     "./maps": "./src/maps/index.ts",
     "./secrets": "./src/secrets/index.ts",
-    "./net": "./src/net/index.ts"
+    "./net": "./src/net/index.ts",
+    "./config": "./src/config/index.ts"
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json",
@@ -25,7 +26,9 @@
     "@aws-sdk/client-s3": "3.1138.0",
     "@aws-sdk/s3-request-presigner": "3.1138.0",
     "@simplexd/contracts": "workspace:*",
+    "@simplexd/db": "workspace:*",
     "@simplexd/domain": "workspace:*",
+    "drizzle-orm": "0.45.3",
     "file-type": "22.1.1",
     "googleapis": "181.0.0",
     "ics": "3.12.0",

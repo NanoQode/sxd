@@ -15,7 +15,6 @@ import { recordAudit } from '@/lib/audit';
 import type { RequestIdentity } from '@/lib/auth/session';
 import { env } from '@/lib/env';
 import { assertOrgPermission, requireActiveOrganization } from './access';
-import { elevate } from './elevate';
 
 const INVITATION_TTL_MS = 7 * 86_400_000;
 
@@ -32,10 +31,9 @@ export async function listMemberships(identity: RequestIdentity): Promise<Organi
   const userId = identity.session.user.id;
   const activeId = identity.ctx.organizationId;
   return withActor(getDb(), identity.ctx, async (tx) => {
-    // Profiles of non-active organisations are hidden by row-level security; the
-    // user's own memberships are safe to read elevated because the query is
-    // constrained to their user id.
-    await elevate(tx, identity.ctx);
+    // Organisation profiles of non-active organisations are hidden by row-level
+    // security, so their kind/ownership fall back to defaults; the switcher only
+    // needs names and roles, and the settings page shows the active organisation.
     const rows = await tx
       .select({ m: schema.member, org: schema.organization, profile: schema.organizationProfiles })
       .from(schema.member)
@@ -87,7 +85,6 @@ export async function updateActiveOrganization(
         })
         .where(eq(schema.organizationProfiles.organizationId, orgId));
     }
-    await elevate(tx, identity.ctx);
     await recordAudit(tx, identity, {
       action: 'organization.updated',
       entityType: 'organization',
@@ -201,7 +198,6 @@ export async function inviteMember(
       expiresAt,
       inviterId,
     });
-    await elevate(tx, identity.ctx);
     const inviteUrl = `${env().APP_URL}/invitations/${id}`;
     await appendOutbox(tx, {
       eventType: 'notification.requested',
@@ -273,7 +269,6 @@ export async function revokeInvitation(
       .returning({ id: schema.invitation.id, email: schema.invitation.email });
     const row = rows[0];
     if (!row) throw new ApiError('not_found', 'pending invitation not found');
-    await elevate(tx, identity.ctx);
     await recordAudit(tx, identity, {
       action: 'organization.invitation_revoked',
       entityType: 'invitation',

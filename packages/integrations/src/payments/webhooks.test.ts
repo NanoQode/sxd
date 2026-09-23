@@ -84,7 +84,9 @@ describe('deriveDedupeKey', () => {
     expect(pending).toBe(replayed);
     const processedLater = deriveDedupeKey(
       parseProviderWebhookBody(
-        pendingText.replace('"refund.pending"', '"refund.processed"').replace('"pending"', '"processed"'),
+        pendingText
+          .replace('"refund.pending"', '"refund.processed"')
+          .replace('"pending"', '"processed"'),
         'paystack',
       ),
     );
@@ -106,25 +108,40 @@ describe('planWebhookActions', () => {
   const none: ExistingRecords = { attemptStatus: null, alreadyAllocated: false };
 
   it('never settles directly: charge.success asks for a server verify', () => {
-    expect(planWebhookActions(chargeSuccess, { attemptStatus: 'pending', alreadyAllocated: false })).toEqual([
-      { kind: 'verify_and_settle', reference: 'qTPrJoy9Bx' },
-    ]);
     expect(
-      planWebhookActions(chargeSuccess, { attemptStatus: 'initialized', alreadyAllocated: false })[0]!.kind,
+      planWebhookActions(chargeSuccess, { attemptStatus: 'pending', alreadyAllocated: false }),
+    ).toEqual([{ kind: 'verify_and_settle', reference: 'qTPrJoy9Bx' }]);
+    expect(
+      planWebhookActions(chargeSuccess, {
+        attemptStatus: 'initialized',
+        alreadyAllocated: false,
+      })[0]!.kind,
     ).toBe('verify_and_settle');
   });
 
   it('ignores replays for already-allocated or successful attempts', () => {
-    expect(planWebhookActions(chargeSuccess, { attemptStatus: 'pending', alreadyAllocated: true })[0]!.kind).toBe('ignore');
-    expect(planWebhookActions(chargeSuccess, { attemptStatus: 'successful', alreadyAllocated: true })[0]!.kind).toBe('ignore');
-    expect(planWebhookActions(chargeSuccess, { attemptStatus: 'successful', alreadyAllocated: false })[0]!.kind).toBe('ignore');
+    expect(
+      planWebhookActions(chargeSuccess, { attemptStatus: 'pending', alreadyAllocated: true })[0]!
+        .kind,
+    ).toBe('ignore');
+    expect(
+      planWebhookActions(chargeSuccess, { attemptStatus: 'successful', alreadyAllocated: true })[0]!
+        .kind,
+    ).toBe('ignore');
+    expect(
+      planWebhookActions(chargeSuccess, {
+        attemptStatus: 'successful',
+        alreadyAllocated: false,
+      })[0]!.kind,
+    ).toBe('ignore');
   });
 
   it('flags unknown references and status conflicts for reconciliation', () => {
     expect(planWebhookActions(chargeSuccess, none)[0]!.kind).toBe('flag_for_reconciliation');
-    expect(planWebhookActions(chargeSuccess, { attemptStatus: 'abandoned', alreadyAllocated: false })[0]!.kind).toBe(
-      'flag_for_reconciliation',
-    );
+    expect(
+      planWebhookActions(chargeSuccess, { attemptStatus: 'abandoned', alreadyAllocated: false })[0]!
+        .kind,
+    ).toBe('flag_for_reconciliation');
     const noReference = { ...chargeSuccess, reference: null };
     expect(planWebhookActions(noReference, none)[0]!.kind).toBe('flag_for_reconciliation');
   });
@@ -136,7 +153,12 @@ describe('planWebhookActions', () => {
 
     const settle = planWebhookActions(processed, { ...none, refundStatus: 'pending' });
     expect(settle).toEqual([
-      expect.objectContaining({ kind: 'update_refund', providerStatus: 'processed', targetStatus: 'settled', needsAttention: false }),
+      expect.objectContaining({
+        kind: 'update_refund',
+        providerStatus: 'processed',
+        targetStatus: 'settled',
+        needsAttention: false,
+      }),
     ]);
     expect(planWebhookActions(processed, { ...none, refundStatus: 'submitted' })[0]).toMatchObject({
       kind: 'update_refund',
@@ -151,12 +173,20 @@ describe('planWebhookActions', () => {
       { kind: 'ignore', reason: 'stale refund.pending: refund already settled' },
     ]);
     // replay of the current state
-    expect(planWebhookActions(pending, { ...none, refundStatus: 'pending' })[0]!.kind).toBe('ignore');
+    expect(planWebhookActions(pending, { ...none, refundStatus: 'pending' })[0]!.kind).toBe(
+      'ignore',
+    );
     // provider says processed after we recorded failed: conflict, human review
-    expect(planWebhookActions(processed, { ...none, refundStatus: 'failed' })[0]!.kind).toBe('flag_for_reconciliation');
+    expect(planWebhookActions(processed, { ...none, refundStatus: 'failed' })[0]!.kind).toBe(
+      'flag_for_reconciliation',
+    );
     // provider refund we never submitted
-    expect(planWebhookActions(pending, { ...none, refundStatus: 'approved' })[0]!.kind).toBe('flag_for_reconciliation');
-    expect(planWebhookActions(pending, { ...none, refundStatus: null })[0]!.kind).toBe('flag_for_reconciliation');
+    expect(planWebhookActions(pending, { ...none, refundStatus: 'approved' })[0]!.kind).toBe(
+      'flag_for_reconciliation',
+    );
+    expect(planWebhookActions(pending, { ...none, refundStatus: null })[0]!.kind).toBe(
+      'flag_for_reconciliation',
+    );
     expect(planWebhookActions(failed, { ...none, refundStatus: 'pending' })[0]).toMatchObject({
       kind: 'update_refund',
       targetStatus: 'failed',
@@ -174,7 +204,10 @@ describe('planWebhookActions', () => {
 
   it('opens a chargeback once and routes reminders and resolutions', () => {
     const dispute = parse('dispute-create.json');
-    const opened = planWebhookActions(dispute, { attemptStatus: 'successful', alreadyAllocated: true });
+    const opened = planWebhookActions(dispute, {
+      attemptStatus: 'successful',
+      alreadyAllocated: true,
+    });
     expect(opened).toEqual([
       {
         kind: 'open_chargeback',
@@ -186,36 +219,68 @@ describe('planWebhookActions', () => {
       },
     ]);
     expect(
-      planWebhookActions(dispute, { attemptStatus: 'successful', alreadyAllocated: true, chargebackStatus: 'opened' })[0]!.kind,
+      planWebhookActions(dispute, {
+        attemptStatus: 'successful',
+        alreadyAllocated: true,
+        chargebackStatus: 'opened',
+      })[0]!.kind,
     ).toBe('ignore');
     expect(planWebhookActions(dispute, none)[0]!.kind).toBe('flag_for_reconciliation');
 
     const remind = { ...dispute, eventType: 'charge.dispute.remind' };
-    expect(planWebhookActions(remind, { attemptStatus: 'successful', alreadyAllocated: true, chargebackStatus: 'opened' })[0]!.kind).toBe(
-      'chargeback_reminder',
-    );
+    expect(
+      planWebhookActions(remind, {
+        attemptStatus: 'successful',
+        alreadyAllocated: true,
+        chargebackStatus: 'opened',
+      })[0]!.kind,
+    ).toBe('chargeback_reminder');
     const resolve = {
       ...dispute,
       eventType: 'charge.dispute.resolve',
       payload: { ...dispute.payload, resolution: 'merchant-accepted' },
     };
     expect(
-      planWebhookActions(resolve, { attemptStatus: 'successful', alreadyAllocated: true, chargebackStatus: 'evidence_submitted' }),
-    ).toEqual([{ kind: 'resolve_chargeback', reference: 'qTPrJoy9Bx', providerDisputeId: '3867', resolution: 'lost' }]);
+      planWebhookActions(resolve, {
+        attemptStatus: 'successful',
+        alreadyAllocated: true,
+        chargebackStatus: 'evidence_submitted',
+      }),
+    ).toEqual([
+      {
+        kind: 'resolve_chargeback',
+        reference: 'qTPrJoy9Bx',
+        providerDisputeId: '3867',
+        resolution: 'lost',
+      },
+    ]);
     expect(
-      planWebhookActions(resolve, { attemptStatus: 'successful', alreadyAllocated: true, chargebackStatus: 'won' })[0]!.kind,
+      planWebhookActions(resolve, {
+        attemptStatus: 'successful',
+        alreadyAllocated: true,
+        chargebackStatus: 'won',
+      })[0]!.kind,
     ).toBe('ignore');
-    const unknownResolution = { ...resolve, payload: { ...dispute.payload, resolution: 'something-new' } };
+    const unknownResolution = {
+      ...resolve,
+      payload: { ...dispute.payload, resolution: 'something-new' },
+    };
     expect(
-      planWebhookActions(unknownResolution, { attemptStatus: 'successful', alreadyAllocated: true, chargebackStatus: 'opened' })[0],
+      planWebhookActions(unknownResolution, {
+        attemptStatus: 'successful',
+        alreadyAllocated: true,
+        chargebackStatus: 'opened',
+      })[0],
     ).toMatchObject({ resolution: 'unknown' });
   });
 
   it('records but does not act on transfers and unknown events', () => {
     expect(planWebhookActions(parse('transfer-success.json'), none)[0]!.kind).toBe('ignore');
-    expect(planWebhookActions({ ...chargeSuccess, eventType: 'subscription.create' }, none)[0]!.kind).toBe('ignore');
-    expect(planWebhookActions({ ...chargeSuccess, eventType: 'bank.transfer.rejected' }, none)[0]!.kind).toBe(
-      'flag_for_reconciliation',
-    );
+    expect(
+      planWebhookActions({ ...chargeSuccess, eventType: 'subscription.create' }, none)[0]!.kind,
+    ).toBe('ignore');
+    expect(
+      planWebhookActions({ ...chargeSuccess, eventType: 'bank.transfer.rejected' }, none)[0]!.kind,
+    ).toBe('flag_for_reconciliation');
   });
 });

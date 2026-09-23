@@ -150,7 +150,12 @@ function planRefund(event: ParsedProviderEvent, existing: ExistingRecords): Webh
     if (REFUND_RANK[targetStatus] < REFUND_RANK[current]) {
       return [ignore(`stale ${event.eventType}: refund already ${current}`)];
     }
-    return [flag(event.reference, `${event.eventType} conflicts with refund status ${current}: ${transition.message}`)];
+    return [
+      flag(
+        event.reference,
+        `${event.eventType} conflicts with refund status ${current}: ${transition.message}`,
+      ),
+    ];
   }
   const actions: WebhookAction[] = [
     {
@@ -164,7 +169,9 @@ function planRefund(event: ParsedProviderEvent, existing: ExistingRecords): Webh
     },
   ];
   if (needsAttention) {
-    actions.push(flag(event.reference, 'provider refund needs attention (customer bank details required)'));
+    actions.push(
+      flag(event.reference, 'provider refund needs attention (customer bank details required)'),
+    );
   }
   return actions;
 }
@@ -249,7 +256,9 @@ export function planWebhookActions(
     ];
   }
   if (type === 'bank.transfer.rejected') {
-    return [flag(event.reference, 'bank transfer rejected by the bank; review the related attempt')];
+    return [
+      flag(event.reference, 'bank transfer rejected by the bank; review the related attempt'),
+    ];
   }
   return [ignore(`unhandled event type ${type}`)];
 }

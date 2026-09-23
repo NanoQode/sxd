@@ -101,7 +101,10 @@ async function loadListings(): Promise<PublicListing[]> {
       titleDisclosure: r.revision.titleDisclosure,
       availability: r.revision.availability,
       verification: scope
-        ? { checks: Array.isArray(scope.checks) ? scope.checks : [], summary: scope.summary ?? null }
+        ? {
+            checks: Array.isArray(scope.checks) ? scope.checks : [],
+            summary: scope.summary ?? null,
+          }
         : null,
       publicLocationPrecision: r.revision.publicLocationPrecision,
       propertyKind: r.propertyKind,
@@ -116,9 +119,13 @@ async function loadListings(): Promise<PublicListing[]> {
   });
 }
 
-const loadAll = cache(async (): Promise<PublicListing[]> => cached('listings:public:v1', 60, loadListings));
+const loadAll = cache(async (): Promise<PublicListing[]> =>
+  cached('listings:public:v1', 60, loadListings),
+);
 
-export async function listPublishedListings(filters: ListingFilters = {}): Promise<PublicListing[]> {
+export async function listPublishedListings(
+  filters: ListingFilters = {},
+): Promise<PublicListing[]> {
   const all = await loadAll();
   return all.filter(
     (l) =>

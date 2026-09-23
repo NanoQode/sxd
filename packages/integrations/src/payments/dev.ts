@@ -111,7 +111,9 @@ export class DevPaymentProvider implements PaymentProvider {
   constructor(options: DevPaymentProviderOptions) {
     const appEnv = options.appEnv ?? process.env.APP_ENV;
     if (appEnv === 'production') {
-      throw new Error('DevPaymentProvider is a development adapter and cannot run when APP_ENV=production');
+      throw new Error(
+        'DevPaymentProvider is a development adapter and cannot run when APP_ENV=production',
+      );
     }
     if (options.environment === 'live') {
       throw new Error('DevPaymentProvider cannot be constructed for the live environment');
@@ -161,7 +163,11 @@ export class DevPaymentProvider implements PaymentProvider {
    * Chooses the outcome `verify()` will report. Overrides let tests simulate a
    * provider reporting a different amount or currency than the attempt.
    */
-  simulate(reference: string, outcome: DevOutcome, overrides: DevSimulationOverrides = {}): VerifyResult {
+  simulate(
+    reference: string,
+    outcome: DevOutcome,
+    overrides: DevSimulationOverrides = {},
+  ): VerifyResult {
     const attempt = this.attempts.get(reference);
     if (!attempt) {
       throw new ProviderError('not_found', 'Transaction reference not found', { httpStatus: 404 });
@@ -175,7 +181,9 @@ export class DevPaymentProvider implements PaymentProvider {
     attempt.paidAt = outcome === 'success' ? this.now().toISOString() : null;
     if (outcome === 'success') {
       attempt.feesKobo =
-        overrides.feesKobo === undefined ? simulatedFees(overrides.amountKobo ?? attempt.amountKobo) : overrides.feesKobo;
+        overrides.feesKobo === undefined
+          ? simulatedFees(overrides.amountKobo ?? attempt.amountKobo)
+          : overrides.feesKobo;
     } else {
       attempt.feesKobo = null;
     }
@@ -205,7 +213,10 @@ export class DevPaymentProvider implements PaymentProvider {
   async createRefund(input: CreateRefundInput): Promise<RefundResult> {
     const reference = asString(input.providerReference) ?? asString(input.reference);
     if (!reference) {
-      throw new ProviderError('invalid_request', 'a provider reference or attempt reference is required');
+      throw new ProviderError(
+        'invalid_request',
+        'a provider reference or attempt reference is required',
+      );
     }
     if (!asString(input.idempotencyKey)) {
       throw new ProviderError('invalid_request', 'an idempotency key is required for refunds');
@@ -218,16 +229,24 @@ export class DevPaymentProvider implements PaymentProvider {
       throw new ProviderError('not_found', 'Transaction reference not found', { httpStatus: 404 });
     }
     if (attempt.status !== 'success') {
-      throw new ProviderError('invalid_request', 'Transaction was not successful; nothing to refund', {
-        httpStatus: 400,
-      });
+      throw new ProviderError(
+        'invalid_request',
+        'Transaction was not successful; nothing to refund',
+        {
+          httpStatus: 400,
+        },
+      );
     }
     const amountKobo = input.amountKobo ?? attempt.amountKobo;
     amountToProviderInteger(amountKobo);
     if (amountKobo > attempt.amountKobo) {
-      throw new ProviderError('invalid_request', 'Refund amount cannot be more than the original transaction amount', {
-        httpStatus: 400,
-      });
+      throw new ProviderError(
+        'invalid_request',
+        'Refund amount cannot be more than the original transaction amount',
+        {
+          httpStatus: 400,
+        },
+      );
     }
     this.refundCounter += 1;
     const refund: DevRefund = {

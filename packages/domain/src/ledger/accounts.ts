@@ -70,7 +70,12 @@ export const CHART_OF_ACCOUNTS: readonly AccountDefinition[] = [
   },
   { code: '2200', name: 'Refunds payable', type: 'liability', normalBalance: 'credit' },
   { code: '2300', name: 'Tax and withholding payable', type: 'liability', normalBalance: 'credit' },
-  { code: '2400', name: 'Partner and supplier payables', type: 'liability', normalBalance: 'credit' },
+  {
+    code: '2400',
+    name: 'Partner and supplier payables',
+    type: 'liability',
+    normalBalance: 'credit',
+  },
   { code: '2500', name: 'Chargebacks pending', type: 'liability', normalBalance: 'credit' },
   { code: '3000', name: 'Retained earnings', type: 'equity', normalBalance: 'credit' },
   { code: '4000', name: 'Service revenue', type: 'revenue', normalBalance: 'credit' },
@@ -81,7 +86,12 @@ export const CHART_OF_ACCOUNTS: readonly AccountDefinition[] = [
     type: 'revenue',
     normalBalance: 'credit',
   },
-  { code: '4300', name: 'Referral and placement revenue', type: 'revenue', normalBalance: 'credit' },
+  {
+    code: '4300',
+    name: 'Referral and placement revenue',
+    type: 'revenue',
+    normalBalance: 'credit',
+  },
   { code: '5000', name: 'Gateway fees', type: 'expense', normalBalance: 'debit' },
   { code: '5100', name: 'Refund and chargeback losses', type: 'expense', normalBalance: 'debit' },
   {

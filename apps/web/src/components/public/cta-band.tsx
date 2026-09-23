@@ -24,7 +24,10 @@ export function CtaBand({
           </div>
           <div className="flex flex-wrap gap-2">
             {secondary ? (
-              <Link href={secondary.href} className={cn(buttonVariants({ variant: 'secondary', size: 'lg' }))}>
+              <Link
+                href={secondary.href}
+                className={cn(buttonVariants({ variant: 'secondary', size: 'lg' }))}
+              >
                 {secondary.label}
               </Link>
             ) : null}

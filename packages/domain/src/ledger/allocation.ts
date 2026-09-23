@@ -44,12 +44,23 @@ export function invoiceBalance(invoice: InvoiceForAllocation): Kobo {
   return balance > 0n ? balance : 0n;
 }
 
-const ALLOCATABLE: ReadonlySet<InvoiceState> = new Set(['issued', 'overdue', 'partially_paid', 'paid']);
+const ALLOCATABLE: ReadonlySet<InvoiceState> = new Set([
+  'issued',
+  'overdue',
+  'partially_paid',
+  'paid',
+]);
 
-export function planAllocation(input: { invoice: InvoiceForAllocation; amountKobo: Kobo }): AllocationPlan {
+export function planAllocation(input: {
+  invoice: InvoiceForAllocation;
+  amountKobo: Kobo;
+}): AllocationPlan {
   const { invoice, amountKobo } = input;
   if (typeof amountKobo !== 'bigint' || amountKobo <= 0n) {
-    throw new AllocationError('invalid_amount', `allocation amount must be positive kobo, received ${String(amountKobo)}`);
+    throw new AllocationError(
+      'invalid_amount',
+      `allocation amount must be positive kobo, received ${String(amountKobo)}`,
+    );
   }
   if (!ALLOCATABLE.has(invoice.status)) {
     throw new AllocationError(
@@ -62,7 +73,8 @@ export function planAllocation(input: { invoice: InvoiceForAllocation; amountKob
   const overpaymentKobo = amountKobo - allocatedKobo;
   const newAmountPaidKobo = invoice.amountPaidKobo + allocatedKobo;
   const remainingBalanceKobo = balance - allocatedKobo;
-  const newStatus: 'partially_paid' | 'paid' = remainingBalanceKobo === 0n ? 'paid' : 'partially_paid';
+  const newStatus: 'partially_paid' | 'paid' =
+    remainingBalanceKobo === 0n ? 'paid' : 'partially_paid';
 
   if (invoice.status !== newStatus) {
     const transition = evaluateTransition(invoiceMachine, {
@@ -99,20 +111,37 @@ export function planCreditNoteApplication(input: {
 }): CreditPlan {
   const { invoice, amountKobo } = input;
   if (typeof amountKobo !== 'bigint' || amountKobo <= 0n) {
-    throw new AllocationError('invalid_amount', `credit amount must be positive kobo, received ${String(amountKobo)}`);
+    throw new AllocationError(
+      'invalid_amount',
+      `credit amount must be positive kobo, received ${String(amountKobo)}`,
+    );
   }
   if (!ALLOCATABLE.has(invoice.status) || invoice.status === 'paid') {
-    throw new AllocationError('invoice_not_open', `invoice in status ${invoice.status} cannot be credited`);
+    throw new AllocationError(
+      'invoice_not_open',
+      `invoice in status ${invoice.status} cannot be credited`,
+    );
   }
   const balance = invoiceBalance(invoice);
   if (amountKobo > balance) {
-    throw new AllocationError('invalid_amount', `credit ${amountKobo} exceeds the invoice balance ${balance}`);
+    throw new AllocationError(
+      'invalid_amount',
+      `credit ${amountKobo} exceeds the invoice balance ${balance}`,
+    );
   }
   const remainingBalanceKobo = balance - amountKobo;
   const newStatus: InvoiceState =
-    remainingBalanceKobo === 0n ? 'paid' : invoice.amountPaidKobo > 0n ? 'partially_paid' : invoice.status;
+    remainingBalanceKobo === 0n
+      ? 'paid'
+      : invoice.amountPaidKobo > 0n
+        ? 'partially_paid'
+        : invoice.status;
   if (invoice.status !== newStatus) {
-    const transition = evaluateTransition(invoiceMachine, { from: invoice.status, to: newStatus, actor: 'system' });
+    const transition = evaluateTransition(invoiceMachine, {
+      from: invoice.status,
+      to: newStatus,
+      actor: 'system',
+    });
     if (!transition.ok) throw new AllocationError('invalid_transition', transition.message);
   }
   return {

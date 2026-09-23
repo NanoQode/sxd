@@ -92,7 +92,8 @@ export interface TermiiDeps {
   now?: () => Date;
 }
 
-export type TermiiErrorCode = 'config' | 'destination' | 'network' | 'timeout' | 'http' | 'response';
+export type TermiiErrorCode =
+  'config' | 'destination' | 'network' | 'timeout' | 'http' | 'response';
 
 export class TermiiError extends Error {
   constructor(
@@ -163,7 +164,10 @@ function printable(text: string): string {
 }
 
 /** Removes secrets and `api_key=` fragments from any provider text before it is stored or shown. */
-export function sanitizeTermiiText(text: string, secrets: Array<string | null | undefined>): string {
+export function sanitizeTermiiText(
+  text: string,
+  secrets: Array<string | null | undefined>,
+): string {
   let out = text;
   for (const secret of secrets) {
     if (!secret || secret.length < 4) continue;
@@ -206,7 +210,8 @@ export function normalizeSenderIdStatus(raw: string | null | undefined): SenderI
   if (['active', 'unblock', 'unblocked', 'approved', 'verified', 'enabled'].includes(text)) {
     return 'approved';
   }
-  if (['pending', 'review', 'in review', 'processing', 'submitted'].includes(text)) return 'pending';
+  if (['pending', 'review', 'in review', 'processing', 'submitted'].includes(text))
+    return 'pending';
   if (['block', 'blocked', 'rejected', 'declined', 'disabled', 'suspended'].includes(text)) {
     return 'blocked';
   }
@@ -372,7 +377,10 @@ export function validateTermiiBaseUrl(baseUrl: string, allowedHosts: string[]): 
     throw new TermiiError('config', 'Termii base URL must not contain a query string or fragment');
   }
   if (!hostAllowed(url.hostname, allowedHosts)) {
-    throw new TermiiError('config', `Termii base URL host ${url.hostname} is not in the allow-list`);
+    throw new TermiiError(
+      'config',
+      `Termii base URL host ${url.hostname} is not in the allow-list`,
+    );
   }
   return `${url.origin}${url.pathname.replace(/\/+$/, '')}`;
 }
@@ -731,7 +739,11 @@ export class TermiiSmsProvider implements SmsProvider {
 
   async requestSenderId(input: SenderIdRequestInput): Promise<SenderIdRequestResult> {
     if (!TERMII_SENDER_ID_PATTERN.test(input.senderId)) {
-      return { ok: false, message: null, errorSanitized: 'sender ID must be 3–11 letters or digits' };
+      return {
+        ok: false,
+        message: null,
+        errorSanitized: 'sender ID must be 3–11 letters or digits',
+      };
     }
     try {
       const res = await this.request('POST', '/api/sender-id/request', {
@@ -903,7 +915,8 @@ export class TermiiSmsProvider implements SmsProvider {
           pin_time_to_live: input.ttlMinutes ?? 10,
           pin_length: input.pinLength ?? 6,
           pin_placeholder: placeholder,
-          message_text: input.messageText ?? `Your SimplexD code is ${placeholder}. Never share it.`,
+          message_text:
+            input.messageText ?? `Your SimplexD code is ${placeholder}. Never share it.`,
           pin_type: 'NUMERIC',
         },
       });
@@ -930,7 +943,10 @@ export class TermiiSmsProvider implements SmsProvider {
       });
       const rec = asRecord(res.body);
       const verified = rec?.verified;
-      if (verified === true || (typeof verified === 'string' && verified.toLowerCase() === 'true')) {
+      if (
+        verified === true ||
+        (typeof verified === 'string' && verified.toLowerCase() === 'true')
+      ) {
         return { ok: true, status: 'verified' };
       }
       if (typeof verified === 'string' && verified.toLowerCase() === 'expired') {

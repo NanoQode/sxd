@@ -112,5 +112,8 @@ export function estimateMessageCost(
   recipients = 1,
 ): SegmentEstimate & CostEstimate {
   const estimate = analyzeSegments(body);
-  return { ...estimate, ...estimateCost({ segments: estimate.segments, unitCostKobo, recipients }) };
+  return {
+    ...estimate,
+    ...estimateCost({ segments: estimate.segments, unitCostKobo, recipients }),
+  };
 }

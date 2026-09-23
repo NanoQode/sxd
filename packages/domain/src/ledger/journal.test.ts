@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { ACCOUNTS, CHART_OF_ACCOUNTS, accountDefinition, isAccountCode, isRevenueAccount } from './accounts';
+import {
+  ACCOUNTS,
+  CHART_OF_ACCOUNTS,
+  accountDefinition,
+  isAccountCode,
+  isRevenueAccount,
+} from './accounts';
 import {
   JournalError,
   assertBalanced,
@@ -29,8 +35,26 @@ const settled: JournalDraft = {
 describe('chart of accounts', () => {
   it('matches the seeded chart codes and classifies revenue accounts', () => {
     expect(CHART_OF_ACCOUNTS.map((a) => a.code)).toEqual([
-      '1000', '1100', '1200', '1300', '1400', '2000', '2100', '2200', '2300', '2400', '2500', '3000',
-      '4000', '4100', '4200', '4300', '5000', '5100', '5200', '5300',
+      '1000',
+      '1100',
+      '1200',
+      '1300',
+      '1400',
+      '2000',
+      '2100',
+      '2200',
+      '2300',
+      '2400',
+      '2500',
+      '3000',
+      '4000',
+      '4100',
+      '4200',
+      '4300',
+      '5000',
+      '5100',
+      '5200',
+      '5300',
     ]);
     expect(isAccountCode('2100')).toBe(true);
     expect(isAccountCode('9999')).toBe(false);
@@ -42,16 +66,25 @@ describe('chart of accounts', () => {
 
 describe('assertBalanced', () => {
   it('accepts a balanced draft and reports totals', () => {
-    expect(assertBalanced(settled)).toEqual({ debitKobo: 100_000n, creditKobo: 100_000n, lineCount: 2 });
+    expect(assertBalanced(settled)).toEqual({
+      debitKobo: 100_000n,
+      creditKobo: 100_000n,
+      lineCount: 2,
+    });
     expect(isBalanced(settled)).toBe(true);
   });
 
   it('throws with detail when debits and credits differ', () => {
     const unbalanced: JournalDraft = {
       ...settled,
-      lines: [debit(ACCOUNTS.GATEWAY_CLEARING, 100_000n), credit(ACCOUNTS.CUSTOMER_RECEIVABLES, 99_000n)],
+      lines: [
+        debit(ACCOUNTS.GATEWAY_CLEARING, 100_000n),
+        credit(ACCOUNTS.CUSTOMER_RECEIVABLES, 99_000n),
+      ],
     };
-    expect(() => assertBalanced(unbalanced)).toThrow(/not balanced: debits 100000 ≠ credits 99000 \(difference 1000\)/);
+    expect(() => assertBalanced(unbalanced)).toThrow(
+      /not balanced: debits 100000 ≠ credits 99000 \(difference 1000\)/,
+    );
     try {
       assertBalanced(unbalanced);
     } catch (error) {
@@ -62,7 +95,9 @@ describe('assertBalanced', () => {
   });
 
   it('rejects malformed lines, accounts, currency and references', () => {
-    expect(() => assertBalanced({ ...settled, lines: [settled.lines[0]!] })).toThrow(/at least two lines/);
+    expect(() => assertBalanced({ ...settled, lines: [settled.lines[0]!] })).toThrow(
+      /at least two lines/,
+    );
     expect(() =>
       assertBalanced({
         ...settled,
@@ -73,15 +108,24 @@ describe('assertBalanced', () => {
       }),
     ).toThrow(/exactly one of debit or credit/);
     expect(() =>
-      assertBalanced({ ...settled, lines: [debit(ACCOUNTS.BANK, 0n), credit(ACCOUNTS.CUSTOMER_RECEIVABLES, 0n)] }),
-    ).toThrow(/positive integer kobo/);
-    expect(() =>
-      assertBalanced({ ...settled, lines: [debit(ACCOUNTS.BANK, -5n), credit(ACCOUNTS.CUSTOMER_RECEIVABLES, -5n)] }),
+      assertBalanced({
+        ...settled,
+        lines: [debit(ACCOUNTS.BANK, 0n), credit(ACCOUNTS.CUSTOMER_RECEIVABLES, 0n)],
+      }),
     ).toThrow(/positive integer kobo/);
     expect(() =>
       assertBalanced({
         ...settled,
-        lines: [debit('7777' as typeof ACCOUNTS.BANK, 5n), credit(ACCOUNTS.CUSTOMER_RECEIVABLES, 5n)],
+        lines: [debit(ACCOUNTS.BANK, -5n), credit(ACCOUNTS.CUSTOMER_RECEIVABLES, -5n)],
+      }),
+    ).toThrow(/positive integer kobo/);
+    expect(() =>
+      assertBalanced({
+        ...settled,
+        lines: [
+          debit('7777' as typeof ACCOUNTS.BANK, 5n),
+          credit(ACCOUNTS.CUSTOMER_RECEIVABLES, 5n),
+        ],
       }),
     ).toThrow(/unknown account 7777/);
     expect(() => assertBalanced({ ...settled, currency: 'naira' })).toThrow(/three-letter/);
@@ -99,17 +143,31 @@ describe('reverse', () => {
     expect(reversal.sourceId).toBe('pa-1');
     expect(reversal.organizationId).toBe('org-1');
     expect(reversal.lines).toEqual([
-      { accountCode: ACCOUNTS.GATEWAY_CLEARING, creditKobo: 100_000n, entityType: 'payment_attempt', entityId: 'pa-1' },
-      { accountCode: ACCOUNTS.CUSTOMER_RECEIVABLES, debitKobo: 100_000n, entityType: 'invoice', entityId: 'inv-1' },
+      {
+        accountCode: ACCOUNTS.GATEWAY_CLEARING,
+        creditKobo: 100_000n,
+        entityType: 'payment_attempt',
+        entityId: 'pa-1',
+      },
+      {
+        accountCode: ACCOUNTS.CUSTOMER_RECEIVABLES,
+        debitKobo: 100_000n,
+        entityType: 'invoice',
+        entityId: 'inv-1',
+      },
     ]);
     expect(journalTotals(reversal)).toEqual(journalTotals(settled));
-    expect(netForAccount(reversal, ACCOUNTS.GATEWAY_CLEARING)).toBe(-netForAccount(settled, ACCOUNTS.GATEWAY_CLEARING));
+    expect(netForAccount(reversal, ACCOUNTS.GATEWAY_CLEARING)).toBe(
+      -netForAccount(settled, ACCOUNTS.GATEWAY_CLEARING),
+    );
     // the original draft is untouched
     expect(settled.lines[0]!.debitKobo).toBe(100_000n);
   });
 
   it('requires a new reference and a reason', () => {
-    expect(() => reverse(settled, settled.businessEventRef, 'oops')).toThrow(/different businessEventRef/);
+    expect(() => reverse(settled, settled.businessEventRef, 'oops')).toThrow(
+      /different businessEventRef/,
+    );
     expect(() => reverse(settled, 'x', '')).toThrow(/reason/);
   });
 });
@@ -120,7 +178,10 @@ describe('balance effects', () => {
     expect(balanceEffect(settled, ACCOUNTS.CUSTOMER_RECEIVABLES)).toBe(-100_000n);
     const liability: JournalDraft = {
       ...settled,
-      lines: [debit(ACCOUNTS.RENT_RECEIVABLE_ON_BEHALF_OF_OWNERS, 1n), credit(ACCOUNTS.RENT_COLLECTED_PAYABLE_TO_OWNERS, 1n)],
+      lines: [
+        debit(ACCOUNTS.RENT_RECEIVABLE_ON_BEHALF_OF_OWNERS, 1n),
+        credit(ACCOUNTS.RENT_COLLECTED_PAYABLE_TO_OWNERS, 1n),
+      ],
     };
     expect(balanceEffect(liability, ACCOUNTS.RENT_COLLECTED_PAYABLE_TO_OWNERS)).toBe(1n);
   });

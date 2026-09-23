@@ -26,7 +26,6 @@ import {
   scenarioUpdateSchema,
 } from '@simplexd/contracts';
 import {
-  applyActorContext,
   getDb,
   schema,
   withActor,
@@ -115,24 +114,6 @@ async function loadScenario(tx: DbExecutor, id: string): Promise<ScenarioRow> {
   return row;
 }
 
-/**
- * Audit and outbox tables are privileged-only. After the row-level-security
- * checked business write, the transaction is elevated just for the append,
- * then restored, so the append stays atomic with the change.
- */
-async function withPrivilegedAppend<T>(
-  tx: Transaction,
-  ctx: ActorContext,
-  fn: () => Promise<T>,
-): Promise<T> {
-  await applyActorContext(tx, { ...ctx, bypass: true });
-  try {
-    return await fn();
-  } finally {
-    await applyActorContext(tx, ctx);
-  }
-}
-
 function requireUser(identity: RequestIdentity, message: string): string {
   const userId = identity.ctx.userId;
   if (!userId) throw new ApiError('unauthenticated', message);
@@ -218,15 +199,13 @@ export async function createScenario(
       })
       .returning();
     if (!row) throw new ApiError('internal_error', 'scenario was not created');
-    await withPrivilegedAppend(tx, identity.ctx, () =>
-      recordAudit(tx, identity, {
-        action: 'scenario.created',
-        entityType: 'scenario',
-        entityId: row.id,
-        after: { name: row.name, objective: row.objective, mode: row.mode, anonymous: !userId },
-        correlationId,
-      }),
-    );
+    await recordAudit(tx, identity, {
+      action: 'scenario.created',
+      entityType: 'scenario',
+      entityId: row.id,
+      after: { name: row.name, objective: row.objective, mode: row.mode, anonymous: !userId },
+      correlationId,
+    });
     return toScenarioDto(row);
   });
 }
@@ -348,15 +327,13 @@ export async function deleteScenario(
       .update(schema.scenarios)
       .set({ expiresAt: new Date(), shareToken: null, shareExpiresAt: null })
       .where(eq(schema.scenarios.id, current.id));
-    await withPrivilegedAppend(tx, identity.ctx, () =>
-      recordAudit(tx, identity, {
-        action: 'scenario.deleted',
-        entityType: 'scenario',
-        entityId: current.id,
-        before: { name: current.name },
-        correlationId,
-      }),
-    );
+    await recordAudit(tx, identity, {
+      action: 'scenario.deleted',
+      entityType: 'scenario',
+      entityId: current.id,
+      before: { name: current.name },
+      correlationId,
+    });
   });
 }
 
@@ -390,16 +367,14 @@ export async function claimScenario(
       .where(eq(schema.scenarios.id, current.id))
       .returning();
     if (!row) throw new ApiError('not_found', 'scenario not found or not accessible');
-    await withPrivilegedAppend(tx, identity.ctx, () =>
-      recordAudit(tx, identity, {
-        action: 'scenario.claimed',
-        entityType: 'scenario',
-        entityId: row.id,
-        before: { anonymous: true },
-        after: { ownerUserId: userId, organizationId: identity.ctx.organizationId },
-        correlationId,
-      }),
-    );
+    await recordAudit(tx, identity, {
+      action: 'scenario.claimed',
+      entityType: 'scenario',
+      entityId: row.id,
+      before: { anonymous: true },
+      after: { ownerUserId: userId, organizationId: identity.ctx.organizationId },
+      correlationId,
+    });
     return toScenarioDto(row);
   });
 }
@@ -420,15 +395,13 @@ export async function shareScenario(
       .update(schema.scenarios)
       .set({ shareToken, shareExpiresAt, updatedAt: new Date() })
       .where(eq(schema.scenarios.id, current.id));
-    await withPrivilegedAppend(tx, identity.ctx, () =>
-      recordAudit(tx, identity, {
-        action: 'scenario.shared',
-        entityType: 'scenario',
-        entityId: current.id,
-        after: { shareExpiresAt: shareExpiresAt.toISOString() },
-        correlationId,
-      }),
-    );
+    await recordAudit(tx, identity, {
+      action: 'scenario.shared',
+      entityType: 'scenario',
+      entityId: current.id,
+      after: { shareExpiresAt: shareExpiresAt.toISOString() },
+      correlationId,
+    });
     return {
       scenarioId: current.id,
       shareToken,
@@ -544,19 +517,17 @@ async function createSnapshotIn(
     .update(schema.scenarios)
     .set({ policyVersion: run.snapshot.policyVersion })
     .where(eq(schema.scenarios.id, scenario.id));
-  await withPrivilegedAppend(tx, identity.ctx, () =>
-    recordAudit(tx, identity, {
-      action: 'scenario.snapshot_created',
-      entityType: 'recommendation_snapshot',
-      entityId: row.id,
-      after: {
-        scenarioId: scenario.id,
-        policyVersion: row.policyVersion,
-        inputsHash: inputs.generatedFrom.inputsHash,
-      },
-      correlationId,
-    }),
-  );
+  await recordAudit(tx, identity, {
+    action: 'scenario.snapshot_created',
+    entityType: 'recommendation_snapshot',
+    entityId: row.id,
+    after: {
+      scenarioId: scenario.id,
+      policyVersion: row.policyVersion,
+      inputsHash: inputs.generatedFrom.inputsHash,
+    },
+    correlationId,
+  });
   return {
     snapshotId: row.id,
     scenarioId: scenario.id,

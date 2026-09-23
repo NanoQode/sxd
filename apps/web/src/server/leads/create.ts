@@ -1,4 +1,5 @@
 import 'server-only';
+import { randomUUID } from 'node:crypto';
 import { and, eq, inArray } from 'drizzle-orm';
 import { ApiError, type ConsultationRequest } from '@simplexd/contracts';
 import { appendOutbox, getDb, schema, withActor, type ActorContext } from '@simplexd/db';
@@ -23,10 +24,13 @@ export async function createLead(
   identity: RequestIdentity | null,
   options: CreateLeadOptions,
 ): Promise<{ id: string; status: string }> {
-  const suspicious = Boolean(input.website) || (input.elapsedMs !== undefined && input.elapsedMs < 1500);
-  const ctx: ActorContext = identity?.ctx ?? { userId: null, organizationId: null, staff: false, bypass: true };
+  const suspicious =
+    Boolean(input.website) || (input.elapsedMs !== undefined && input.elapsedMs < 1500);
+  // Anonymous visitors insert leads and consents under the plain anonymous
+  // context: the row-level policies allow anonymous appends but never reads.
+  const ctx: ActorContext = identity?.ctx ?? { userId: null, organizationId: null, staff: false };
   const db = getDb();
-  return withActor(db, { ...ctx, bypass: true, correlationId: options.correlationId }, async (tx) => {
+  return withActor(db, { ...ctx, correlationId: options.correlationId }, async (tx) => {
     let interestServiceId: string | null = null;
     if (input.serviceSlug) {
       const svc = await tx
@@ -48,36 +52,39 @@ export async function createLead(
         .select({ id: schema.scenarios.id })
         .from(schema.scenarios)
         .where(and(eq(schema.scenarios.id, input.scenarioId)));
-      if (scenario.length === 0) throw new ApiError('not_found', 'scenario not found or not accessible');
+      if (scenario.length === 0)
+        throw new ApiError('not_found', 'scenario not found or not accessible');
     }
-    const [lead] = await tx
-      .insert(schema.leads)
-      .values({
-        userId: identity?.session?.user.id ?? null,
-        organizationId: identity?.ctx.organizationId ?? null,
-        contactName: input.contactName,
-        email: input.email.toLowerCase(),
-        phoneE164: input.phoneE164 ?? null,
-        countryOfResidence: input.countryOfResidence ?? null,
-        timeZone: input.timeZone ?? null,
-        source: options.source,
-        interestServiceId,
-        goal: input.goal,
-        message: input.message ?? null,
-        scenarioId: input.scenarioId ?? null,
-        context: {
-          marketIds,
-          budgetNaira: input.budgetNaira ?? null,
-          elapsedMs: input.elapsedMs ?? null,
-          suspicious,
-        },
-        status: suspicious ? 'spam' : 'new',
-        marketingConsent: input.marketingConsent,
-        consentPolicyVersion: input.consentPolicyVersion,
-        ipHash: options.ipHash,
-        userAgent: options.userAgent?.slice(0, 300) ?? null,
-      })
-      .returning({ id: schema.leads.id, status: schema.leads.status });
+    // Anonymous rows cannot be read back (RETURNING applies the read policy), so the
+    // id and status are decided here and inserted without RETURNING.
+    const leadId = randomUUID();
+    const status = suspicious ? ('spam' as const) : ('new' as const);
+    await tx.insert(schema.leads).values({
+      id: leadId,
+      userId: identity?.session?.user.id ?? null,
+      organizationId: identity?.ctx.organizationId ?? null,
+      contactName: input.contactName,
+      email: input.email.toLowerCase(),
+      phoneE164: input.phoneE164 ?? null,
+      countryOfResidence: input.countryOfResidence ?? null,
+      timeZone: input.timeZone ?? null,
+      source: options.source,
+      interestServiceId,
+      goal: input.goal,
+      message: input.message ?? null,
+      scenarioId: input.scenarioId ?? null,
+      context: {
+        marketIds,
+        budgetNaira: input.budgetNaira ?? null,
+        elapsedMs: input.elapsedMs ?? null,
+        suspicious,
+      },
+      status,
+      marketingConsent: input.marketingConsent,
+      consentPolicyVersion: input.consentPolicyVersion,
+      ipHash: options.ipHash,
+      userAgent: options.userAgent?.slice(0, 300) ?? null,
+    });
     if (input.marketingConsent) {
       await tx.insert(schema.consents).values({
         userId: identity?.session?.user.id ?? null,
@@ -92,19 +99,19 @@ export async function createLead(
     await appendOutbox(tx, {
       eventType: 'lead.created',
       aggregateType: 'lead',
-      aggregateId: lead!.id,
+      aggregateId: leadId,
       organizationId: identity?.ctx.organizationId ?? null,
       actorUserId: identity?.session?.user.id ?? null,
-      payload: { leadId: lead!.id, source: options.source, suspicious },
+      payload: { leadId: leadId, source: options.source, suspicious },
       correlationId: options.correlationId,
     });
     await recordAudit(tx, identity, {
       action: 'lead.created',
       entityType: 'lead',
-      entityId: lead!.id,
+      entityId: leadId,
       after: { source: options.source, suspicious },
       correlationId: options.correlationId,
     });
-    return { id: lead!.id, status: lead!.status };
+    return { id: leadId, status: status };
   });
 }

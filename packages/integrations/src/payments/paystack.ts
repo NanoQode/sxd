@@ -265,7 +265,10 @@ export class PaystackPaymentProvider implements PaymentProvider {
   async createRefund(input: CreateRefundInput): Promise<RefundResult> {
     const transaction = asString(input.providerReference) ?? asString(input.reference);
     if (!transaction) {
-      throw new ProviderError('invalid_request', 'a provider reference or attempt reference is required');
+      throw new ProviderError(
+        'invalid_request',
+        'a provider reference or attempt reference is required',
+      );
     }
     if (!asString(input.idempotencyKey)) {
       throw new ProviderError('invalid_request', 'an idempotency key is required for refunds');

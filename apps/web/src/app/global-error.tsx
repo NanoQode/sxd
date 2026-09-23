@@ -33,7 +33,9 @@ export default function GlobalError({
         }}
       >
         <main style={{ maxWidth: 560 }}>
-          <p style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: 1, color: '#5b625e' }}>
+          <p
+            style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: 1, color: '#5b625e' }}
+          >
             SimplexD
           </p>
           <h1 style={{ fontSize: 28, margin: '4px 0 8px' }}>The site could not load</h1>

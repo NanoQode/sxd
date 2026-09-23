@@ -6,7 +6,6 @@ import { engagementMachine, evaluateTransition } from '@simplexd/domain/workflow
 import { recordAudit } from '@/lib/audit';
 import type { RequestIdentity } from '@/lib/auth/session';
 import { assertOrgPermission } from '@/server/portal/access';
-import { elevate } from '@/server/portal/elevate';
 import { loadServiceRequest, toServiceRequestDto } from './queries';
 
 /**
@@ -50,7 +49,8 @@ export async function applyCustomerTransition(
         details: { currentVersion: sr.version },
       });
     }
-    await elevate(tx, ctx);
+    // The update, transition and log appends all run under the customer's own
+    // context: the row is visible through the request policy.
     const patch: Partial<typeof schema.serviceRequests.$inferInsert> = {
       status: input.to,
       version: sr.version + 1,

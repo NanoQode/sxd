@@ -148,8 +148,7 @@ export type PermitEventKind = (typeof PERMIT_EVENT_TYPES)[number];
 const PERMIT_TERMINAL: readonly PermitState[] = ['approved', 'rejected', 'withdrawn'];
 
 export type PermitEventDecision =
-  | { ok: true; status: PermitState; changed: boolean }
-  | { ok: false; message: string };
+  { ok: true; status: PermitState; changed: boolean } | { ok: false; message: string };
 
 /** Which status an event moves the application to; informational events leave it unchanged. */
 export function permitStatusAfterEvent(
@@ -172,7 +171,10 @@ export function permitStatusAfterEvent(
     case 'query_raised':
       return status === 'submitted' || status === 'resubmitted'
         ? { ok: true, status: 'query_raised', changed: true }
-        : { ok: false, message: `a query can only be raised while the authority holds the application` };
+        : {
+            ok: false,
+            message: `a query can only be raised while the authority holds the application`,
+          };
     case 'resubmitted':
       return status === 'query_raised'
         ? { ok: true, status: 'resubmitted', changed: true }
@@ -181,7 +183,10 @@ export function permitStatusAfterEvent(
     case 'rejected':
       return status === 'submitted' || status === 'resubmitted'
         ? { ok: true, status: eventType, changed: true }
-        : { ok: false, message: `a decision requires a submitted application (currently ${status})` };
+        : {
+            ok: false,
+            message: `a decision requires a submitted application (currently ${status})`,
+          };
     case 'withdrawn':
       return { ok: true, status: 'withdrawn', changed: true };
   }

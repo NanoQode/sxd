@@ -41,9 +41,9 @@ export function ConsentBanner({ initialConsent }: { initialConsent: ConsentChoic
         Analytics consent
       </h2>
       <p id={descId} className="mt-1 text-sm text-fg-muted">
-        With your permission we record page views and form completions to improve this site.
-        Events never include your email, documents or payment details, and nothing is sent
-        before you choose. Read the{' '}
+        With your permission we record page views and form completions to improve this site. Events
+        never include your email, documents or payment details, and nothing is sent before you
+        choose. Read the{' '}
         <Link href="/policies/privacy" className="text-primary underline">
           privacy notice
         </Link>

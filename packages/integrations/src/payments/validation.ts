@@ -84,7 +84,10 @@ export function validateInitializeInput(input: InitializeInput): void {
   if (input.channels) {
     for (const channel of input.channels) {
       if (!PAYMENT_CHANNELS.includes(channel)) {
-        throw new ProviderError('invalid_request', `unsupported payment channel ${String(channel)}`);
+        throw new ProviderError(
+          'invalid_request',
+          `unsupported payment channel ${String(channel)}`,
+        );
       }
     }
   }
@@ -97,7 +100,9 @@ export function detectKeyEnvironment(secretKey: string | null | undefined): Dete
   return 'unknown';
 }
 
-export function detectPublicKeyEnvironment(publicKey: string | null | undefined): DetectedEnvironment {
+export function detectPublicKeyEnvironment(
+  publicKey: string | null | undefined,
+): DetectedEnvironment {
   if (!publicKey) return 'unknown';
   if (publicKey.startsWith('pk_test_')) return 'test';
   if (publicKey.startsWith('pk_live_')) return 'live';

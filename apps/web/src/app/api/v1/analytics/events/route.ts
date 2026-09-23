@@ -1,11 +1,16 @@
 import { createHmac } from 'node:crypto';
 import { ApiError } from '@simplexd/contracts';
-import { getDb, schema, systemContext, withActor } from '@simplexd/db';
+import { getDb, schema, withActor } from '@simplexd/db';
 import { json, parseJson, route } from '@/lib/api/respond';
 import { analyticsEventBodySchema } from '@/lib/api/registry/public';
+import { getIdentity } from '@/lib/auth/session';
 import { env } from '@/lib/env';
 import { clientIp, enforceRateLimit, hashIp } from '@/lib/rate-limit';
-import { containsEmailLike, CONSENT_VERSION, parseConsentCookie } from '@/components/public/analytics';
+import {
+  containsEmailLike,
+  CONSENT_VERSION,
+  parseConsentCookie,
+} from '@/components/public/analytics';
 
 export const dynamic = 'force-dynamic';
 
@@ -24,17 +29,28 @@ export const POST = route(async (req, { correlationId }) => {
   await enforceRateLimit(`analytics:${ipHash}`, { windowSeconds: 60, max: 120 });
 
   const body = await parseJson(req, analyticsEventBodySchema);
-  if (containsEmailLike(body.eventName) || containsEmailLike(body.path) || containsEmailLike(body.props ?? {})) {
-    throw new ApiError('validation_failed', 'analytics payloads must not contain personal identifiers', {
-      details: [{ path: 'props', message: 'email-like value detected' }],
-    });
+  if (
+    containsEmailLike(body.eventName) ||
+    containsEmailLike(body.path) ||
+    containsEmailLike(body.props ?? {})
+  ) {
+    throw new ApiError(
+      'validation_failed',
+      'analytics payloads must not contain personal identifiers',
+      {
+        details: [{ path: 'props', message: 'email-like value detected' }],
+      },
+    );
   }
   const sessionHash = createHmac('sha256', env().AUTH_SECRET)
     .update(`analytics:${body.sessionId}`)
     .digest('hex')
     .slice(0, 32);
 
-  await withActor(getDb(), systemContext(correlationId), (tx) =>
+  // Appending to analytics_events is allowed for every actor; the caller's own
+  // context is used rather than an elevated one.
+  const identity = await getIdentity();
+  await withActor(getDb(), { ...identity.ctx, correlationId }, (tx) =>
     tx.insert(schema.analyticsEvents).values({
       sessionHash,
       eventName: body.eventName,

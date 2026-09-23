@@ -65,7 +65,8 @@ function fieldMismatches(attempt: AttemptForMatch, verification: VerifyResult): 
     );
   }
   if (verification.amountKobo === null || verification.amountKobo !== attempt.amountKobo) {
-    const provided = verification.amountKobo === null ? 'no amount' : `${verification.amountKobo} kobo`;
+    const provided =
+      verification.amountKobo === null ? 'no amount' : `${verification.amountKobo} kobo`;
     reasons.push(
       `amount_mismatch: provider reported ${provided}, attempt is ${attempt.amountKobo} kobo (never settle a mismatched amount, even when larger)`,
     );
@@ -83,7 +84,10 @@ export function matchVerification(input: MatchInput): MatchOutcome {
       const mismatches = fieldMismatches(attempt, verification);
       return mismatches.length === 0
         ? { decision: 'no_change', reasons: ['attempt already settled; allocation is idempotent'] }
-        : { decision: 'mismatch', reasons: ['attempt already settled but provider data differs', ...mismatches] };
+        : {
+            decision: 'mismatch',
+            reasons: ['attempt already settled but provider data differs', ...mismatches],
+          };
     }
     if (status === 'reversed') {
       return {
@@ -98,7 +102,10 @@ export function matchVerification(input: MatchInput): MatchOutcome {
         reasons: [`status_conflict: attempt is successful but provider reports ${status}`],
       };
     }
-    return { decision: 'no_change', reasons: [`provider status ${status} carries no new information`] };
+    return {
+      decision: 'no_change',
+      reasons: [`provider status ${status} carries no new information`],
+    };
   }
 
   if (FINAL_STATES.has(attempt.status)) {
@@ -127,7 +134,9 @@ export function matchVerification(input: MatchInput): MatchOutcome {
     case 'failed':
       return {
         decision: 'fail',
-        reasons: [`provider reports failed${verification.gatewayResponse ? `: ${verification.gatewayResponse}` : ''}`],
+        reasons: [
+          `provider reports failed${verification.gatewayResponse ? `: ${verification.gatewayResponse}` : ''}`,
+        ],
         targetStatus: 'failed',
       };
     case 'abandoned':
@@ -139,13 +148,18 @@ export function matchVerification(input: MatchInput): MatchOutcome {
     case 'reversed':
       return {
         decision: 'fail',
-        reasons: ['provider reports the charge was reversed before settlement; nothing was allocated'],
+        reasons: [
+          'provider reports the charge was reversed before settlement; nothing was allocated',
+        ],
         targetStatus: 'failed',
       };
     case 'pending':
     case 'unknown': {
       const age = input.ageSeconds;
-      const label = status === 'unknown' ? 'provider status unknown or reference not found' : 'provider still processing';
+      const label =
+        status === 'unknown'
+          ? 'provider status unknown or reference not found'
+          : 'provider still processing';
       if (age !== undefined && age > threshold) {
         if (attempt.status === 'uncertain') {
           return { decision: 'no_change', reasons: [`${label}; attempt already uncertain`] };
@@ -163,6 +177,10 @@ export function matchVerification(input: MatchInput): MatchOutcome {
       };
     }
     default:
-      return { decision: 'mark_uncertain', reasons: ['unrecognised provider status'], targetStatus: 'uncertain' };
+      return {
+        decision: 'mark_uncertain',
+        reasons: ['unrecognised provider status'],
+        targetStatus: 'uncertain',
+      };
   }
 }

@@ -64,8 +64,7 @@ export function toTaskDependencies(rows: ScheduleDependencyRecord[]): TaskDepend
 }
 
 export type ScheduleGraphValidation =
-  | { ok: true }
-  | { ok: false; code: GraphError['code']; message: string; details: GraphError };
+  { ok: true } | { ok: false; code: GraphError['code']; message: string; details: GraphError };
 
 /** Delegates to the engine's graph builder; cycles are reported with their path. */
 export function validateScheduleGraph(

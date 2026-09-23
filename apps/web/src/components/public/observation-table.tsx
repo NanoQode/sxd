@@ -1,11 +1,20 @@
 import type { ObservationDto } from '@simplexd/contracts';
-import { Badge, DataTable, EvidenceBadge, formatNumber, formatWholeNaira, type Column } from '@simplexd/ui';
+import {
+  Badge,
+  DataTable,
+  EvidenceBadge,
+  formatNumber,
+  formatWholeNaira,
+  type Column,
+} from '@simplexd/ui';
 
 /** Formats an observation value with its declared representation and unit. */
 export function observationValue(o: ObservationDto): string {
   const money = o.numericRepresentation === 'whole_naira_not_kobo';
-  const fmt = (n: number) => (money ? formatWholeNaira(n) : formatNumber(n, Number.isInteger(n) ? 0 : 2));
-  if (o.value !== null) return `${fmt(o.value)}${money ? '' : ` ${o.unit}`}${money ? ` (${o.unit})` : ''}`;
+  const fmt = (n: number) =>
+    money ? formatWholeNaira(n) : formatNumber(n, Number.isInteger(n) ? 0 : 2);
+  if (o.value !== null)
+    return `${fmt(o.value)}${money ? '' : ` ${o.unit}`}${money ? ` (${o.unit})` : ''}`;
   if (o.valueLow !== null || o.valueHigh !== null) {
     const low = o.valueLow !== null ? fmt(o.valueLow) : '?';
     const high = o.valueHigh !== null ? fmt(o.valueHigh) : '?';
@@ -18,7 +27,9 @@ export function observationValue(o: ObservationDto): string {
 function period(o: ObservationDto): string {
   if (o.observationPeriodStart || o.observationPeriodEnd) {
     const range = `${o.observationPeriodStart ?? '?'} to ${o.observationPeriodEnd ?? '?'}`;
-    return o.periodCompleteAtRetrieval === false ? `${range} (period incomplete at retrieval)` : range;
+    return o.periodCompleteAtRetrieval === false
+      ? `${range} (period incomplete at retrieval)`
+      : range;
   }
   return 'Not stated';
 }
@@ -50,8 +61,16 @@ export function ObservationTable({
         </div>
       ),
     },
-    { key: 'value', header: 'Value', cell: (o) => <span className="font-mono text-sm">{observationValue(o)}</span> },
-    { key: 'scope', header: 'Geography', cell: (o) => `${o.geographyLabel} (${o.geographyLevel.replace(/_/g, ' ')})` },
+    {
+      key: 'value',
+      header: 'Value',
+      cell: (o) => <span className="font-mono text-sm">{observationValue(o)}</span>,
+    },
+    {
+      key: 'scope',
+      header: 'Geography',
+      cell: (o) => `${o.geographyLabel} (${o.geographyLevel.replace(/_/g, ' ')})`,
+    },
     { key: 'period', header: 'Observation period', cell: (o) => period(o) },
     { key: 'retrieved', header: 'Retrieved', cell: (o) => o.retrievedAt },
     {
@@ -64,7 +83,12 @@ export function ObservationTable({
       header: 'Source',
       cell: (o) =>
         o.source.url ? (
-          <a href={o.source.url} rel="noopener noreferrer" target="_blank" className="text-primary underline">
+          <a
+            href={o.source.url}
+            rel="noopener noreferrer"
+            target="_blank"
+            className="text-primary underline"
+          >
             {o.source.title}
           </a>
         ) : (

@@ -30,7 +30,9 @@ export function Breadcrumbs({ items, baseUrl }: { items: Crumb[]; baseUrl: strin
           );
         })}
       </ol>
-      <JsonLd data={breadcrumbJsonLd(all.map((c) => ({ name: c.name, url: `${baseUrl}${c.href}` })))} />
+      <JsonLd
+        data={breadcrumbJsonLd(all.map((c) => ({ name: c.name, url: `${baseUrl}${c.href}` })))}
+      />
     </nav>
   );
 }

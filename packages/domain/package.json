@@ -15,7 +15,10 @@
     "./ledger": "./src/ledger/index.ts",
     "./evidence": "./src/evidence/index.ts",
     "./services": "./src/services/index.ts",
-    "./time": "./src/time/index.ts"
+    "./time": "./src/time/index.ts",
+    "./projects": "./src/projects/index.ts",
+    "./procurement": "./src/procurement/index.ts",
+    "./tenders": "./src/tenders/index.ts"
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json",

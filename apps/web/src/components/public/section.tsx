@@ -58,5 +58,10 @@ export function Section({
 
 /** Narrow content column for long-form pages. */
 export function Prose({ html, className }: { html: string; className?: string }) {
-  return <div className={cn('sx-prose max-w-prose', className)} dangerouslySetInnerHTML={{ __html: html }} />;
+  return (
+    <div
+      className={cn('sx-prose max-w-prose', className)}
+      dangerouslySetInnerHTML={{ __html: html }}
+    />
+  );
 }

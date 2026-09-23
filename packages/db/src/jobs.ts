@@ -76,20 +76,22 @@ export interface OutboxInput {
   correlationId?: string | null;
 }
 
-export async function appendOutbox(tx: DbExecutor, input: OutboxInput): Promise<number> {
-  const [row] = await tx
-    .insert(s.outboxEvents)
-    .values({
-      eventType: input.eventType,
-      aggregateType: input.aggregateType,
-      aggregateId: input.aggregateId,
-      payload: input.payload,
-      organizationId: input.organizationId ?? null,
-      actorUserId: input.actorUserId ?? null,
-      correlationId: input.correlationId ?? null,
-    })
-    .returning({ id: s.outboxEvents.id });
-  return row!.id;
+/**
+ * Appends an outbox event inside the caller's transaction. Any actor may
+ * append (row-level policy), but only privileged contexts may read the table,
+ * so the insert deliberately has no RETURNING clause: PostgreSQL applies the
+ * SELECT policy to returned rows and would refuse the append for customers.
+ */
+export async function appendOutbox(tx: DbExecutor, input: OutboxInput): Promise<void> {
+  await tx.insert(s.outboxEvents).values({
+    eventType: input.eventType,
+    aggregateType: input.aggregateType,
+    aggregateId: input.aggregateId,
+    payload: input.payload,
+    organizationId: input.organizationId ?? null,
+    actorUserId: input.actorUserId ?? null,
+    correlationId: input.correlationId ?? null,
+  });
 }
 
 export type JobRow = typeof s.jobs.$inferSelect;

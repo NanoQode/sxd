@@ -110,9 +110,17 @@ export const termiiSettingsSchema = z.object({
       /** Poll the history endpoint for messages without a receipt after this many minutes. */
       pollAfterMinutes: z.number().int().min(1).default(30),
     })
-    .default({ webhookPath: '/api/v1/webhooks/termii', secretConfigured: false, pollAfterMinutes: 30 }),
+    .default({
+      webhookPath: '/api/v1/webhooks/termii',
+      secretConfigured: false,
+      pollAfterMinutes: 30,
+    }),
   /** E.164 recipient for permission-controlled test sends; always shown before sending. */
-  testRecipient: z.string().regex(/^\+[1-9]\d{6,14}$/).nullable().default(null),
+  testRecipient: z
+    .string()
+    .regex(/^\+[1-9]\d{6,14}$/)
+    .nullable()
+    .default(null),
 });
 
 export type TermiiSettings = z.output<typeof termiiSettingsSchema>;

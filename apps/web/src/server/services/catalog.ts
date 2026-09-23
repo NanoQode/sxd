@@ -77,7 +77,9 @@ export interface ServiceCatalog {
 
 interface RawCatalog {
   services: Array<typeof schema.services.$inferSelect>;
-  packages: Array<Omit<typeof schema.servicePackages.$inferSelect, 'amountKobo'> & { amountKobo: string | null }>;
+  packages: Array<
+    Omit<typeof schema.servicePackages.$inferSelect, 'amountKobo'> & { amountKobo: string | null }
+  >;
   flags: Record<string, boolean>;
 }
 
@@ -156,7 +158,8 @@ function availabilityFor(
   s: typeof schema.services.$inferSelect,
   flagEnabled: boolean,
 ): ServiceAvailabilityMode {
-  if (s.category === 'core') return s.publicationState === 'published' && s.bookingEnabled ? 'request' : 'inquiry_only';
+  if (s.category === 'core')
+    return s.publicationState === 'published' && s.bookingEnabled ? 'request' : 'inquiry_only';
   return flagEnabled && s.staffed && s.bookingEnabled ? 'request' : 'inquiry_only';
 }
 
@@ -184,8 +187,12 @@ async function buildCatalog(): Promise<ServiceCatalog> {
       slug: s.slug,
       name: s.name,
       category: s.category,
-      shortDescription: cms?.fields.intro && typeof cms.fields.intro === 'string' ? cms.fields.intro : s.shortDescription,
-      descriptionHtml: cms?.bodyHtml || (s.descriptionMarkdown ? renderMarkdown(s.descriptionMarkdown) : null),
+      shortDescription:
+        cms?.fields.intro && typeof cms.fields.intro === 'string'
+          ? cms.fields.intro
+          : s.shortDescription,
+      descriptionHtml:
+        cms?.bodyHtml || (s.descriptionMarkdown ? renderMarkdown(s.descriptionMarkdown) : null),
       deliverables: Array.isArray(s.deliverables) ? s.deliverables : [],
       completionEvidence: s.completionEvidence,
       workflowTemplateKey: s.workflowTemplateKey,
@@ -232,55 +239,57 @@ export interface CoverageSummary {
 }
 
 /** Counts of published markets by service availability for one service (map coverage stays separate). */
-export const getServiceCoverageSummary = cache(async (serviceId: string): Promise<CoverageSummary> => {
-  return cached(`services:coverage:${serviceId}`, 60, async () => {
-    const rows = await withActor(getDb(), anonymousContext, async (tx) => {
-      const coverage = await tx
-        .select({ availability: schema.serviceCoverage.availability })
-        .from(schema.serviceCoverage)
-        .innerJoin(schema.markets, eq(schema.markets.id, schema.serviceCoverage.marketId))
-        .where(
-          and(
-            eq(schema.serviceCoverage.serviceId, serviceId),
-            eq(schema.markets.publicationState, 'published'),
-          ),
-        );
-      const published = await tx
-        .select({ id: schema.markets.id })
-        .from(schema.markets)
-        .where(eq(schema.markets.publicationState, 'published'));
-      return { coverage, publishedMarkets: published.length };
-    });
-    const summary: CoverageSummary = {
-      available: 0,
-      limited: 0,
-      onRequest: 0,
-      pending: 0,
-      unavailable: 0,
-      publishedMarkets: rows.publishedMarkets,
-    };
-    for (const c of rows.coverage) {
-      switch (c.availability) {
-        case 'available':
-          summary.available += 1;
-          break;
-        case 'limited':
-          summary.limited += 1;
-          break;
-        case 'on_request':
-          summary.onRequest += 1;
-          break;
-        case 'pending_operations_confirmation':
-          summary.pending += 1;
-          break;
-        case 'unavailable':
-          summary.unavailable += 1;
-          break;
+export const getServiceCoverageSummary = cache(
+  async (serviceId: string): Promise<CoverageSummary> => {
+    return cached(`services:coverage:${serviceId}`, 60, async () => {
+      const rows = await withActor(getDb(), anonymousContext, async (tx) => {
+        const coverage = await tx
+          .select({ availability: schema.serviceCoverage.availability })
+          .from(schema.serviceCoverage)
+          .innerJoin(schema.markets, eq(schema.markets.id, schema.serviceCoverage.marketId))
+          .where(
+            and(
+              eq(schema.serviceCoverage.serviceId, serviceId),
+              eq(schema.markets.publicationState, 'published'),
+            ),
+          );
+        const published = await tx
+          .select({ id: schema.markets.id })
+          .from(schema.markets)
+          .where(eq(schema.markets.publicationState, 'published'));
+        return { coverage, publishedMarkets: published.length };
+      });
+      const summary: CoverageSummary = {
+        available: 0,
+        limited: 0,
+        onRequest: 0,
+        pending: 0,
+        unavailable: 0,
+        publishedMarkets: rows.publishedMarkets,
+      };
+      for (const c of rows.coverage) {
+        switch (c.availability) {
+          case 'available':
+            summary.available += 1;
+            break;
+          case 'limited':
+            summary.limited += 1;
+            break;
+          case 'on_request':
+            summary.onRequest += 1;
+            break;
+          case 'pending_operations_confirmation':
+            summary.pending += 1;
+            break;
+          case 'unavailable':
+            summary.unavailable += 1;
+            break;
+        }
       }
-    }
-    return summary;
-  });
-});
+      return summary;
+    });
+  },
+);
 
 /** Shape exposed by GET /api/v1/services (no internal ids beyond the slug). */
 export interface PublicServiceDto {

@@ -262,10 +262,7 @@ function MobileMenu({
       <details className="group rounded-md border border-border" open>
         <summary className="sx-touch flex cursor-pointer list-none items-center justify-between px-3 text-base font-medium [&::-webkit-details-marker]:hidden">
           Services
-          <ChevronDown
-            aria-hidden="true"
-            className="sx-transition h-4 w-4 group-open:rotate-180"
-          />
+          <ChevronDown aria-hidden="true" className="sx-transition h-4 w-4 group-open:rotate-180" />
         </summary>
         <ul className="border-t border-border p-1">
           {services.map((s) => (

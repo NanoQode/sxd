@@ -16,7 +16,10 @@ export function GoalPaths({ serviceNames }: { serviceNames: Record<string, strin
       {GOAL_PATHS.map((goal) => {
         const Icon = icons[goal.key];
         return (
-          <li key={goal.key} className="flex flex-col rounded-lg border border-border bg-bg-elevated p-5 shadow-sm">
+          <li
+            key={goal.key}
+            className="flex flex-col rounded-lg border border-border bg-bg-elevated p-5 shadow-sm"
+          >
             <span className="inline-flex h-10 w-10 items-center justify-center rounded-md bg-gold-soft text-fg">
               <Icon aria-hidden="true" className="h-5 w-5" />
             </span>
@@ -26,12 +29,18 @@ export function GoalPaths({ serviceNames }: { serviceNames: Record<string, strin
               {goal.serviceSlugs.map((s) => serviceNames[s] ?? s).join(' · ')}
             </p>
             <div className="mt-auto flex flex-wrap gap-2 pt-4">
-              <Link href={goal.href} className={cn(buttonVariants({ variant: 'secondary', size: 'sm' }))}>
+              <Link
+                href={goal.href}
+                className={cn(buttonVariants({ variant: 'secondary', size: 'sm' }))}
+              >
                 Start
                 <ArrowRight aria-hidden="true" className="h-4 w-4" />
               </Link>
               {goal.exploreHref !== goal.href ? (
-                <Link href={goal.exploreHref} className={cn(buttonVariants({ variant: 'ghost', size: 'sm' }))}>
+                <Link
+                  href={goal.exploreHref}
+                  className={cn(buttonVariants({ variant: 'ghost', size: 'sm' }))}
+                >
                   Explore locations
                 </Link>
               ) : null}

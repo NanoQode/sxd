@@ -24,7 +24,11 @@ export function createMailProvider(options: CreateMailProviderOptions): MailProv
     if (nodeEnv === 'production') {
       throw new Error('Mail adapter "dev" is not permitted in production; configure SMTP');
     }
-    return new DevMailProvider({ ...options.dev, nodeEnv, deps: options.dev?.deps ?? options.deps });
+    return new DevMailProvider({
+      ...options.dev,
+      nodeEnv,
+      deps: options.dev?.deps ?? options.deps,
+    });
   }
   if (!options.smtp) throw new Error('SMTP configuration is required for the smtp adapter');
   if (nodeEnv === 'production' && options.smtp.allowPrivate) {
@@ -126,7 +130,12 @@ export interface MailAdminFieldDescriptor {
 }
 
 export const SMTP_ADMIN_FIELDS: readonly MailAdminFieldDescriptor[] = [
-  { key: 'host', label: 'SMTP host', secret: false, help: 'Must be on the operator allow-list (SMTP_ALLOWED_HOSTS).' },
+  {
+    key: 'host',
+    label: 'SMTP host',
+    secret: false,
+    help: 'Must be on the operator allow-list (SMTP_ALLOWED_HOSTS).',
+  },
   { key: 'port', label: 'Port', secret: false, help: '465 for implicit TLS, 587 for STARTTLS.' },
   {
     key: 'security',
@@ -137,13 +146,28 @@ export const SMTP_ADMIN_FIELDS: readonly MailAdminFieldDescriptor[] = [
   { key: 'username', label: 'Username', secret: false, help: 'Shown masked after saving.' },
   { key: 'password', label: 'Password', secret: true, help: 'Write-only; stored encrypted.' },
   { key: 'fromName', label: 'Sender name', secret: false, help: 'Display name on outgoing mail.' },
-  { key: 'fromEmail', label: 'Sender address', secret: false, help: 'Must be in an approved sender domain.' },
-  { key: 'replyTo', label: 'Reply-to', secret: false, help: 'Optional mailbox that receives replies.' },
+  {
+    key: 'fromEmail',
+    label: 'Sender address',
+    secret: false,
+    help: 'Must be in an approved sender domain.',
+  },
+  {
+    key: 'replyTo',
+    label: 'Reply-to',
+    secret: false,
+    help: 'Optional mailbox that receives replies.',
+  },
   {
     key: 'approvedSenderDomains',
     label: 'Approved sender domains',
     secret: false,
     help: 'Domains with SPF, DKIM and DMARC published; sends from other domains are refused.',
   },
-  { key: 'testRecipient', label: 'Test recipient', secret: false, help: 'Receives explicit test emails.' },
+  {
+    key: 'testRecipient',
+    label: 'Test recipient',
+    secret: false,
+    help: 'Receives explicit test emails.',
+  },
 ];

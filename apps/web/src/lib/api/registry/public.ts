@@ -21,6 +21,12 @@ export const publicConsultationBodySchema = consultationRequestSchema.extend({
   source: z
     .enum(['website_form', 'consultation_booking', 'map_scenario', 'quote_request'])
     .default('website_form'),
+  /**
+   * Honeypot. The shared contract requires it empty; the public endpoint
+   * accepts any value so bots receive the same "received" reply while
+   * createLead marks the lead for review.
+   */
+  website: z.string().max(200).optional(),
 });
 export type PublicConsultationBody = z.infer<typeof publicConsultationBodySchema>;
 

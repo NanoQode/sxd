@@ -21,7 +21,7 @@ import { recordAudit } from '@/lib/audit';
 import type { RequestIdentity } from '@/lib/auth/session';
 import { cacheDelete } from '@/lib/cache';
 import { renderMarkdown } from '@/lib/markdown';
-import { decodeCursor, encodeCursor } from '@/server/portal/elevate';
+import { decodeCursor, encodeCursor } from '@/server/portal/pagination';
 
 /**
  * CMS administration: draft → review → publish with scheduled publication,

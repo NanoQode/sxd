@@ -11,6 +11,8 @@ export default defineConfig({
       'packages/integrations',
       'packages/ui',
       'packages/db',
+      'packages/finance',
+      'packages/notifications',
       'apps/web',
       'apps/worker',
     ],

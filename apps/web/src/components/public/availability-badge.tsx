@@ -2,11 +2,7 @@ import { CheckCircle2, CircleDashed, Clock, TriangleAlert, XCircle } from 'lucid
 import { Badge } from '@simplexd/ui';
 
 export type ServiceAvailability =
-  | 'pending_operations_confirmation'
-  | 'available'
-  | 'limited'
-  | 'on_request'
-  | 'unavailable';
+  'pending_operations_confirmation' | 'available' | 'limited' | 'on_request' | 'unavailable';
 
 const meta: Record<
   ServiceAvailability,
@@ -40,10 +36,7 @@ export function AvailabilityBadge({ value }: { value: ServiceAvailability }) {
 }
 
 export type RecommendationStatus =
-  | 'insufficient_local_evidence'
-  | 'assumption_mode_only'
-  | 'eligible'
-  | 'gated_by_policy';
+  'insufficient_local_evidence' | 'assumption_mode_only' | 'eligible' | 'gated_by_policy';
 
 export function recommendationLabel(status: RecommendationStatus): string {
   switch (status) {

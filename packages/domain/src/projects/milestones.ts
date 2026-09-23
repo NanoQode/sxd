@@ -61,12 +61,7 @@ export const milestoneMachine = defineMachine<MilestoneState>({
 });
 
 export type MilestoneAction =
-  | 'record_progress'
-  | 'submit'
-  | 'accept'
-  | 'reject'
-  | 'rework'
-  | 'finance_authorize';
+  'record_progress' | 'submit' | 'accept' | 'reject' | 'rework' | 'finance_authorize';
 
 export interface MilestoneActionContext {
   status: MilestoneState;

@@ -81,7 +81,9 @@ export function computeBudgetVariance(input: BudgetVarianceInput): BudgetVarianc
   const progressExtrapolation = extrapolateFromProgress(input.actualKobo, input.percentComplete);
 
   if (input.approvedBaseKobo === null) {
-    notes.push('No approved budget version: commitments and actuals are reported without variance.');
+    notes.push(
+      'No approved budget version: commitments and actuals are reported without variance.',
+    );
     return {
       method: 'commitment_based',
       hasApprovedBudget: false,
@@ -111,20 +113,26 @@ export function computeBudgetVariance(input: BudgetVarianceInput): BudgetVarianc
   const forecast = exposure + costToComplete;
   const variance = approvedTotal - forecast;
   const variancePct =
-    approvedTotal === 0n ? null : Math.round((Number(variance) / Number(approvedTotal)) * 10_000) / 100;
+    approvedTotal === 0n
+      ? null
+      : Math.round((Number(variance) / Number(approvedTotal)) * 10_000) / 100;
 
   let status: BudgetStatus = 'within_budget';
   if (input.actualKobo > approvedTotal) status = 'over_spent';
   else if (input.committedKobo > approvedTotal) status = 'over_committed';
 
   if (input.pendingChangeOrderDeltaKobo !== 0n) {
-    notes.push('Pending change orders are shown as exposure and are not part of the forecast until approved.');
+    notes.push(
+      'Pending change orders are shown as exposure and are not part of the forecast until approved.',
+    );
   }
   if (input.approvedChangeOrderDeltaKobo !== 0n) {
     notes.push('The approved total already includes every approved and applied change order.');
   }
   if (status !== 'within_budget') {
-    notes.push('Commitments or actuals exceed the approved budget; the forecast recognises the evidenced overrun.');
+    notes.push(
+      'Commitments or actuals exceed the approved budget; the forecast recognises the evidenced overrun.',
+    );
   }
 
   return {

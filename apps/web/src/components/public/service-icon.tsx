@@ -22,7 +22,13 @@ const icons: Record<string, LucideIcon> = {
   landmark: Landmark,
 };
 
-export function ServiceIcon({ iconKey, className }: { iconKey: string | null; className?: string }) {
+export function ServiceIcon({
+  iconKey,
+  className,
+}: {
+  iconKey: string | null;
+  className?: string;
+}) {
   const Icon = (iconKey && icons[iconKey]) || Layers;
   return <Icon aria-hidden="true" className={className ?? 'h-5 w-5'} />;
 }

@@ -4,7 +4,7 @@ import { ApiError, type ServiceRequestCreate, type ServiceRequestDto } from '@si
 import { appendOutbox, getDb, schema, withActor, type Transaction } from '@simplexd/db';
 import { recordAudit } from '@/lib/audit';
 import type { RequestIdentity } from '@/lib/auth/session';
-import { elevate } from '@/server/portal/elevate';
+import { demote, elevate } from '@/server/portal/elevate';
 import { assertOrgPermission, requireActiveOrganization } from '@/server/portal/access';
 import { insertWithReferenceRetry } from './reference';
 import { toServiceRequestDto } from './queries';
@@ -30,17 +30,16 @@ export interface ServiceRequestRecordInput {
 }
 
 /**
- * Inserts a service request in `inquiry`, its first engagement transition, the
- * outbox event and the audit entry. The caller's transaction must already be
- * elevated (see server/portal/elevate.ts) and the caller must have authorised
- * the action. Shared by the customer intake flow and staff lead conversion.
+ * Privileged part of request creation: allocates the reference across all
+ * organisations and inserts the row. The `service_requests` policy is
+ * self-referencing, so the caller must run this under a privileged context
+ * (staff, or a customer transaction briefly elevated — see portal/elevate.ts).
  */
-export async function createServiceRequestRecord(
+export async function insertServiceRequestRow(
   tx: Transaction,
-  identity: RequestIdentity,
   input: ServiceRequestRecordInput,
 ): Promise<{ id: string; reference: string }> {
-  const created = await insertWithReferenceRetry(tx, 'SR', async (reference) => {
+  return insertWithReferenceRetry(tx, 'SR', async (reference) => {
     const [row] = await tx
       .insert(schema.serviceRequests)
       .values({
@@ -59,6 +58,20 @@ export async function createServiceRequestRecord(
       .returning({ id: schema.serviceRequests.id, reference: schema.serviceRequests.reference });
     return row!;
   });
+}
+
+/**
+ * Records the first engagement transition (null → inquiry), links the scenario,
+ * appends the outbox event and the audit entry. Runs under the caller's normal
+ * context: transitions are visible through the request's policy and the logs
+ * accept appends from every actor.
+ */
+export async function recordServiceRequestCreation(
+  tx: Transaction,
+  identity: RequestIdentity,
+  created: { id: string; reference: string },
+  input: ServiceRequestRecordInput,
+): Promise<void> {
   await tx.insert(schema.engagementTransitions).values({
     serviceRequestId: created.id,
     fromStatus: null,
@@ -103,6 +116,19 @@ export async function createServiceRequestRecord(
     },
     correlationId: input.correlationId,
   });
+}
+
+/**
+ * Staff path (lead conversion): the staff context is privileged, so insert and
+ * bookkeeping run under the same context.
+ */
+export async function createServiceRequestRecord(
+  tx: Transaction,
+  identity: RequestIdentity,
+  input: ServiceRequestRecordInput,
+): Promise<{ id: string; reference: string }> {
+  const created = await insertServiceRequestRow(tx, input);
+  await recordServiceRequestCreation(tx, identity, created, input);
   return created;
 }
 
@@ -156,9 +182,7 @@ export async function createServiceRequest(
       if (allowedKeys.has(key) && value.trim().length > 0) intake[key] = value.trim();
     }
     const title = input.title?.trim() || `${service.name}${marketName ? ` – ${marketName}` : ''}`;
-
-    await elevate(tx, ctx);
-    const created = await createServiceRequestRecord(tx, identity, {
+    const recordInput: ServiceRequestRecordInput = {
       organizationId,
       requestedByUserId: userId,
       serviceId: service.id,
@@ -177,7 +201,19 @@ export async function createServiceRequest(
       actorType: 'customer',
       actorUserId: userId,
       correlationId: options.correlationId,
-    });
+    };
+
+    // Elevated only for the self-referencing insert and the cross-organisation
+    // reference sequence; every other write below runs as the customer again.
+    await elevate(tx, ctx);
+    let created: { id: string; reference: string };
+    try {
+      created = await insertServiceRequestRow(tx, recordInput);
+    } finally {
+      await demote(tx, ctx);
+    }
+    await recordServiceRequestCreation(tx, identity, created, recordInput);
+
     const rows = await tx
       .select({
         sr: schema.serviceRequests,
