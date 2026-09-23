@@ -1,3 +1,4 @@
+import dynamic from 'next/dynamic';
 import type { ReactNode } from 'react';
 import { Alert, EvidenceBadge, Skeleton } from '@simplexd/ui';
 import { formatNumber, formatPercent } from '@simplexd/ui/format';
@@ -13,7 +14,12 @@ import {
   type LongLetView,
 } from '@/lib/explorer';
 import { ErrorState } from './error-state';
-import { SensitivityChart } from './sensitivity-chart';
+
+// The charting library is large; load it only when a sensitivity grid is shown.
+const SensitivityChart = dynamic(
+  () => import('./sensitivity-chart').then((m) => m.SensitivityChart),
+  { loading: () => <Skeleton className="h-64 w-full" label="Loading sensitivity chart" /> },
+);
 
 /**
  * Calculator output tables. Every figure is a scenario under the user's
