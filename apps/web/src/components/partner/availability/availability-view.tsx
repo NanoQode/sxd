@@ -20,7 +20,16 @@ export interface AvailabilityRow {
   active: boolean;
 }
 
-const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+/** Rows store ISO weekdays (1 = Monday … 7 = Sunday), as the booking engine reads them. */
+const WEEKDAYS: Record<number, string> = {
+  1: 'Monday',
+  2: 'Tuesday',
+  3: 'Wednesday',
+  4: 'Thursday',
+  5: 'Friday',
+  6: 'Saturday',
+  7: 'Sunday',
+};
 
 /**
  * Read-only availability. The schema has `staff_availability` and the

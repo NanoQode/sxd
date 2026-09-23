@@ -39,7 +39,7 @@ import {
 } from '@/lib/partner/offline/use-draft-store';
 import { putBytes } from '@/lib/partner/upload';
 import { DualTime, LoadingBlock, NotAvailable, RequestFailed } from '../common';
-import { syncStateLabel, syncStateTone } from '../visits/visits-list';
+import { syncStateLabel, syncStateTone } from '../visits/sync-state';
 
 const KINDS = [
   'inspection',
@@ -198,14 +198,23 @@ export function ReportEditor({ target, projectId }: { target: string; projectId:
       });
       notifyDraftsChanged();
       void qc.invalidateQueries({ queryKey: ['partner', 'reports'] });
+      dirtyRef.current = false;
       if (outcome.cleared && outcome.reportId) {
         toast({ tone: 'success', title: 'Saved on the server', description: outcome.message });
-        router.replace(`/partner/reports/${outcome.reportId}`);
+        // The local copy was removed; keep editing against the server report.
+        setDraft({ ...outcome.draft, reportId: outcome.reportId, syncState: 'synced' });
+        setMessage({ tone: 'success', text: outcome.message });
+        void qc.invalidateQueries({ queryKey: ['partner', 'report', outcome.reportId] });
+        if (serverReportId !== outcome.reportId) {
+          router.replace(`/partner/reports/${outcome.reportId}`);
+        }
         return;
       }
-      dirtyRef.current = false;
       setDraft(outcome.draft);
-      setMessage({ tone: 'danger', text: outcome.message });
+      setMessage({
+        tone: outcome.draft.syncState === 'rejected' ? 'danger' : 'warning',
+        text: outcome.message,
+      });
     } catch (err) {
       setMessage({
         tone: 'warning',
@@ -240,7 +249,12 @@ export function ReportEditor({ target, projectId }: { target: string; projectId:
   if (locked) {
     return (
       <Alert tone="danger" title="Draft cannot be opened">
-        Captured in a previous browser session; the key is gone. Discard it from the reports list.
+        It was written in a previous browser session, or no longer exists; the encryption key is
+        gone, so it can only be discarded.{' '}
+        <Link href="/partner/reports" className="underline">
+          Open the reports list to discard it
+        </Link>
+        .
       </Alert>
     );
   }

@@ -2,7 +2,16 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ApiError, uuidSchema } from '@simplexd/contracts';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, PageHeader, StatusBadge, humanize } from '@simplexd/ui';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  PageHeader,
+  StatusBadge,
+  humanize,
+} from '@simplexd/ui';
 import { requireSignedIn } from '@/lib/auth/session';
 import { AppointmentActions } from '@/components/portal/appointment-actions';
 import { viewerFromIdentity } from '@/server/appointments/access';
@@ -11,12 +20,17 @@ import { getAppointment } from '@/server/appointments/queries';
 export const metadata: Metadata = { title: 'Appointment' };
 export const dynamic = 'force-dynamic';
 
-export default async function AppointmentDetailPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function AppointmentDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
   const { id } = await params;
   if (!uuidSchema.safeParse(id).success) notFound();
   const identity = await requireSignedIn(`/portal/appointments/${id}`);
   const appointment = await getAppointment(viewerFromIdentity(identity), id).catch((err) => {
-    if (err instanceof ApiError && (err.code === 'not_found' || err.code === 'forbidden')) return null;
+    if (err instanceof ApiError && (err.code === 'not_found' || err.code === 'forbidden'))
+      return null;
     throw err;
   });
   if (!appointment) notFound();
@@ -38,7 +52,10 @@ export default async function AppointmentDetailPage({ params }: { params: Promis
         <Card>
           <CardHeader>
             <CardTitle>When</CardTitle>
-            <CardDescription>UTC instant {appointment.startsAt} to {appointment.endsAt}; labels below follow each zone&apos;s daylight-saving rules.</CardDescription>
+            <CardDescription>
+              UTC instant {appointment.startsAt} to {appointment.endsAt}; labels below follow each
+              zone&apos;s daylight-saving rules.
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <dl className="grid gap-x-6 gap-y-3 text-sm sm:grid-cols-2">
@@ -52,7 +69,9 @@ export default async function AppointmentDetailPage({ params }: { params: Promis
               </div>
               {appointment.label.dateDiffers ? (
                 <div className="sm:col-span-2">
-                  <dd className="text-xs text-fg-muted">The calendar date differs between the two zones.</dd>
+                  <dd className="text-xs text-fg-muted">
+                    The calendar date differs between the two zones.
+                  </dd>
                 </div>
               ) : null}
               {appointment.notes ? (
@@ -86,7 +105,9 @@ export default async function AppointmentDetailPage({ params }: { params: Promis
                 </div>
               </dl>
             ) : (
-              <p className="text-fg-muted">Contact details are shown to the booker and staff only.</p>
+              <p className="text-fg-muted">
+                Contact details are shown to the booker and staff only.
+              </p>
             )}
             <p className="mt-3 text-xs text-fg-muted">Version {appointment.version}</p>
           </CardContent>

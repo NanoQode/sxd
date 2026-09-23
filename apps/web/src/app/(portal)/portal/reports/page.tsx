@@ -18,7 +18,10 @@ export default async function ReportsPage() {
         description="Released reports across your projects and requests: progress, inspection, diligence memoranda, valuations and closing packs. Drafts and internal reviews are never shown."
       />
       {reports.length === 0 ? (
-        <EmptyState title="No released reports" description="Reports are produced during engagements and appear once a named reviewer releases them." />
+        <EmptyState
+          title="No released reports"
+          description="Reports are produced during engagements and appear once a named reviewer releases them."
+        />
       ) : (
         <DataTable
           caption="Released reports"
@@ -30,14 +33,29 @@ export default async function ReportsPage() {
               key: 'title',
               header: 'Report',
               cell: (r) => (
-                <Link href={`/portal/reports/${r.id}`} className="font-medium text-primary underline">
+                <Link
+                  href={`/portal/reports/${r.id}`}
+                  className="font-medium text-primary underline"
+                >
                   {r.title}
                 </Link>
               ),
             },
-            { key: 'kind', header: 'Kind', cell: (r) => <Badge tone="info">{humanize(r.kind)}</Badge> },
-            { key: 'version', header: 'Version', cell: (r) => (r.releasedVersion ? `v${r.releasedVersion}` : '—') },
-            { key: 'released', header: 'Released', cell: (r) => (r.releasedAt ? formatDateLabel(r.releasedAt, zone) : '—') },
+            {
+              key: 'kind',
+              header: 'Kind',
+              cell: (r) => <Badge tone="info">{humanize(r.kind)}</Badge>,
+            },
+            {
+              key: 'version',
+              header: 'Version',
+              cell: (r) => (r.releasedVersion ? `v${r.releasedVersion}` : '—'),
+            },
+            {
+              key: 'released',
+              header: 'Released',
+              cell: (r) => (r.releasedAt ? formatDateLabel(r.releasedAt, zone) : '—'),
+            },
           ]}
         />
       )}

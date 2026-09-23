@@ -1,6 +1,13 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { DataTable, EmptyState, PageHeader, StatusBadge, formatDateLabel, humanize } from '@simplexd/ui';
+import {
+  DataTable,
+  EmptyState,
+  PageHeader,
+  StatusBadge,
+  formatDateLabel,
+  humanize,
+} from '@simplexd/ui';
 import { requireSignedIn } from '@/lib/auth/session';
 import { customerCapabilities } from '@/lib/portal/server/permissions';
 import { LinkButton } from '@/components/portal/link-button';
@@ -19,7 +26,11 @@ export default async function PropertiesPage() {
       <PageHeader
         title="Properties"
         description="Land, buildings and units your organisation owns or manages through SimplexD, with title status that states what was checked."
-        actions={caps.manageProperties ? <LinkButton href="/portal/properties/new">Add a property</LinkButton> : undefined}
+        actions={
+          caps.manageProperties ? (
+            <LinkButton href="/portal/properties/new">Add a property</LinkButton>
+          ) : undefined
+        }
       />
       {properties.length === 0 ? (
         <EmptyState
@@ -48,15 +59,27 @@ export default async function PropertiesPage() {
               key: 'name',
               header: 'Property',
               cell: (p) => (
-                <Link href={`/portal/properties/${p.id}`} className="font-medium text-primary underline">
+                <Link
+                  href={`/portal/properties/${p.id}`}
+                  className="font-medium text-primary underline"
+                >
                   {p.name}
                 </Link>
               ),
             },
             { key: 'kind', header: 'Type', cell: (p) => humanize(p.kind) },
             { key: 'market', header: 'Market', cell: (p) => p.marketName ?? '—' },
-            { key: 'title', header: 'Title status', cell: (p) => <StatusBadge status={p.titleStatus} /> },
-            { key: 'updated', header: 'Updated', cell: (p) => formatDateLabel(p.updatedAt, zone), hideOnMobile: true },
+            {
+              key: 'title',
+              header: 'Title status',
+              cell: (p) => <StatusBadge status={p.titleStatus} />,
+            },
+            {
+              key: 'updated',
+              header: 'Updated',
+              cell: (p) => formatDateLabel(p.updatedAt, zone),
+              hideOnMobile: true,
+            },
           ]}
         />
       )}

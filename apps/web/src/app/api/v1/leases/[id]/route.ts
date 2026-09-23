@@ -20,5 +20,7 @@ export const PATCH = route<{ params: Promise<{ id: string }> }>(async (req, ctx)
   if (!identity.session) throw new ApiError('unauthenticated', 'sign in required');
   const { id } = await params(ctx, idParams);
   const body = await parseJson(req, leaseUpdateSchema);
-  return json(await updateLease(identity, id, body, { correlationId: ctx.correlationId }), { correlationId: ctx.correlationId });
+  return json(await updateLease(identity, id, body, { correlationId: ctx.correlationId }), {
+    correlationId: ctx.correlationId,
+  });
 });

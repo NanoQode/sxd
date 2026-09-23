@@ -2,18 +2,23 @@ import { describe, expect, it } from 'vitest';
 import {
   addMonths,
   ageArrears,
+  apportionAllocation,
   computeStatementTotals,
   daysInclusive,
+  daysOverdue,
   generateRentSchedule,
   isSlaBreached,
+  leaseLifecycleTarget,
   leaseManagementFee,
   monthsInPeriod,
   nextServiceDate,
   nightsBetween,
   periodsDueForInvoicing,
   prorateByDays,
+  scheduleStatusFor,
   slaDueAt,
   staysOverlap,
+  truncateCharge,
   warrantyStatus,
 } from './index';
 
@@ -115,7 +120,12 @@ describe('generateRentSchedule', () => {
       rentPeriod: 'term',
       academicTerms: [
         { label: 'Second semester', start: '2027-02-01', end: '2027-06-30' },
-        { label: 'First semester', start: '2026-09-01', end: '2027-01-15', amountKobo: 45_000_000n },
+        {
+          label: 'First semester',
+          start: '2026-09-01',
+          end: '2027-01-15',
+          amountKobo: 45_000_000n,
+        },
       ],
     });
     expect(periods.map((p) => p.label)).toEqual(['First semester', 'Second semester']);
@@ -134,16 +144,31 @@ describe('generateRentSchedule', () => {
       }),
     ).toThrow(/overlap/);
     expect(() =>
-      generateRentSchedule({ startDate: '2026-09-01', endDate: null, rentAmountKobo: 1n, rentPeriod: 'term' }),
+      generateRentSchedule({
+        startDate: '2026-09-01',
+        endDate: null,
+        rentAmountKobo: 1n,
+        rentPeriod: 'term',
+      }),
     ).toThrow(/at least one term/);
   });
 
   it('rejects invalid input', () => {
     expect(() =>
-      generateRentSchedule({ startDate: '2026-02-30', endDate: null, rentAmountKobo: 1n, rentPeriod: 'monthly' }),
+      generateRentSchedule({
+        startDate: '2026-02-30',
+        endDate: null,
+        rentAmountKobo: 1n,
+        rentPeriod: 'monthly',
+      }),
     ).toThrow();
     expect(() =>
-      generateRentSchedule({ startDate: '2026-02-01', endDate: '2026-01-01', rentAmountKobo: 1n, rentPeriod: 'monthly' }),
+      generateRentSchedule({
+        startDate: '2026-02-01',
+        endDate: '2026-01-01',
+        rentAmountKobo: 1n,
+        rentPeriod: 'monthly',
+      }),
     ).toThrow(/before/);
     expect(() => prorateByDays(100n, 0, 30)).toThrow();
   });
@@ -204,12 +229,73 @@ describe('owner statement maths', () => {
     });
   });
   it('computes management fees per basis', () => {
-    expect(leaseManagementFee({ basis: 'percentage_of_collected', feeBps: 1000 }, 2_400_000n, 1)).toBe(240_000n);
+    expect(
+      leaseManagementFee({ basis: 'percentage_of_collected', feeBps: 1000 }, 2_400_000n, 1),
+    ).toBe(240_000n);
     expect(leaseManagementFee({ basis: 'percentage_of_collected', feeBps: 1000 }, 0n, 1)).toBe(0n);
     expect(leaseManagementFee({ basis: 'fixed_monthly', fixedKobo: 5_000n }, 0n, 3)).toBe(15_000n);
     expect(leaseManagementFee({ basis: 'none' }, 1_000n, 1)).toBe(0n);
     expect(monthsInPeriod('2026-01-01', '2026-03-31')).toBe(3);
     expect(monthsInPeriod('2026-01-10', '2026-01-20')).toBe(1);
+  });
+});
+
+describe('termination, lifecycle and collections', () => {
+  it('truncates a period charge by the days kept, half-up', () => {
+    // 15 of 28 February days: 28,000,000 × 15 / 28 = 15,000,000.
+    expect(truncateCharge(28_000_000n, '2026-02-01', '2026-02-28', '2026-02-15')).toBe(15_000_000n);
+    // 1 of 3 days: 100 / 3 = 33.33 → 33; 2 of 3 days: 66.67 → 67.
+    expect(truncateCharge(100n, '2026-03-01', '2026-03-03', '2026-03-01')).toBe(33n);
+    expect(truncateCharge(100n, '2026-03-01', '2026-03-03', '2026-03-02')).toBe(67n);
+    expect(() => truncateCharge(100n, '2026-03-01', '2026-03-03', '2026-03-03')).toThrow();
+    expect(() => truncateCharge(100n, '2026-03-01', '2026-03-03', '2026-02-28')).toThrow();
+  });
+
+  it('moves leases through the system lifecycle', () => {
+    const lease = { status: 'active', endDate: '2026-12-31', noticePeriodDays: null };
+    expect(leaseLifecycleTarget(lease, '2026-11-30')).toBeNull();
+    expect(leaseLifecycleTarget(lease, '2026-12-01')).toBe('expiring');
+    expect(leaseLifecycleTarget({ ...lease, noticePeriodDays: 90 }, '2026-10-02')).toBe('expiring');
+    expect(leaseLifecycleTarget({ ...lease, status: 'expiring' }, '2026-12-31')).toBeNull();
+    expect(leaseLifecycleTarget({ ...lease, status: 'expiring' }, '2027-01-01')).toBe('ended');
+    expect(leaseLifecycleTarget(lease, '2027-01-01')).toBe('ended');
+    expect(leaseLifecycleTarget({ ...lease, endDate: null }, '2030-01-01')).toBeNull();
+    expect(leaseLifecycleTarget({ ...lease, status: 'draft' }, '2027-01-01')).toBeNull();
+    expect(leaseLifecycleTarget({ ...lease, status: 'terminated' }, '2027-01-01')).toBeNull();
+  });
+
+  it('apportions an allocation oldest first and never above what a charge owes', () => {
+    const charges = [
+      { id: 'rent', amountKobo: 1_000n },
+      { id: 'service', amountKobo: 200n },
+      { id: 'late', amountKobo: 50n },
+    ];
+    expect(apportionAllocation(1_100n, charges, new Map([['rent', 300n]]))).toEqual([
+      { chargeId: 'rent', amountKobo: 700n },
+      { chargeId: 'service', amountKobo: 200n },
+      { chargeId: 'late', amountKobo: 50n },
+    ]);
+    expect(apportionAllocation(500n, charges, new Map())).toEqual([
+      { chargeId: 'rent', amountKobo: 500n },
+    ]);
+    expect(apportionAllocation(0n, charges, new Map())).toEqual([]);
+  });
+
+  it('derives the schedule status from what was settled and the due date', () => {
+    expect(scheduleStatusFor('invoiced', 1_000n, 1_000n, '2026-09-01', '2026-09-22')).toBe('paid');
+    expect(scheduleStatusFor('invoiced', 1_000n, 400n, '2026-09-30', '2026-09-22')).toBe(
+      'partially_paid',
+    );
+    expect(scheduleStatusFor('invoiced', 1_000n, 400n, '2026-09-01', '2026-09-22')).toBe('overdue');
+    expect(scheduleStatusFor('invoiced', 1_000n, 0n, '2026-09-22', '2026-09-22')).toBe('invoiced');
+    expect(scheduleStatusFor('overdue', 1_000n, 1_000n, '2026-09-01', '2026-09-22')).toBe('paid');
+    expect(scheduleStatusFor('scheduled', 1_000n, 0n, '2026-01-01', '2026-09-22')).toBe(
+      'scheduled',
+    );
+    expect(scheduleStatusFor('waived', 1_000n, 0n, '2026-01-01', '2026-09-22')).toBe('waived');
+    expect(daysOverdue('2026-09-01', '2026-09-22')).toBe(21);
+    expect(daysOverdue('2026-09-22', '2026-09-22')).toBe(0);
+    expect(daysOverdue('2026-10-01', '2026-09-22')).toBe(0);
   });
 });
 

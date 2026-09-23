@@ -3,13 +3,30 @@
  * wire; these helpers never use floating point for the stored value.
  */
 
-/** Parses a naira amount typed by a person ("1,250,000.50") into integer kobo as a string. */
+/**
+ * Parses a naira amount typed by a person ("1,250,000.50", "-5000" for a
+ * reduction) into integer kobo as a string. The server decides whether a
+ * negative amount is acceptable for the field.
+ */
 export function parseNairaToKobo(input: string): string | null {
-  const cleaned = input.replace(/[₦,\s]/g, '').replace(/^NGN/i, '');
+  const trimmed = input.trim();
+  const negative = trimmed.startsWith('-');
+  const cleaned = (negative ? trimmed.slice(1) : trimmed).replace(/[₦,\s]/g, '').replace(/^NGN/i, '');
   if (!/^\d+(\.\d{1,2})?$/.test(cleaned)) return null;
   const [whole, frac = ''] = cleaned.split('.');
   const kobo = BigInt(whole!) * 100n + BigInt(frac.padEnd(2, '0'));
-  return kobo.toString();
+  return (negative && kobo !== 0n ? -kobo : kobo).toString();
+}
+
+/** Formats integer kobo as a plain naira input value ("1250.5" → "1250.50"), for prefilled fields. */
+export function koboToNairaInput(kobo: string | null | undefined): string {
+  if (!kobo || !/^-?\d+$/.test(kobo)) return '';
+  const v = BigInt(kobo);
+  const neg = v < 0n;
+  const abs = neg ? -v : v;
+  const whole = abs / 100n;
+  const frac = abs % 100n;
+  return `${neg ? '-' : ''}${whole}${frac === 0n ? '' : `.${frac.toString().padStart(2, '0')}`}`;
 }
 
 /** Sums integer kobo strings without precision loss. */

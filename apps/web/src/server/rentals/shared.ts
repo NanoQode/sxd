@@ -104,7 +104,10 @@ export async function elevated<T>(
 }
 
 /** A finance actor for postings made by the platform on the caller's behalf (journals are privileged). */
-export function systemActorFor(identity: RequestIdentity | null, correlationId?: string): FinanceActor {
+export function systemActorFor(
+  identity: RequestIdentity | null,
+  correlationId?: string,
+): FinanceActor {
   const userId = identity?.session?.user.id ?? null;
   return {
     actor: {
@@ -127,7 +130,12 @@ export function systemActorFor(identity: RequestIdentity | null, correlationId?:
 /* ---------------------------------------------------------------------- */
 
 export function leaseRef(row: LeaseRow, partyUserIds: string[] = []): ResourceRef {
-  return { type: 'lease', id: row.id, organizationId: row.organizationId, assigneeUserIds: partyUserIds };
+  return {
+    type: 'lease',
+    id: row.id,
+    organizationId: row.organizationId,
+    assigneeUserIds: partyUserIds,
+  };
 }
 
 export async function loadLease(tx: DbExecutor, id: string): Promise<LeaseRow | null> {
@@ -168,7 +176,12 @@ export function assertLeaseRead(
   }
   const decision = authorizeAny(
     identity.actor,
-    [{ staff: 'rentals.manage' }, { staff: 'customers.read' }, { staff: 'finance.read' }, { org: 'org.read' }],
+    [
+      { staff: 'rentals.manage' },
+      { staff: 'customers.read' },
+      { staff: 'finance.read' },
+      { org: 'org.read' },
+    ],
     ref,
   );
   assertAllowed(decision);
@@ -233,13 +246,23 @@ export async function loadLeaseTerms(
 
 export async function saveLeaseTerms(
   tx: DbExecutor,
-  input: { leaseId: string; organizationId: string; authorUserId: string; terms: Partial<LeaseTermsDto> },
+  input: {
+    leaseId: string;
+    organizationId: string;
+    authorUserId: string;
+    terms: Partial<LeaseTermsDto>;
+  },
 ): Promise<void> {
   const body = JSON.stringify(input.terms);
   const [existing] = await tx
     .select({ id: schema.notes.id })
     .from(schema.notes)
-    .where(and(eq(schema.notes.entityType, LEASE_TERMS_ENTITY), eq(schema.notes.entityId, input.leaseId)))
+    .where(
+      and(
+        eq(schema.notes.entityType, LEASE_TERMS_ENTITY),
+        eq(schema.notes.entityId, input.leaseId),
+      ),
+    )
     .limit(1);
   if (existing) {
     await tx.update(schema.notes).set({ body }).where(eq(schema.notes.id, existing.id));
@@ -344,7 +367,10 @@ export function decodeCursor(cursor: string | undefined): { createdAt: Date; id:
 }
 
 /** Resolves the organisation a staff member acts for, or the customer's active organisation. */
-export function resolveOrganization(identity: RequestIdentity, requested: string | undefined): string {
+export function resolveOrganization(
+  identity: RequestIdentity,
+  requested: string | undefined,
+): string {
   const active = identity.ctx.organizationId;
   if (isStaffIdentity(identity) && !active) {
     if (!requested)
@@ -353,7 +379,10 @@ export function resolveOrganization(identity: RequestIdentity, requested: string
       });
     return requested;
   }
-  if (!active) throw new ApiError('forbidden', 'join an organisation first', { details: { code: 'no_organization' } });
+  if (!active)
+    throw new ApiError('forbidden', 'join an organisation first', {
+      details: { code: 'no_organization' },
+    });
   if (requested && requested !== active)
     throw new ApiError('forbidden', 'records can only be created in the active organisation');
   return active;

@@ -110,11 +110,10 @@ export async function BudgetTab({ identity, shell }: { identity: RequestIdentity
                 { name: 'kind', label: 'Kind', type: 'select', required: true, options: [{ value: 'commitment', label: 'Commitment' }, { value: 'actual', label: 'Actual' }] },
                 { name: 'amountKobo', label: 'Amount (₦)', type: 'naira', required: true },
                 { name: 'description', label: 'Description', required: true, wide: true },
-                { name: 'counterparty', label: 'Counterparty' },
-                { name: 'reference', label: 'Reference' },
-                { name: 'incurredAt', label: 'Date', type: 'date' },
+                { name: 'counterparty', label: 'Counterparty', emptyAs: 'null' },
+                { name: 'reference', label: 'Reference', emptyAs: 'null' },
+                { name: 'incurredAt', label: 'Date', type: 'date', emptyAs: 'null' },
               ]}
-              toBody={(v) => ({ ...v, counterparty: v.counterparty || null, reference: v.reference || null, incurredAt: v.incurredAt || null })}
             />
           ) : null
         }

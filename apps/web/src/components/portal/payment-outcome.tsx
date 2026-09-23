@@ -6,21 +6,13 @@ import type { PaymentVerifyResult } from '@simplexd/contracts';
 import { Alert, Button, Skeleton, StatusBadge } from '@simplexd/ui';
 import { describeError, portalFetch } from '@/lib/portal/client';
 import { koboToNaira } from '@/lib/portal/format';
+import { paymentOutcomeCopy, type OutcomeTone } from '@/lib/portal/payments';
 import { ErrorState } from './error-state';
 
-type Tone = 'success' | 'warning' | 'danger' | 'info';
-
-export function outcomeOf(result: PaymentVerifyResult): { tone: Tone; title: string } {
-  const status = result.attempt.status;
-  if (status === 'successful') return { tone: 'success', title: 'Payment received' };
-  if (status === 'pending' || status === 'initialized')
-    return { tone: 'info', title: 'Payment not confirmed yet' };
-  if (status === 'uncertain') return { tone: 'warning', title: 'Payment needs review' };
-  if (status === 'reversed') return { tone: 'warning', title: 'Payment reversed' };
-  return {
-    tone: 'danger',
-    title: status === 'abandoned' ? 'Checkout abandoned' : 'Payment failed',
-  };
+/** Headline for a verification result; the status is what the server recorded. */
+export function outcomeOf(result: PaymentVerifyResult): { tone: OutcomeTone; title: string } {
+  const { tone, title } = paymentOutcomeCopy(result.attempt);
+  return { tone, title };
 }
 
 /**

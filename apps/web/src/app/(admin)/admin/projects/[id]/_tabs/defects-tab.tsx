@@ -40,11 +40,10 @@ export async function DefectsTab({ identity, shell }: { identity: RequestIdentit
               { name: 'title', label: 'Title', required: true, wide: true },
               { name: 'severity', label: 'Severity', type: 'select', required: true, options: defectSeveritySchema.options.map((s) => ({ value: s, label: humanize(s) })), defaultValue: 'minor' },
               { name: 'accountableParty', label: 'Accountable party', type: 'select', required: true, options: accountablePartySchema.options.map((s) => ({ value: s, label: humanize(s) })), defaultValue: 'unknown' },
-              { name: 'locationNote', label: 'Location' },
-              { name: 'dueDate', label: 'Due date', type: 'date' },
-              { name: 'description', label: 'Description', type: 'textarea' },
+              { name: 'locationNote', label: 'Location', emptyAs: 'null' },
+              { name: 'dueDate', label: 'Due date', type: 'date', emptyAs: 'null' },
+              { name: 'description', label: 'Description', type: 'textarea', emptyAs: 'null' },
             ]}
-            toBody={(v) => ({ ...v, locationNote: v.locationNote || null, dueDate: v.dueDate || null, description: v.description || null })}
           />
         ) : null
       }

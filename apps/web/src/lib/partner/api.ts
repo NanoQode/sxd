@@ -54,7 +54,12 @@ export async function partnerFetch<T>(
 ): Promise<T> {
   const res = await fetch(path, {
     method: init.method ?? (init.body === undefined ? 'GET' : 'POST'),
-    headers: init.body === undefined ? {} : { 'content-type': 'application/json' },
+    // JSON always: e.g. the file download endpoint answers with a 302 to the
+    // storage host unless the client asks for the signed URL as JSON.
+    headers:
+      init.body === undefined
+        ? { accept: 'application/json' }
+        : { accept: 'application/json', 'content-type': 'application/json' },
     body: init.body === undefined ? undefined : JSON.stringify(init.body),
     credentials: 'same-origin',
     signal: init.signal,

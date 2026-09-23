@@ -19,6 +19,12 @@ export const POST = route<{ params: Promise<{ id: string }> }>(async (req, ctx) 
   const identity = await getIdentity();
   if (!identity.session) throw new ApiError('unauthenticated', 'sign in required');
   const { id } = await params(ctx, idParams);
-  const body = await parseJson(req, workOrderCreateSchema.pick({ title: true, description: true, category: true, priority: true }));
-  return json(await createMyTicket(identity, id, body, { correlationId: ctx.correlationId }), { status: 201, correlationId: ctx.correlationId });
+  const body = await parseJson(
+    req,
+    workOrderCreateSchema.pick({ title: true, description: true, category: true, priority: true }),
+  );
+  return json(await createMyTicket(identity, id, body, { correlationId: ctx.correlationId }), {
+    status: 201,
+    correlationId: ctx.correlationId,
+  });
 });

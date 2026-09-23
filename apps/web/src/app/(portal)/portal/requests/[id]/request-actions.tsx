@@ -3,8 +3,18 @@
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import type { EngagementStatus } from '@simplexd/contracts';
-import { Alert, Button, Dialog, DialogContent, DialogFooter, Field, Textarea, humanize, useToast } from '@simplexd/ui';
-import { apiFetch, errorMessage } from '@/lib/api/client-fetch';
+import {
+  Button,
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  Field,
+  Textarea,
+  humanize,
+  useToast,
+} from '@simplexd/ui';
+import { describeError, portalFetch } from '@/lib/portal/client';
+import { ErrorState } from '@/components/portal/error-state';
 
 interface Transition {
   to: EngagementStatus;
@@ -23,33 +33,34 @@ export function RequestActions({
   version,
   status,
   availableTransitions,
-  mode,
 }: {
   id: string;
   version: number;
   status: EngagementStatus;
   availableTransitions: Transition[];
-  mode: 'transitions' | 'note';
 }) {
   const router = useRouter();
   const { toast } = useToast();
   const [open, setOpen] = useState<Transition | null>(null);
   const [reason, setReason] = useState('');
-  const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<{ message: string; correlationId: string | null } | null>(
+    null,
+  );
 
   async function submitTransition() {
     if (!open) return;
     if (open.reasonRequired && reason.trim().length < 3) {
-      setError('Please give a short reason; it is recorded in the timeline.');
+      setError({
+        message: 'Please give a short reason; it is recorded in the timeline.',
+        correlationId: null,
+      });
       return;
     }
     setBusy(true);
     setError(null);
     try {
-      await apiFetch(`/api/v1/service-requests/${id}/transitions`, {
-        method: 'POST',
+      await portalFetch(`/api/v1/service-requests/${id}/transitions`, {
         body: { to: open.to, reason: reason.trim() || undefined, expectedVersion: version },
       });
       toast({ title: `${LABELS[open.to] ?? humanize(open.to)} recorded`, tone: 'success' });
@@ -57,54 +68,11 @@ export function RequestActions({
       setReason('');
       router.refresh();
     } catch (err) {
-      setError(errorMessage(err));
+      const e = describeError(err);
+      setError({ message: e.message, correlationId: e.correlationId });
     } finally {
       setBusy(false);
     }
-  }
-
-  async function submitNote() {
-    if (note.trim().length === 0) return;
-    setBusy(true);
-    setError(null);
-    try {
-      await apiFetch(`/api/v1/service-requests/${id}/notes`, { method: 'POST', body: { body: note.trim() } });
-      setNote('');
-      toast({ title: 'Note added', tone: 'success' });
-      router.refresh();
-    } catch (err) {
-      setError(errorMessage(err));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  if (mode === 'note') {
-    const closed = status === 'completed' || status === 'cancelled' || status === 'rejected';
-    if (closed) return <p className="text-sm text-fg-muted">This request is closed; notes are read-only.</p>;
-    return (
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          void submitNote();
-        }}
-        className="space-y-2"
-      >
-        {error ? (
-          <Alert tone="danger" title="Could not add note">
-            {error}
-          </Alert>
-        ) : null}
-        <Field label="Add a note for the team">
-          {({ id: fieldId }) => (
-            <Textarea id={fieldId} rows={3} maxLength={4000} value={note} onChange={(e) => setNote(e.target.value)} />
-          )}
-        </Field>
-        <Button type="submit" variant="secondary" size="sm" loading={busy} disabled={note.trim().length === 0}>
-          Add note
-        </Button>
-      </form>
-    );
   }
 
   if (availableTransitions.length === 0) return null;
@@ -132,12 +100,18 @@ export function RequestActions({
           >
             <div className="space-y-3">
               {error ? (
-                <Alert tone="danger" title="Could not apply">
-                  {error}
-                </Alert>
+                <ErrorState
+                  title="Could not apply"
+                  message={error.message}
+                  correlationId={error.correlationId}
+                />
               ) : null}
               {open.reasonRequired ? (
-                <Field label="Reason" required hint="Recorded in the request timeline and shared with the team.">
+                <Field
+                  label="Reason"
+                  required
+                  hint="Recorded in the request timeline and shared with the team."
+                >
                   {({ id: fieldId, describedBy }) => (
                     <Textarea
                       id={fieldId}
@@ -150,13 +124,19 @@ export function RequestActions({
                   )}
                 </Field>
               ) : (
-                <p className="text-sm text-fg-muted">The request will move from {humanize(status)} to {humanize(open.to)}.</p>
+                <p className="text-sm text-fg-muted">
+                  The request will move from {humanize(status)} to {humanize(open.to)}.
+                </p>
               )}
               <DialogFooter>
                 <Button variant="ghost" onClick={() => setOpen(null)} disabled={busy}>
                   Keep as is
                 </Button>
-                <Button variant={open.to === 'cancelled' ? 'danger' : 'primary'} onClick={() => void submitTransition()} loading={busy}>
+                <Button
+                  variant={open.to === 'cancelled' ? 'danger' : 'primary'}
+                  onClick={() => void submitTransition()}
+                  loading={busy}
+                >
                   Confirm
                 </Button>
               </DialogFooter>

@@ -10,14 +10,27 @@ import {
   inviteParty,
   listLeases,
   postLeaseNotice,
+  renewLease,
   revokeParty,
   terminateLease,
   transitionLease,
   updateLease,
 } from './leases';
-import { generateOwnerStatement, getOwnerStatement, issueOwnerStatement, reconcileOwnerStatement } from './owner-statements';
-import { firstApprovePayout, proposePayout, secondApprovePayout, settlePayout, submitPayout } from './payouts';
-import { getLeaseBalance, listCharges, listSchedule, runRentInvoicing } from './schedules';
+import {
+  generateOwnerStatement,
+  getOwnerStatement,
+  issueOwnerStatement,
+  reconcileOwnerStatement,
+} from './owner-statements';
+import {
+  firstApprovePayout,
+  proposePayout,
+  secondApprovePayout,
+  settlePayout,
+  submitPayout,
+} from './payouts';
+import { runRentInvoicing } from './jobs';
+import { getLeaseBalance, listCharges, listSchedule } from './schedules';
 import { createStayBooking, transitionStayBooking } from './stays';
 import {
   ALL_FLAGS,
@@ -91,64 +104,134 @@ describe('leases and rent', () => {
     expect(lease.terms).toMatchObject({ dueLeadDays: 0 });
 
     // The other owner cannot see it; the adviser reads but cannot manage; support lacks rentals.manage.
-    await expect(getLease(ownerIdentity(f, 'B'), leaseId)).rejects.toSatisfy((e) => errorCode(e) === 'not_found');
+    await expect(getLease(ownerIdentity(f, 'B'), leaseId)).rejects.toSatisfy(
+      (e) => errorCode(e) === 'not_found',
+    );
     expect((await getLease(adviserIdentity(f), leaseId)).id).toBe(leaseId);
-    await expect(updateLease(adviserIdentity(f), leaseId, { expectedVersion: 1, noticePeriodDays: 30 })).rejects.toSatisfy((e) => errorCode(e) === 'forbidden');
-    await expect(updateLease(supportIdentity(f), leaseId, { expectedVersion: 1, noticePeriodDays: 30 })).rejects.toSatisfy((e) => errorCode(e) === 'forbidden');
     await expect(
-      createLease(ownerIdentity(f, 'B'), { propertyId: f.propertyA, kind: 'residential_monthly', startDate: '2026-01-01', rentAmountKobo: '1', rentPeriod: 'monthly', currency: 'NGN', depositKobo: '0', managementFeeBasis: 'none' }),
+      updateLease(adviserIdentity(f), leaseId, { expectedVersion: 1, noticePeriodDays: 30 }),
+    ).rejects.toSatisfy((e) => errorCode(e) === 'forbidden');
+    await expect(
+      updateLease(supportIdentity(f), leaseId, { expectedVersion: 1, noticePeriodDays: 30 }),
+    ).rejects.toSatisfy((e) => errorCode(e) === 'forbidden');
+    await expect(
+      createLease(ownerIdentity(f, 'B'), {
+        propertyId: f.propertyA,
+        kind: 'residential_monthly',
+        startDate: '2026-01-01',
+        rentAmountKobo: '1',
+        rentPeriod: 'monthly',
+        currency: 'NGN',
+        depositKobo: '0',
+        managementFeeBasis: 'none',
+      }),
     ).rejects.toSatisfy((e) => errorCode(e) === 'not_found');
 
-    const party = await inviteParty(owner, leaseId, { role: 'tenant', name: 'Tunde Tenant', email: `${f.tenant1}@example.test`, expiresInDays: 7 });
+    const party = await inviteParty(owner, leaseId, {
+      role: 'tenant',
+      name: 'Tunde Tenant',
+      email: `${f.tenant1}@example.test`,
+      expiresInDays: 7,
+    });
     expect(party.accessStatus).toBe('invited');
-    const [outbox] = await f.dbs.owner.select().from(schema.outboxEvents).where(eq(schema.outboxEvents.eventType, 'tenant.invited'));
+    const [outbox] = await f.dbs.owner
+      .select()
+      .from(schema.outboxEvents)
+      .where(eq(schema.outboxEvents.eventType, 'tenant.invited'));
     const payload = outbox!.payload as { invitationLink: string; email: string };
     expect(payload.email).toBe(`${f.tenant1}@example.test`);
     const token = new URL(payload.invitationLink, 'http://x').searchParams.get('token')!;
 
     // The wrong person cannot redeem; the invited tenant can, once.
-    await expect(acceptTenantInvitation(tenantIdentity(f, 2), { token })).rejects.toSatisfy((e) => errorCode(e) === 'forbidden');
+    await expect(acceptTenantInvitation(tenantIdentity(f, 2), { token })).rejects.toSatisfy(
+      (e) => errorCode(e) === 'forbidden',
+    );
     const accepted = await acceptTenantInvitation(tenantIdentity(f, 1), { token });
     expect(accepted.accessStatus).toBe('active');
     expect(accepted.userId).toBe(f.tenant1);
-    await expect(acceptTenantInvitation(tenantIdentity(f, 1), { token })).rejects.toSatisfy((e) => errorCode(e) === 'not_found');
+    await expect(acceptTenantInvitation(tenantIdentity(f, 1), { token })).rejects.toSatisfy(
+      (e) => errorCode(e) === 'not_found',
+    );
 
     // An expired invitation is refused and marked expired.
-    const expired = await inviteParty(owner, leaseId, { role: 'occupant', name: 'Late Occupant', email: 'late@example.test', expiresInDays: 1 });
-    await f.dbs.owner.update(schema.leaseParties).set({ invitationExpiresAt: new Date(Date.now() - 1000) }).where(eq(schema.leaseParties.id, expired.id));
-    const [late] = await f.dbs.owner.select().from(schema.outboxEvents).where(eq(schema.outboxEvents.aggregateId, expired.id));
-    const lateToken = new URL((late!.payload as { invitationLink: string }).invitationLink, 'http://x').searchParams.get('token')!;
-    await expect(acceptTenantInvitation(identityFor('late_user', { email: 'late@example.test' }), { token: lateToken })).rejects.toSatisfy((e) => errorCode(e) === 'conflict');
-    const [lateRow] = await f.dbs.owner.select().from(schema.leaseParties).where(eq(schema.leaseParties.id, expired.id));
+    const expired = await inviteParty(owner, leaseId, {
+      role: 'occupant',
+      name: 'Late Occupant',
+      email: 'late@example.test',
+      expiresInDays: 1,
+    });
+    await f.dbs.owner
+      .update(schema.leaseParties)
+      .set({ invitationExpiresAt: new Date(Date.now() - 1000) })
+      .where(eq(schema.leaseParties.id, expired.id));
+    const [late] = await f.dbs.owner
+      .select()
+      .from(schema.outboxEvents)
+      .where(eq(schema.outboxEvents.aggregateId, expired.id));
+    const lateToken = new URL(
+      (late!.payload as { invitationLink: string }).invitationLink,
+      'http://x',
+    ).searchParams.get('token')!;
+    await expect(
+      acceptTenantInvitation(identityFor('late_user', { email: 'late@example.test' }), {
+        token: lateToken,
+      }),
+    ).rejects.toSatisfy((e) => errorCode(e) === 'conflict');
+    const [lateRow] = await f.dbs.owner
+      .select()
+      .from(schema.leaseParties)
+      .where(eq(schema.leaseParties.id, expired.id));
     expect(lateRow!.accessStatus).toBe('expired');
   });
 
   it('activates the lease and generates the schedule with rent, service charge and deposit charges', async () => {
     const owner = ownerIdentity(f, 'A');
-    const updated = await updateLease(owner, leaseId, { expectedVersion: 1, terms: { serviceChargeKobo: '5000000' } });
+    const updated = await updateLease(owner, leaseId, {
+      expectedVersion: 1,
+      terms: { serviceChargeKobo: '5000000' },
+    });
     expect(updated.version).toBe(2);
     const active = await transitionLease(owner, leaseId, { to: 'active', expectedVersion: 2 });
     expect(active.status).toBe('active');
     const schedule = await listSchedule(owner, leaseId);
     expect(schedule).toHaveLength(12);
-    expect(schedule[0]).toMatchObject({ periodStart: '2026-01-01', periodEnd: '2026-01-31', dueDate: '2026-01-01', status: 'scheduled' });
+    expect(schedule[0]).toMatchObject({
+      periodStart: '2026-01-01',
+      periodEnd: '2026-01-31',
+      dueDate: '2026-01-01',
+      status: 'scheduled',
+    });
     expect(schedule[0]!.amountKobo).toBe((RENT + 50_000_00n).toString());
     const charges = await listCharges(owner, leaseId);
     expect(charges.filter((c) => c.kind === 'rent')).toHaveLength(12);
     expect(charges.filter((c) => c.kind === 'service_charge')).toHaveLength(12);
     expect(charges.filter((c) => c.kind === 'deposit')).toHaveLength(1);
     // Activation is idempotent for the schedule and the unit is now occupied.
-    await expect(transitionLease(owner, leaseId, { to: 'active', expectedVersion: 3 })).rejects.toSatisfy((e) => errorCode(e) === 'invalid_transition');
-    const [unit] = await f.dbs.owner.select().from(schema.units).where(eq(schema.units.id, f.unitA1));
+    await expect(
+      transitionLease(owner, leaseId, { to: 'active', expectedVersion: 3 }),
+    ).rejects.toSatisfy((e) => errorCode(e) === 'invalid_transition');
+    const [unit] = await f.dbs.owner
+      .select()
+      .from(schema.units)
+      .where(eq(schema.units.id, f.unitA1));
     expect(unit!.status).toBe('occupied');
     // Rent terms are frozen once active.
-    await expect(updateLease(owner, leaseId, { expectedVersion: 3, rentAmountKobo: '1' })).rejects.toSatisfy((e) => errorCode(e) === 'invalid_transition');
+    await expect(
+      updateLease(owner, leaseId, { expectedVersion: 3, rentAmountKobo: '1' }),
+    ).rejects.toSatisfy((e) => errorCode(e) === 'invalid_transition');
   });
 
-  it('issues rent invoices on the owner\'s behalf, settles them through finance and mirrors the allocation', async () => {
-    const run = await runRentInvoicing(f.dbs.app, { asOf: '2026-01-01', leadDays: 14, now: new Date('2026-01-01T09:00:00Z') });
+  it("issues rent invoices on the owner's behalf, settles them through finance and mirrors the allocation", async () => {
+    const run = await runRentInvoicing(f.dbs.app, {
+      asOf: '2026-01-01',
+      leadDays: 14,
+      now: new Date('2026-01-01T09:00:00Z'),
+    });
     expect(run.invoiced).toBe(2); // deposit + January rent
-    const invoices = await f.dbs.owner.select().from(schema.invoices).where(eq(schema.invoices.leaseId, leaseId));
+    const invoices = await f.dbs.owner
+      .select()
+      .from(schema.invoices)
+      .where(eq(schema.invoices.leaseId, leaseId));
     const rent = invoices.find((i) => i.kind === 'rent')!;
     const deposit = invoices.find((i) => i.kind === 'deposit')!;
     expect(rent.status).toBe('issued');
@@ -171,20 +254,31 @@ describe('leases and rent', () => {
     expect(paid.receiptNumber).toMatch(/^RCT|^REC|\d/);
     const balance = await getLeaseBalance(ownerIdentity(f, 'A'), leaseId);
     expect(balance.paidKobo).toBe((RENT + 50_000_00n).toString());
-    const mirrored = await f.dbs.owner.select().from(schema.rentAllocations).where(eq(schema.rentAllocations.leaseId, leaseId));
+    const mirrored = await f.dbs.owner
+      .select()
+      .from(schema.rentAllocations)
+      .where(eq(schema.rentAllocations.leaseId, leaseId));
     expect(mirrored.reduce((s, r) => s + r.amountKobo, 0n)).toBe(RENT + 50_000_00n);
     expect(mirrored.every((r) => r.allocationId === paid.allocationId)).toBe(true);
     const scheduleAfter = await listSchedule(ownerIdentity(f, 'A'), leaseId);
     expect(scheduleAfter[0]!.status).toBe('paid');
     // Arrears: eleven unpaid periods; the deposit is held, not owed rent; buckets add up to the total.
     expect(balance.arrears.totalOutstandingKobo).toBe((11n * (RENT + 50_000_00n)).toString());
-    expect(Object.values(balance.arrears.buckets).reduce((s, v) => s + BigInt(v), 0n).toString()).toBe(balance.arrears.totalOutstandingKobo);
+    expect(
+      Object.values(balance.arrears.buckets)
+        .reduce((s, v) => s + BigInt(v), 0n)
+        .toString(),
+    ).toBe(balance.arrears.totalOutstandingKobo);
   });
 
   it('builds an owner statement reconciled to allocations and journals, then pays out with two approvers', async () => {
     const ops = opsIdentity(f);
     // Settlement happened "now", so the statement period is the current month.
-    const statement = await generateOwnerStatement(ops, { organizationId: f.orgA, propertyId: f.propertyA, ...currentMonth() });
+    const statement = await generateOwnerStatement(ops, {
+      organizationId: f.orgA,
+      propertyId: f.propertyA,
+      ...currentMonth(),
+    });
     expect(statement.status).toBe('draft');
     expect(statement.totals.collectedKobo).toBe((RENT + 50_000_00n).toString());
     expect(statement.totals.feesKobo).toBe((RENT / 10n).toString()); // 1000 bps of rent, not of the service charge
@@ -193,8 +287,12 @@ describe('leases and rent', () => {
     expect(statement.lines.filter((l) => l.kind === 'rent_collected')).toHaveLength(1);
     expect(statement.lines.filter((l) => l.kind === 'service_charge_collected')).toHaveLength(1);
     // Owners do not see drafts; support cannot generate.
-    await expect(getOwnerStatement(ownerIdentity(f, 'A'), statement.id)).rejects.toSatisfy((e) => errorCode(e) === 'not_found');
-    await expect(generateOwnerStatement(supportIdentity(f), { organizationId: f.orgA, ...currentMonth() })).rejects.toSatisfy((e) => errorCode(e) === 'forbidden');
+    await expect(getOwnerStatement(ownerIdentity(f, 'A'), statement.id)).rejects.toSatisfy(
+      (e) => errorCode(e) === 'not_found',
+    );
+    await expect(
+      generateOwnerStatement(supportIdentity(f), { organizationId: f.orgA, ...currentMonth() }),
+    ).rejects.toSatisfy((e) => errorCode(e) === 'forbidden');
 
     const reconciled = await reconcileOwnerStatement(ops, statement.id);
     expect(reconciled.status).toBe('reconciled');
@@ -204,7 +302,10 @@ describe('leases and rent', () => {
       recoveryJournalKobo: '0',
       matches: true,
     });
-    const feeLines = await journalLinesByRef(f.dbs.owner, `owner_statement:${statement.id}:management_fee:${leaseId}`);
+    const feeLines = await journalLinesByRef(
+      f.dbs.owner,
+      `owner_statement:${statement.id}:management_fee:${leaseId}`,
+    );
     expect(feeLines).toEqual([
       { code: '2100', debitKobo: RENT / 10n, creditKobo: 0n },
       { code: '4100', debitKobo: 0n, creditKobo: RENT / 10n },
@@ -212,7 +313,9 @@ describe('leases and rent', () => {
     const issued = await issueOwnerStatement(ops, statement.id);
     expect(issued.status).toBe('issued');
     expect((await getOwnerStatement(ownerIdentity(f, 'A'), statement.id)).status).toBe('issued');
-    await expect(getOwnerStatement(ownerIdentity(f, 'B'), statement.id)).rejects.toSatisfy((e) => errorCode(e) === 'not_found');
+    await expect(getOwnerStatement(ownerIdentity(f, 'B'), statement.id)).rejects.toSatisfy(
+      (e) => errorCode(e) === 'not_found',
+    );
 
     // Payout: proposed by ops, first approval by finance 1, second must be a different approver.
     const payout = await proposePayout(ops, {
@@ -221,22 +324,42 @@ describe('leases and rent', () => {
     });
     expect(payout.status).toBe('proposed');
     expect(payout.amountKobo).toBe(issued.totals.netKobo);
-    await expect(proposePayout(ops, { ownerStatementId: statement.id, amountKobo: '1', beneficiary: { accountName: 'x', bankName: 'y', accountNumberMasked: '0000' } })).rejects.toSatisfy((e) => errorCode(e) === 'validation_failed');
-    await expect(firstApprovePayout(financeIdentity(f, 1, false), payout.id)).rejects.toSatisfy((e) => errorCode(e) === 'forbidden');
-    await expect(firstApprovePayout(ops, payout.id)).rejects.toSatisfy((e) => errorCode(e) === 'forbidden');
+    await expect(
+      proposePayout(ops, {
+        ownerStatementId: statement.id,
+        amountKobo: '1',
+        beneficiary: { accountName: 'x', bankName: 'y', accountNumberMasked: '0000' },
+      }),
+    ).rejects.toSatisfy((e) => errorCode(e) === 'validation_failed');
+    await expect(firstApprovePayout(financeIdentity(f, 1, false), payout.id)).rejects.toSatisfy(
+      (e) => errorCode(e) === 'forbidden',
+    );
+    await expect(firstApprovePayout(ops, payout.id)).rejects.toSatisfy(
+      (e) => errorCode(e) === 'forbidden',
+    );
     const first = await firstApprovePayout(financeIdentity(f, 1), payout.id);
     expect(first.status).toBe('first_approved');
-    await expect(secondApprovePayout(financeIdentity(f, 1), payout.id)).rejects.toSatisfy((e) => errorCode(e) === 'forbidden');
+    await expect(secondApprovePayout(financeIdentity(f, 1), payout.id)).rejects.toSatisfy(
+      (e) => errorCode(e) === 'forbidden',
+    );
     const approved = await secondApprovePayout(financeIdentity(f, 2), payout.id);
     expect(approved.status).toBe('approved');
     expect(approved.journalId).not.toBeNull();
-    expect((await journalLinesByRef(f.dbs.owner, `payout:${payout.id}:approved`)).map((l) => l.code)).toEqual(['2100', '2400']);
-    await expect(settlePayout(financeIdentity(f, 1), payout.id, { settlementReference: 'TRF-1' })).rejects.toSatisfy((e) => errorCode(e) === 'invalid_transition');
+    expect(
+      (await journalLinesByRef(f.dbs.owner, `payout:${payout.id}:approved`)).map((l) => l.code),
+    ).toEqual(['2100', '2400']);
+    await expect(
+      settlePayout(financeIdentity(f, 1), payout.id, { settlementReference: 'TRF-1' }),
+    ).rejects.toSatisfy((e) => errorCode(e) === 'invalid_transition');
     const submitted = await submitPayout(financeIdentity(f, 1), payout.id);
     expect(submitted.status).toBe('submitted');
-    const settled = await settlePayout(financeIdentity(f, 2), payout.id, { settlementReference: 'GTB-2026-01-0001' });
+    const settled = await settlePayout(financeIdentity(f, 2), payout.id, {
+      settlementReference: 'GTB-2026-01-0001',
+    });
     expect(settled.status).toBe('settled');
-    expect((await journalLinesByRef(f.dbs.owner, `payout:${payout.id}:settled`)).map((l) => l.code)).toEqual(['2400', '1000']);
+    expect(
+      (await journalLinesByRef(f.dbs.owner, `payout:${payout.id}:settled`)).map((l) => l.code),
+    ).toEqual(['2400', '1000']);
     const ledger = await ledgerBalanced(f.dbs.owner);
     expect(ledger.unbalancedJournals).toBe(0);
     expect(ledger.debitKobo).toBe(ledger.creditKobo);
@@ -244,22 +367,218 @@ describe('leases and rent', () => {
 
   it('posts notices to active tenants, revokes access and terminates with a reason', async () => {
     const owner = ownerIdentity(f, 'A');
-    expect(await postLeaseNotice(owner, leaseId, { title: 'Water outage', body: 'Tank cleaning on Saturday.' })).toEqual({ recipients: 1 });
+    expect(
+      await postLeaseNotice(owner, leaseId, {
+        title: 'Water outage',
+        body: 'Tank cleaning on Saturday.',
+      }),
+    ).toEqual({ recipients: 1 });
     const parties = (await getLease(owner, leaseId)).parties;
     const tenantParty = parties.find((p) => p.userId === f.tenant1)!;
     const revoked = await revokeParty(owner, leaseId, tenantParty.id, { reason: 'moved out' });
     expect(revoked.accessStatus).toBe('revoked');
-    await expect(getLease(tenantIdentity(f, 1), leaseId)).rejects.toSatisfy((e) => errorCode(e) === 'not_found');
+    await expect(getLease(tenantIdentity(f, 1), leaseId)).rejects.toSatisfy(
+      (e) => errorCode(e) === 'not_found',
+    );
     const current = await getLease(owner, leaseId);
-    await expect(terminateLease(owner, leaseId, { reason: '', expectedVersion: current.version })).rejects.toSatisfy((e) => ['validation_failed', 'invalid_transition'].includes(errorCode(e)!));
-    const terminated = await terminateLease(owner, leaseId, { reason: 'Tenant relocated abroad', terminatedOn: '2026-02-15', expectedVersion: current.version });
+    await expect(
+      terminateLease(owner, leaseId, { reason: '', expectedVersion: current.version }),
+    ).rejects.toSatisfy((e) => ['validation_failed', 'invalid_transition'].includes(errorCode(e)!));
+    await expect(
+      terminateLease(owner, leaseId, {
+        reason: 'Too early',
+        terminatedOn: '2025-12-31',
+        expectedVersion: current.version,
+      }),
+    ).rejects.toSatisfy((e) => errorCode(e) === 'validation_failed');
+    const terminated = await terminateLease(owner, leaseId, {
+      reason: 'Tenant relocated abroad',
+      terminatedOn: '2026-02-15',
+      expectedVersion: current.version,
+    });
     expect(terminated.status).toBe('terminated');
     expect(terminated.terminationReason).toBe('Tenant relocated abroad');
+    expect(terminated.endDate).toBe('2026-02-15');
     const schedule = await listSchedule(owner, leaseId);
-    expect(schedule.filter((s) => s.status === 'waived')).toHaveLength(11);
+    // March–December are waived; February (not invoiced yet) is cut at 15 Feb and scaled 15/28 days.
+    expect(schedule.filter((s) => s.status === 'waived')).toHaveLength(10);
+    const february = schedule.find((s) => s.periodStart === '2026-02-01')!;
+    const rentFeb = (RENT * 15n * 2n + 28n) / (28n * 2n); // half-up
+    const serviceFeb = (50_000_00n * 15n * 2n + 28n) / (28n * 2n);
+    expect(february).toMatchObject({
+      periodEnd: '2026-02-15',
+      status: 'scheduled',
+      amountKobo: (rentFeb + serviceFeb).toString(),
+    });
+    const febCharges = (await listCharges(owner, leaseId)).filter(
+      (c) => c.scheduleId === february.id,
+    );
+    expect(febCharges.map((c) => c.amountKobo).sort()).toEqual(
+      [serviceFeb.toString(), rentFeb.toString()].sort(),
+    );
+    // Waived periods are no longer owed: the balance is February plus nothing beyond it.
+    const after = await getLeaseBalance(owner, leaseId);
+    expect(after.outstandingKobo).toBe((rentFeb + serviceFeb).toString());
+    expect(
+      (await listCharges(owner, leaseId)).some(
+        (c) => c.chargedAt >= '2026-03-01' && c.kind !== 'deposit',
+      ),
+    ).toBe(false);
     const page = await listLeases(owner, { limit: 10, status: 'terminated' });
     expect(page.items.map((l) => l.id)).toEqual([leaseId]);
     expect((await listLeases(ownerIdentity(f, 'B'), { limit: 10 })).items).toHaveLength(0);
+  });
+});
+
+describe('lease lifecycle and renewal', () => {
+  it('renews a fixed-term lease without overlap; the rent job moves it to expiring, then ended', async () => {
+    const owner = ownerIdentity(f, 'A');
+    const [unit] = await f.dbs.owner
+      .insert(schema.units)
+      .values({ propertyId: f.propertyA, label: 'A2', unitType: 'flat' })
+      .returning({ id: schema.units.id });
+    const base = {
+      propertyId: f.propertyA,
+      unitId: unit!.id,
+      kind: 'residential_monthly' as const,
+      rentPeriod: 'monthly' as const,
+      currency: 'NGN',
+      depositKobo: '0',
+      managementFeeBasis: 'none' as const,
+    };
+    const first = await createLease(owner, {
+      ...base,
+      startDate: '2026-01-01',
+      endDate: '2026-06-30',
+      rentAmountKobo: '1000000',
+    });
+    await transitionLease(owner, first.id, { to: 'active', expectedVersion: 1 });
+    // A second lease for overlapping dates cannot be activated on the same unit.
+    const clash = await createLease(owner, {
+      ...base,
+      startDate: '2026-03-01',
+      endDate: '2026-08-31',
+      rentAmountKobo: '1000000',
+    });
+    await expect(
+      transitionLease(owner, clash.id, { to: 'active', expectedVersion: 1 }),
+    ).rejects.toSatisfy((e) => errorCode(e) === 'conflict');
+
+    await expect(
+      renewLease(owner, first.id, { startDate: '2026-06-15', expectedVersion: 2 }),
+    ).rejects.toSatisfy((e) => errorCode(e) === 'validation_failed');
+    const { previous, renewal } = await renewLease(owner, first.id, {
+      startDate: '2026-07-01',
+      endDate: '2026-12-31',
+      rentAmountKobo: '1100000',
+      expectedVersion: 2,
+    });
+    expect(previous).toMatchObject({ status: 'active', endDate: '2026-06-30' });
+    expect(renewal).toMatchObject({
+      status: 'draft',
+      startDate: '2026-07-01',
+      endDate: '2026-12-31',
+      rentAmountKobo: '1100000',
+      unitId: unit!.id,
+    });
+    // The owner can activate the renewal while the current lease runs: their terms do not overlap.
+    expect(
+      (await transitionLease(owner, renewal.id, { to: 'active', expectedVersion: 1 })).status,
+    ).toBe('active');
+
+    const june = await runRentInvoicing(f.dbs.app, {
+      asOf: '2026-06-05',
+      leadDays: 0,
+      leaseIds: [first.id],
+    });
+    expect(june).toMatchObject({ leases: 1, invoiced: 6, overdue: 6, failures: [] });
+    expect(june.transitions).toEqual([{ leaseId: first.id, to: 'expiring' }]);
+    const july = await runRentInvoicing(f.dbs.app, {
+      asOf: '2026-07-01',
+      leadDays: 0,
+      leaseIds: [first.id],
+    });
+    expect(july.transitions).toEqual([{ leaseId: first.id, to: 'ended' }]);
+    expect((await getLease(owner, first.id)).status).toBe('ended');
+    const [u] = await f.dbs.owner.select().from(schema.units).where(eq(schema.units.id, unit!.id));
+    expect(u!.status).toBe('occupied'); // the renewal holds the unit
+    // Ended leases with open invoices are still reconciled; nothing is invoiced or transitioned twice.
+    const again = await runRentInvoicing(f.dbs.app, {
+      asOf: '2026-07-02',
+      leadDays: 0,
+      leaseIds: [first.id],
+    });
+    expect(again).toMatchObject({
+      leases: 1,
+      invoiced: 0,
+      overdue: 0,
+      transitions: [],
+      failures: [],
+    });
+    const events = await f.dbs.owner
+      .select({ type: schema.outboxEvents.eventType })
+      .from(schema.outboxEvents)
+      .where(eq(schema.outboxEvents.aggregateId, first.id));
+    const types = events.map((e) => e.type);
+    expect(types).toEqual(
+      expect.arrayContaining([
+        'lease.renewed',
+        'lease.transitioned',
+        'rent.invoice_issued',
+        'rent.overdue',
+      ]),
+    );
+    expect(types.filter((t) => t === 'rent.overdue')).toHaveLength(6);
+  });
+
+  it('renews an open-ended lease at a period boundary and closes zero-rent periods without an invoice', async () => {
+    const owner = ownerIdentity(f, 'A');
+    const open = await createLease(owner, {
+      propertyId: f.propertyA,
+      kind: 'commercial',
+      startDate: '2026-01-01',
+      rentAmountKobo: '2000000',
+      rentPeriod: 'monthly',
+      currency: 'NGN',
+      depositKobo: '0',
+      managementFeeBasis: 'none',
+    });
+    await transitionLease(owner, open.id, { to: 'active', expectedVersion: 1 });
+    expect(await listSchedule(owner, open.id)).toHaveLength(12);
+    await expect(
+      renewLease(owner, open.id, { startDate: '2026-04-15', expectedVersion: 2 }),
+    ).rejects.toSatisfy((e) => errorCode(e) === 'validation_failed');
+    const { previous, renewal } = await renewLease(owner, open.id, {
+      startDate: '2026-04-01',
+      endDate: null,
+      expectedVersion: 2,
+    });
+    expect(previous).toMatchObject({ status: 'active', endDate: '2026-03-31', version: 3 });
+    expect(renewal).toMatchObject({ status: 'draft', startDate: '2026-04-01', endDate: null });
+    const periods = await listSchedule(owner, open.id);
+    expect(periods.filter((p) => p.status === 'waived').map((p) => p.periodStart)).toEqual(
+      periods.slice(3).map((p) => p.periodStart),
+    );
+
+    const free = await createLease(owner, {
+      propertyId: f.propertyA,
+      kind: 'short_stay_management',
+      startDate: '2026-01-01',
+      endDate: '2026-03-31',
+      rentAmountKobo: '0',
+      rentPeriod: 'monthly',
+      currency: 'NGN',
+      depositKobo: '0',
+      managementFeeBasis: 'none',
+    });
+    await transitionLease(owner, free.id, { to: 'active', expectedVersion: 1 });
+    const run = await runRentInvoicing(f.dbs.app, {
+      asOf: '2026-01-10',
+      leadDays: 0,
+      leaseIds: [free.id],
+    });
+    expect(run).toMatchObject({ invoiced: 0, skipped: 1, failures: [] });
+    expect((await listSchedule(owner, free.id))[0]!.status).toBe('waived');
   });
 });
 
@@ -298,12 +617,19 @@ describe('proration and academic periods', () => {
       terms: {
         academicTerms: [
           { label: 'First semester', start: '2026-09-01', end: '2027-01-15' },
-          { label: 'Second semester', start: '2027-02-01', end: '2027-06-30', amountKobo: '38000000' },
+          {
+            label: 'Second semester',
+            start: '2027-02-01',
+            end: '2027-06-30',
+            amountKobo: '38000000',
+          },
         ],
         guarantor: { name: 'Mrs Guarantor', relationship: 'parent', phoneE164: '+2348012345678' },
       },
     };
-    await expect(createLease(owner, student)).rejects.toSatisfy((e) => errorCode(e) === 'feature_disabled');
+    await expect(createLease(owner, student)).rejects.toSatisfy(
+      (e) => errorCode(e) === 'feature_disabled',
+    );
     const flagged = ownerIdentity(f, 'A', ALL_FLAGS);
     const created = await createLease(flagged, student);
     expect(created.parties.find((p) => p.role === 'guarantor')?.name).toBe('Mrs Guarantor');
@@ -319,10 +645,27 @@ describe('proration and academic periods', () => {
 describe('expansion variants', () => {
   it('gates assets, estates and short stays behind their flags', async () => {
     const owner = ownerIdentity(f, 'A');
-    await expect(createAsset(owner, { propertyId: f.propertyA, name: 'Generator', category: 'power', condition: 'good' })).rejects.toSatisfy((e) => errorCode(e) === 'feature_disabled');
-    await expect(createEstate(owner, { name: 'Lekki Gardens' })).rejects.toSatisfy((e) => errorCode(e) === 'feature_disabled');
     await expect(
-      createStayBooking(owner, { propertyId: f.propertyA, guestName: 'Guest', checkIn: '2026-05-01', checkOut: '2026-05-03', nightlyRateKobo: '5000000', platformFeeKobo: '0', cleaningKobo: '0' }),
+      createAsset(owner, {
+        propertyId: f.propertyA,
+        name: 'Generator',
+        category: 'power',
+        condition: 'good',
+      }),
+    ).rejects.toSatisfy((e) => errorCode(e) === 'feature_disabled');
+    await expect(createEstate(owner, { name: 'Lekki Gardens' })).rejects.toSatisfy(
+      (e) => errorCode(e) === 'feature_disabled',
+    );
+    await expect(
+      createStayBooking(owner, {
+        propertyId: f.propertyA,
+        guestName: 'Guest',
+        checkIn: '2026-05-01',
+        checkOut: '2026-05-03',
+        nightlyRateKobo: '5000000',
+        platformFeeKobo: '0',
+        cleaningKobo: '0',
+      }),
     ).rejects.toSatisfy((e) => errorCode(e) === 'feature_disabled');
   });
 
@@ -342,36 +685,103 @@ describe('expansion variants', () => {
     expect(booking.nights).toBe(3);
     expect(booking.grossKobo).toBe('15000000');
     await expect(
-      createStayBooking(owner, { propertyId: f.propertyB, unitId: f.unitB1, guestName: 'Clash', checkIn: '2026-05-03', checkOut: '2026-05-05', nightlyRateKobo: '1', platformFeeKobo: '0', cleaningKobo: '0' }),
+      createStayBooking(owner, {
+        propertyId: f.propertyB,
+        unitId: f.unitB1,
+        guestName: 'Clash',
+        checkIn: '2026-05-03',
+        checkOut: '2026-05-05',
+        nightlyRateKobo: '1',
+        platformFeeKobo: '0',
+        cleaningKobo: '0',
+      }),
     ).rejects.toSatisfy((e) => errorCode(e) === 'slot_unavailable');
-    const adjacent = await createStayBooking(owner, { propertyId: f.propertyB, unitId: f.unitB1, guestName: 'Next', checkIn: '2026-05-04', checkOut: '2026-05-06', nightlyRateKobo: '1', platformFeeKobo: '0', cleaningKobo: '0' });
+    const adjacent = await createStayBooking(owner, {
+      propertyId: f.propertyB,
+      unitId: f.unitB1,
+      guestName: 'Next',
+      checkIn: '2026-05-04',
+      checkOut: '2026-05-06',
+      nightlyRateKobo: '1',
+      platformFeeKobo: '0',
+      cleaningKobo: '0',
+    });
     expect(adjacent.status).toBe('requested');
     await transitionStayBooking(owner, booking.id, { to: 'confirmed' });
     await transitionStayBooking(owner, booking.id, { to: 'checked_in' });
     const out = await transitionStayBooking(owner, booking.id, { to: 'checked_out' });
     expect(out.turnoverWorkOrderId).not.toBeNull();
-    const [wo] = await f.dbs.owner.select().from(schema.workOrders).where(eq(schema.workOrders.id, out.turnoverWorkOrderId!));
+    const [wo] = await f.dbs.owner
+      .select()
+      .from(schema.workOrders)
+      .where(eq(schema.workOrders.id, out.turnoverWorkOrderId!));
     expect(wo).toMatchObject({ category: 'turnover', propertyId: f.propertyB, unitId: f.unitB1 });
-    const statement = await generateOwnerStatement(opsIdentity(f, ALL_FLAGS), { organizationId: f.orgB, propertyId: f.propertyB, periodStart: '2026-05-01', periodEnd: '2026-05-31' });
+    const statement = await generateOwnerStatement(opsIdentity(f, ALL_FLAGS), {
+      organizationId: f.orgB,
+      propertyId: f.propertyB,
+      periodStart: '2026-05-01',
+      periodEnd: '2026-05-31',
+    });
     expect(statement.lines.map((l) => l.kind)).toEqual(['short_stay_income', 'short_stay_expense']);
     expect(statement.totals.collectedKobo).toBe('0');
   });
 
   it('estates: separate ledger segment and service-charge invoices to every active lease', async () => {
     const ops = opsIdentity(f, ALL_FLAGS);
-    const estate = await createEstate(ops, { organizationId: f.orgB, name: 'Ikeja Heights Estate', ledgerSegment: 'ikeja-heights', serviceChargePolicy: { amountKobo: '2500000', period: 'monthly' } });
+    const estate = await createEstate(ops, {
+      organizationId: f.orgB,
+      name: 'Ikeja Heights Estate',
+      ledgerSegment: 'ikeja-heights',
+      serviceChargePolicy: { amountKobo: '2500000', period: 'monthly' },
+    });
     expect(estate.ledgerSegment).toBe('ikeja-heights');
     await attachProperty(ops, estate.id, f.propertyB);
     const owner = ownerIdentity(f, 'B', ALL_FLAGS);
-    const lease = await createLease(owner, { propertyId: f.propertyB, unitId: f.unitB1, kind: 'residential_annual', startDate: '2026-01-01', endDate: '2026-12-31', rentAmountKobo: '50000000', rentPeriod: 'annual', currency: 'NGN', depositKobo: '0', managementFeeBasis: 'none' });
+    const lease = await createLease(owner, {
+      propertyId: f.propertyB,
+      unitId: f.unitB1,
+      kind: 'residential_annual',
+      startDate: '2026-01-01',
+      endDate: '2026-12-31',
+      rentAmountKobo: '50000000',
+      rentPeriod: 'annual',
+      currency: 'NGN',
+      depositKobo: '0',
+      managementFeeBasis: 'none',
+    });
     await transitionLease(owner, lease.id, { to: 'active', expectedVersion: 1 });
-    await expect(runServiceCharges(owner, estate.id, { periodStart: '2026-06-01', periodEnd: '2026-06-30' })).rejects.toSatisfy((e) => errorCode(e) === 'forbidden');
-    const run = await runServiceCharges(ops, estate.id, { periodStart: '2026-06-01', periodEnd: '2026-06-30', dueDate: '2026-06-01' });
+    await expect(
+      runServiceCharges(owner, estate.id, { periodStart: '2026-06-01', periodEnd: '2026-06-30' }),
+    ).rejects.toSatisfy((e) => errorCode(e) === 'forbidden');
+    const run = await runServiceCharges(ops, estate.id, {
+      periodStart: '2026-06-01',
+      periodEnd: '2026-06-30',
+      dueDate: '2026-06-01',
+    });
     expect(run).toMatchObject({ invoiced: 1, skipped: 0 });
-    const [inv] = await f.dbs.owner.select().from(schema.invoices).where(eq(schema.invoices.id, run.invoiceIds[0]!));
-    expect(inv).toMatchObject({ kind: 'service_charge', estateSegment: 'ikeja-heights', isRentOnBehalfOfOwner: true, organizationId: f.orgB, status: 'issued' });
-    const [journal] = await f.dbs.owner.select().from(schema.journals).where(eq(schema.journals.businessEventRef, `invoice:${inv!.id}:issued`));
+    const [inv] = await f.dbs.owner
+      .select()
+      .from(schema.invoices)
+      .where(eq(schema.invoices.id, run.invoiceIds[0]!));
+    expect(inv).toMatchObject({
+      kind: 'service_charge',
+      estateSegment: 'ikeja-heights',
+      isRentOnBehalfOfOwner: true,
+      organizationId: f.orgB,
+      status: 'issued',
+    });
+    const [journal] = await f.dbs.owner
+      .select()
+      .from(schema.journals)
+      .where(eq(schema.journals.businessEventRef, `invoice:${inv!.id}:issued`));
     expect(journal!.estateSegment).toBe('ikeja-heights');
-    expect((await runServiceCharges(ops, estate.id, { periodStart: '2026-06-01', periodEnd: '2026-06-30' })).skipped).toBe(1);
+    expect(
+      (
+        await runServiceCharges(ops, estate.id, {
+          periodStart: '2026-06-01',
+          periodEnd: '2026-06-30',
+        })
+      ).skipped,
+    ).toBe(1);
   });
 });

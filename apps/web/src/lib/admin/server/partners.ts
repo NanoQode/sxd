@@ -16,7 +16,9 @@ export interface PartnerRow {
   verificationExpiresAt: string | null;
   availabilityStatus: string;
   coverageStateCount: number;
-  conflictDisclosureCount: number;
+  /** Free-text conflict disclosure recorded on the profile, if any. */
+  conflictDisclosure: string | null;
+  credentialCount: number;
   ratingAverage: string | null;
   assignments: { active: number; completed: number; declined: number; revoked: number };
   bids: { submitted: number; awarded: number };
@@ -84,9 +86,6 @@ export async function listPartners(
       const ac = a.get(r.p.userId) ?? {};
       const bc = b.get(r.p.userId) ?? {};
       const coverage = Array.isArray(r.p.coverageStateIds) ? (r.p.coverageStateIds as unknown[]).length : 0;
-      const conflicts = Array.isArray(r.p.conflictDisclosures)
-        ? (r.p.conflictDisclosures as unknown[]).length
-        : 0;
       return {
         id: r.p.id,
         userId: r.p.userId,
@@ -99,7 +98,8 @@ export async function listPartners(
         verificationExpiresAt: iso(r.p.verificationExpiresAt),
         availabilityStatus: r.p.availabilityStatus,
         coverageStateCount: coverage,
-        conflictDisclosureCount: conflicts,
+        conflictDisclosure: r.p.conflictDisclosures?.trim() ? r.p.conflictDisclosures.trim() : null,
+        credentialCount: Array.isArray(r.p.credentials) ? r.p.credentials.length : 0,
         ratingAverage: r.p.ratingAverage === null || r.p.ratingAverage === undefined ? null : String(r.p.ratingAverage),
         assignments: {
           active: (ac.active ?? 0) + (ac.accepted ?? 0) + (ac.proposed ?? 0),

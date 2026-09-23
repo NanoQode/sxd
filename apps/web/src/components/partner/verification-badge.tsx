@@ -45,7 +45,7 @@ export function VerificationBadge({
   const checked = verification.verifiedAt
     ? `checked ${formatDateLabel(verification.verifiedAt, zone)}`
     : 'no check recorded';
-  const scope = verification.scope ?? 'scope of the check not recorded';
+  const scope = (verification.scope ?? 'scope of the check not recorded').replace(/[.\s]+$/, '');
   const expiry = verification.expiresAt
     ? `; valid until ${formatDateLabel(verification.expiresAt, zone)}`
     : '';

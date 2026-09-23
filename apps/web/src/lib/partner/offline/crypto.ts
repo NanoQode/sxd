@@ -4,7 +4,9 @@
  * The key is generated per browser session and per user, and kept only in
  * `sessionStorage` under a user-scoped name. Consequences, stated plainly:
  * - Another user signing in on the same device, in the same or a new session,
- *   has no key for the previous user's records and cannot read them.
+ *   has no key for the previous user's records and cannot read them: records
+ *   are listed per user, and opening the workspace purges any other user's
+ *   key left in the tab (`purgeOtherSessionKeys`); sign-out discards the own key.
  * - Reloading the page or going offline keeps the key (sessionStorage survives
  *   both), so fieldwork survives connection loss within the same tab.
  * - Closing the tab or browser discards the key: encrypted drafts that were not
@@ -25,7 +27,10 @@ export interface EncryptedEnvelope {
   data: string;
 }
 
+/** The subset of `Storage` the key handling needs (sessionStorage in the browser). */
 export interface KeyStore {
+  readonly length: number;
+  key(index: number): string | null;
   getItem(name: string): string | null;
   setItem(name: string, value: string): void;
   removeItem(name: string): void;
@@ -103,6 +108,28 @@ export function discardSessionKey(
   store: KeyStore | null = defaultKeyStore(),
 ): void {
   store?.removeItem(`${KEY_PREFIX}${userId}`);
+}
+
+/**
+ * Removes every other user's key from this tab's session storage. Called when
+ * a user opens the workspace, so a previous user who never signed out (session
+ * expired, tab handed over) leaves no key behind that could open their
+ * records. Their drafts become locked: only they, after syncing in their own
+ * session, could have read them. Returns the number of keys removed.
+ */
+export function purgeOtherSessionKeys(
+  userId: string,
+  store: KeyStore | null = defaultKeyStore(),
+): number {
+  if (!store) return 0;
+  const own = `${KEY_PREFIX}${userId}`;
+  const stale: string[] = [];
+  for (let i = 0; i < store.length; i += 1) {
+    const name = store.key(i);
+    if (name && name.startsWith(KEY_PREFIX) && name !== own) stale.push(name);
+  }
+  for (const name of stale) store.removeItem(name);
+  return stale.length;
 }
 
 export async function encryptJson(key: CryptoKey, value: unknown): Promise<EncryptedEnvelope> {

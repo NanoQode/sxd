@@ -13,5 +13,8 @@ export const POST = route<{ params: Promise<{ id: string }> }>(async (req, ctx) 
   if (!identity.session) throw new ApiError('unauthenticated', 'sign in required');
   const { id } = await params(ctx, idParams);
   const body = await parseJson(req, workOrderTriageSchema);
-  return json(await triageWorkOrder(identity, id, body, { correlationId: ctx.correlationId }), { status: 200, correlationId: ctx.correlationId });
+  return json(await triageWorkOrder(identity, id, body, { correlationId: ctx.correlationId }), {
+    status: 200,
+    correlationId: ctx.correlationId,
+  });
 });

@@ -14,8 +14,16 @@ import { getDb, schema, withActor, type DbExecutor, type Transaction } from '@si
 import { assertAllowed, authorizeTenant, type TenantPermission } from '@simplexd/domain/authz';
 import type { RequestIdentity } from '@/lib/auth/session';
 import { createWorkOrder, listWorkOrders } from '@/server/maintenance/work-orders';
-import { chargesWithBalances, computeLeaseBalance, syncRentAllocations } from './schedules';
-import { elevated, loadLeaseTerms, requireUserId, toLeaseDto, today, type LeaseRow, type ServiceOptions } from './shared';
+import { chargesWithBalances, computeLeaseBalance, refreshLeaseAllocations } from './schedules';
+import {
+  elevated,
+  loadLeaseTerms,
+  requireUserId,
+  toLeaseDto,
+  today,
+  type LeaseRow,
+  type ServiceOptions,
+} from './shared';
 
 /**
  * Tenant portal. Everything starts from the caller's own active lease
@@ -36,12 +44,18 @@ async function myLeases(tx: DbExecutor, userId: string): Promise<TenantLease[]> 
     .select({ lease: schema.leases, role: schema.leaseParties.role })
     .from(schema.leaseParties)
     .innerJoin(schema.leases, eq(schema.leases.id, schema.leaseParties.leaseId))
-    .where(and(eq(schema.leaseParties.userId, userId), eq(schema.leaseParties.accessStatus, 'active')))
+    .where(
+      and(eq(schema.leaseParties.userId, userId), eq(schema.leaseParties.accessStatus, 'active')),
+    )
     .orderBy(desc(schema.leases.startDate));
   return rows.map((r) => ({ lease: r.lease, role: r.role }));
 }
 
-function assertTenant(identity: RequestIdentity, permission: TenantPermission, leaseId: string | null): void {
+function assertTenant(
+  identity: RequestIdentity,
+  permission: TenantPermission,
+  leaseId: string | null,
+): void {
   const userId = requireUserId(identity);
   assertAllowed(
     authorizeTenant(identity.actor, permission, {
@@ -65,24 +79,50 @@ async function requireMyLease(
   return mine;
 }
 
-async function summary(tx: Transaction, identity: RequestIdentity, entry: TenantLease): Promise<TenantLeaseSummary> {
+async function summary(
+  tx: Transaction,
+  identity: RequestIdentity,
+  entry: TenantLease,
+): Promise<TenantLeaseSummary> {
   const [property] = await tx
-    .select({ id: schema.properties.id, name: schema.properties.name, address: schema.properties.address })
+    .select({
+      id: schema.properties.id,
+      name: schema.properties.name,
+      address: schema.properties.address,
+    })
     .from(schema.properties)
     .where(eq(schema.properties.id, entry.lease.propertyId));
   const [unit] = entry.lease.unitId
-    ? await tx.select({ id: schema.units.id, label: schema.units.label }).from(schema.units).where(eq(schema.units.id, entry.lease.unitId))
+    ? await tx
+        .select({ id: schema.units.id, label: schema.units.label })
+        .from(schema.units)
+        .where(eq(schema.units.id, entry.lease.unitId))
     : [];
   // The terms note is readable by the owner organisation only; the tenant gets the inventory they signed.
   const terms = await elevated(tx, identity.ctx, () => loadLeaseTerms(tx, entry.lease.id));
-  const { parties: _p, managementFeeBasis: _b, managementFeeBps: _f, managementFeeFixedKobo: _x, ...lease } = toLeaseDto(
+  const {
+    parties: _p,
+    managementFeeBasis: _b,
+    managementFeeBps: _f,
+    managementFeeFixedKobo: _x,
+    ...lease
+  } = toLeaseDto(
     entry.lease,
     [],
-    terms ? { ...(terms.moveInInventory ? { moveInInventory: terms.moveInInventory } : {}), ...(terms.academicTerms ? { academicTerms: terms.academicTerms } : {}) } : null,
+    terms
+      ? {
+          ...(terms.moveInInventory ? { moveInInventory: terms.moveInInventory } : {}),
+          ...(terms.academicTerms ? { academicTerms: terms.academicTerms } : {}),
+        }
+      : null,
   );
   return {
     lease,
-    property: { id: property!.id, name: property!.name, address: (property!.address as Record<string, unknown> | null) ?? null },
+    property: {
+      id: property!.id,
+      name: property!.name,
+      address: (property!.address as Record<string, unknown> | null) ?? null,
+    },
     unit: unit ? { id: unit.id, label: unit.label } : null,
     myRole: entry.role,
   };
@@ -98,22 +138,33 @@ export async function listMyLeases(identity: RequestIdentity): Promise<TenantLea
   });
 }
 
-export async function getMyLease(identity: RequestIdentity, leaseId: string): Promise<TenantLeaseSummary> {
-  return withActor(getDb(), identity.ctx, async (tx) => summary(tx, identity, await requireMyLease(tx, identity, leaseId, 'tenant.lease.view')));
+export async function getMyLease(
+  identity: RequestIdentity,
+  leaseId: string,
+): Promise<TenantLeaseSummary> {
+  return withActor(getDb(), identity.ctx, async (tx) =>
+    summary(tx, identity, await requireMyLease(tx, identity, leaseId, 'tenant.lease.view')),
+  );
 }
 
-export async function getMyBalance(identity: RequestIdentity, leaseId: string): Promise<LeaseBalanceDto> {
+export async function getMyBalance(
+  identity: RequestIdentity,
+  leaseId: string,
+): Promise<LeaseBalanceDto> {
   return withActor(getDb(), identity.ctx, async (tx) => {
     const { lease } = await requireMyLease(tx, identity, leaseId, 'tenant.balances.view');
-    await syncRentAllocations(tx, [lease.id]);
+    await refreshLeaseAllocations(tx, identity, lease.id);
     return computeLeaseBalance(tx, lease, today());
   });
 }
 
-export async function listMyCharges(identity: RequestIdentity, leaseId: string): Promise<RentChargeDto[]> {
+export async function listMyCharges(
+  identity: RequestIdentity,
+  leaseId: string,
+): Promise<RentChargeDto[]> {
   return withActor(getDb(), identity.ctx, async (tx) => {
     const { lease } = await requireMyLease(tx, identity, leaseId, 'tenant.balances.view');
-    await syncRentAllocations(tx, [lease.id]);
+    await refreshLeaseAllocations(tx, identity, lease.id);
     return chargesWithBalances(tx, lease.id);
   });
 }
@@ -129,7 +180,9 @@ export async function listMyReceipts(identity: RequestIdentity): Promise<TenantR
       .select({ receipt: schema.receipts, invoiceNumber: schema.invoices.number })
       .from(schema.receipts)
       .innerJoin(schema.invoices, eq(schema.invoices.id, schema.receipts.invoiceId))
-      .where(and(inArray(schema.invoices.leaseId, leaseIds), eq(schema.invoices.customerUserId, userId)))
+      .where(
+        and(inArray(schema.invoices.leaseId, leaseIds), eq(schema.invoices.customerUserId, userId)),
+      )
       .orderBy(desc(schema.receipts.issuedAt));
     return rows.map((r) => ({
       id: r.receipt.id,
@@ -142,10 +195,15 @@ export async function listMyReceipts(identity: RequestIdentity): Promise<TenantR
   });
 }
 
-export async function listMyTickets(identity: RequestIdentity, leaseId?: string): Promise<WorkOrderDto[]> {
+export async function listMyTickets(
+  identity: RequestIdentity,
+  leaseId?: string,
+): Promise<WorkOrderDto[]> {
   const userId = requireUserId(identity);
   assertTenant(identity, 'tenant.maintenance.request', null);
-  const leaseIds = await withActor(getDb(), identity.ctx, async (tx) => (await myLeases(tx, userId)).map((l) => l.lease.id));
+  const leaseIds = await withActor(getDb(), identity.ctx, async (tx) =>
+    (await myLeases(tx, userId)).map((l) => l.lease.id),
+  );
   if (leaseIds.length === 0) return [];
   if (leaseId && !leaseIds.includes(leaseId)) throw new ApiError('not_found', 'lease not found');
   const out: WorkOrderDto[] = [];
@@ -163,10 +221,21 @@ export async function createMyTicket(
   input: Pick<WorkOrderCreate, 'title' | 'description' | 'category' | 'priority'>,
   options: ServiceOptions = {},
 ): Promise<WorkOrderDto> {
-  const lease = await withActor(getDb(), identity.ctx, async (tx) => (await requireMyLease(tx, identity, leaseId, 'tenant.maintenance.request')).lease);
+  const lease = await withActor(
+    getDb(),
+    identity.ctx,
+    async (tx) => (await requireMyLease(tx, identity, leaseId, 'tenant.maintenance.request')).lease,
+  );
   return createWorkOrder(
     identity,
-    { ...input, propertyId: lease.propertyId, unitId: lease.unitId, leaseId: lease.id, assetId: null, estateId: null },
+    {
+      ...input,
+      propertyId: lease.propertyId,
+      unitId: lease.unitId,
+      leaseId: lease.id,
+      assetId: null,
+      estateId: null,
+    },
     options,
   );
 }
@@ -189,7 +258,11 @@ export async function listMyAppointments(identity: RequestIdentity) {
       .where(eq(schema.appointments.customerUserId, userId))
       .orderBy(desc(schema.appointments.startsAt))
       .limit(100);
-    return rows.map((r) => ({ ...r, startsAt: r.startsAt.toISOString(), endsAt: r.endsAt.toISOString() }));
+    return rows.map((r) => ({
+      ...r,
+      startsAt: r.startsAt.toISOString(),
+      endsAt: r.endsAt.toISOString(),
+    }));
   });
 }
 
@@ -201,7 +274,12 @@ export async function listMyNotices(identity: RequestIdentity): Promise<TenantNo
     const rows = await tx
       .select()
       .from(schema.notifications)
-      .where(and(eq(schema.notifications.userId, userId), eq(schema.notifications.kind, 'tenant_notice')))
+      .where(
+        and(
+          eq(schema.notifications.userId, userId),
+          eq(schema.notifications.kind, 'tenant_notice'),
+        ),
+      )
       .orderBy(desc(schema.notifications.createdAt))
       .limit(100);
     return rows.map((n) => ({

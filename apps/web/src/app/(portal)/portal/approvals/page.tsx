@@ -1,6 +1,14 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { Alert, Badge, DataTable, EmptyState, PageHeader, formatDateTimeLabel, humanize } from '@simplexd/ui';
+import {
+  Alert,
+  Badge,
+  DataTable,
+  EmptyState,
+  PageHeader,
+  formatDateTimeLabel,
+  humanize,
+} from '@simplexd/ui';
 import { requireSignedIn } from '@/lib/auth/session';
 import { loadQuotesForRequest } from '@/lib/portal/server/finance';
 import { capabilityNote, customerCapabilities } from '@/lib/portal/server/permissions';
@@ -21,7 +29,9 @@ export default async function ApprovalsPage() {
   const caps = customerCapabilities(identity);
   const [pending, quoted] = await Promise.all([
     listPendingApprovals(identity),
-    identity.ctx.organizationId ? listServiceRequests(identity, { status: 'quoted', limit: 50 }) : Promise.resolve({ items: [], nextCursor: null }),
+    identity.ctx.organizationId
+      ? listServiceRequests(identity, { status: 'quoted', limit: 50 })
+      : Promise.resolve({ items: [], nextCursor: null }),
   ]);
   const quotes = (
     await Promise.all(
@@ -34,7 +44,9 @@ export default async function ApprovalsPage() {
 
   const hrefFor = (entityType: string, projectId: string | null) => {
     if (!projectId) return '/portal/projects';
-    return entityType === 'budget_version' ? `/portal/projects/${projectId}?tab=decisions` : `/portal/projects/${projectId}?tab=decisions`;
+    return entityType === 'budget_version'
+      ? `/portal/projects/${projectId}?tab=decisions`
+      : `/portal/projects/${projectId}?tab=decisions`;
   };
 
   return (
@@ -65,13 +77,20 @@ export default async function ApprovalsPage() {
                 key: 'request',
                 header: 'Request',
                 cell: (q) => (
-                  <Link href={`/portal/quotes/${q.quote.id}`} className="font-medium text-primary underline">
+                  <Link
+                    href={`/portal/quotes/${q.quote.id}`}
+                    className="font-medium text-primary underline"
+                  >
                     {q.request.reference} · {q.request.title}
                   </Link>
                 ),
               },
               { key: 'version', header: 'Version', cell: (q) => `v${q.quote.currentVersion}` },
-              { key: 'updated', header: 'Issued', cell: (q) => formatDateTimeLabel(q.quote.updatedAt, zone) },
+              {
+                key: 'updated',
+                header: 'Issued',
+                cell: (q) => formatDateTimeLabel(q.quote.updatedAt, zone),
+              },
             ]}
           />
         )}
@@ -81,7 +100,10 @@ export default async function ApprovalsPage() {
           Project decisions
         </h2>
         {pending.items.length === 0 ? (
-          <EmptyState title="Nothing needs your decision" description="Approvals appear when a change order, budget version or milestone is waiting on you." />
+          <EmptyState
+            title="Nothing needs your decision"
+            description="Approvals appear when a change order, budget version or milestone is waiting on you."
+          />
         ) : (
           <DataTable
             caption="Pending project approvals"
@@ -93,15 +115,31 @@ export default async function ApprovalsPage() {
                 key: 'what',
                 header: 'Decision',
                 cell: (a) => (
-                  <Link href={hrefFor(a.entityType, a.projectId)} className="font-medium text-primary underline">
+                  <Link
+                    href={hrefFor(a.entityType, a.projectId)}
+                    className="font-medium text-primary underline"
+                  >
                     {a.entityTitle ?? humanize(a.entityType)}
                   </Link>
                 ),
               },
-              { key: 'type', header: 'Type', cell: (a) => <Badge tone="neutral">{humanize(a.entityType)}</Badge> },
+              {
+                key: 'type',
+                header: 'Type',
+                cell: (a) => <Badge tone="neutral">{humanize(a.entityType)}</Badge>,
+              },
               { key: 'project', header: 'Project', cell: (a) => a.projectName ?? '—' },
-              { key: 'requested', header: 'Requested', cell: (a) => formatDateTimeLabel(a.requestedAt, zone) },
-              { key: 'expires', header: 'Expires', cell: (a) => (a.expiresAt ? formatDateTimeLabel(a.expiresAt, zone) : '—'), hideOnMobile: true },
+              {
+                key: 'requested',
+                header: 'Requested',
+                cell: (a) => formatDateTimeLabel(a.requestedAt, zone),
+              },
+              {
+                key: 'expires',
+                header: 'Expires',
+                cell: (a) => (a.expiresAt ? formatDateTimeLabel(a.expiresAt, zone) : '—'),
+                hideOnMobile: true,
+              },
             ]}
           />
         )}

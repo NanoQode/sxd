@@ -1,7 +1,12 @@
 import { eq, sql } from 'drizzle-orm';
 import { schema, type Database } from '@simplexd/db';
 import { chartOfAccounts, taxTreatmentDefaults } from '@simplexd/db/seed';
-import { connectTestDatabases, resetDatabase, uniqueSuffix, type TestDatabases } from '@simplexd/db/testing';
+import {
+  connectTestDatabases,
+  resetDatabase,
+  uniqueSuffix,
+  type TestDatabases,
+} from '@simplexd/db/testing';
 import { createFinanceRuntime, settleAttempt, type FinanceRuntime } from '@simplexd/finance';
 import type { OrgRole, StaffRole } from '@simplexd/domain/authz';
 import type { RequestIdentity } from '@/lib/auth/session';
@@ -48,24 +53,52 @@ export interface IdentityOptions {
 export function identityFor(userId: string, opts: IdentityOptions = {}): RequestIdentity {
   const memberships = opts.memberships ?? [];
   const activeOrganizationId =
-    opts.activeOrganizationId === undefined ? (memberships[0]?.organizationId ?? null) : opts.activeOrganizationId;
+    opts.activeOrganizationId === undefined
+      ? (memberships[0]?.organizationId ?? null)
+      : opts.activeOrganizationId;
   const staffRoles = opts.staffRoles ?? [];
   const now = new Date();
   const flags = opts.flags ?? {};
   const session = {
-    user: { id: userId, name: userId, email: opts.email ?? `${userId}@example.test`, emailVerified: true, createdAt: now, updatedAt: now },
-    session: { id: `sess_${userId}`, userId, token: `tok_${userId}`, expiresAt: new Date(now.getTime() + 3_600_000), createdAt: now, updatedAt: now, activeOrganizationId },
+    user: {
+      id: userId,
+      name: userId,
+      email: opts.email ?? `${userId}@example.test`,
+      emailVerified: true,
+      createdAt: now,
+      updatedAt: now,
+    },
+    session: {
+      id: `sess_${userId}`,
+      userId,
+      token: `tok_${userId}`,
+      expiresAt: new Date(now.getTime() + 3_600_000),
+      createdAt: now,
+      updatedAt: now,
+      activeOrganizationId,
+    },
   } as unknown as RequestIdentity['session'];
   return {
     session,
-    actor: { userId, staffRoles, memberships, activeOrganizationId, isPartner: opts.isPartner ?? false, mfaVerified: opts.mfaVerified ?? false, impersonation: null, flags },
+    actor: {
+      userId,
+      staffRoles,
+      memberships,
+      activeOrganizationId,
+      isPartner: opts.isPartner ?? false,
+      mfaVerified: opts.mfaVerified ?? false,
+      impersonation: null,
+      flags,
+    },
     ctx: { userId, organizationId: activeOrganizationId, staff: staffRoles.length > 0 },
     profile: null,
     featureFlags: flags,
   };
 }
 
-export const ALL_FLAGS: Record<string, boolean> = Object.fromEntries(Object.values(FEATURES).map((k) => [k, true]));
+export const ALL_FLAGS: Record<string, boolean> = Object.fromEntries(
+  Object.values(FEATURES).map((k) => [k, true]),
+);
 
 export async function createRentalFixture(): Promise<RentalFixture> {
   const dbs = connectTestDatabases();
@@ -106,18 +139,61 @@ export async function createRentalFixture(): Promise<RentalFixture> {
     { userId: ids.finance2, role: 'finance' },
     { userId: ids.support, role: 'support' },
   ]);
-  await owner.insert(schema.partnerProfiles).values({ userId: ids.partner, partnerType: 'contractor', displayName: 'Fix-It Ltd', verificationStatus: 'verified' });
-  await owner.insert(schema.ledgerAccounts).values(chartOfAccounts).onConflictDoNothing({ target: schema.ledgerAccounts.code });
-  for (const tt of taxTreatmentDefaults) await owner.insert(schema.taxTreatments).values(tt).onConflictDoNothing();
-  const [propertyA] = await owner.insert(schema.properties).values({ organizationId: ids.orgA, name: 'Lekki Court', kind: 'residential', address: { city: 'Lagos' } }).returning({ id: schema.properties.id });
-  const [unitA1] = await owner.insert(schema.units).values({ propertyId: propertyA!.id, label: 'A1', unitType: 'flat' }).returning({ id: schema.units.id });
-  const [propertyB] = await owner.insert(schema.properties).values({ organizationId: ids.orgB, name: 'Ikeja Heights', kind: 'residential' }).returning({ id: schema.properties.id });
-  const [unitB1] = await owner.insert(schema.units).values({ propertyId: propertyB!.id, label: 'B1', unitType: 'flat' }).returning({ id: schema.units.id });
-  const rt = createFinanceRuntime({ db: dbs.app, appUrl: 'http://localhost:3000', appEnv: 'test', defaultEnvironment: 'test', resolveProvider: async () => null });
-  return { dbs, rt, ...ids, propertyA: propertyA!.id, unitA1: unitA1!.id, propertyB: propertyB!.id, unitB1: unitB1!.id };
+  await owner.insert(schema.partnerProfiles).values({
+    userId: ids.partner,
+    partnerType: 'contractor',
+    displayName: 'Fix-It Ltd',
+    verificationStatus: 'verified',
+  });
+  await owner
+    .insert(schema.ledgerAccounts)
+    .values(chartOfAccounts)
+    .onConflictDoNothing({ target: schema.ledgerAccounts.code });
+  for (const tt of taxTreatmentDefaults)
+    await owner.insert(schema.taxTreatments).values(tt).onConflictDoNothing();
+  const [propertyA] = await owner
+    .insert(schema.properties)
+    .values({
+      organizationId: ids.orgA,
+      name: 'Lekki Court',
+      kind: 'residential',
+      address: { city: 'Lagos' },
+    })
+    .returning({ id: schema.properties.id });
+  const [unitA1] = await owner
+    .insert(schema.units)
+    .values({ propertyId: propertyA!.id, label: 'A1', unitType: 'flat' })
+    .returning({ id: schema.units.id });
+  const [propertyB] = await owner
+    .insert(schema.properties)
+    .values({ organizationId: ids.orgB, name: 'Ikeja Heights', kind: 'residential' })
+    .returning({ id: schema.properties.id });
+  const [unitB1] = await owner
+    .insert(schema.units)
+    .values({ propertyId: propertyB!.id, label: 'B1', unitType: 'flat' })
+    .returning({ id: schema.units.id });
+  const rt = createFinanceRuntime({
+    db: dbs.app,
+    appUrl: 'http://localhost:3000',
+    appEnv: 'test',
+    defaultEnvironment: 'test',
+    resolveProvider: async () => null,
+  });
+  return {
+    dbs,
+    rt,
+    ...ids,
+    propertyA: propertyA!.id,
+    unitA1: unitA1!.id,
+    propertyB: propertyB!.id,
+    unitB1: unitB1!.id,
+  };
 }
 
-export async function enableFlags(owner: Database, keys: string[] = Object.values(FEATURES)): Promise<void> {
+export async function enableFlags(
+  owner: Database,
+  keys: string[] = Object.values(FEATURES),
+): Promise<void> {
   for (const key of keys) {
     await owner
       .insert(schema.featureFlags)
@@ -126,7 +202,11 @@ export async function enableFlags(owner: Database, keys: string[] = Object.value
   }
 }
 
-export function ownerIdentity(f: RentalFixture, which: 'A' | 'B', flags: Record<string, boolean> = {}): RequestIdentity {
+export function ownerIdentity(
+  f: RentalFixture,
+  which: 'A' | 'B',
+  flags: Record<string, boolean> = {},
+): RequestIdentity {
   return which === 'A'
     ? identityFor(f.ownerA, { memberships: [{ organizationId: f.orgA, role: 'owner' }], flags })
     : identityFor(f.ownerB, { memberships: [{ organizationId: f.orgB, role: 'owner' }], flags });
@@ -136,12 +216,22 @@ export function adviserIdentity(f: RentalFixture): RequestIdentity {
   return identityFor(f.adviserA, { memberships: [{ organizationId: f.orgA, role: 'adviser' }] });
 }
 
-export function opsIdentity(f: RentalFixture, flags: Record<string, boolean> = {}): RequestIdentity {
+export function opsIdentity(
+  f: RentalFixture,
+  flags: Record<string, boolean> = {},
+): RequestIdentity {
   return identityFor(f.ops, { staffRoles: ['operations_manager'], flags });
 }
 
-export function financeIdentity(f: RentalFixture, which: 1 | 2, mfaVerified = true): RequestIdentity {
-  return identityFor(which === 1 ? f.finance1 : f.finance2, { staffRoles: ['finance'], mfaVerified });
+export function financeIdentity(
+  f: RentalFixture,
+  which: 1 | 2,
+  mfaVerified = true,
+): RequestIdentity {
+  return identityFor(which === 1 ? f.finance1 : f.finance2, {
+    staffRoles: ['finance'],
+    mfaVerified,
+  });
 }
 
 export function supportIdentity(f: RentalFixture): RequestIdentity {
@@ -157,7 +247,12 @@ export function tenantIdentity(f: RentalFixture, which: 1 | 2): RequestIdentity 
 }
 
 /** A clean file in an organisation's store (owner role). */
-export async function insertFile(owner: Database, organizationId: string, ownerUserId: string, mime = 'image/jpeg'): Promise<string> {
+export async function insertFile(
+  owner: Database,
+  organizationId: string,
+  ownerUserId: string,
+  mime = 'image/jpeg',
+): Promise<string> {
   const [row] = await owner
     .insert(schema.fileObjects)
     .values({
@@ -181,10 +276,19 @@ export async function insertFile(owner: Database, organizationId: string, ownerU
  * simulated provider truth, posts the journal, allocates once and issues the
  * receipt.
  */
-export async function payInvoice(f: RentalFixture, invoiceId: string, payerUserId: string, amountKobo?: bigint): Promise<{ attemptId: string; allocationId: string | null; receiptNumber: string | null }> {
-  const [invoice] = await f.dbs.owner.select().from(schema.invoices).where(eq(schema.invoices.id, invoiceId));
+export async function payInvoice(
+  f: RentalFixture,
+  invoiceId: string,
+  payerUserId: string,
+  amountKobo?: bigint,
+): Promise<{ attemptId: string; allocationId: string | null; receiptNumber: string | null }> {
+  const [invoice] = await f.dbs.owner
+    .select()
+    .from(schema.invoices)
+    .where(eq(schema.invoices.id, invoiceId));
   if (!invoice) throw new Error('invoice not found');
-  const amount = amountKobo ?? invoice.totalKobo - invoice.amountPaidKobo - invoice.amountCreditedKobo;
+  const amount =
+    amountKobo ?? invoice.totalKobo - invoice.amountPaidKobo - invoice.amountCreditedKobo;
   const reference = `SXD-${uniqueSuffix().toUpperCase()}`;
   const [attempt] = await f.dbs.owner
     .insert(schema.paymentAttempts)
@@ -218,18 +322,33 @@ export async function payInvoice(f: RentalFixture, invoiceId: string, payerUserI
     source: 'verify',
     actorUserId: payerUserId,
   });
-  return { attemptId: attempt!.id, allocationId: result.allocationId, receiptNumber: result.receiptNumber };
+  return {
+    attemptId: attempt!.id,
+    allocationId: result.allocationId,
+    receiptNumber: result.receiptNumber,
+  };
 }
 
-export async function ledgerBalanced(owner: Database): Promise<{ debitKobo: bigint; creditKobo: bigint; unbalancedJournals: number }> {
-  const totals = await owner.execute<{ d: string; c: string }>(sql`select coalesce(sum(debit_kobo),0)::text as d, coalesce(sum(credit_kobo),0)::text as c from journal_lines`);
+export async function ledgerBalanced(
+  owner: Database,
+): Promise<{ debitKobo: bigint; creditKobo: bigint; unbalancedJournals: number }> {
+  const totals = await owner.execute<{ d: string; c: string }>(
+    sql`select coalesce(sum(debit_kobo),0)::text as d, coalesce(sum(credit_kobo),0)::text as c from journal_lines`,
+  );
   const perJournal = await owner.execute<{ n: string }>(
     sql`select count(*)::text as n from (select journal_id, sum(debit_kobo) d, sum(credit_kobo) c from journal_lines group by journal_id) j where j.d <> j.c`,
   );
-  return { debitKobo: BigInt(totals.rows[0]?.d ?? '0'), creditKobo: BigInt(totals.rows[0]?.c ?? '0'), unbalancedJournals: Number(perJournal.rows[0]?.n ?? '0') };
+  return {
+    debitKobo: BigInt(totals.rows[0]?.d ?? '0'),
+    creditKobo: BigInt(totals.rows[0]?.c ?? '0'),
+    unbalancedJournals: Number(perJournal.rows[0]?.n ?? '0'),
+  };
 }
 
-export async function journalLinesByRef(owner: Database, ref: string): Promise<Array<{ code: string; debitKobo: bigint; creditKobo: bigint }>> {
+export async function journalLinesByRef(
+  owner: Database,
+  ref: string,
+): Promise<Array<{ code: string; debitKobo: bigint; creditKobo: bigint }>> {
   const rows = await owner.execute<{ code: string; d: string; c: string }>(sql`
     select la.code, jl.debit_kobo::text as d, jl.credit_kobo::text as c
     from journals j join journal_lines jl on jl.journal_id = j.id join ledger_accounts la on la.id = jl.account_id

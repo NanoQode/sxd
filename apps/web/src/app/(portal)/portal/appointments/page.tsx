@@ -1,6 +1,19 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { Badge, Card, CardContent, CardDescription, CardHeader, CardTitle, DataTable, EmptyState, PageHeader, StatusBadge, formatDateTimeLabel, humanize } from '@simplexd/ui';
+import {
+  Badge,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  DataTable,
+  EmptyState,
+  PageHeader,
+  StatusBadge,
+  formatDateTimeLabel,
+  humanize,
+} from '@simplexd/ui';
 import { requireSignedIn } from '@/lib/auth/session';
 import { LinkButton } from '@/components/portal/link-button';
 import { listAppointments, type AppointmentListItem } from '@/server/portal/lists';
@@ -15,18 +28,27 @@ function columns(zone: string) {
       header: 'When',
       cell: (a: AppointmentListItem) => (
         <div className="text-sm">
-          <Link href={`/portal/appointments/${a.id}`} className="font-medium text-primary underline">
+          <Link
+            href={`/portal/appointments/${a.id}`}
+            className="font-medium text-primary underline"
+          >
             {formatDateTimeLabel(a.startsAt, zone)}
           </Link>
           {zone !== a.businessTimeZone ? (
-            <p className="text-xs text-fg-muted">{formatDateTimeLabel(a.startsAt, a.businessTimeZone)} business time</p>
+            <p className="text-xs text-fg-muted">
+              {formatDateTimeLabel(a.startsAt, a.businessTimeZone)} business time
+            </p>
           ) : null}
         </div>
       ),
     },
     { key: 'kind', header: 'Kind', cell: (a: AppointmentListItem) => humanize(a.kind) },
     { key: 'topic', header: 'Topic', cell: (a: AppointmentListItem) => a.topic ?? '—' },
-    { key: 'status', header: 'Status', cell: (a: AppointmentListItem) => <StatusBadge status={a.status} /> },
+    {
+      key: 'status',
+      header: 'Status',
+      cell: (a: AppointmentListItem) => <StatusBadge status={a.status} />,
+    },
     {
       key: 'meeting',
       header: 'Meeting',
@@ -43,7 +65,12 @@ function columns(zone: string) {
           humanize(a.meetingProvider)
         ),
     },
-    { key: 'staff', header: 'With', cell: (a: AppointmentListItem) => a.staffName ?? '—', hideOnMobile: true },
+    {
+      key: 'staff',
+      header: 'With',
+      cell: (a: AppointmentListItem) => a.staffName ?? '—',
+      hideOnMobile: true,
+    },
   ];
 }
 
@@ -61,7 +88,9 @@ export default async function AppointmentsPage() {
       <Card>
         <CardHeader>
           <CardTitle>Upcoming</CardTitle>
-          <CardDescription>Meeting links appear only once the calendar provider confirms them; nothing is invented.</CardDescription>
+          <CardDescription>
+            Meeting links appear only once the calendar provider confirms them; nothing is invented.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           {upcoming.length === 0 ? (
@@ -71,7 +100,13 @@ export default async function AppointmentsPage() {
               action={<LinkButton href="/portal/appointments/new">Book an appointment</LinkButton>}
             />
           ) : (
-            <DataTable caption="Upcoming appointments" rows={upcoming} rowKey={(a) => a.id} rowLabel={(a) => `${humanize(a.kind)} ${formatDateTimeLabel(a.startsAt, zone)}`} columns={columns(zone)} />
+            <DataTable
+              caption="Upcoming appointments"
+              rows={upcoming}
+              rowKey={(a) => a.id}
+              rowLabel={(a) => `${humanize(a.kind)} ${formatDateTimeLabel(a.startsAt, zone)}`}
+              columns={columns(zone)}
+            />
           )}
         </CardContent>
       </Card>
@@ -81,7 +116,13 @@ export default async function AppointmentsPage() {
             <CardTitle>Past</CardTitle>
           </CardHeader>
           <CardContent>
-            <DataTable caption="Past appointments" rows={past} rowKey={(a) => a.id} rowLabel={(a) => `${humanize(a.kind)} ${formatDateTimeLabel(a.startsAt, zone)}`} columns={columns(zone)} />
+            <DataTable
+              caption="Past appointments"
+              rows={past}
+              rowKey={(a) => a.id}
+              rowLabel={(a) => `${humanize(a.kind)} ${formatDateTimeLabel(a.startsAt, zone)}`}
+              columns={columns(zone)}
+            />
           </CardContent>
         </Card>
       ) : null}

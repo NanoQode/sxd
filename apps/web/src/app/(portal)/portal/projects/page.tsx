@@ -21,7 +21,10 @@ export default async function ProjectsPage() {
           title="No projects yet"
           description="A project is opened by the team once a construction monitoring, architecture, renovation or snagging engagement is accepted and paid where required. Approvals, budget changes and site visits then appear here."
           action={
-            <Link href="/portal/requests/new" className="sx-touch inline-flex items-center rounded-md bg-primary px-4 text-sm font-medium text-fg-on-primary">
+            <Link
+              href="/portal/requests/new"
+              className="sx-touch inline-flex items-center rounded-md bg-primary px-4 text-sm font-medium text-fg-on-primary"
+            >
               Request a service
             </Link>
           }
@@ -37,15 +40,27 @@ export default async function ProjectsPage() {
               key: 'name',
               header: 'Project',
               cell: (p) => (
-                <Link href={`/portal/projects/${p.id}`} className="font-medium text-primary underline">
+                <Link
+                  href={`/portal/projects/${p.id}`}
+                  className="font-medium text-primary underline"
+                >
                   {p.name}
                 </Link>
               ),
             },
             { key: 'kind', header: 'Kind', cell: (p) => humanize(p.kind) },
             { key: 'status', header: 'Status', cell: (p) => <StatusBadge status={p.status} /> },
-            { key: 'target', header: 'Target completion', cell: (p) => p.forecastCompletionDate ?? p.targetCompletionDate ?? '—' },
-            { key: 'pm', header: 'Project manager', cell: (p) => p.pmName ?? 'Not assigned', hideOnMobile: true },
+            {
+              key: 'target',
+              header: 'Target completion',
+              cell: (p) => p.forecastCompletionDate ?? p.targetCompletionDate ?? '—',
+            },
+            {
+              key: 'pm',
+              header: 'Project manager',
+              cell: (p) => p.pmName ?? 'Not assigned',
+              hideOnMobile: true,
+            },
             {
               key: 'approvals',
               header: 'Needs you',

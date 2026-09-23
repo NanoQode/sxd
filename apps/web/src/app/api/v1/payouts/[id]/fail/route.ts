@@ -13,5 +13,13 @@ export const POST = route<{ params: Promise<{ id: string }> }>(async (req, ctx) 
   if (!identity.session) throw new ApiError('unauthenticated', 'sign in required');
   const { id } = await params(ctx, idParams);
   const body = await parseJson(req, payoutDecisionSchema);
-  return json(await failPayout(identity, id, { reason: body.reason ?? 'transfer failed' }, { correlationId: ctx.correlationId }), { correlationId: ctx.correlationId });
+  return json(
+    await failPayout(
+      identity,
+      id,
+      { reason: body.reason ?? 'transfer failed' },
+      { correlationId: ctx.correlationId },
+    ),
+    { correlationId: ctx.correlationId },
+  );
 });

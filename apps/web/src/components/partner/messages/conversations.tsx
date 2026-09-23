@@ -22,6 +22,7 @@ import {
 import { errorMessage } from '@/lib/api/client-fetch';
 import { partnerFetch, withQuery } from '@/lib/partner/api';
 import { usePartner } from '@/lib/partner/context';
+import { openSignedDownload } from '@/lib/partner/upload';
 import { DualTime, LoadingBlock, NotAvailable, RequestFailed } from '../common';
 
 export function ConversationsList() {
@@ -208,10 +209,11 @@ export function ConversationView({ conversationId }: { conversationId: string })
                     </p>
                     <p className="mt-1 whitespace-pre-wrap">{m.body}</p>
                     {m.attachmentFileIds.length > 0 ? (
-                      <p className="mt-1 text-xs text-fg-muted">
-                        {m.attachmentFileIds.length} attachment(s); open them from Evidence or
-                        Documents where you have access.
-                      </p>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {m.attachmentFileIds.map((fileId, i) => (
+                          <AttachmentButton key={fileId} fileId={fileId} index={i} />
+                        ))}
+                      </div>
                     ) : null}
                   </li>
                 );
@@ -244,5 +246,34 @@ export function ConversationView({ conversationId }: { conversationId: string })
         </form>
       ) : null}
     </div>
+  );
+}
+
+/** Opens a short-lived signed link; the server re-checks access on every request. */
+function AttachmentButton({ fileId, index }: { fileId: string; index: number }) {
+  const { toast } = useToast();
+  const [busy, setBusy] = useState(false);
+  return (
+    <Button
+      size="sm"
+      variant="secondary"
+      loading={busy}
+      onClick={async () => {
+        setBusy(true);
+        try {
+          await openSignedDownload(fileId, 'inline');
+        } catch (err) {
+          toast({
+            tone: 'danger',
+            title: 'Attachment not available',
+            description: errorMessage(err),
+          });
+        } finally {
+          setBusy(false);
+        }
+      }}
+    >
+      Attachment {index + 1}
+    </Button>
   );
 }

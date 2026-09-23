@@ -23,9 +23,13 @@ export default async function NewPropertyPage() {
         description="Record what you know. Areas are stored exactly as declared (plots are never converted), and title status stays unknown until documents are verified."
       />
       {!caps.organizationId ? (
-        <Alert tone="warning" title="No organisation">Create or join an organisation before adding properties.</Alert>
+        <Alert tone="warning" title="No organisation">
+          Create or join an organisation before adding properties.
+        </Alert>
       ) : !caps.manageProperties ? (
-        <Alert tone="info" title="Not available for your role">{capabilityNote(caps, 'Adding a property')}</Alert>
+        <Alert tone="info" title="Not available for your role">
+          {capabilityNote(caps, 'Adding a property')}
+        </Alert>
       ) : (
         <Card>
           <CardContent className="pt-5">

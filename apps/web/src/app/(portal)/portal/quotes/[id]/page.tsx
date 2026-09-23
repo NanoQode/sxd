@@ -23,7 +23,10 @@ export default async function QuoteDetailPage({ params }: { params: Promise<{ id
     <div className="space-y-6">
       <PageHeader
         eyebrow={
-          <Link href={`/portal/requests/${quote.serviceRequestId}?tab=quotes`} className="underline">
+          <Link
+            href={`/portal/requests/${quote.serviceRequestId}?tab=quotes`}
+            className="underline"
+          >
             Back to the request
           </Link>
         }
@@ -34,7 +37,9 @@ export default async function QuoteDetailPage({ params }: { params: Promise<{ id
         quote={quote}
         zone={zone}
         canAccept={caps.acceptQuotes}
-        cannotAcceptReason={caps.acceptQuotes ? undefined : capabilityNote(caps, 'Accepting a quote')}
+        cannotAcceptReason={
+          caps.acceptQuotes ? undefined : capabilityNote(caps, 'Accepting a quote')
+        }
         requestHref={`/portal/requests/${quote.serviceRequestId}`}
       />
     </div>

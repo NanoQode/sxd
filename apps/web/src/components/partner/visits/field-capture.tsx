@@ -1,7 +1,7 @@
 'use client';
 
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { Camera, LocateFixed, Plus, RefreshCw, Trash2, WifiOff } from 'lucide-react';
+import { ArrowLeft, Camera, LocateFixed, Plus, RefreshCw, Trash2, WifiOff } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -25,6 +25,7 @@ import {
   formatDateTimeLabel,
   useToast,
 } from '@simplexd/ui';
+import { errorMessage } from '@/lib/api/client-fetch';
 import { isApiCode, partnerFetch } from '@/lib/partner/api';
 import { normalizeChecklist } from '@/lib/partner/checklist';
 import { usePartner } from '@/lib/partner/context';
@@ -42,15 +43,27 @@ import {
 } from '@/lib/partner/offline/use-draft-store';
 import { putBytes } from '@/lib/partner/upload';
 import { DualTime, LoadingBlock, RequestFailed } from '../common';
-import { syncStateLabel, syncStateTone } from './visits-list';
+import { syncStateLabel, syncStateTone } from './sync-state';
 
 /**
  * Field capture. `target` is one of:
  * - `visit_<offlineId>`: an existing local draft;
  * - `new` with `projectId`: a visit created in the field;
  * - a server site-visit id: opens (or creates) the draft for that visit.
+ *
+ * `onExit` is set when the editor is rendered inline on the visits page (the
+ * offline-safe path: no navigation, so no network round trip is needed);
+ * otherwise leaving goes back to the visits route.
  */
-export function FieldCapture({ target, projectId }: { target: string; projectId: string | null }) {
+export function FieldCapture({
+  target,
+  projectId,
+  onExit,
+}: {
+  target: string;
+  projectId: string | null;
+  onExit?: () => void;
+}) {
   const p = usePartner();
   const router = useRouter();
   const { toast } = useToast();
@@ -58,6 +71,8 @@ export function FieldCapture({ target, projectId }: { target: string; projectId:
   const { store, ready, sealingProblem, persistent } = useDraftStore(p.userId);
   const [draft, setDraft] = useState<VisitDraft | null>(null);
   const [locked, setLocked] = useState(false);
+  /** The local store has been checked for an existing draft of this visit. */
+  const [lookupDone, setLookupDone] = useState(false);
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'failed'>('idle');
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
@@ -68,7 +83,12 @@ export function FieldCapture({ target, projectId }: { target: string; projectId:
   const [discardOpen, setDiscardOpen] = useState(false);
   const [gpsError, setGpsError] = useState<string | null>(null);
   const [previews, setPreviews] = useState<Record<string, string>>({});
+  const [newItem, setNewItem] = useState('');
   const fileInput = useRef<HTMLInputElement>(null);
+  const exit = useCallback(() => {
+    if (onExit) onExit();
+    else router.push('/partner/visits');
+  }, [onExit, router]);
   const isLocalId = target.startsWith('visit_');
   const isNew = target === 'new';
   const serverVisitId = !isLocalId && !isNew ? target : null;
@@ -130,6 +150,7 @@ export function FieldCapture({ target, projectId }: { target: string; projectId:
         return;
       }
       const existing = all.find((d) => d.kind === 'visit' && d.siteVisitId === serverVisitId);
+      setLookupDone(true);
       if (existing && existing.kind === 'visit') {
         setDraft(existing);
         return;
@@ -165,6 +186,16 @@ export function FieldCapture({ target, projectId }: { target: string; projectId:
         lastSyncError: null,
       };
       setDraft(d);
+      // Keep instructions and checklist on the device right away so the visit
+      // can be continued offline even before anything is typed.
+      try {
+        await store.put(d);
+        notifyDraftsChanged();
+        setSavedAt(nowIso);
+        setSaveState('saved');
+      } catch {
+        setSaveState('failed');
+      }
       if (v.status === 'scheduled' && online) startVisit.mutate(d);
     })();
     return () => {
@@ -184,12 +215,17 @@ export function FieldCapture({ target, projectId }: { target: string; projectId:
         setSaveState('saved');
         setSavedAt(new Date().toISOString());
         notifyDraftsChanged();
+        // A new field visit now exists on the device: point the address at it so a
+        // reload reopens this draft instead of starting another one.
+        if (isNew && !onExit && window.location.pathname.endsWith('/partner/visits/new')) {
+          window.history.replaceState(null, '', `/partner/visits/${draft.offlineClientId}`);
+        }
       } catch {
         setSaveState('failed');
       }
     }, 500);
     return () => clearTimeout(t);
-  }, [draft, store]);
+  }, [draft, store, isNew, onExit]);
 
   const update = useCallback((patch: Partial<VisitDraft>) => {
     dirtyRef.current = true;
@@ -199,7 +235,9 @@ export function FieldCapture({ target, projectId }: { target: string; projectId:
             ...d,
             ...patch,
             updatedAt: new Date().toISOString(),
-            syncState: d.syncState === 'synced' ? 'unsynced' : d.syncState,
+            // An edit after a completed or refused sync needs a new sync.
+            syncState:
+              d.syncState === 'synced' || d.syncState === 'rejected' ? 'unsynced' : d.syncState,
           }
         : d,
     );
@@ -315,7 +353,7 @@ export function FieldCapture({ target, projectId }: { target: string; projectId:
       notifyDraftsChanged();
       if (outcome.cleared) {
         toast({ tone: 'success', title: 'Visit synced', description: outcome.message });
-        router.push('/partner/visits');
+        exit();
         return;
       }
       dirtyRef.current = false;
@@ -343,7 +381,20 @@ export function FieldCapture({ target, projectId }: { target: string; projectId:
     if (!draft || !store) return;
     await store.delete(draft.offlineClientId);
     notifyDraftsChanged();
-    router.push('/partner/visits');
+    exit();
+  }
+
+  function addChecklistItem() {
+    if (!draft) return;
+    const label = newItem.trim();
+    if (!label) return;
+    update({
+      checklist: [
+        ...draft.checklist,
+        { key: `custom_${Date.now().toString(36)}`, label, checked: false },
+      ],
+    });
+    setNewItem('');
   }
 
   const checklistDone = useMemo(
@@ -356,9 +407,9 @@ export function FieldCapture({ target, projectId }: { target: string; projectId:
       <Alert tone="danger" title="Draft cannot be opened">
         This draft was captured in a previous browser session, or does not exist. The encryption key
         is gone, so it can only be discarded from the visits list.
-        <Link href="/partner/visits" className="ml-1 underline">
+        <Button variant="secondary" size="sm" className="mt-2" onClick={exit}>
           Back to visits
-        </Link>
+        </Button>
       </Alert>
     );
   }
@@ -371,6 +422,7 @@ export function FieldCapture({ target, projectId }: { target: string; projectId:
   }
   if (serverVisitId && !draft) {
     if (!online && serverVisit.isPending) {
+      if (!lookupDone) return <LoadingBlock rows={4} label="Looking for a saved draft" />;
       return (
         <Alert tone="warning" title="Offline and no local draft">
           This visit has not been opened on this device before, so its instructions are not
@@ -408,9 +460,20 @@ export function FieldCapture({ target, projectId }: { target: string; projectId:
     <div className="space-y-6">
       <PageHeader
         eyebrow={
-          <Link href="/partner/visits" className="underline">
-            Visits
-          </Link>
+          onExit ? (
+            <button
+              type="button"
+              className="inline-flex items-center gap-1 underline"
+              onClick={onExit}
+            >
+              <ArrowLeft aria-hidden="true" className="h-3 w-3" />
+              Visits
+            </button>
+          ) : (
+            <Link href="/partner/visits" className="underline">
+              Visits
+            </Link>
+          )
         }
         title={draft.title}
         description={
@@ -461,6 +524,12 @@ export function FieldCapture({ target, projectId }: { target: string; projectId:
           IndexedDB is unavailable; a reload loses unsynced work. Sync as soon as you can.
         </Alert>
       ) : null}
+      {startVisit.isError ? (
+        <Alert tone="warning" title="The server did not record the start of this visit">
+          {errorMessage(startVisit.error)} You can keep capturing; the sync will report whether the
+          visit can be submitted.
+        </Alert>
+      ) : null}
       {syncMessage ? (
         <Alert tone={syncMessage.tone} title="Sync">
           {syncMessage.text}
@@ -483,36 +552,15 @@ export function FieldCapture({ target, projectId }: { target: string; projectId:
             </Card>
           ) : null}
           <Card>
-            <CardHeader className="flex-row flex-wrap items-center justify-between gap-2">
+            <CardHeader>
               <CardTitle>
                 Checklist{' '}
                 <span className="text-sm font-normal text-fg-muted">
                   ({checklistDone}/{draft.checklist.length})
                 </span>
               </CardTitle>
-              <Button
-                size="sm"
-                variant="secondary"
-                onClick={() => {
-                  const label = window.prompt('Checklist item');
-                  if (label?.trim())
-                    update({
-                      checklist: [
-                        ...draft.checklist,
-                        {
-                          key: `custom_${Date.now().toString(36)}`,
-                          label: label.trim(),
-                          checked: false,
-                        },
-                      ],
-                    });
-                }}
-              >
-                <Plus aria-hidden="true" className="h-4 w-4" />
-                Add item
-              </Button>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-4">
               {draft.checklist.length === 0 ? (
                 <p className="text-sm text-fg-muted">
                   No checklist was attached. Add items as you go.
@@ -532,6 +580,32 @@ export function FieldCapture({ target, projectId }: { target: string; projectId:
                   ))}
                 </ul>
               )}
+              <form
+                className="flex flex-wrap items-end gap-2"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  addChecklistItem();
+                }}
+              >
+                <Field
+                  label="Add a checklist item"
+                  htmlFor="capture-new-item"
+                  className="min-w-0 flex-1"
+                >
+                  {({ id }) => (
+                    <Input
+                      id={id}
+                      value={newItem}
+                      maxLength={300}
+                      onChange={(e) => setNewItem(e.target.value)}
+                    />
+                  )}
+                </Field>
+                <Button type="submit" variant="secondary" disabled={!newItem.trim()}>
+                  <Plus aria-hidden="true" className="h-4 w-4" />
+                  Add item
+                </Button>
+              </form>
             </CardContent>
           </Card>
           <Card>
@@ -678,7 +752,6 @@ export function FieldCapture({ target, projectId }: { target: string; projectId:
                       </div>
                       {ph.state !== 'linked' ? (
                         <Button
-                          size="sm"
                           variant="ghost"
                           className="mt-1"
                           onClick={() => void removePhoto(ph)}
@@ -716,12 +789,12 @@ export function FieldCapture({ target, projectId }: { target: string; projectId:
               )}
               {gpsError ? <p className="text-xs text-danger">{gpsError}</p> : null}
               <div className="flex gap-2">
-                <Button size="sm" variant="secondary" onClick={recordGps}>
+                <Button variant="secondary" onClick={recordGps}>
                   <LocateFixed aria-hidden="true" className="h-4 w-4" />
                   {draft.gps ? 'Update position' : 'Record position'}
                 </Button>
                 {draft.gps ? (
-                  <Button size="sm" variant="ghost" onClick={() => update({ gps: null })}>
+                  <Button variant="ghost" onClick={() => update({ gps: null })}>
                     Clear
                   </Button>
                 ) : null}
@@ -784,7 +857,6 @@ function ChecklistRow({
       <Input
         aria-label={`Note for ${item.label}`}
         placeholder="Note (optional)"
-        className="h-9"
         value={item.note ?? ''}
         maxLength={1000}
         onChange={(e) => onChange({ ...item, note: e.target.value })}

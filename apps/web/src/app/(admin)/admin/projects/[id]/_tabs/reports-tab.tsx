@@ -21,20 +21,15 @@ export async function ReportsTab({ identity, shell }: { identity: RequestIdentit
             title="Draft a report"
             path={`/api/v1/projects/${p.id}/reports`}
             successMessage="Report drafted"
-            redirectTo={(r) => `/admin/reports/${(r as { id: string }).id}`}
+            redirectTo="/admin/reports/{id}"
             fields={[
               { name: 'kind', label: 'Kind', type: 'select', required: true, options: reportKindSchema.options.map((k) => ({ value: k, label: humanize(k) })) },
               { name: 'title', label: 'Title', required: true },
-              { name: 'summary', label: 'Summary', type: 'textarea' },
-              { name: 'bodyMarkdown', label: 'Body (markdown)', type: 'textarea', required: true },
-              { name: 'scopeLimitations', label: 'Scope and limitations', type: 'textarea', hint: 'What this report does not cover. Never implies a legal guarantee.' },
+              { name: 'summary', label: 'Summary', type: 'textarea', bodyKey: 'initialRevision.summary', emptyAs: 'null' },
+              { name: 'bodyMarkdown', label: 'Body (markdown)', type: 'textarea', required: true, bodyKey: 'initialRevision.bodyMarkdown' },
+              { name: 'scopeLimitations', label: 'Scope and limitations', type: 'textarea', hint: 'What this report does not cover. Never implies a legal guarantee.', bodyKey: 'initialRevision.scopeLimitations', emptyAs: 'null' },
             ]}
-            toBody={(v) => ({
-              kind: v.kind,
-              title: v.title,
-              serviceRequestId: p.serviceRequestId,
-              initialRevision: { summary: v.summary || null, bodyMarkdown: v.bodyMarkdown, scopeLimitations: v.scopeLimitations || null, attachmentFileIds: [] },
-            })}
+            extraBody={{ serviceRequestId: p.serviceRequestId, 'initialRevision.attachmentFileIds': [] }}
           />
         ) : null
       }

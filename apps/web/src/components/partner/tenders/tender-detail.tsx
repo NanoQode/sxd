@@ -13,10 +13,15 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
+  Dialog,
+  DialogContent,
+  DialogFooter,
   Field,
   PageHeader,
   StatusBadge,
   Textarea,
+  buttonVariants,
+  formatDateTimeLabel,
   formatNairaString,
   humanize,
   useToast,
@@ -70,6 +75,8 @@ export function TenderDetailView({ tenderId }: { tenderId: string }) {
   const { toast } = useToast();
   const { now } = useServerNow();
   const [question, setQuestion] = useState('');
+  const [declining, setDeclining] = useState<'invitation' | 'award' | null>(null);
+  const [declineNote, setDeclineNote] = useState('');
   const tender = useQuery({
     queryKey: ['partner', 'tender', tenderId],
     queryFn: () => partnerFetch<TenderDetail>(`/api/v1/tenders/${tenderId}`),
@@ -82,9 +89,19 @@ export function TenderDetailView({ tenderId }: { tenderId: string }) {
   });
   const respondInvitation = useMutation({
     mutationFn: (decision: 'accept' | 'decline') =>
-      partnerFetch(`/api/v1/tenders/${tenderId}/invitations/respond`, { body: { decision } }),
-    onSuccess: () => {
-      toast({ tone: 'success', title: 'Invitation updated' });
+      partnerFetch(`/api/v1/tenders/${tenderId}/invitations/respond`, {
+        body: {
+          decision,
+          note: decision === 'decline' && declineNote.trim() ? declineNote.trim() : null,
+        },
+      }),
+    onSuccess: (_r, decision) => {
+      toast({
+        tone: 'success',
+        title: decision === 'accept' ? 'Invitation accepted' : 'Invitation declined',
+      });
+      setDeclining(null);
+      setDeclineNote('');
       void qc.invalidateQueries({ queryKey: ['partner', 'tender', tenderId] });
       void qc.invalidateQueries({ queryKey: ['partner', 'tenders'] });
     },
@@ -108,9 +125,19 @@ export function TenderDetailView({ tenderId }: { tenderId: string }) {
   });
   const respondAward = useMutation({
     mutationFn: (decision: 'accept' | 'decline') =>
-      partnerFetch(`/api/v1/tenders/${tenderId}/award/respond`, { body: { decision } }),
-    onSuccess: () => {
-      toast({ tone: 'success', title: 'Award response recorded' });
+      partnerFetch(`/api/v1/tenders/${tenderId}/award/respond`, {
+        body: {
+          decision,
+          note: decision === 'decline' && declineNote.trim() ? declineNote.trim() : null,
+        },
+      }),
+    onSuccess: (_r, decision) => {
+      toast({
+        tone: 'success',
+        title: decision === 'accept' ? 'Award accepted' : 'Award declined',
+      });
+      setDeclining(null);
+      setDeclineNote('');
       void qc.invalidateQueries({ queryKey: ['partner', 'tender', tenderId] });
       void qc.invalidateQueries({ queryKey: ['partner', 'awards'] });
     },
@@ -135,6 +162,10 @@ export function TenderDetailView({ tenderId }: { tenderId: string }) {
   const open = ['published', 'clarifications'].includes(t.status) && !deadlinePassed;
   const declined = t.myInvitation?.status === 'declined';
   const canAsk = open && !cutoffPassed && !declined && t.status !== 'closed';
+  const awaitingResponse =
+    open &&
+    (t.myInvitation?.status === 'invited' || t.myInvitation?.status === 'viewed') &&
+    !t.myInvitation.respondedAt;
 
   return (
     <div className="space-y-6">
@@ -146,24 +177,26 @@ export function TenderDetailView({ tenderId }: { tenderId: string }) {
             <StatusBadge status={t.status} />
             {t.sealed ? <Badge tone="info">Sealed bids</Badge> : null}
             {t.myInvitation ? (
-              <Badge tone="neutral">Invitation: {humanize(t.myInvitation.status)}</Badge>
+              <Badge tone="neutral">
+                Invitation:{' '}
+                {t.myInvitation.status === 'viewed' && t.myInvitation.respondedAt
+                  ? 'accepted'
+                  : humanize(t.myInvitation.status).toLowerCase()}
+              </Badge>
             ) : null}
           </span>
         }
         actions={
           <>
             {!declined ? (
-              <Link
-                href={`/partner/tenders/${t.id}/bid`}
-                className="sx-transition inline-flex h-11 items-center rounded-md bg-primary px-4 text-sm font-medium text-fg-on-primary hover:bg-primary-hover"
-              >
+              <Link href={`/partner/tenders/${t.id}/bid`} className={buttonVariants()}>
                 {t.myBid ? 'Open my bid' : open ? 'Start a bid' : 'View bid workspace'}
               </Link>
             ) : null}
           </>
         }
       />
-      {t.myInvitation?.status === 'invited' || t.myInvitation?.status === 'viewed' ? (
+      {awaitingResponse ? (
         <Alert tone="info" title="Respond to the invitation">
           <p>
             Accepting signals intent; it does not commit you to submit. Declining hides the bid
@@ -177,12 +210,7 @@ export function TenderDetailView({ tenderId }: { tenderId: string }) {
             >
               Accept invitation
             </Button>
-            <Button
-              size="sm"
-              variant="secondary"
-              onClick={() => respondInvitation.mutate('decline')}
-              loading={respondInvitation.isPending && respondInvitation.variables === 'decline'}
-            >
+            <Button size="sm" variant="secondary" onClick={() => setDeclining('invitation')}>
               Decline
             </Button>
           </div>
@@ -345,7 +373,7 @@ export function TenderDetailView({ tenderId }: { tenderId: string }) {
                 label="Ask a clarification question"
                 hint={
                   cutoff
-                    ? `Questions close at ${new Date(cutoff).toISOString().replace('T', ' ').slice(0, 16)} UTC (checked on the server clock).`
+                    ? `Questions close ${formatDateTimeLabel(cutoff, t.displayTimeZone)} (${t.displayTimeZone}), ${formatDateTimeLabel(cutoff, 'UTC')} UTC. The server clock decides.`
                     : 'No cut-off set.'
                 }
                 error={ask.isError ? errorMessage(ask.error) : undefined}
@@ -434,12 +462,7 @@ export function TenderDetailView({ tenderId }: { tenderId: string }) {
                   >
                     Accept award
                   </Button>
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    onClick={() => respondAward.mutate('decline')}
-                    loading={respondAward.isPending && respondAward.variables === 'decline'}
-                  >
+                  <Button size="sm" variant="secondary" onClick={() => setDeclining('award')}>
                     Decline award
                   </Button>
                 </div>
@@ -448,6 +471,53 @@ export function TenderDetailView({ tenderId }: { tenderId: string }) {
           )}
         </CardContent>
       </Card>
+      <Dialog
+        open={declining !== null}
+        onOpenChange={(o) => {
+          if (!o) setDeclining(null);
+        }}
+      >
+        {declining ? (
+          <DialogContent
+            title={declining === 'award' ? 'Decline this award?' : 'Decline this invitation?'}
+            description={
+              declining === 'award'
+                ? 'Declining is final: staff may award the work to another bidder.'
+                : 'Declining closes the bid workspace for this tender. It cannot be undone from your side.'
+            }
+          >
+            <Field label="Note to staff (optional)" hint="Up to 2000 characters.">
+              {({ id, describedBy }) => (
+                <Textarea
+                  id={id}
+                  aria-describedby={describedBy}
+                  value={declineNote}
+                  maxLength={2000}
+                  onChange={(e) => setDeclineNote(e.target.value)}
+                />
+              )}
+            </Field>
+            <DialogFooter>
+              <Button variant="secondary" onClick={() => setDeclining(null)}>
+                Keep
+              </Button>
+              <Button
+                variant="danger"
+                loading={
+                  declining === 'award' ? respondAward.isPending : respondInvitation.isPending
+                }
+                onClick={() =>
+                  declining === 'award'
+                    ? respondAward.mutate('decline')
+                    : respondInvitation.mutate('decline')
+                }
+              >
+                {declining === 'award' ? 'Decline award' : 'Decline invitation'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        ) : null}
+      </Dialog>
     </div>
   );
 }

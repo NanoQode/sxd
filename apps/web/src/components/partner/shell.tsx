@@ -17,10 +17,21 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import type { ReactNode } from 'react';
-import { Badge, Button, ReduceMotionToggle, ThemeToggle, cn } from '@simplexd/ui';
+import { useState, type ReactNode } from 'react';
+import {
+  Alert,
+  Badge,
+  Button,
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  ReduceMotionToggle,
+  ThemeToggle,
+  cn,
+} from '@simplexd/ui';
 import { authClient } from '@/lib/auth/client';
 import { PartnerProvider, type PartnerIdentity } from '@/lib/partner/context';
+import { partnerModules, type PartnerModule } from '@/lib/partner/nav';
 import { discardSessionKey } from '@/lib/partner/offline/crypto';
 import { useDrafts, useOnline } from '@/lib/partner/offline/use-draft-store';
 import { VerificationBadge } from './verification-badge';
@@ -30,31 +41,33 @@ interface NavItem {
   label: string;
   icon: typeof LayoutDashboard;
   exact?: boolean;
-  show: (p: PartnerIdentity) => boolean;
+  module: PartnerModule;
 }
 
 const NAV: NavItem[] = [
-  { href: '/partner', label: 'Home', icon: LayoutDashboard, exact: true, show: () => true },
-  { href: '/partner/assignments', label: 'Assignments', icon: ClipboardList, show: () => true },
-  { href: '/partner/tenders', label: 'Tenders & bids', icon: Gavel, show: (p) => p.isPartner },
-  { href: '/partner/rfqs', label: 'RFQs & orders', icon: Package, show: (p) => p.isPartner },
+  { href: '/partner', label: 'Home', icon: LayoutDashboard, exact: true, module: 'home' },
   {
-    href: '/partner/visits',
-    label: 'Visits',
-    icon: Camera,
-    show: (p) => p.isStaffInspector || p.isPartner,
+    href: '/partner/assignments',
+    label: 'Assignments',
+    icon: ClipboardList,
+    module: 'assignments',
   },
-  { href: '/partner/evidence', label: 'Evidence', icon: Images, show: () => true },
-  { href: '/partner/reports', label: 'Reports', icon: FileText, show: () => true },
-  { href: '/partner/messages', label: 'Messages', icon: MessageSquare, show: () => true },
-  { href: '/partner/notifications', label: 'Notifications', icon: Bell, show: () => true },
-  { href: '/partner/availability', label: 'Availability', icon: CalendarClock, show: () => true },
+  { href: '/partner/tenders', label: 'Tenders & bids', icon: Gavel, module: 'tenders' },
+  { href: '/partner/rfqs', label: 'RFQs & orders', icon: Package, module: 'rfqs' },
+  { href: '/partner/visits', label: 'Visits', icon: Camera, module: 'visits' },
+  { href: '/partner/evidence', label: 'Evidence', icon: Images, module: 'evidence' },
+  { href: '/partner/reports', label: 'Reports', icon: FileText, module: 'reports' },
+  { href: '/partner/messages', label: 'Messages', icon: MessageSquare, module: 'messages' },
+  { href: '/partner/notifications', label: 'Notifications', icon: Bell, module: 'notifications' },
+  {
+    href: '/partner/availability',
+    label: 'Availability',
+    icon: CalendarClock,
+    module: 'availability',
+  },
 ];
 
-function UnsyncedIndicator({ userId }: { userId: string }) {
-  const { drafts } = useDrafts(userId);
-  const online = useOnline();
-  const unsynced = drafts.filter((d) => d.syncState !== 'synced').length;
+function UnsyncedIndicator({ unsynced, online }: { unsynced: number; online: boolean }) {
   return (
     <div className="flex items-center gap-2">
       {!online ? (
@@ -87,9 +100,16 @@ export function PartnerShell({
   const pathname = usePathname();
   const router = useRouter();
   const queryClient = useQueryClient();
-  const items = NAV.filter((n) => n.show(identity));
+  const modules = partnerModules(identity);
+  const items = NAV.filter((n) => modules.has(n.module));
+  const { drafts } = useDrafts(identity.userId);
+  const online = useOnline();
+  const unsynced = drafts.filter((d) => d.syncState !== 'synced').length;
+  const [confirmSignOut, setConfirmSignOut] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
 
   async function signOut() {
+    setSigningOut(true);
     // Forget the offline encryption key first so drafts on a shared device become unreadable.
     discardSessionKey(identity.userId);
     await authClient.signOut();
@@ -124,13 +144,14 @@ export function PartnerShell({
               </span>
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              <UnsyncedIndicator userId={identity.userId} />
+              <UnsyncedIndicator unsynced={unsynced} online={online} />
               <VerificationBadge verification={identity.verification} zone={identity.timeZone} />
               <ThemeToggle compact />
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => void signOut()}
+                loading={signingOut}
+                onClick={() => (unsynced > 0 ? setConfirmSignOut(true) : void signOut())}
                 aria-label={`Sign out ${identity.email}`}
               >
                 <LogOut aria-hidden="true" className="h-4 w-4" />
@@ -139,6 +160,15 @@ export function PartnerShell({
             </div>
           </div>
         </header>
+        {!online ? (
+          <div className="sx-container pt-4">
+            <Alert tone="warning" title="You are offline">
+              Keep this tab open. Field drafts are saved encrypted on this device and can be opened
+              from the Visits page without a connection; moving to another page or reloading needs
+              the network.
+            </Alert>
+          </div>
+        ) : null}
         <div className="sx-container flex flex-1 flex-col gap-6 py-6 md:flex-row">
           <nav aria-label="Partner workspace" className="md:w-56 md:shrink-0">
             <ul className="flex gap-1 overflow-x-auto pb-1 md:flex-col md:overflow-visible">
@@ -185,6 +215,27 @@ export function PartnerShell({
           </main>
         </div>
       </div>
+      <Dialog open={confirmSignOut} onOpenChange={setConfirmSignOut}>
+        <DialogContent
+          title={`${unsynced} draft${unsynced === 1 ? ' is' : 's are'} not on the server yet`}
+          description="Signing out deletes this session's encryption key, so unsynced drafts on this device become unreadable and can only be discarded. Sync them first unless you mean to abandon them."
+        >
+          <DialogFooter>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setConfirmSignOut(false);
+                router.push('/partner/visits');
+              }}
+            >
+              Go to visits
+            </Button>
+            <Button variant="danger" loading={signingOut} onClick={() => void signOut()}>
+              Sign out anyway
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </PartnerProvider>
   );
 }

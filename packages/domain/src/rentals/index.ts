@@ -202,7 +202,10 @@ export function generateRentSchedule(input: ScheduleInput): SchedulePeriod[] {
       periodStart: cursor,
       periodEnd,
       dueDate: dueDateFor(cursor, leadDays),
-      amountKobo: partial && prorate ? prorateByDays(input.rentAmountKobo, days, ofDays) : input.rentAmountKobo,
+      amountKobo:
+        partial && prorate
+          ? prorateByDays(input.rentAmountKobo, days, ofDays)
+          : input.rentAmountKobo,
       proration: partial && prorate ? { days, ofDays } : null,
       label: null,
     });
@@ -221,6 +224,107 @@ export function periodsDueForInvoicing<T extends { dueDate: string; status: stri
 ): T[] {
   const cutoff = addDays(asOf, leadDays);
   return periods.filter((p) => p.status === 'scheduled' && compareDates(p.dueDate, cutoff) <= 0);
+}
+
+/**
+ * A charge for a period that ends early (termination inside the period):
+ * scaled by the days kept over the days of the period as scheduled, half-up.
+ * `newEnd` must fall inside the period and before its scheduled end.
+ */
+export function truncateCharge(
+  amountKobo: Kobo,
+  periodStart: string,
+  periodEnd: string,
+  newEnd: string,
+): Kobo {
+  if (compareDates(newEnd, periodStart) < 0 || compareDates(newEnd, periodEnd) >= 0)
+    throw new ScheduleError(`${newEnd} does not cut the period ${periodStart}..${periodEnd}`);
+  return prorateByDays(
+    amountKobo,
+    daysInclusive(periodStart, newEnd),
+    daysInclusive(periodStart, periodEnd),
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/* Lease lifecycle                                                            */
+/* -------------------------------------------------------------------------- */
+
+/** Days before the end date a lease turns `expiring` when the lease sets no notice period. */
+export const DEFAULT_EXPIRY_NOTICE_DAYS = 30;
+
+/**
+ * The system transition due for a lease on `asOf` (`leaseMachine` system
+ * rules): `active → expiring` inside the notice window before the end date,
+ * `active | expiring → ended` once the end date has passed. Open-ended,
+ * draft and closed leases never move on their own.
+ */
+export function leaseLifecycleTarget(
+  lease: { status: string; endDate: string | null; noticePeriodDays?: number | null },
+  asOf: string,
+): 'expiring' | 'ended' | null {
+  if (!lease.endDate) return null;
+  if (lease.status !== 'active' && lease.status !== 'expiring') return null;
+  if (compareDates(asOf, lease.endDate) > 0) return 'ended';
+  if (lease.status === 'active') {
+    const notice = lease.noticePeriodDays ?? DEFAULT_EXPIRY_NOTICE_DAYS;
+    if (compareDates(asOf, addDays(lease.endDate, -notice)) >= 0) return 'expiring';
+  }
+  return null;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Collections                                                                */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Apportions one settled allocation across the charges of its invoice in the
+ * order given (oldest first), never above what each charge still owes. Any
+ * remainder (an overpayment) is left unapportioned.
+ */
+export function apportionAllocation(
+  amountKobo: Kobo,
+  charges: ReadonlyArray<{ id: string; amountKobo: Kobo }>,
+  paidByCharge: ReadonlyMap<string, Kobo>,
+): Array<{ chargeId: string; amountKobo: Kobo }> {
+  const out: Array<{ chargeId: string; amountKobo: Kobo }> = [];
+  let remaining = amountKobo;
+  for (const c of charges) {
+    if (remaining <= 0n) break;
+    const open = c.amountKobo - (paidByCharge.get(c.id) ?? 0n);
+    if (open <= 0n) continue;
+    const take = open < remaining ? open : remaining;
+    out.push({ chargeId: c.id, amountKobo: take });
+    remaining -= take;
+  }
+  return out;
+}
+
+export type RentScheduleStatus =
+  'scheduled' | 'invoiced' | 'partially_paid' | 'paid' | 'overdue' | 'waived';
+
+/**
+ * Status of an invoiced period from what its charges total and what has been
+ * settled against them: paid in full, else overdue once the due date has
+ * passed, else partially paid or invoiced. Scheduled and waived periods keep
+ * their status.
+ */
+export function scheduleStatusFor(
+  current: RentScheduleStatus,
+  totalKobo: Kobo,
+  settledKobo: Kobo,
+  dueDate: string,
+  asOf: string,
+): RentScheduleStatus {
+  if (current === 'scheduled' || current === 'waived') return current;
+  if (settledKobo >= totalKobo) return 'paid';
+  if (compareDates(dueDate, asOf) < 0) return 'overdue';
+  return settledKobo > 0n ? 'partially_paid' : 'invoiced';
+}
+
+/** Whole days a due date is overdue on `asOf` (0 when not yet due). */
+export function daysOverdue(dueDate: string, asOf: string): number {
+  return compareDates(asOf, dueDate) <= 0 ? 0 : daysInclusive(dueDate, asOf) - 1;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -255,7 +359,12 @@ export interface ArrearsAgeing {
   buckets: Record<ArrearsBucket, Kobo>;
   totalOutstandingKobo: Kobo;
   /** Outstanding charges with their bucket, oldest first. */
-  items: Array<{ chargeId: string; outstandingKobo: Kobo; daysOverdue: number; bucket: ArrearsBucket }>;
+  items: Array<{
+    chargeId: string;
+    outstandingKobo: Kobo;
+    daysOverdue: number;
+    bucket: ArrearsBucket;
+  }>;
 }
 
 export function outstandingByCharge(
@@ -263,7 +372,8 @@ export function outstandingByCharge(
   allocations: AllocationLike[],
 ): Map<string, Kobo> {
   const paid = new Map<string, Kobo>();
-  for (const a of allocations) paid.set(a.rentChargeId, (paid.get(a.rentChargeId) ?? 0n) + a.amountKobo);
+  for (const a of allocations)
+    paid.set(a.rentChargeId, (paid.get(a.rentChargeId) ?? 0n) + a.amountKobo);
   const out = new Map<string, Kobo>();
   for (const c of charges) {
     const remaining = c.amountKobo - (paid.get(c.id) ?? 0n);
@@ -299,12 +409,16 @@ export function ageArrears(
   for (const c of [...charges].sort((a, b) => compareDates(a.chargedAt, b.chargedAt))) {
     const remaining = outstanding.get(c.id) ?? 0n;
     if (remaining <= 0n) continue;
-    const due = c.dueDate ?? c.chargedAt;
-    const daysOverdue = compareDates(asOf, due) < 0 ? 0 : daysInclusive(due, asOf) - 1;
-    const bucket = bucketForDaysOverdue(daysOverdue);
+    const overdueDays = daysOverdue(c.dueDate ?? c.chargedAt, asOf);
+    const bucket = bucketForDaysOverdue(overdueDays);
     buckets[bucket] += remaining;
     total += remaining;
-    items.push({ chargeId: c.id, outstandingKobo: remaining, daysOverdue, bucket });
+    items.push({
+      chargeId: c.id,
+      outstandingKobo: remaining,
+      daysOverdue: overdueDays,
+      bucket,
+    });
   }
   return { asOf, buckets, totalOutstandingKobo: total, items };
 }
@@ -373,7 +487,13 @@ export function computeStatementTotals(lines: StatementLine[]): StatementTotals 
         break;
     }
   }
-  return { collectedKobo: collected, feesKobo: fees, expensesKobo: expenses, netKobo: collected - fees - expenses, arrearsKobo: arrears };
+  return {
+    collectedKobo: collected,
+    feesKobo: fees,
+    expensesKobo: expenses,
+    netKobo: collected - fees - expenses,
+    arrearsKobo: arrears,
+  };
 }
 
 export interface FeeTerms {
@@ -402,7 +522,8 @@ export function leaseManagementFee(
 export function monthsInPeriod(periodStart: string, periodEnd: string): number {
   const s = parseDate(periodStart);
   const e = parseDate(periodEnd);
-  const months = (e.getUTCFullYear() - s.getUTCFullYear()) * 12 + (e.getUTCMonth() - s.getUTCMonth()) + 1;
+  const months =
+    (e.getUTCFullYear() - s.getUTCFullYear()) * 12 + (e.getUTCMonth() - s.getUTCMonth()) + 1;
   return Math.max(1, months);
 }
 
@@ -438,11 +559,7 @@ export const OPEN_WORK_ORDER_STATUSES = new Set([
 ]);
 
 /** Breached when still open past the SLA deadline. Completed, verified and closed work stops the clock. */
-export function isSlaBreached(
-  status: string,
-  slaDueAt: Date | null,
-  now: Date,
-): boolean {
+export function isSlaBreached(status: string, slaDueAt: Date | null, now: Date): boolean {
   if (!slaDueAt) return false;
   if (!OPEN_WORK_ORDER_STATUSES.has(status)) return false;
   return now.getTime() > slaDueAt.getTime();

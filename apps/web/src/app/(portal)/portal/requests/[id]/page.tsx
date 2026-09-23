@@ -25,9 +25,12 @@ import { loadInvoicesForRequest, loadQuotesForRequest } from '@/lib/portal/serve
 import { capabilityNote, customerCapabilities } from '@/lib/portal/server/permissions';
 import { FilesPanel } from '@/components/portal/files-panel';
 import { LinkButton } from '@/components/portal/link-button';
+import { NotesPanel } from '@/components/portal/notes-panel';
 import { QuoteCard } from '@/components/portal/quote-panel';
 import { SectionTabs, resolveTab } from '@/components/portal/section-tabs';
+import { StartConversation } from '@/components/portal/start-conversation';
 import { listAssignments } from '@/server/assignments/service';
+import { listConversations } from '@/server/conversations/service';
 import { listFilesForEntity } from '@/server/files/queries';
 import { getServiceRequestDetail } from '@/server/requests/queries';
 import { intakeLabel } from '@/server/requests/services';
@@ -61,11 +64,29 @@ export default async function RequestDetailPage({
   const basePath = `/portal/requests/${id}`;
 
   const [quotes, invoices] = await Promise.all([
-    tab === 'quotes' || tab === 'overview' ? loadQuotesForRequest(identity, id) : Promise.resolve([]),
-    tab === 'invoices' || tab === 'overview' ? loadInvoicesForRequest(identity, id) : Promise.resolve([]),
+    tab === 'quotes' || tab === 'overview'
+      ? loadQuotesForRequest(identity, id)
+      : Promise.resolve([]),
+    tab === 'invoices' || tab === 'overview'
+      ? loadInvoicesForRequest(identity, id)
+      : Promise.resolve([]),
   ]);
+  const closed = ['completed', 'cancelled', 'rejected'].includes(detail.status);
+  const conversationId =
+    tab === 'overview'
+      ? ((
+          await listConversations(identity, {
+            status: 'all',
+            entityType: 'service_request',
+            entityId: id,
+            limit: 1,
+          })
+        ).items[0]?.id ?? null)
+      : null;
   const openQuotes = quotes.filter((q) => q.status === 'issued').length;
-  const unpaid = invoices.filter((i) => ['issued', 'partially_paid', 'overdue'].includes(i.status)).length;
+  const unpaid = invoices.filter((i) =>
+    ['issued', 'partially_paid', 'overdue'].includes(i.status),
+  ).length;
 
   return (
     <div className="space-y-6">
@@ -90,8 +111,17 @@ export default async function RequestDetailPage({
         label="Request sections"
         tabs={[
           { value: 'overview', label: 'Overview' },
-          { value: 'quotes', label: 'Quotes', badge: openQuotes > 0 ? <Badge tone="warning">{openQuotes} to decide</Badge> : undefined },
-          { value: 'invoices', label: 'Invoices', badge: unpaid > 0 ? <Badge tone="warning">{unpaid} due</Badge> : undefined },
+          {
+            value: 'quotes',
+            label: 'Quotes',
+            badge:
+              openQuotes > 0 ? <Badge tone="warning">{openQuotes} to decide</Badge> : undefined,
+          },
+          {
+            value: 'invoices',
+            label: 'Invoices',
+            badge: unpaid > 0 ? <Badge tone="warning">{unpaid} due</Badge> : undefined,
+          },
           { value: 'team', label: 'Team' },
           { value: 'documents', label: 'Documents' },
           { value: 'appointments', label: 'Appointments' },
@@ -104,24 +134,37 @@ export default async function RequestDetailPage({
             <Card>
               <CardHeader>
                 <CardTitle>Request details</CardTitle>
-                <CardDescription>What you told us at intake. Triage may ask follow-up questions in the notes.</CardDescription>
+                <CardDescription>
+                  What you told us at intake. Triage may ask follow-up questions in the notes.
+                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4 text-sm">
                 <p className="whitespace-pre-wrap">{detail.description ?? '—'}</p>
                 <dl className="grid gap-x-6 gap-y-2 sm:grid-cols-2">
                   <div>
                     <dt className="text-fg-muted">Budget</dt>
-                    <dd>{detail.budgetNaira !== null ? formatWholeNaira(detail.budgetNaira) : 'Not specified'}</dd>
+                    <dd>
+                      {detail.budgetNaira !== null
+                        ? formatWholeNaira(detail.budgetNaira)
+                        : 'Not specified'}
+                    </dd>
                   </div>
                   <div>
                     <dt className="text-fg-muted">Preferred timeline</dt>
-                    <dd>{detail.preferredTimeline ? PREFERRED_TIMELINE_LABELS[detail.preferredTimeline] : 'Not specified'}</dd>
+                    <dd>
+                      {detail.preferredTimeline
+                        ? PREFERRED_TIMELINE_LABELS[detail.preferredTimeline]
+                        : 'Not specified'}
+                    </dd>
                   </div>
                   <div>
                     <dt className="text-fg-muted">Scenario</dt>
                     <dd>
                       {detail.scenarioId ? (
-                        <Link href={`/explore?scenario=${detail.scenarioId}`} className="text-primary underline">
+                        <Link
+                          href={`/explore?scenario=${detail.scenarioId}`}
+                          className="text-primary underline"
+                        >
                           Open linked scenario
                         </Link>
                       ) : (
@@ -178,7 +221,8 @@ export default async function RequestDetailPage({
                   ) : null}
                   {unpaid > 0 ? (
                     <LinkButton href={`${basePath}?tab=invoices`} variant="secondary" size="sm">
-                      Pay {unpaid === 1 ? 'the outstanding invoice' : `${unpaid} outstanding invoices`}
+                      Pay{' '}
+                      {unpaid === 1 ? 'the outstanding invoice' : `${unpaid} outstanding invoices`}
                     </LinkButton>
                   ) : null}
                 </CardContent>
@@ -188,28 +232,20 @@ export default async function RequestDetailPage({
             <Card>
               <CardHeader>
                 <CardTitle>Notes</CardTitle>
-                <CardDescription>Messages between you and the team on this request. Internal staff notes are never shown here.</CardDescription>
+                <CardDescription>
+                  Notes between you and the team on this request. Internal staff notes are never
+                  shown here.
+                </CardDescription>
               </CardHeader>
               <CardContent>
-                {detail.notes.length === 0 ? (
-                  <p className="text-sm text-fg-muted">No notes yet. Add one below to give the team more context.</p>
-                ) : (
-                  <ol className="space-y-3">
-                    {detail.notes.map((n) => (
-                      <li key={n.id} className="rounded-md border border-border p-3 text-sm">
-                        <p className="mb-1 flex flex-wrap items-center gap-2 text-xs text-fg-muted">
-                          <span className="font-medium text-fg">{n.authorName ?? 'Team'}</span>
-                          <span>{formatDateTimeLabel(n.createdAt, zone)}</span>
-                          <Badge tone="neutral">{humanize(n.visibility)}</Badge>
-                        </p>
-                        <p className="whitespace-pre-wrap">{n.body}</p>
-                      </li>
-                    ))}
-                  </ol>
-                )}
-                <div className="mt-4">
-                  <RequestActions id={detail.id} version={detail.version} status={detail.status} availableTransitions={detail.availableTransitions} mode="note" />
-                </div>
+                <NotesPanel
+                  entityType="service_request"
+                  entityId={detail.id}
+                  notes={detail.notes}
+                  zone={zone}
+                  readOnly={closed}
+                  readOnlyReason="This request is closed; notes are read-only."
+                />
               </CardContent>
             </Card>
           </div>
@@ -218,16 +254,23 @@ export default async function RequestDetailPage({
             <Card>
               <CardHeader>
                 <CardTitle>Engagement timeline</CardTitle>
-                <CardDescription>Every transition is recorded with who made it and why.</CardDescription>
+                <CardDescription>
+                  Every transition is recorded with who made it and why.
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <ol className="space-y-3 border-l border-border pl-4">
                   {detail.transitions.map((t) => (
                     <li key={t.id} className="relative text-sm">
-                      <span aria-hidden="true" className="absolute -left-[21px] top-1.5 h-2.5 w-2.5 rounded-full bg-primary" />
+                      <span
+                        aria-hidden="true"
+                        className="absolute -left-[21px] top-1.5 h-2.5 w-2.5 rounded-full bg-primary"
+                      />
                       <p className="flex flex-wrap items-center gap-2">
                         <StatusBadge status={t.toStatus} />
-                        <span className="text-xs text-fg-muted">{formatDateTimeLabel(t.createdAt, zone)}</span>
+                        <span className="text-xs text-fg-muted">
+                          {formatDateTimeLabel(t.createdAt, zone)}
+                        </span>
                       </p>
                       <p className="text-xs text-fg-muted">
                         {t.actorName ?? humanize(t.actorType)}
@@ -241,6 +284,31 @@ export default async function RequestDetailPage({
             </Card>
             <Card>
               <CardHeader>
+                <CardTitle>Talk to your team</CardTitle>
+                <CardDescription>
+                  {detail.assignedPm
+                    ? `${detail.assignedPm.name} manages this request.`
+                    : 'A project manager is assigned at triage.'}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <StartConversation
+                  entityType="service_request"
+                  entityId={detail.id}
+                  subject={`${detail.reference}: ${detail.title}`}
+                  contact={detail.assignedPm}
+                  existingConversationId={conversationId}
+                  canSend={caps.sendMessages && !closed}
+                  cannotSendReason={
+                    closed
+                      ? 'This request is closed; open Messages for earlier conversations.'
+                      : capabilityNote(caps, 'Sending messages')
+                  }
+                />
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader>
                 <CardTitle>Actions</CardTitle>
                 <CardDescription>
                   {detail.availableTransitions.length === 0
@@ -249,7 +317,12 @@ export default async function RequestDetailPage({
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <RequestActions id={detail.id} version={detail.version} status={detail.status} availableTransitions={detail.availableTransitions} mode="transitions" />
+                <RequestActions
+                  id={detail.id}
+                  version={detail.version}
+                  status={detail.status}
+                  availableTransitions={detail.availableTransitions}
+                />
               </CardContent>
             </Card>
           </div>
@@ -270,7 +343,9 @@ export default async function RequestDetailPage({
                 quote={q}
                 zone={zone}
                 canAccept={caps.acceptQuotes}
-                cannotAcceptReason={caps.acceptQuotes ? undefined : capabilityNote(caps, 'Accepting a quote')}
+                cannotAcceptReason={
+                  caps.acceptQuotes ? undefined : capabilityNote(caps, 'Accepting a quote')
+                }
                 detailHref={`/portal/quotes/${q.id}`}
               />
             ))
@@ -281,7 +356,10 @@ export default async function RequestDetailPage({
       {tab === 'invoices' ? (
         <section aria-label="Invoices">
           {invoices.length === 0 ? (
-            <EmptyState title="No invoices on this request" description="Invoices are raised when you accept a quotation that requires payment, and for milestones the team authorises." />
+            <EmptyState
+              title="No invoices on this request"
+              description="Invoices are raised when you accept a quotation that requires payment, and for milestones the team authorises."
+            />
           ) : (
             <DataTable
               caption="Invoices on this request"
@@ -293,45 +371,93 @@ export default async function RequestDetailPage({
                   key: 'number',
                   header: 'Number',
                   cell: (i) => (
-                    <Link href={`/portal/invoices/${i.id}`} className="font-mono text-primary underline">
+                    <Link
+                      href={`/portal/invoices/${i.id}`}
+                      className="font-mono text-primary underline"
+                    >
                       {i.number}
                     </Link>
                   ),
                 },
                 { key: 'kind', header: 'Kind', cell: (i) => humanize(i.kind) },
                 { key: 'status', header: 'Status', cell: (i) => <StatusBadge status={i.status} /> },
-                { key: 'total', header: 'Total', cell: (i) => koboToNaira(i.totalKobo), className: 'text-right' },
-                { key: 'balance', header: 'Balance', cell: (i) => koboToNaira(i.balanceKobo), className: 'text-right' },
-                { key: 'due', header: 'Due', cell: (i) => (i.dueDate ? formatDateLabel(i.dueDate) : '—') },
+                {
+                  key: 'total',
+                  header: 'Total',
+                  cell: (i) => koboToNaira(i.totalKobo),
+                  className: 'text-right',
+                },
+                {
+                  key: 'balance',
+                  header: 'Balance',
+                  cell: (i) => koboToNaira(i.balanceKobo),
+                  className: 'text-right',
+                },
+                {
+                  key: 'due',
+                  header: 'Due',
+                  cell: (i) => (i.dueDate ? formatDateLabel(i.dueDate) : '—'),
+                },
               ]}
             />
           )}
         </section>
       ) : null}
 
-      {tab === 'team' ? <TeamTab identity={identity} requestId={id} zone={zone} pmName={detail.assignedPm?.name ?? null} /> : null}
+      {tab === 'team' ? (
+        <TeamTab
+          identity={identity}
+          requestId={id}
+          zone={zone}
+          pmName={detail.assignedPm?.name ?? null}
+        />
+      ) : null}
 
-      {tab === 'documents' ? <DocumentsTab identity={identity} requestId={id} zone={zone} canUpload={caps.uploadDocuments} closed={['completed', 'cancelled', 'rejected'].includes(detail.status)} /> : null}
+      {tab === 'documents' ? (
+        <DocumentsTab
+          identity={identity}
+          requestId={id}
+          zone={zone}
+          canUpload={caps.uploadDocuments}
+          closed={closed}
+        />
+      ) : null}
 
-      {tab === 'appointments' ? <AppointmentsTab identity={identity} requestId={id} zone={zone} /> : null}
+      {tab === 'appointments' ? (
+        <AppointmentsTab identity={identity} requestId={id} zone={zone} />
+      ) : null}
     </div>
   );
 }
 
-async function TeamTab({ identity, requestId, zone, pmName }: { identity: Awaited<ReturnType<typeof requireSignedIn>>; requestId: string; zone: string; pmName: string | null }) {
+async function TeamTab({
+  identity,
+  requestId,
+  zone,
+  pmName,
+}: {
+  identity: Awaited<ReturnType<typeof requireSignedIn>>;
+  requestId: string;
+  zone: string;
+  pmName: string | null;
+}) {
   const page = await listAssignments(identity, { serviceRequestId: requestId, limit: 50 });
   return (
     <Card>
       <CardHeader>
         <CardTitle>Assigned team</CardTitle>
         <CardDescription>
-          {pmName ? `${pmName} is your project manager. ` : 'A project manager is assigned at triage. '}
+          {pmName
+            ? `${pmName} is your project manager. `
+            : 'A project manager is assigned at triage. '}
           Accepted and active assignments are listed; proposals still being confirmed are not.
         </CardDescription>
       </CardHeader>
       <CardContent>
         {page.items.length === 0 ? (
-          <p className="text-sm text-fg-muted">No specialists are assigned yet beyond your project manager.</p>
+          <p className="text-sm text-fg-muted">
+            No specialists are assigned yet beyond your project manager.
+          </p>
         ) : (
           <DataTable
             caption="Assignments"
@@ -339,10 +465,18 @@ async function TeamTab({ identity, requestId, zone, pmName }: { identity: Awaite
             rowKey={(a) => a.id}
             rowLabel={(a) => a.assigneeName ?? a.assigneeUserId}
             columns={[
-              { key: 'name', header: 'Name', cell: (a) => <span className="font-medium">{a.assigneeName ?? 'Team member'}</span> },
+              {
+                key: 'name',
+                header: 'Name',
+                cell: (a) => <span className="font-medium">{a.assigneeName ?? 'Team member'}</span>,
+              },
               { key: 'role', header: 'Role', cell: (a) => humanize(a.role) },
               { key: 'status', header: 'Status', cell: (a) => <StatusBadge status={a.status} /> },
-              { key: 'since', header: 'Since', cell: (a) => formatDateLabel(a.startsAt ?? a.createdAt, zone) },
+              {
+                key: 'since',
+                header: 'Since',
+                cell: (a) => formatDateLabel(a.startsAt ?? a.createdAt, zone),
+              },
             ]}
           />
         )}
@@ -364,12 +498,19 @@ async function DocumentsTab({
   canUpload: boolean;
   closed: boolean;
 }) {
-  const page = await listFilesForEntity(identity, { entityType: 'service_request', entityId: requestId, limit: 100 });
+  const page = await listFilesForEntity(identity, {
+    entityType: 'service_request',
+    entityId: requestId,
+    limit: 100,
+  });
   return (
     <Card>
       <CardHeader>
         <CardTitle>Documents</CardTitle>
-        <CardDescription>Title papers, drawings and anything the team asked for. Files are scanned before anyone can open them; large files upload in parts and can resume.</CardDescription>
+        <CardDescription>
+          Title papers, drawings and anything the team asked for. Files are scanned before anyone
+          can open them; large files upload in parts and can resume.
+        </CardDescription>
       </CardHeader>
       <CardContent>
         <FilesPanel
@@ -379,14 +520,26 @@ async function DocumentsTab({
           purpose="org_document"
           zone={zone}
           canUpload={canUpload && !closed}
-          cannotUploadReason={closed ? 'This request is closed; documents are read-only.' : 'Uploading documents needs an owner or member of this organisation.'}
+          cannotUploadReason={
+            closed
+              ? 'This request is closed; documents are read-only.'
+              : 'Uploading documents needs an owner or member of this organisation.'
+          }
         />
       </CardContent>
     </Card>
   );
 }
 
-async function AppointmentsTab({ identity, requestId, zone }: { identity: Awaited<ReturnType<typeof requireSignedIn>>; requestId: string; zone: string }) {
+async function AppointmentsTab({
+  identity,
+  requestId,
+  zone,
+}: {
+  identity: Awaited<ReturnType<typeof requireSignedIn>>;
+  requestId: string;
+  zone: string;
+}) {
   const items = await listRequestAppointments(identity, requestId);
   return (
     <Card>
@@ -394,9 +547,15 @@ async function AppointmentsTab({ identity, requestId, zone }: { identity: Awaite
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div>
             <CardTitle>Appointments linked to this request</CardTitle>
-            <CardDescription>Consultations, viewings and site visits booked for this engagement.</CardDescription>
+            <CardDescription>
+              Consultations, viewings and site visits booked for this engagement.
+            </CardDescription>
           </div>
-          <LinkButton href={`/portal/appointments/new?request=${requestId}`} variant="secondary" size="sm">
+          <LinkButton
+            href={`/portal/appointments/new?request=${requestId}`}
+            variant="secondary"
+            size="sm"
+          >
             Book an appointment
           </LinkButton>
         </div>

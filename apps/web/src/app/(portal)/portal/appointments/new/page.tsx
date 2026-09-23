@@ -8,12 +8,22 @@ import { AvailabilityPicker } from '@/components/portal/availability-picker';
 export const metadata: Metadata = { title: 'Book an appointment' };
 export const dynamic = 'force-dynamic';
 
-export default async function NewAppointmentPage({ searchParams }: { searchParams: Promise<{ request?: string; kind?: string }> }) {
+export default async function NewAppointmentPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ request?: string; kind?: string }>;
+}) {
   const identity = await requireSignedIn('/portal/appointments/new');
   const { request, kind } = await searchParams;
   const zone = identity.profile?.timeZone ?? 'Africa/Lagos';
   const requestId = request && uuidSchema.safeParse(request).success ? request : undefined;
-  const defaultKind = kind === 'viewing' || kind === 'site_visit' || kind === 'virtual_inspection' || kind === 'meeting' ? kind : 'consultation';
+  const defaultKind =
+    kind === 'viewing' ||
+    kind === 'site_visit' ||
+    kind === 'virtual_inspection' ||
+    kind === 'meeting'
+      ? kind
+      : 'consultation';
   return (
     <div className="space-y-6">
       <PageHeader
@@ -27,7 +37,12 @@ export default async function NewAppointmentPage({ searchParams }: { searchParam
       />
       <Card>
         <CardContent className="pt-5">
-          <AvailabilityPicker mode="book" defaultKind={defaultKind} defaultZone={zone} serviceRequestId={requestId} />
+          <AvailabilityPicker
+            mode="book"
+            defaultKind={defaultKind}
+            defaultZone={zone}
+            serviceRequestId={requestId}
+          />
         </CardContent>
       </Card>
     </div>

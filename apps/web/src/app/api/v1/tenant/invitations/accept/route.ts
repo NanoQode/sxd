@@ -10,5 +10,7 @@ export const POST = route(async (req, ctx) => {
   const identity = await getIdentity();
   if (!identity.session) throw new ApiError('unauthenticated', 'sign in required');
   const body = await parseJson(req, tenantInvitationAcceptSchema);
-  return json(await acceptTenantInvitation(identity, body, { correlationId: ctx.correlationId }), { correlationId: ctx.correlationId });
+  return json(await acceptTenantInvitation(identity, body, { correlationId: ctx.correlationId }), {
+    correlationId: ctx.correlationId,
+  });
 });

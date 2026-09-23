@@ -143,11 +143,11 @@ export default async function ReportReviewPage({ params }: { params: Promise<{ i
                   path={`/api/v1/reports/${report.id}/revisions`}
                   successMessage="Revision added"
                   fields={[
-                    { name: 'summary', label: 'Summary', type: 'textarea', defaultValue: current?.summary ?? '' },
+                    { name: 'summary', label: 'Summary', type: 'textarea', defaultValue: current?.summary ?? '', emptyAs: 'null' },
                     { name: 'bodyMarkdown', label: 'Body (markdown)', type: 'textarea', required: true, defaultValue: current?.bodyMarkdown ?? '' },
-                    { name: 'scopeLimitations', label: 'Scope and limitations', type: 'textarea', defaultValue: current?.scopeLimitations ?? '' },
+                    { name: 'scopeLimitations', label: 'Scope and limitations', type: 'textarea', defaultValue: current?.scopeLimitations ?? '', emptyAs: 'null' },
                   ]}
-                  toBody={(v) => ({ summary: v.summary || null, bodyMarkdown: v.bodyMarkdown, scopeLimitations: v.scopeLimitations || null, attachmentFileIds: current?.attachmentFileIds ?? [], expectedVersion: report.version })}
+                  extraBody={{ attachmentFileIds: current?.attachmentFileIds ?? [], expectedVersion: report.version }}
                 />
               ) : null}
               {canDraft && ['draft', 'changes_requested'].includes(report.status) ? (
@@ -159,7 +159,7 @@ export default async function ReportReviewPage({ params }: { params: Promise<{ i
                   successMessage="Submitted for review"
                   variant="primary"
                   fields={[{ name: 'namedReviewerUserId', label: 'Named reviewer', type: 'select', required: true, options: reviewers.map((s) => ({ value: s.userId, label: `${s.name} (${s.roles.map(humanize).join(', ')})` })) }]}
-                  toBody={(v) => ({ namedReviewerUserId: v.namedReviewerUserId, expectedVersion: report.version })}
+                  extraBody={{ expectedVersion: report.version }}
                 />
               ) : null}
               {report.status === 'in_review' && canReview && !isAuthor ? (

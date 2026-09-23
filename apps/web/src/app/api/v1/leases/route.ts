@@ -9,7 +9,9 @@ export const dynamic = 'force-dynamic';
 export const GET = route(async (req, ctx) => {
   const identity = await getIdentity();
   if (!identity.session) throw new ApiError('unauthenticated', 'sign in required');
-  return json(await listLeases(identity, parseQuery(req, leaseListQuerySchema)), { correlationId: ctx.correlationId });
+  return json(await listLeases(identity, parseQuery(req, leaseListQuerySchema)), {
+    correlationId: ctx.correlationId,
+  });
 });
 
 /** POST /api/v1/leases — create a lease (`org.leases.manage` or staff `rentals.manage`). */
@@ -17,5 +19,8 @@ export const POST = route(async (req, ctx) => {
   const identity = await getIdentity();
   if (!identity.session) throw new ApiError('unauthenticated', 'sign in required');
   const body = await parseJson(req, leaseCreateSchema);
-  return json(await createLease(identity, body, { correlationId: ctx.correlationId }), { status: 201, correlationId: ctx.correlationId });
+  return json(await createLease(identity, body, { correlationId: ctx.correlationId }), {
+    status: 201,
+    correlationId: ctx.correlationId,
+  });
 });

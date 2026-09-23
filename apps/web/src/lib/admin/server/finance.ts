@@ -3,6 +3,7 @@ import { and, asc, count, desc, eq, gte, inArray, lte, sql } from 'drizzle-orm';
 import type {
   BankTransferReceiptDto,
   CreditNoteDto,
+  InvoiceDto,
   PaymentAttemptDto,
   ReceiptDto,
   RefundDto,
@@ -10,6 +11,9 @@ import type {
 import { schema } from '@simplexd/db';
 import {
   exportAllocations,
+  getInvoice,
+  listInvoices,
+  listReceiptsForInvoice,
   listReconciliationAttempts,
   listReconciliationExceptions,
   toBankReceiptDto,
@@ -418,6 +422,9 @@ export interface PayoutRow {
   status: string;
   beneficiary: unknown;
   ownerStatementId: string | null;
+  proposedBy: string | null;
+  firstApproverId: string | null;
+  createdAt: string;
   proposedByName: string | null;
   firstApproverName: string | null;
   secondApproverName: string | null;
@@ -426,10 +433,15 @@ export interface PayoutRow {
   failureReason: string | null;
 }
 
-export async function listPayouts(identity: RequestIdentity, limit = 100): Promise<PayoutRow[]> {
-  requireAnyStaff(identity, ['finance.read']);
+export async function listPayouts(identity: RequestIdentity, limit = 100, status?: string): Promise<PayoutRow[]> {
+  requireAnyStaff(identity, ['finance.read', 'rentals.manage']);
   return staffTx(identity, async (tx) => {
-    const rows = await tx.select().from(schema.payouts).orderBy(desc(schema.payouts.createdAt)).limit(limit);
+    const rows = await tx
+      .select()
+      .from(schema.payouts)
+      .where(status ? eq(schema.payouts.status, status as never) : undefined)
+      .orderBy(desc(schema.payouts.createdAt))
+      .limit(limit);
     const names = await userNames(
       tx,
       rows.flatMap((r) => [r.proposedBy, r.firstApproverId, r.secondApproverId]),
@@ -448,6 +460,9 @@ export async function listPayouts(identity: RequestIdentity, limit = 100): Promi
       status: r.status,
       beneficiary: r.beneficiary ?? null,
       ownerStatementId: r.ownerStatementId ?? null,
+      proposedBy: r.proposedBy ?? null,
+      firstApproverId: r.firstApproverId ?? null,
+      createdAt: r.createdAt.toISOString(),
       proposedByName: r.proposedBy ? (names.get(r.proposedBy)?.name ?? null) : null,
       firstApproverName: r.firstApproverId ? (names.get(r.firstApproverId)?.name ?? null) : null,
       secondApproverName: r.secondApproverId ? (names.get(r.secondApproverId)?.name ?? null) : null,
@@ -549,5 +564,113 @@ export async function allocationsReconciliation(
     receiptsCount: totals.n,
     allocationsCount: rows.length,
     reconciles: BigInt(allocated) === BigInt(totals.total),
+  };
+}
+
+export interface InvoiceListRow extends InvoiceDto {
+  organizationName: string;
+  serviceRequestReference: string | null;
+}
+
+/** Invoice list for finance staff (cursor pagination, organisation names, request references). */
+export async function listInvoicesView(
+  identity: RequestIdentity,
+  query: { status?: InvoiceDto['status']; organizationId?: string; serviceRequestId?: string; cursor?: string; limit: number },
+): Promise<{ items: InvoiceListRow[]; nextCursor: string | null }> {
+  requireAnyStaff(identity, ['finance.read']);
+  const { rt, fa } = financeFor(identity);
+  const page = await listInvoices(rt, fa, {
+    status: query.status,
+    organizationId: query.organizationId,
+    serviceRequestId: query.serviceRequestId,
+    cursor: query.cursor,
+    limit: query.limit,
+  });
+  const extras = await staffTx(identity, async (tx) => {
+    const orgs = await orgNames(
+      tx,
+      page.items.map((i) => i.organizationId),
+    );
+    const srIds = [...new Set(page.items.map((i) => i.serviceRequestId).filter((v): v is string => Boolean(v)))];
+    const refs = srIds.length
+      ? await tx
+          .select({ id: schema.serviceRequests.id, reference: schema.serviceRequests.reference })
+          .from(schema.serviceRequests)
+          .where(inArray(schema.serviceRequests.id, srIds))
+      : [];
+    return { orgs, refs: new Map(refs.map((r) => [r.id, r.reference])) };
+  });
+  return {
+    nextCursor: page.nextCursor,
+    items: page.items.map((i) => ({
+      ...i,
+      organizationName: extras.orgs.get(i.organizationId) ?? i.organizationId,
+      serviceRequestReference: i.serviceRequestId ? (extras.refs.get(i.serviceRequestId) ?? null) : null,
+    })),
+  };
+}
+
+export interface InvoiceDetailView {
+  invoice: InvoiceDto;
+  organizationName: string;
+  serviceRequest: { id: string; reference: string; title: string } | null;
+  customer: { id: string; name: string } | null;
+  attempts: PaymentAttemptDto[];
+  bankReceipts: BankTransferReceiptDto[];
+  refunds: Array<RefundDto & { requestedByName: string | null; approvedByName: string | null }>;
+  creditNotes: CreditNoteDto[];
+  receipts: ReceiptDto[];
+  /** Balance still refundable per successful attempt (amount minus refunds not rejected/failed). */
+  refundableByAttempt: Record<string, string>;
+}
+
+export async function invoiceDetail(identity: RequestIdentity, invoiceId: string): Promise<InvoiceDetailView> {
+  requireAnyStaff(identity, ['finance.read']);
+  const { rt, fa } = financeFor(identity);
+  const [invoice, related, receipts] = await Promise.all([
+    getInvoice(rt, fa, invoiceId),
+    listInvoiceAttempts(identity, invoiceId),
+    listReceiptsForInvoice(rt, fa, invoiceId),
+  ]);
+  const extras = await staffTx(identity, async (tx) => {
+    const orgs = await orgNames(tx, [invoice.organizationId]);
+    const [sr] = invoice.serviceRequestId
+      ? await tx
+          .select({ id: schema.serviceRequests.id, reference: schema.serviceRequests.reference, title: schema.serviceRequests.title })
+          .from(schema.serviceRequests)
+          .where(eq(schema.serviceRequests.id, invoice.serviceRequestId))
+      : [];
+    const names = await userNames(tx, [
+      invoice.customerUserId,
+      ...related.refunds.flatMap((r) => [r.requestedBy, r.approvedBy]),
+    ]);
+    return { orgName: orgs.get(invoice.organizationId) ?? invoice.organizationId, sr: sr ?? null, names };
+  });
+  const refundableByAttempt: Record<string, string> = {};
+  for (const a of related.attempts) {
+    if (a.status !== 'successful') continue;
+    let remaining = BigInt(a.amountKobo);
+    for (const r of related.refunds) {
+      if (r.paymentAttemptId === a.id && !['rejected', 'failed'].includes(r.status)) remaining -= BigInt(r.amountKobo);
+    }
+    refundableByAttempt[a.id] = (remaining < 0n ? 0n : remaining).toString();
+  }
+  return {
+    invoice,
+    organizationName: extras.orgName,
+    serviceRequest: extras.sr,
+    customer: invoice.customerUserId
+      ? { id: invoice.customerUserId, name: extras.names.get(invoice.customerUserId)?.name ?? invoice.customerUserId }
+      : null,
+    attempts: related.attempts,
+    bankReceipts: related.bankReceipts,
+    refunds: related.refunds.map((r) => ({
+      ...r,
+      requestedByName: r.requestedBy ? (extras.names.get(r.requestedBy)?.name ?? null) : null,
+      approvedByName: r.approvedBy ? (extras.names.get(r.approvedBy)?.name ?? null) : null,
+    })),
+    creditNotes: related.creditNotes,
+    receipts,
+    refundableByAttempt,
   };
 }

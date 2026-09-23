@@ -1,34 +1,42 @@
 'use client';
 
 import { useQueries, useQuery } from '@tanstack/react-query';
-import { Lock } from 'lucide-react';
+import { Lock, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
+import { useState } from 'react';
 import type { Page, ProjectDto, ReportDto } from '@simplexd/contracts';
 import {
   Badge,
+  Button,
   Card,
   CardContent,
   CardHeader,
   CardTitle,
   DataTable,
+  Dialog,
+  DialogContent,
+  DialogFooter,
   EmptyState,
   PageHeader,
   StatusBadge,
+  buttonVariants,
   formatDateTimeLabel,
   humanize,
 } from '@simplexd/ui';
 import { partnerFetch, withQuery } from '@/lib/partner/api';
 import { usePartner } from '@/lib/partner/context';
-import { useDrafts } from '@/lib/partner/offline/use-draft-store';
+import type { Draft, LockedDraft } from '@/lib/partner/offline/types';
+import { notifyDraftsChanged, useDrafts } from '@/lib/partner/offline/use-draft-store';
 import { DualTime, LoadingBlock, RequestFailed } from '../common';
-import { syncStateLabel, syncStateTone } from '../visits/visits-list';
+import { syncStateLabel, syncStateTone } from '../visits/sync-state';
 
 export function ReportsList() {
   const p = usePartner();
   const params = useSearchParams();
   const filterProject = params.get('projectId');
-  const { drafts, loading } = useDrafts(p.userId);
+  const { drafts, loading, store, refresh } = useDrafts(p.userId);
+  const [discarding, setDiscarding] = useState<Draft | LockedDraft | null>(null);
   const reportDrafts = drafts.filter(
     (d) => d.kind === 'report' || (d.kind === 'locked' && d.draftKind === 'report'),
   );
@@ -89,18 +97,29 @@ export function ReportsList() {
                       Updated {formatDateTimeLabel(d.updatedAt, p.timeZone)}
                     </p>
                   </div>
-                  {d.kind === 'report' ? (
-                    <Link
-                      href={`/partner/reports/${d.offlineClientId}`}
-                      className="text-primary underline"
+                  <div className="flex flex-wrap items-center gap-2">
+                    {d.kind === 'report' ? (
+                      <Link
+                        href={`/partner/reports/${d.offlineClientId}`}
+                        className={buttonVariants({ variant: 'secondary' })}
+                      >
+                        Open
+                      </Link>
+                    ) : (
+                      <span className="text-xs text-danger">
+                        Written in a previous browser session; the key is gone, so it can only be
+                        discarded.
+                      </span>
+                    )}
+                    <Button
+                      variant="ghost"
+                      onClick={() => setDiscarding(d)}
+                      aria-label={`Discard draft ${d.title}`}
                     >
-                      Open
-                    </Link>
-                  ) : (
-                    <span className="text-xs text-danger">
-                      Key from a previous session; discard it from the editor.
-                    </span>
-                  )}
+                      <Trash2 aria-hidden="true" className="h-4 w-4" />
+                      Discard
+                    </Button>
+                  </div>
                 </li>
               ))}
             </ul>
@@ -171,7 +190,7 @@ export function ReportsList() {
                     <li key={pr.id}>
                       <Link
                         href={`/partner/reports/new?projectId=${pr.id}`}
-                        className="sx-transition inline-flex h-9 items-center rounded-md border border-border-strong px-3 text-sm hover:bg-bg-sunken"
+                        className={buttonVariants({ variant: 'secondary' })}
                       >
                         {pr.name}
                       </Link>
@@ -183,6 +202,37 @@ export function ReportsList() {
           )}
         </CardContent>
       </Card>
+      <Dialog
+        open={discarding !== null}
+        onOpenChange={(o) => {
+          if (!o) setDiscarding(null);
+        }}
+      >
+        {discarding ? (
+          <DialogContent
+            title="Discard this draft?"
+            description="Anything not saved to the server is deleted from this device. This cannot be undone."
+          >
+            <p className="text-sm">{discarding.title || 'Untitled report'}</p>
+            <DialogFooter>
+              <Button variant="secondary" onClick={() => setDiscarding(null)}>
+                Keep draft
+              </Button>
+              <Button
+                variant="danger"
+                onClick={async () => {
+                  await store?.delete(discarding.offlineClientId);
+                  setDiscarding(null);
+                  notifyDraftsChanged();
+                  refresh();
+                }}
+              >
+                Discard
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        ) : null}
+      </Dialog>
     </div>
   );
 }

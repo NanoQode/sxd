@@ -23,6 +23,7 @@ import {
 } from '@simplexd/ui';
 import { describeApiFailure, partnerFetch, withQuery } from '@/lib/partner/api';
 import { usePartner } from '@/lib/partner/context';
+import { partnerModules } from '@/lib/partner/nav';
 import { useDrafts } from '@/lib/partner/offline/use-draft-store';
 
 function Tile({
@@ -68,6 +69,7 @@ function stateOf(q: { isPending: boolean; isError: boolean }): 'ok' | 'loading' 
 
 export function PartnerHome() {
   const p = usePartner();
+  const modules = partnerModules(p);
   const { drafts } = useDrafts(p.userId);
   const assignments = useQuery({
     queryKey: ['partner', 'assignments', 'proposed'],
@@ -80,7 +82,7 @@ export function PartnerHome() {
     queryKey: ['partner', 'tenders', 'mine', 'home'],
     queryFn: () =>
       partnerFetch<Page<InvitedTenderDto>>(withQuery('/api/v1/tenders/mine', { limit: 50 })),
-    enabled: p.isPartner,
+    enabled: modules.has('tenders'),
   });
   const orders = useQuery({
     queryKey: ['partner', 'orders', 'issued'],
@@ -88,7 +90,7 @@ export function PartnerHome() {
       partnerFetch<Page<PurchaseOrderDto>>(
         withQuery('/api/v1/purchase-orders', { status: 'issued', limit: 50 }),
       ),
-    enabled: p.isPartner,
+    enabled: modules.has('rfqs'),
   });
   const notifications = useQuery({
     queryKey: ['partner', 'notifications', 'unread'],
@@ -145,7 +147,7 @@ export function PartnerHome() {
               : 'Accept or decline proposed work.'
           }
         />
-        {p.isPartner ? (
+        {modules.has('tenders') ? (
           <Tile
             title="Open tenders you are invited to"
             href="/partner/tenders"
@@ -160,7 +162,7 @@ export function PartnerHome() {
             }
           />
         ) : null}
-        {p.isPartner ? (
+        {modules.has('rfqs') ? (
           <Tile
             title="Purchase orders to acknowledge"
             href="/partner/rfqs?tab=orders"

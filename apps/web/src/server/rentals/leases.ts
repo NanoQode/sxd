@@ -1,6 +1,6 @@
 import 'server-only';
 import { createHash, randomBytes } from 'node:crypto';
-import { and, desc, eq, inArray, lt, or } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, gte, inArray, isNull, lt, lte, ne, or } from 'drizzle-orm';
 import {
   ApiError,
   type LeaseCreate,
@@ -19,7 +19,12 @@ import {
 } from '@simplexd/contracts';
 import { appendOutbox, getDb, schema, withActor, type DbExecutor } from '@simplexd/db';
 import { evaluateTransition, leaseMachine, type ActorKind } from '@simplexd/domain/workflow';
-import { generateRentSchedule } from '@simplexd/domain/rentals';
+import {
+  addDays,
+  generateRentSchedule,
+  leaseLifecycleTarget,
+  truncateCharge,
+} from '@simplexd/domain/rentals';
 import { recordAudit } from '@/lib/audit';
 import type { RequestIdentity } from '@/lib/auth/session';
 import { isFeatureEnabled } from '@/lib/features';
@@ -52,9 +57,12 @@ import {
 /**
  * Lease lifecycle (draft → pending_signature → active → expiring → ended |
  * terminated) through `leaseMachine`; activation generates the rent
- * schedule. Tenant parties join through single-use invitation tokens with
- * expiry and revocation; only `active` parties gain tenant access, in the
- * application policy and in `app.can_access_lease` alike.
+ * schedule, the hourly rent job applies the system transitions (expiring
+ * inside the notice window, ended after the end date). Tenant parties join
+ * through single-use invitation tokens with expiry and revocation; only
+ * `active` parties gain tenant access, in the application policy and in
+ * `app.can_access_lease` alike. Move-in inventories are part of every lease;
+ * guarantors and academic terms are the student-housing variant.
  */
 
 type LeaseInsert = typeof schema.leases.$inferInsert;
@@ -67,7 +75,11 @@ function hashToken(token: string): string {
   return createHash('sha256').update(token).digest('hex');
 }
 
-async function assertUnit(tx: DbExecutor, propertyId: string, unitId: string | null | undefined): Promise<void> {
+async function assertUnit(
+  tx: DbExecutor,
+  propertyId: string,
+  unitId: string | null | undefined,
+): Promise<void> {
   if (!unitId) return;
   const [unit] = await tx
     .select({ id: schema.units.id })
@@ -79,26 +91,77 @@ async function assertUnit(tx: DbExecutor, propertyId: string, unitId: string | n
     });
 }
 
-function assertVariantTerms(identity: RequestIdentity, input: { kind?: LeaseCreate['kind']; terms?: Partial<LeaseTermsDto> }): void {
+function assertVariantTerms(
+  identity: RequestIdentity,
+  input: { kind?: LeaseCreate['kind']; terms?: Partial<LeaseTermsDto> },
+): void {
   if (input.kind === 'student_academic' && !isFeatureEnabled(identity, FEATURES.studentHousing)) {
     throw new ApiError('feature_disabled', 'student housing leases are not enabled', {
       details: { feature: FEATURES.studentHousing },
     });
   }
-  if (input.terms?.guarantor && !isFeatureEnabled(identity, FEATURES.studentHousing)) {
-    throw new ApiError('feature_disabled', 'guarantors are part of the student housing package', {
-      details: { feature: FEATURES.studentHousing },
-    });
-  }
-  if (input.terms?.moveInInventory && !isFeatureEnabled(identity, FEATURES.rentalPlacement)) {
-    throw new ApiError('feature_disabled', 'move-in inventories are part of rental placement', {
-      details: { feature: FEATURES.rentalPlacement },
-    });
+  if (
+    (input.terms?.guarantor || input.terms?.academicTerms) &&
+    !isFeatureEnabled(identity, FEATURES.studentHousing)
+  ) {
+    throw new ApiError(
+      'feature_disabled',
+      'guarantors and academic terms are part of the student housing package',
+      { details: { feature: FEATURES.studentHousing } },
+    );
   }
 }
 
+/** Another active or expiring lease on the same unit whose dates overlap `[start, end]`. */
+async function overlappingUnitLease(
+  tx: DbExecutor,
+  lease: Pick<LeaseRow, 'id' | 'unitId'>,
+  start: string,
+  end: string | null,
+): Promise<string | null> {
+  if (!lease.unitId) return null;
+  const [row] = await tx
+    .select({ id: schema.leases.id })
+    .from(schema.leases)
+    .where(
+      and(
+        eq(schema.leases.unitId, lease.unitId),
+        ne(schema.leases.id, lease.id),
+        inArray(schema.leases.status, ['active', 'expiring']),
+        end ? lte(schema.leases.startDate, end) : undefined,
+        or(isNull(schema.leases.endDate), gte(schema.leases.endDate, start)),
+      ),
+    )
+    .limit(1);
+  return row?.id ?? null;
+}
+
+/** Marks the unit vacant unless another active or expiring lease still occupies it. */
+async function releaseUnit(tx: DbExecutor, lease: Pick<LeaseRow, 'id' | 'unitId'>): Promise<void> {
+  if (!lease.unitId) return;
+  const [other] = await tx
+    .select({ id: schema.leases.id })
+    .from(schema.leases)
+    .where(
+      and(
+        eq(schema.leases.unitId, lease.unitId),
+        ne(schema.leases.id, lease.id),
+        inArray(schema.leases.status, ['active', 'expiring']),
+      ),
+    )
+    .limit(1);
+  if (!other)
+    await tx
+      .update(schema.units)
+      .set({ status: 'vacant' })
+      .where(eq(schema.units.id, lease.unitId));
+}
+
 /** Validates the schedule the terms would produce so bad terms fail at save time, not at activation. */
-function assertScheduleValid(row: Pick<LeaseRow, 'startDate' | 'endDate' | 'rentAmountKobo' | 'rentPeriod'>, terms: Partial<LeaseTermsDto> | null): void {
+function assertScheduleValid(
+  row: Pick<LeaseRow, 'startDate' | 'endDate' | 'rentAmountKobo' | 'rentPeriod'>,
+  terms: Partial<LeaseTermsDto> | null,
+): void {
   try {
     generateRentSchedule({
       startDate: row.startDate,
@@ -116,19 +179,33 @@ function assertScheduleValid(row: Pick<LeaseRow, 'startDate' | 'endDate' | 'rent
       horizonPeriods: 1,
     });
   } catch (err) {
-    throw new ApiError('validation_failed', (err as Error).message, { details: [{ path: 'terms', message: (err as Error).message }] });
+    throw new ApiError('validation_failed', (err as Error).message, {
+      details: [{ path: 'terms', message: (err as Error).message }],
+    });
   }
 }
 
-async function guarantorParty(tx: DbExecutor, leaseId: string, guarantor: NonNullable<LeaseTermsDto['guarantor']>): Promise<void> {
+async function guarantorParty(
+  tx: DbExecutor,
+  leaseId: string,
+  guarantor: NonNullable<LeaseTermsDto['guarantor']>,
+): Promise<void> {
   const [existing] = await tx
     .select({ id: schema.leaseParties.id })
     .from(schema.leaseParties)
     .where(and(eq(schema.leaseParties.leaseId, leaseId), eq(schema.leaseParties.role, 'guarantor')))
     .limit(1);
-  const values = { name: guarantor.name, email: guarantor.email ?? null, phoneE164: guarantor.phoneE164 ?? null };
-  if (existing) await tx.update(schema.leaseParties).set(values).where(eq(schema.leaseParties.id, existing.id));
-  else await tx.insert(schema.leaseParties).values({ leaseId, role: 'guarantor', accessStatus: 'not_invited', ...values });
+  const values = {
+    name: guarantor.name,
+    email: guarantor.email ?? null,
+    phoneE164: guarantor.phoneE164 ?? null,
+  };
+  if (existing)
+    await tx.update(schema.leaseParties).set(values).where(eq(schema.leaseParties.id, existing.id));
+  else
+    await tx
+      .insert(schema.leaseParties)
+      .values({ leaseId, role: 'guarantor', accessStatus: 'not_invited', ...values });
 }
 
 async function dto(tx: DbExecutor, row: LeaseRow): Promise<LeaseDto> {
@@ -167,7 +244,9 @@ export async function createLease(
       depositKobo: BigInt(input.depositKobo),
       managementFeeBasis: input.managementFeeBasis,
       managementFeeBps: input.managementFeeBps ?? null,
-      managementFeeFixedKobo: input.managementFeeFixedKobo ? BigInt(input.managementFeeFixedKobo) : null,
+      managementFeeFixedKobo: input.managementFeeFixedKobo
+        ? BigInt(input.managementFeeFixedKobo)
+        : null,
       termsFileId: input.termsFileId ?? null,
       academicPeriod: input.academicPeriod ?? null,
       noticePeriodDays: input.noticePeriodDays ?? null,
@@ -184,7 +263,13 @@ export async function createLease(
       entityType: 'lease',
       entityId: row!.id,
       organizationId,
-      after: { propertyId: property.id, unitId: row!.unitId, kind: row!.kind, rentAmountKobo: row!.rentAmountKobo, rentPeriod: row!.rentPeriod },
+      after: {
+        propertyId: property.id,
+        unitId: row!.unitId,
+        kind: row!.kind,
+        rentAmountKobo: row!.rentAmountKobo,
+        rentPeriod: row!.rentPeriod,
+      },
       correlationId: options.correlationId,
     });
     return dto(tx, row!);
@@ -198,7 +283,10 @@ export async function getLease(identity: RequestIdentity, id: string): Promise<L
   });
 }
 
-export async function listLeases(identity: RequestIdentity, query: LeaseListQuery): Promise<Page<LeaseDto>> {
+export async function listLeases(
+  identity: RequestIdentity,
+  query: LeaseListQuery,
+): Promise<Page<LeaseDto>> {
   requireUserId(identity);
   const staff = isStaffIdentity(identity);
   let organizationId: string | null;
@@ -206,7 +294,8 @@ export async function listLeases(identity: RequestIdentity, query: LeaseListQuer
   else {
     organizationId = identity.ctx.organizationId;
     if (!organizationId) return { items: [], nextCursor: null };
-    if (query.organizationId && query.organizationId !== organizationId) return { items: [], nextCursor: null };
+    if (query.organizationId && query.organizationId !== organizationId)
+      return { items: [], nextCursor: null };
   }
   const cursor = decodeCursor(query.cursor);
   return withActor(getDb(), identity.ctx, async (tx) => {
@@ -219,7 +308,10 @@ export async function listLeases(identity: RequestIdentity, query: LeaseListQuer
           query.propertyId ? eq(schema.leases.propertyId, query.propertyId) : undefined,
           query.status ? eq(schema.leases.status, query.status) : undefined,
           cursor
-            ? or(lt(schema.leases.createdAt, cursor.createdAt), and(eq(schema.leases.createdAt, cursor.createdAt), lt(schema.leases.id, cursor.id)))
+            ? or(
+                lt(schema.leases.createdAt, cursor.createdAt),
+                and(eq(schema.leases.createdAt, cursor.createdAt), lt(schema.leases.id, cursor.id)),
+              )
             : undefined,
         ),
       )
@@ -229,7 +321,11 @@ export async function listLeases(identity: RequestIdentity, query: LeaseListQuer
     const items: LeaseDto[] = [];
     for (const row of page) {
       if (!staff) {
-        assertLeaseRead(identity, { type: 'lease', id: row.id, organizationId: row.organizationId });
+        assertLeaseRead(identity, {
+          type: 'lease',
+          id: row.id,
+          organizationId: row.organizationId,
+        });
       }
       items.push(await dto(tx, row));
     }
@@ -252,9 +348,15 @@ export async function updateLease(
     if (['ended', 'terminated'].includes(lease.status))
       throw new ApiError('invalid_transition', `a ${lease.status} lease cannot be edited`);
     const financialChange =
-      input.startDate !== undefined || input.endDate !== undefined || input.rentAmountKobo !== undefined || input.rentPeriod !== undefined;
+      input.startDate !== undefined ||
+      input.endDate !== undefined ||
+      input.rentAmountKobo !== undefined ||
+      input.rentPeriod !== undefined;
     if (financialChange && !['draft', 'pending_signature'].includes(lease.status)) {
-      throw new ApiError('invalid_transition', 'dates, rent and period are fixed once a lease is active; renew or terminate instead');
+      throw new ApiError(
+        'invalid_transition',
+        'dates, rent and period are fixed once a lease is active; renew or terminate instead',
+      );
     }
     await assertUnit(tx, lease.propertyId, input.unitId);
     const patch: Partial<LeaseInsert> = { version: lease.version + 1 };
@@ -269,7 +371,9 @@ export async function updateLease(
     if (input.managementFeeBasis !== undefined) patch.managementFeeBasis = input.managementFeeBasis;
     if (input.managementFeeBps !== undefined) patch.managementFeeBps = input.managementFeeBps;
     if (input.managementFeeFixedKobo !== undefined)
-      patch.managementFeeFixedKobo = input.managementFeeFixedKobo ? BigInt(input.managementFeeFixedKobo) : null;
+      patch.managementFeeFixedKobo = input.managementFeeFixedKobo
+        ? BigInt(input.managementFeeFixedKobo)
+        : null;
     if (input.termsFileId !== undefined) patch.termsFileId = input.termsFileId;
     if (input.academicPeriod !== undefined) patch.academicPeriod = input.academicPeriod;
     if (input.noticePeriodDays !== undefined) patch.noticePeriodDays = input.noticePeriodDays;
@@ -283,7 +387,12 @@ export async function updateLease(
       .returning();
     if (!row) throw versionConflict();
     if (input.terms) {
-      await saveLeaseTerms(tx, { leaseId: id, organizationId: lease.organizationId, authorUserId: userId, terms });
+      await saveLeaseTerms(tx, {
+        leaseId: id,
+        organizationId: lease.organizationId,
+        authorUserId: userId,
+        terms,
+      });
       if (input.terms.guarantor) await guarantorParty(tx, id, input.terms.guarantor);
     }
     const { version: _v, ...changes } = patch;
@@ -292,7 +401,9 @@ export async function updateLease(
       entityType: 'lease',
       entityId: id,
       organizationId: lease.organizationId,
-      before: Object.fromEntries(Object.keys(changes).map((k) => [k, (lease as Record<string, unknown>)[k] ?? null])),
+      before: Object.fromEntries(
+        Object.keys(changes).map((k) => [k, (lease as Record<string, unknown>)[k] ?? null]),
+      ),
       after: { ...changes, terms: input.terms ?? undefined, version: row.version },
       correlationId: options.correlationId,
     });
@@ -300,24 +411,37 @@ export async function updateLease(
   });
 }
 
+interface TransitionActor {
+  identity: RequestIdentity | null;
+  kind: ActorKind;
+  correlationId?: string | undefined;
+}
+
 async function applyTransition(
   tx: DbExecutor,
-  identity: RequestIdentity,
+  by: TransitionActor,
   lease: LeaseRow,
   to: LeaseRow['status'],
   extra: Partial<LeaseInsert>,
   reason: string | null,
-  options: ServiceOptions,
 ): Promise<LeaseRow> {
-  const decision = evaluateTransition(leaseMachine, { from: lease.status, to, actor: actorKind(identity), reason });
-  if (!decision.ok) throw new ApiError('invalid_transition', decision.message, { details: { code: decision.code } });
+  const decision = evaluateTransition(leaseMachine, {
+    from: lease.status,
+    to,
+    actor: by.kind,
+    reason,
+  });
+  if (!decision.ok)
+    throw new ApiError('invalid_transition', decision.message, {
+      details: { code: decision.code },
+    });
   const [row] = await tx
     .update(schema.leases)
     .set({ status: to, version: lease.version + 1, ...extra })
     .where(and(eq(schema.leases.id, lease.id), eq(schema.leases.version, lease.version)))
     .returning();
   if (!row) throw versionConflict();
-  await recordAudit(tx, identity, {
+  await recordAudit(tx, by.identity, {
     action: `lease.${to}`,
     entityType: 'lease',
     entityId: lease.id,
@@ -325,18 +449,29 @@ async function applyTransition(
     before: { status: lease.status, version: lease.version },
     after: { status: to, version: row.version },
     reason,
-    correlationId: options.correlationId,
+    correlationId: by.correlationId,
+    ...(by.identity ? {} : { actorType: 'job' as const }),
   });
   await appendOutbox(tx, {
     eventType: 'lease.transitioned',
     aggregateType: 'lease',
     aggregateId: lease.id,
     organizationId: lease.organizationId,
-    actorUserId: identity.session?.user.id ?? null,
-    payload: { leaseId: lease.id, from: lease.status, to, reason, recipientUserIds: activePartyUserIds(await loadParties(tx, lease.id)) },
-    correlationId: options.correlationId ?? null,
+    actorUserId: by.identity?.session?.user.id ?? null,
+    payload: {
+      leaseId: lease.id,
+      from: lease.status,
+      to,
+      reason,
+      recipientUserIds: activePartyUserIds(await loadParties(tx, lease.id)),
+    },
+    correlationId: by.correlationId ?? null,
   });
   return row;
+}
+
+function userActor(identity: RequestIdentity, options: ServiceOptions): TransitionActor {
+  return { identity, kind: actorKind(identity), correlationId: options.correlationId };
 }
 
 /** draft → pending_signature | active; active/expiring → ended (staff). Activation generates the schedule. */
@@ -353,21 +488,21 @@ export async function transitionLease(
     if (input.to === 'ended' && !isStaffIdentity(identity))
       throw new ApiError('forbidden', 'only staff end a lease; owners terminate with a reason');
     if (input.to === 'active') {
-      const [unitBusy] = lease.unitId
-        ? await tx
-            .select({ id: schema.leases.id })
-            .from(schema.leases)
-            .where(and(eq(schema.leases.unitId, lease.unitId), inArray(schema.leases.status, ['active', 'expiring']), lt(schema.leases.startDate, lease.endDate ?? '9999-12-31')))
-            .limit(1)
-        : [];
-      if (unitBusy && unitBusy.id !== lease.id)
-        throw new ApiError('conflict', 'the unit already has an active lease for that period', { details: { leaseId: unitBusy.id } });
+      const busy = await overlappingUnitLease(tx, lease, lease.startDate, lease.endDate);
+      if (busy)
+        throw new ApiError('conflict', 'the unit already has an active lease for that period', {
+          details: { leaseId: busy },
+        });
     }
-    const row = await applyTransition(tx, identity, lease, input.to, {}, null, options);
+    const row = await applyTransition(tx, userActor(identity, options), lease, input.to, {}, null);
     if (input.to === 'active') {
       const terms = await loadLeaseTerms(tx, id);
       const generated = await generateScheduleForLease(tx, row, terms, userId);
-      if (lease.unitId) await tx.update(schema.units).set({ status: 'occupied' }).where(eq(schema.units.id, lease.unitId));
+      if (lease.unitId)
+        await tx
+          .update(schema.units)
+          .set({ status: 'occupied' })
+          .where(eq(schema.units.id, lease.unitId));
       await recordAudit(tx, identity, {
         action: 'lease.schedule_generated',
         entityType: 'lease',
@@ -377,11 +512,18 @@ export async function transitionLease(
         correlationId: options.correlationId,
       });
     }
-    if (input.to === 'ended' && lease.unitId) await tx.update(schema.units).set({ status: 'vacant' }).where(eq(schema.units.id, lease.unitId));
+    if (input.to === 'ended') await releaseUnit(tx, lease);
     return dto(tx, row);
   });
 }
 
+/**
+ * Terminates with a reason on `terminatedOn` (default today). Periods not yet
+ * invoiced that start after that day are waived; a period not yet invoiced
+ * that straddles it is cut at that day and its charges scaled by the days
+ * kept (`truncateCharge`). Periods already invoiced stay as issued; finance
+ * credits any unused part with a credit note.
+ */
 export async function terminateLease(
   identity: RequestIdentity,
   id: string,
@@ -393,26 +535,89 @@ export async function terminateLease(
     const { lease } = await requireLease(tx, identity, id, 'manage');
     if (lease.version !== input.expectedVersion) throw versionConflict(lease.version);
     const terminatedOn = input.terminatedOn ?? today();
+    if (terminatedOn < lease.startDate || (lease.endDate && terminatedOn > lease.endDate))
+      throw new ApiError('validation_failed', 'terminatedOn must fall within the lease term', {
+        details: [
+          {
+            path: 'terminatedOn',
+            message: `between ${lease.startDate} and ${lease.endDate ?? 'open'}`,
+          },
+        ],
+      });
     const row = await applyTransition(
       tx,
-      identity,
+      userActor(identity, options),
       lease,
       'terminated',
       { terminatedAt: new Date(), terminationReason: input.reason, endDate: terminatedOn },
       input.reason,
-      options,
     );
-    // Future periods are waived; the statement settles deposit and arrears.
     await tx
       .update(schema.rentSchedules)
       .set({ status: 'waived' })
-      .where(and(eq(schema.rentSchedules.leaseId, id), eq(schema.rentSchedules.status, 'scheduled')));
-    if (lease.unitId) await tx.update(schema.units).set({ status: 'vacant' }).where(eq(schema.units.id, lease.unitId));
+      .where(
+        and(
+          eq(schema.rentSchedules.leaseId, id),
+          eq(schema.rentSchedules.status, 'scheduled'),
+          gt(schema.rentSchedules.periodStart, terminatedOn),
+        ),
+      );
+    const [straddling] = await tx
+      .select()
+      .from(schema.rentSchedules)
+      .where(
+        and(
+          eq(schema.rentSchedules.leaseId, id),
+          eq(schema.rentSchedules.status, 'scheduled'),
+          lte(schema.rentSchedules.periodStart, terminatedOn),
+          gt(schema.rentSchedules.periodEnd, terminatedOn),
+        ),
+      );
+    if (straddling) {
+      const charges = await tx
+        .select()
+        .from(schema.rentCharges)
+        .where(
+          and(
+            eq(schema.rentCharges.scheduleId, straddling.id),
+            isNull(schema.rentCharges.invoiceId),
+          ),
+        );
+      let total = 0n;
+      for (const c of charges) {
+        const amount = truncateCharge(
+          c.amountKobo,
+          straddling.periodStart,
+          straddling.periodEnd,
+          terminatedOn,
+        );
+        total += amount;
+        await tx
+          .update(schema.rentCharges)
+          .set({
+            amountKobo: amount,
+            description: `${c.description} (to ${terminatedOn} on termination)`,
+          })
+          .where(eq(schema.rentCharges.id, c.id));
+      }
+      await tx
+        .update(schema.rentSchedules)
+        .set({ periodEnd: terminatedOn, amountKobo: total })
+        .where(eq(schema.rentSchedules.id, straddling.id));
+    }
+    await releaseUnit(tx, lease);
     return dto(tx, row);
   });
 }
 
-/** Ends the current lease on the day before the renewal starts and creates the successor lease (draft). */
+/**
+ * Creates the successor lease as a draft with the same parties (active
+ * tenants keep their access). A fixed-term lease renews after its end date;
+ * the current lease runs to its end and the rent job ends it. An open-ended
+ * lease renews at the start of a period not invoiced yet (or after its last
+ * generated period): its end date becomes the day before the renewal and
+ * its later periods are waived.
+ */
 export async function renewLease(
   identity: RequestIdentity,
   id: string,
@@ -424,11 +629,64 @@ export async function renewLease(
     const { lease } = await requireLease(tx, identity, id, 'manage');
     if (lease.version !== input.expectedVersion) throw versionConflict(lease.version);
     if (!['active', 'expiring'].includes(lease.status))
-      throw new ApiError('invalid_transition', `only active or expiring leases renew (lease is ${lease.status})`);
-    if (lease.endDate && input.startDate <= lease.endDate && input.startDate < today())
-      throw new ApiError('validation_failed', 'renewal must start after the current term');
+      throw new ApiError(
+        'invalid_transition',
+        `only active or expiring leases renew (lease is ${lease.status})`,
+      );
+    let current = lease;
+    if (lease.endDate) {
+      if (input.startDate <= lease.endDate)
+        throw new ApiError('validation_failed', `the renewal starts after ${lease.endDate}`, {
+          details: [{ path: 'startDate', message: `after ${lease.endDate}` }],
+        });
+    } else {
+      if (input.startDate <= lease.startDate)
+        throw new ApiError('validation_failed', 'the renewal starts after the current lease', {
+          details: [{ path: 'startDate', message: `after ${lease.startDate}` }],
+        });
+      const schedules = await tx
+        .select()
+        .from(schema.rentSchedules)
+        .where(eq(schema.rentSchedules.leaseId, id))
+        .orderBy(asc(schema.rentSchedules.periodStart));
+      const last = schedules[schedules.length - 1];
+      const boundary = schedules.find((s) => s.periodStart === input.startDate);
+      const afterLast = !last || input.startDate > last.periodEnd;
+      if (!afterLast && boundary?.status !== 'scheduled')
+        throw new ApiError(
+          'validation_failed',
+          'an open-ended lease renews at the start of a rent period that is not invoiced yet',
+          { details: [{ path: 'startDate', message: 'not a period boundary' }] },
+        );
+      await tx
+        .update(schema.rentSchedules)
+        .set({ status: 'waived' })
+        .where(
+          and(
+            eq(schema.rentSchedules.leaseId, id),
+            eq(schema.rentSchedules.status, 'scheduled'),
+            gte(schema.rentSchedules.periodStart, input.startDate),
+          ),
+        );
+      const [shortened] = await tx
+        .update(schema.leases)
+        .set({ endDate: addDays(input.startDate, -1), version: lease.version + 1 })
+        .where(and(eq(schema.leases.id, id), eq(schema.leases.version, lease.version)))
+        .returning();
+      if (!shortened) throw versionConflict();
+      current = shortened;
+    }
     const terms = await loadLeaseTerms(tx, id);
-    const { id: _id, version: _version, createdAt: _c, updatedAt: _u, status: _s, terminatedAt: _t, terminationReason: _r, ...copy } = lease;
+    const {
+      id: _id,
+      version: _version,
+      createdAt: _c,
+      updatedAt: _u,
+      status: _s,
+      terminatedAt: _t,
+      terminationReason: _r,
+      ...copy
+    } = lease;
     const values: LeaseInsert = {
       ...copy,
       status: 'draft',
@@ -439,7 +697,13 @@ export async function renewLease(
     };
     assertScheduleValid(values as LeaseRow, terms);
     const [renewal] = await tx.insert(schema.leases).values(values).returning();
-    if (terms) await saveLeaseTerms(tx, { leaseId: renewal!.id, organizationId: lease.organizationId, authorUserId: userId, terms });
+    if (terms)
+      await saveLeaseTerms(tx, {
+        leaseId: renewal!.id,
+        organizationId: lease.organizationId,
+        authorUserId: userId,
+        terms,
+      });
     // Parties carry over with their access; the tenant does not need a new invitation.
     const parties = await loadParties(tx, id);
     for (const p of parties) {
@@ -454,19 +718,63 @@ export async function renewLease(
         acceptedAt: p.accessStatus === 'active' ? p.acceptedAt : null,
       });
     }
-    const ended = isStaffIdentity(identity)
-      ? await applyTransition(tx, identity, lease, 'ended', { endDate: lease.endDate ?? input.startDate }, null, options)
-      : lease;
     await recordAudit(tx, identity, {
       action: 'lease.renewed',
       entityType: 'lease',
       entityId: id,
       organizationId: lease.organizationId,
-      after: { renewalLeaseId: renewal!.id, startDate: input.startDate, endDate: input.endDate ?? null },
+      before: { endDate: lease.endDate, version: lease.version },
+      after: {
+        endDate: current.endDate,
+        renewalLeaseId: renewal!.id,
+        startDate: input.startDate,
+        renewalEndDate: input.endDate ?? null,
+        rentAmountKobo: values.rentAmountKobo,
+      },
       correlationId: options.correlationId,
     });
-    return { previous: await dto(tx, ended), renewal: await dto(tx, renewal!) };
+    await appendOutbox(tx, {
+      eventType: 'lease.renewed',
+      aggregateType: 'lease',
+      aggregateId: id,
+      organizationId: lease.organizationId,
+      actorUserId: userId,
+      payload: {
+        leaseId: id,
+        renewalLeaseId: renewal!.id,
+        startDate: input.startDate,
+        endDate: input.endDate ?? null,
+        recipientUserIds: activePartyUserIds(parties),
+      },
+      correlationId: options.correlationId ?? null,
+    });
+    return { previous: await dto(tx, current), renewal: await dto(tx, renewal!) };
   });
+}
+
+/**
+ * System lifecycle step for one lease (rent job, system context): moves an
+ * active lease to `expiring` inside its notice window and an active or
+ * expiring lease to `ended` after its end date, releasing the unit.
+ */
+export async function advanceLeaseLifecycle(
+  tx: DbExecutor,
+  lease: LeaseRow,
+  asOf: string,
+  correlationId?: string,
+): Promise<LeaseRow['status'] | null> {
+  const target = leaseLifecycleTarget(lease, asOf);
+  if (!target) return null;
+  await applyTransition(
+    tx,
+    { identity: null, kind: 'system', correlationId },
+    lease,
+    target,
+    {},
+    null,
+  );
+  if (target === 'ended') await releaseUnit(tx, lease);
+  return target;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -488,7 +796,13 @@ export async function inviteParty(
     const [existing] = await tx
       .select()
       .from(schema.leaseParties)
-      .where(and(eq(schema.leaseParties.leaseId, leaseId), eq(schema.leaseParties.email, email), eq(schema.leaseParties.role, input.role)))
+      .where(
+        and(
+          eq(schema.leaseParties.leaseId, leaseId),
+          eq(schema.leaseParties.email, email),
+          eq(schema.leaseParties.role, input.role),
+        ),
+      )
       .limit(1);
     if (existing?.accessStatus === 'active')
       throw new ApiError('conflict', 'this person already has active access to the lease');
@@ -507,8 +821,15 @@ export async function inviteParty(
       revokedBy: null,
     };
     const [row] = existing
-      ? await tx.update(schema.leaseParties).set(values).where(eq(schema.leaseParties.id, existing.id)).returning()
-      : await tx.insert(schema.leaseParties).values({ leaseId, role: input.role, ...values }).returning();
+      ? await tx
+          .update(schema.leaseParties)
+          .set(values)
+          .where(eq(schema.leaseParties.id, existing.id))
+          .returning()
+      : await tx
+          .insert(schema.leaseParties)
+          .values({ leaseId, role: input.role, ...values })
+          .returning();
     await recordAudit(tx, identity, {
       action: 'lease_party.invited',
       entityType: 'lease_party',
@@ -553,36 +874,60 @@ export async function acceptTenantInvitation(
   const ctx = ctxFor(identity, options);
   const hash = hashToken(input.token);
   const outcome = await withActor(getDb(), ctx, async (tx) =>
-    elevated(tx, ctx, async (): Promise<{ kind: 'expired' } | { kind: 'accepted'; party: LeasePartyDto }> => {
-      const [party] = await tx.select().from(schema.leaseParties).where(eq(schema.leaseParties.invitationTokenHash, hash)).limit(1);
-      if (!party || party.accessStatus !== 'invited') throw new ApiError('not_found', 'invitation not found or already used');
-      const now = new Date();
-      if (party.invitationExpiresAt && party.invitationExpiresAt.getTime() < now.getTime()) {
-        // Committed on its own: the expiry mark must survive the error returned to the caller.
-        await tx.update(schema.leaseParties).set({ accessStatus: 'expired', invitationTokenHash: null }).where(eq(schema.leaseParties.id, party.id));
-        return { kind: 'expired' };
-      }
-      if (party.email && sessionEmail && party.email.toLowerCase() !== sessionEmail)
-        throw new ApiError('forbidden', 'sign in with the invited e-mail address to accept this invitation');
-      const [row] = await tx
-        .update(schema.leaseParties)
-        .set({ userId, accessStatus: 'active', acceptedAt: now, invitationTokenHash: null })
-        .where(and(eq(schema.leaseParties.id, party.id), eq(schema.leaseParties.accessStatus, 'invited')))
-        .returning();
-      if (!row) throw new ApiError('conflict', 'invitation was redeemed concurrently');
-      const [lease] = await tx.select({ organizationId: schema.leases.organizationId }).from(schema.leases).where(eq(schema.leases.id, party.leaseId));
-      await recordAudit(tx, identity, {
-        action: 'lease_party.accepted',
-        entityType: 'lease_party',
-        entityId: row.id,
-        organizationId: lease?.organizationId ?? null,
-        after: { leaseId: row.leaseId, role: row.role },
-        correlationId: options.correlationId,
-      });
-      return { kind: 'accepted', party: toPartyDto(row) };
-    }),
+    elevated(
+      tx,
+      ctx,
+      async (): Promise<{ kind: 'expired' } | { kind: 'accepted'; party: LeasePartyDto }> => {
+        const [party] = await tx
+          .select()
+          .from(schema.leaseParties)
+          .where(eq(schema.leaseParties.invitationTokenHash, hash))
+          .limit(1);
+        if (!party || party.accessStatus !== 'invited')
+          throw new ApiError('not_found', 'invitation not found or already used');
+        const now = new Date();
+        if (party.invitationExpiresAt && party.invitationExpiresAt.getTime() < now.getTime()) {
+          // Committed on its own: the expiry mark must survive the error returned to the caller.
+          await tx
+            .update(schema.leaseParties)
+            .set({ accessStatus: 'expired', invitationTokenHash: null })
+            .where(eq(schema.leaseParties.id, party.id));
+          return { kind: 'expired' };
+        }
+        if (party.email && sessionEmail && party.email.toLowerCase() !== sessionEmail)
+          throw new ApiError(
+            'forbidden',
+            'sign in with the invited e-mail address to accept this invitation',
+          );
+        const [row] = await tx
+          .update(schema.leaseParties)
+          .set({ userId, accessStatus: 'active', acceptedAt: now, invitationTokenHash: null })
+          .where(
+            and(
+              eq(schema.leaseParties.id, party.id),
+              eq(schema.leaseParties.accessStatus, 'invited'),
+            ),
+          )
+          .returning();
+        if (!row) throw new ApiError('conflict', 'invitation was redeemed concurrently');
+        const [lease] = await tx
+          .select({ organizationId: schema.leases.organizationId })
+          .from(schema.leases)
+          .where(eq(schema.leases.id, party.leaseId));
+        await recordAudit(tx, identity, {
+          action: 'lease_party.accepted',
+          entityType: 'lease_party',
+          entityId: row.id,
+          organizationId: lease?.organizationId ?? null,
+          after: { leaseId: row.leaseId, role: row.role },
+          correlationId: options.correlationId,
+        });
+        return { kind: 'accepted', party: toPartyDto(row) };
+      },
+    ),
   );
-  if (outcome.kind === 'expired') throw new ApiError('conflict', 'this invitation has expired; ask for a new one');
+  if (outcome.kind === 'expired')
+    throw new ApiError('conflict', 'this invitation has expired; ask for a new one');
   return outcome.party;
 }
 
@@ -605,7 +950,12 @@ export async function revokeParty(
     if (party.accessStatus === 'revoked') return toPartyDto(party);
     const [row] = await tx
       .update(schema.leaseParties)
-      .set({ accessStatus: 'revoked', revokedAt: new Date(), revokedBy: userId, invitationTokenHash: null })
+      .set({
+        accessStatus: 'revoked',
+        revokedAt: new Date(),
+        revokedBy: userId,
+        invitationTokenHash: null,
+      })
       .where(eq(schema.leaseParties.id, partyId))
       .returning();
     await recordAudit(tx, identity, {
@@ -622,7 +972,10 @@ export async function revokeParty(
   });
 }
 
-export async function listParties(identity: RequestIdentity, leaseId: string): Promise<LeasePartyDto[]> {
+export async function listParties(
+  identity: RequestIdentity,
+  leaseId: string,
+): Promise<LeasePartyDto[]> {
   return withActor(getDb(), identity.ctx, async (tx) => {
     const { parties, viewer } = await requireLease(tx, identity, leaseId, 'read');
     const userId = identity.session!.user.id;
@@ -636,7 +989,12 @@ export async function expireInvitations(tx: DbExecutor, now: Date = new Date()):
   const rows = await tx
     .update(schema.leaseParties)
     .set({ accessStatus: 'expired', invitationTokenHash: null })
-    .where(and(eq(schema.leaseParties.accessStatus, 'invited'), lt(schema.leaseParties.invitationExpiresAt, now)))
+    .where(
+      and(
+        eq(schema.leaseParties.accessStatus, 'invited'),
+        lt(schema.leaseParties.invitationExpiresAt, now),
+      ),
+    )
     .returning({ id: schema.leaseParties.id });
   return rows.length;
 }

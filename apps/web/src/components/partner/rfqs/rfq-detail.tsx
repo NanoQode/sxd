@@ -12,6 +12,9 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
+  Dialog,
+  DialogContent,
+  DialogFooter,
   Field,
   Input,
   PageHeader,
@@ -48,10 +51,11 @@ export function RfqDetailView({ rfqId }: { rfqId: string }) {
   const r = rfq.data;
   const mine = r.responses.find((x) => x.supplierUserId === p.userId) ?? null;
   const deadlinePassed = r.deadlineAt ? new Date(r.deadlineAt).getTime() <= now.getTime() : false;
+  // Withdrawn, selected and rejected responses are final on the server.
   const canRespond =
     r.status === 'sent' &&
     !deadlinePassed &&
-    (!mine || ['draft', 'withdrawn', 'submitted'].includes(mine.status));
+    (!mine || ['draft', 'submitted'].includes(mine.status));
 
   return (
     <div className="space-y-6">
@@ -150,6 +154,7 @@ function RfqResponseForm({
     mine?.validUntil ? mine.validUntil.slice(0, 16) : '',
   );
   const [errors, setErrors] = useState<string[]>([]);
+  const [confirmWithdraw, setConfirmWithdraw] = useState(false);
   const submit = useMutation({
     mutationFn: (input: RfqResponseSubmit) =>
       partnerFetch<RfqResponseDto>(`/api/v1/rfqs/${rfqId}/responses`, { body: input }),
@@ -167,10 +172,10 @@ function RfqResponseForm({
       partnerFetch(`/api/v1/rfqs/${rfqId}/responses/${mine?.id}/withdraw`, { body: {} }),
     onSuccess: () => {
       toast({ tone: 'success', title: 'Quotation withdrawn' });
+      setConfirmWithdraw(false);
       void qc.invalidateQueries({ queryKey: ['partner', 'rfq', rfqId] });
+      void qc.invalidateQueries({ queryKey: ['partner', 'rfqs'] });
     },
-    onError: (err) =>
-      toast({ tone: 'danger', title: 'Could not withdraw', description: errorMessage(err) }),
   });
 
   function setLine(i: number, patch: Partial<LineForm>) {
@@ -446,22 +451,53 @@ function RfqResponseForm({
         >
           {mine?.status === 'submitted' ? 'Re-submit quotation' : 'Submit quotation'}
         </Button>
-        {mine?.status === 'submitted' && canRespond ? (
-          <Button
-            type="button"
-            variant="danger"
-            loading={withdraw.isPending}
-            onClick={() => withdraw.mutate()}
-          >
+        {mine && canRespond ? (
+          <Button type="button" variant="danger" onClick={() => setConfirmWithdraw(true)}>
             Withdraw
           </Button>
         ) : null}
       </div>
       {!canRespond ? (
-        <Alert tone="info" title={deadlinePassed ? 'Deadline passed' : `RFQ is ${r.status}`}>
-          Responses are no longer accepted for this request.
+        <Alert
+          tone="info"
+          title={
+            mine && !['draft', 'submitted'].includes(mine.status)
+              ? `Your response is ${humanize(mine.status).toLowerCase()}`
+              : deadlinePassed
+                ? 'Deadline passed'
+                : `RFQ is ${humanize(r.status).toLowerCase()}`
+          }
+        >
+          {mine?.status === 'withdrawn'
+            ? 'A withdrawn quotation is final and cannot be changed or resubmitted.'
+            : 'Responses are no longer accepted for this request.'}
         </Alert>
       ) : null}
+      <Dialog open={confirmWithdraw} onOpenChange={setConfirmWithdraw}>
+        <DialogContent
+          title="Withdraw your quotation?"
+          description="Withdrawal is final: the buyer no longer considers it and you cannot resubmit for this RFQ."
+        >
+          {withdraw.isError ? (
+            <Alert tone="danger" title="Could not withdraw">
+              {errorMessage(withdraw.error)}
+            </Alert>
+          ) : null}
+          <DialogFooter>
+            <Button type="button" variant="secondary" onClick={() => setConfirmWithdraw(false)}>
+              Keep quotation
+            </Button>
+            <Button
+              type="button"
+              variant="danger"
+              loading={withdraw.isPending}
+              onClick={() => withdraw.mutate()}
+            >
+              Withdraw
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </form>
   );
 }

@@ -43,7 +43,11 @@ export type LeaseStatus = z.infer<typeof leaseStatusSchema>;
 export const rentPeriodSchema = z.enum(['annual', 'quarterly', 'monthly', 'term']);
 export type RentPeriodDto = z.infer<typeof rentPeriodSchema>;
 
-export const managementFeeBasisSchema = z.enum(['percentage_of_collected', 'fixed_monthly', 'none']);
+export const managementFeeBasisSchema = z.enum([
+  'percentage_of_collected',
+  'fixed_monthly',
+  'none',
+]);
 
 export const academicTermSchema = z.object({
   label: z.string().trim().min(1).max(120),
@@ -149,8 +153,19 @@ export const leaseListQuerySchema = cursorPaginationQuerySchema.extend({
 });
 export type LeaseListQuery = z.infer<typeof leaseListQuerySchema>;
 
-export const leasePartyRoleSchema = z.enum(['tenant', 'guarantor', 'occupant', 'owner_representative']);
-export const partyAccessStatusSchema = z.enum(['not_invited', 'invited', 'active', 'revoked', 'expired']);
+export const leasePartyRoleSchema = z.enum([
+  'tenant',
+  'guarantor',
+  'occupant',
+  'owner_representative',
+]);
+export const partyAccessStatusSchema = z.enum([
+  'not_invited',
+  'invited',
+  'active',
+  'revoked',
+  'expired',
+]);
 
 export const leasePartyDtoSchema = z.object({
   id: uuidSchema,
@@ -315,17 +330,37 @@ export const leaseBalanceDtoSchema = z.object({
   outstandingKobo: koboStringSchema,
   depositHeldKobo: koboStringSchema,
   nextDue: z
-    .object({ dueDate: dateOnlySchema, amountKobo: koboStringSchema, invoiceId: uuidSchema.nullable() })
+    .object({
+      dueDate: dateOnlySchema,
+      amountKobo: koboStringSchema,
+      invoiceId: uuidSchema.nullable(),
+    })
     .nullable(),
   arrears: arrearsDtoSchema,
 });
 export type LeaseBalanceDto = z.infer<typeof leaseBalanceDtoSchema>;
 
+export const rentInvoicingRunInputSchema = z.object({
+  asOf: dateOnlySchema.optional(),
+  leadDays: z.number().int().min(0).max(90).optional(),
+});
+export type RentInvoicingRunInput = z.infer<typeof rentInvoicingRunInputSchema>;
+
+/** One run of the rent job: each lease is processed in its own transaction. */
 export const rentInvoicingRunDtoSchema = z.object({
+  leases: z.number().int().nonnegative(),
   invoiced: z.number().int().nonnegative(),
+  /** Periods closed without an invoice (nothing to collect). */
   skipped: z.number().int().nonnegative(),
   invoiceIds: z.array(uuidSchema),
+  overdue: z.number().int().nonnegative(),
+  /** System lease transitions applied (active → expiring, → ended). */
+  transitions: z.array(z.object({ leaseId: uuidSchema, to: z.enum(['expiring', 'ended']) })),
+  expiredInvitations: z.number().int().nonnegative(),
+  /** Leases whose step failed; the rest of the run is kept and the next run retries them. */
+  failures: z.array(z.object({ leaseId: uuidSchema, message: z.string() })),
 });
+export type RentInvoicingRunDto = z.infer<typeof rentInvoicingRunDtoSchema>;
 
 /* ---------------------------------------------------------------------- */
 /* Tenant portal                                                           */
@@ -362,8 +397,17 @@ export const tenantAppointmentDtoSchema = z.object({
 });
 
 export const tenantLeaseSummarySchema = z.object({
-  lease: leaseDtoSchema.omit({ parties: true, managementFeeBasis: true, managementFeeBps: true, managementFeeFixedKobo: true }),
-  property: z.object({ id: uuidSchema, name: z.string(), address: z.record(z.string(), z.unknown()).nullable() }),
+  lease: leaseDtoSchema.omit({
+    parties: true,
+    managementFeeBasis: true,
+    managementFeeBps: true,
+    managementFeeFixedKobo: true,
+  }),
+  property: z.object({
+    id: uuidSchema,
+    name: z.string(),
+    address: z.record(z.string(), z.unknown()).nullable(),
+  }),
   unit: z.object({ id: uuidSchema, label: z.string() }).nullable(),
   myRole: leasePartyRoleSchema,
 });

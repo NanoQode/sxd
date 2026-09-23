@@ -1,13 +1,24 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { Badge, DataTable, EmptyState, PageHeader, formatDateTimeLabel, humanize } from '@simplexd/ui';
+import {
+  Badge,
+  DataTable,
+  EmptyState,
+  PageHeader,
+  formatDateTimeLabel,
+  humanize,
+} from '@simplexd/ui';
 import { requireSignedIn } from '@/lib/auth/session';
 import { listConversations } from '@/server/conversations/service';
 
 export const metadata: Metadata = { title: 'Messages' };
 export const dynamic = 'force-dynamic';
 
-export default async function MessagesPage({ searchParams }: { searchParams: Promise<{ status?: string; cursor?: string }> }) {
+export default async function MessagesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ status?: string; cursor?: string }>;
+}) {
   const identity = await requireSignedIn('/portal/messages');
   const { status: statusParam, cursor } = await searchParams;
   const status = statusParam === 'closed' || statusParam === 'all' ? statusParam : 'open';
@@ -34,7 +45,15 @@ export default async function MessagesPage({ searchParams }: { searchParams: Pro
       {page.items.length === 0 ? (
         <EmptyState
           title={status === 'open' ? 'No open conversations' : 'No conversations'}
-          description="A conversation with your team opens when a request is triaged and a contact is assigned. Until then, notes on a request are the fastest way to reach us."
+          description="Start a conversation from a request's overview once a project manager is assigned, or wait for the team to message you. Until then, notes on a request are the fastest way to reach us."
+          action={
+            <Link
+              href="/portal/requests"
+              className="sx-touch inline-flex items-center rounded-md border border-border-strong px-4 text-sm font-medium"
+            >
+              Go to requests
+            </Link>
+          }
         />
       ) : (
         <DataTable
@@ -48,7 +67,10 @@ export default async function MessagesPage({ searchParams }: { searchParams: Pro
               header: 'Subject',
               cell: (c) => (
                 <span className="flex items-center gap-2">
-                  <Link href={`/portal/messages/${c.id}`} className="font-medium text-primary underline">
+                  <Link
+                    href={`/portal/messages/${c.id}`}
+                    className="font-medium text-primary underline"
+                  >
                     {c.subject}
                   </Link>
                   {c.unreadCount > 0 ? <Badge tone="primary">{c.unreadCount} unread</Badge> : null}
@@ -56,13 +78,20 @@ export default async function MessagesPage({ searchParams }: { searchParams: Pro
               ),
             },
             { key: 'kind', header: 'Kind', cell: (c) => humanize(c.kind) },
-            { key: 'last', header: 'Last message', cell: (c) => (c.lastMessageAt ? formatDateTimeLabel(c.lastMessageAt, zone) : '—') },
+            {
+              key: 'last',
+              header: 'Last message',
+              cell: (c) => (c.lastMessageAt ? formatDateTimeLabel(c.lastMessageAt, zone) : '—'),
+            },
             { key: 'state', header: 'State', cell: (c) => (c.closedAt ? 'Closed' : 'Open') },
           ]}
         />
       )}
       {page.nextCursor ? (
-        <Link href={`/portal/messages?${new URLSearchParams({ status, cursor: page.nextCursor }).toString()}`} className="sx-touch inline-flex items-center rounded-md border border-border-strong px-4 text-sm">
+        <Link
+          href={`/portal/messages?${new URLSearchParams({ status, cursor: page.nextCursor }).toString()}`}
+          className="sx-touch inline-flex items-center rounded-md border border-border-strong px-4 text-sm"
+        >
           Load older conversations
         </Link>
       ) : null}

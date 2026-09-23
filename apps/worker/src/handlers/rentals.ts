@@ -1,5 +1,5 @@
-import { and, asc, eq, inArray, isNull, lt, sql } from 'drizzle-orm';
-import { ApiError } from '@simplexd/contracts';
+import { and, asc, eq, inArray, isNull, lt, ne, or, sql } from 'drizzle-orm';
+import type { Logger } from 'pino';
 import {
   appendOutbox,
   schema,
@@ -16,33 +16,50 @@ import {
   type FinanceActor,
 } from '@simplexd/finance';
 import {
-  compareDates,
+  apportionAllocation,
+  daysOverdue,
+  leaseLifecycleTarget,
   nextServiceDate,
   periodsDueForInvoicing,
+  scheduleStatusFor,
   slaDueAt,
 } from '@simplexd/domain/rentals';
+import { evaluateTransition, leaseMachine } from '@simplexd/domain/workflow';
 import type { JobRunner } from '../runner';
 
 /**
  * Property management jobs. The worker cannot load the web app's server
- * modules (`server-only`, `@/` aliases), so the job bodies here mirror
- * apps/web/src/server/rentals/schedules.ts and
- * apps/web/src/server/maintenance/work-orders.ts and are covered by the
- * integration tests there. Every step is idempotent and safe to re-run.
+ * modules (`server-only`, `@/` aliases), so the job bodies here follow
+ * apps/web/src/server/rentals/jobs.ts (the same steps, exercised by the web
+ * integration tests through `runRentInvoicing` and the staff
+ * `POST /api/v1/rent/invoicing-runs` endpoint) and share every decision with
+ * it through the pure functions of `@simplexd/domain/rentals`
+ * (`periodsDueForInvoicing`, `apportionAllocation`, `scheduleStatusFor`,
+ * `leaseLifecycleTarget`). Each lease runs in its own transaction under the
+ * system context, serialised by an advisory lock, so one failing lease never
+ * holds back the rest and every step is safe to re-run.
  *
  *  - `rent.generate_due_charges` (hourly): deposit invoices for newly active
- *    leases, `rent` invoices for periods due within the lead window (collected
- *    on the owner's behalf, estate segment when applicable), settled money
- *    mirrored into `rent_allocations`, overdue periods flagged once with a
- *    `rent.overdue` late-notice event, stale invitations expired.
+ *    leases; `rent` invoices for periods due within the lead window (collected
+ *    on the owner's behalf, estate segment when applicable); settled money
+ *    mirrored into `rent_allocations`; overdue periods flagged once with a
+ *    `rent.overdue` late notice; system lease transitions (expiring inside
+ *    the notice window, ended after the end date); stale invitations expired.
  *  - `work_orders.sla_check` (every 15 minutes): open work orders past their
- *    SLA flagged once (`work_order.sla_breached`), recurring work orders
- *    raised from the asset register when `expansion.preventive_maintenance`
+ *    SLA flagged once (`work_order.sla_breached`); recurring work orders
+ *    raised from the asset register while `expansion.preventive_maintenance`
  *    is enabled.
  */
 
 const INVOICE_LEAD_DAYS = 14;
-const OPEN_WORK = ['requested', 'triaged', 'assigned', 'in_progress', 'awaiting_approval', 'approved'] as const;
+const OPEN_WORK = [
+  'requested',
+  'triaged',
+  'assigned',
+  'in_progress',
+  'awaiting_approval',
+  'approved',
+] as const;
 
 type LeaseRow = typeof schema.leases.$inferSelect;
 type ScheduleRow = typeof schema.rentSchedules.$inferSelect;
@@ -65,6 +82,16 @@ async function primaryTenant(tx: DbExecutor, leaseId: string): Promise<string | 
   return party?.userId ?? null;
 }
 
+async function activePartyIds(tx: DbExecutor, leaseId: string): Promise<string[]> {
+  const rows = await tx
+    .select({ userId: schema.leaseParties.userId })
+    .from(schema.leaseParties)
+    .where(
+      and(eq(schema.leaseParties.leaseId, leaseId), eq(schema.leaseParties.accessStatus, 'active')),
+    );
+  return rows.map((r) => r.userId).filter((v): v is string => Boolean(v));
+}
+
 async function estateSegment(tx: DbExecutor, propertyId: string): Promise<string | null> {
   const [row] = await tx
     .select({ segment: schema.estates.ledgerSegment })
@@ -72,6 +99,26 @@ async function estateSegment(tx: DbExecutor, propertyId: string): Promise<string
     .innerJoin(schema.estates, eq(schema.estates.id, schema.properties.estateId))
     .where(eq(schema.properties.id, propertyId));
   return row?.segment ?? null;
+}
+
+/** Charges of the lease that are still owed or paid (charges of waived periods are left out). */
+async function liveCharges(tx: DbExecutor, leaseId: string) {
+  const rows = await tx
+    .select({ charge: schema.rentCharges })
+    .from(schema.rentCharges)
+    .leftJoin(schema.rentSchedules, eq(schema.rentSchedules.id, schema.rentCharges.scheduleId))
+    .where(
+      and(
+        eq(schema.rentCharges.leaseId, leaseId),
+        or(isNull(schema.rentCharges.scheduleId), sql`${schema.rentSchedules.status} <> 'waived'`),
+      ),
+    )
+    .orderBy(
+      asc(schema.rentCharges.chargedAt),
+      asc(schema.rentCharges.createdAt),
+      asc(schema.rentCharges.id),
+    );
+  return rows.map((r) => r.charge);
 }
 
 async function invoiceDeposit(
@@ -99,7 +146,14 @@ async function invoiceDeposit(
     currency: lease.currency,
     dueDate: lease.startDate,
     notes: 'Security deposit held for the tenancy',
-    lines: [{ description: charge.description, quantity: '1', unitAmountKobo: charge.amountKobo.toString() }],
+    lines: [
+      {
+        description: charge.description,
+        quantity: '1',
+        unitAmountKobo: charge.amountKobo.toString(),
+      },
+    ],
+    createdBy: null,
   });
   const [linked] = await tx
     .update(schema.invoices)
@@ -121,7 +175,7 @@ async function invoiceSchedule(
   lease: LeaseRow,
   now: Date,
 ): Promise<string | null> {
-  const charges = await tx
+  const open = await tx
     .select()
     .from(schema.rentCharges)
     .where(
@@ -132,22 +186,37 @@ async function invoiceSchedule(
       ),
     )
     .orderBy(asc(schema.rentCharges.chargedAt), asc(schema.rentCharges.id));
-  if (charges.length === 0) return null;
+  const charges = open.filter((c) => c.amountKobo > 0n);
+  if (charges.length === 0) {
+    // Nothing to collect for this period (a zero-rent period): it is closed as waived.
+    await tx
+      .update(schema.rentSchedules)
+      .set({ status: 'waived' })
+      .where(eq(schema.rentSchedules.id, schedule.id));
+    return null;
+  }
   const draft = await createInvoiceRecord(tx, fa, {
     organizationId: lease.organizationId,
     customerUserId: await primaryTenant(tx, lease.id),
     kind: 'rent',
     currency: lease.currency,
+    taxTreatmentKey: null,
     dueDate: schedule.dueDate,
     notes: `Rent for ${schedule.periodStart} to ${schedule.periodEnd}`,
-    lines: charges.map((c) => ({ description: c.description, quantity: '1', unitAmountKobo: c.amountKobo.toString() })),
+    lines: charges.map((c) => ({
+      description: c.description,
+      quantity: '1',
+      unitAmountKobo: c.amountKobo.toString(),
+    })),
+    createdBy: null,
   });
   const [linked] = await tx
     .update(schema.invoices)
     .set({
       leaseId: lease.id,
       isRentOnBehalfOfOwner: true,
-      // See apps/web/src/server/rentals/schedules.ts: the owner is the invoice organisation.
+      // The owner is the invoice organisation; see apps/web/src/server/rentals/schedules.ts for
+      // why `ownerOrganizationId` stays null until the `invoiceIssued` posting is fixed.
       ownerOrganizationId: null,
       estateSegment: await estateSegment(tx, lease.propertyId),
     })
@@ -187,7 +256,7 @@ async function invoiceSchedule(
   return issued.id;
 }
 
-/** Mirrors finance allocations into rent allocations and refreshes schedule statuses (see the web module). */
+/** Mirrors finance allocations into rent allocations and refreshes schedule statuses. */
 async function syncAllocations(tx: DbExecutor, lease: LeaseRow, asOf: string): Promise<number> {
   const invoices = await tx
     .select({ id: schema.invoices.id })
@@ -204,44 +273,36 @@ async function syncAllocations(tx: DbExecutor, lease: LeaseRow, asOf: string): P
       ),
     )
     .orderBy(asc(schema.allocations.allocatedAt), asc(schema.allocations.id));
-  const existing = new Set(
-    (
-      await tx
-        .select({ allocationId: schema.rentAllocations.allocationId })
-        .from(schema.rentAllocations)
-        .where(eq(schema.rentAllocations.leaseId, lease.id))
-    ).map((r) => r.allocationId),
-  );
-  const charges = await tx
-    .select()
-    .from(schema.rentCharges)
-    .where(eq(schema.rentCharges.leaseId, lease.id))
-    .orderBy(asc(schema.rentCharges.chargedAt), asc(schema.rentCharges.createdAt), asc(schema.rentCharges.id));
-  const paid = new Map<string, bigint>();
-  for (const r of await tx
-    .select({ rentChargeId: schema.rentAllocations.rentChargeId, amountKobo: schema.rentAllocations.amountKobo })
+  const mirroredRows = await tx
+    .select({
+      allocationId: schema.rentAllocations.allocationId,
+      rentChargeId: schema.rentAllocations.rentChargeId,
+      amountKobo: schema.rentAllocations.amountKobo,
+    })
     .from(schema.rentAllocations)
-    .where(eq(schema.rentAllocations.leaseId, lease.id))) {
+    .where(eq(schema.rentAllocations.leaseId, lease.id));
+  const existing = new Set(mirroredRows.map((r) => r.allocationId));
+  const paid = new Map<string, bigint>();
+  for (const r of mirroredRows)
     paid.set(r.rentChargeId, (paid.get(r.rentChargeId) ?? 0n) + r.amountKobo);
-  }
+  const charges = await liveCharges(tx, lease.id);
   for (const a of allocations) {
     if (existing.has(a.id)) continue;
-    let remaining = a.amountKobo;
-    for (const c of charges.filter((c) => c.invoiceId === a.invoiceId)) {
-      if (remaining <= 0n) break;
-      const open = c.amountKobo - (paid.get(c.id) ?? 0n);
-      if (open <= 0n) continue;
-      const take = open < remaining ? open : remaining;
+    const parts = apportionAllocation(
+      a.amountKobo,
+      charges.filter((c) => c.invoiceId === a.invoiceId),
+      paid,
+    );
+    for (const part of parts) {
       await tx.insert(schema.rentAllocations).values({
         leaseId: lease.id,
-        rentChargeId: c.id,
+        rentChargeId: part.chargeId,
         allocationId: a.id,
-        amountKobo: take,
+        amountKobo: part.amountKobo,
         allocatedBy: a.allocatedBy && a.allocatedBy !== 'system' ? a.allocatedBy : null,
         journalId: a.journalId,
       });
-      paid.set(c.id, (paid.get(c.id) ?? 0n) + take);
-      remaining -= take;
+      paid.set(part.chargeId, (paid.get(part.chargeId) ?? 0n) + part.amountKobo);
     }
     existing.add(a.id);
   }
@@ -251,93 +312,212 @@ async function syncAllocations(tx: DbExecutor, lease: LeaseRow, asOf: string): P
     .from(schema.rentSchedules)
     .where(eq(schema.rentSchedules.leaseId, lease.id));
   for (const s of schedules) {
-    if (s.status === 'scheduled' || s.status === 'waived') continue;
     const own = charges.filter((c) => c.scheduleId === s.id);
     const total = own.reduce((sum, c) => sum + c.amountKobo, 0n);
     const settled = own.reduce((sum, c) => sum + (paid.get(c.id) ?? 0n), 0n);
-    let next: ScheduleRow['status'];
-    if (total > 0n && settled >= total) next = 'paid';
-    else if (compareDates(s.dueDate, asOf) < 0) next = 'overdue';
-    else next = settled > 0n ? 'partially_paid' : 'invoiced';
+    const next = scheduleStatusFor(s.status, total, settled, s.dueDate, asOf);
     if (next === s.status) continue;
-    await tx.update(schema.rentSchedules).set({ status: next }).where(eq(schema.rentSchedules.id, s.id));
-    if (next === 'overdue') {
-      overdue += 1;
-      const recipients = await tx
-        .select({ userId: schema.leaseParties.userId })
-        .from(schema.leaseParties)
-        .where(and(eq(schema.leaseParties.leaseId, lease.id), eq(schema.leaseParties.accessStatus, 'active')));
-      await appendOutbox(tx, {
-        eventType: 'rent.overdue',
-        aggregateType: 'lease',
-        aggregateId: lease.id,
-        organizationId: lease.organizationId,
-        actorUserId: null,
-        payload: {
-          leaseId: lease.id,
-          scheduleId: s.id,
-          invoiceId: s.invoiceId,
-          dueDate: s.dueDate,
-          outstandingKobo: (total - settled).toString(),
-          recipientUserIds: recipients.map((p) => p.userId).filter(Boolean),
-        },
-        correlationId: null,
-      });
-    }
+    await tx
+      .update(schema.rentSchedules)
+      .set({ status: next })
+      .where(eq(schema.rentSchedules.id, s.id));
+    if (next !== 'overdue') continue;
+    overdue += 1;
+    await appendOutbox(tx, {
+      eventType: 'rent.overdue',
+      aggregateType: 'lease',
+      aggregateId: lease.id,
+      organizationId: lease.organizationId,
+      actorUserId: null,
+      payload: {
+        leaseId: lease.id,
+        scheduleId: s.id,
+        invoiceId: s.invoiceId,
+        dueDate: s.dueDate,
+        outstandingKobo: (total - settled).toString(),
+        daysOverdue: daysOverdue(s.dueDate, asOf),
+        recipientUserIds: await activePartyIds(tx, lease.id),
+      },
+      correlationId: null,
+    });
   }
   return overdue;
 }
 
+/** System lease transition (`leaseMachine`): expiring inside the notice window, ended after the end date. */
+async function advanceLifecycle(
+  tx: DbExecutor,
+  lease: LeaseRow,
+  asOf: string,
+  correlationId: string,
+): Promise<'expiring' | 'ended' | null> {
+  const target = leaseLifecycleTarget(lease, asOf);
+  if (!target) return null;
+  const decision = evaluateTransition(leaseMachine, {
+    from: lease.status,
+    to: target,
+    actor: 'system',
+  });
+  if (!decision.ok) return null;
+  const [row] = await tx
+    .update(schema.leases)
+    .set({ status: target, version: lease.version + 1 })
+    .where(and(eq(schema.leases.id, lease.id), eq(schema.leases.version, lease.version)))
+    .returning({ version: schema.leases.version });
+  if (!row) return null;
+  await tx.insert(schema.auditEvents).values({
+    actorType: 'job',
+    organizationId: lease.organizationId,
+    action: `lease.${target}`,
+    entityType: 'lease',
+    entityId: lease.id,
+    before: { status: lease.status, version: lease.version },
+    after: { status: target, version: row.version },
+    correlationId,
+  });
+  await appendOutbox(tx, {
+    eventType: 'lease.transitioned',
+    aggregateType: 'lease',
+    aggregateId: lease.id,
+    organizationId: lease.organizationId,
+    actorUserId: null,
+    payload: {
+      leaseId: lease.id,
+      from: lease.status,
+      to: target,
+      reason: null,
+      recipientUserIds: await activePartyIds(tx, lease.id),
+    },
+    correlationId,
+  });
+  if (target === 'ended' && lease.unitId) {
+    const [other] = await tx
+      .select({ id: schema.leases.id })
+      .from(schema.leases)
+      .where(
+        and(
+          eq(schema.leases.unitId, lease.unitId),
+          ne(schema.leases.id, lease.id),
+          inArray(schema.leases.status, ['active', 'expiring']),
+        ),
+      )
+      .limit(1);
+    if (!other)
+      await tx
+        .update(schema.units)
+        .set({ status: 'vacant' })
+        .where(eq(schema.units.id, lease.unitId));
+  }
+  return target;
+}
+
 export interface RentRunSummary {
+  leases: number;
   invoiced: number;
+  skipped: number;
   overdue: number;
+  transitions: number;
+  failed: number;
   expiredInvitations: number;
 }
 
-export async function runRentJob(db: Database, now: Date = new Date(), correlationId?: string): Promise<RentRunSummary> {
+export async function runRentJob(
+  db: Database,
+  log: Pick<Logger, 'error'>,
+  now: Date = new Date(),
+  correlationId?: string,
+): Promise<RentRunSummary> {
   const asOf = today(now);
-  const fa = systemFinanceActor(correlationId);
-  return withActor(db, systemContext(correlationId ?? 'rent.generate_due_charges'), async (tx) => {
-    const summary: RentRunSummary = { invoiced: 0, overdue: 0, expiredInvitations: 0 };
-    const leases = await tx
-      .select()
-      .from(schema.leases)
-      .where(inArray(schema.leases.status, ['active', 'expiring']));
-    for (const lease of leases) {
-      await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`lease:${lease.id}`}))`);
-      if (await invoiceDeposit(tx, fa, lease, now)) summary.invoiced += 1;
-      const schedules = await tx
-        .select()
-        .from(schema.rentSchedules)
-        .where(eq(schema.rentSchedules.leaseId, lease.id))
-        .orderBy(asc(schema.rentSchedules.dueDate));
-      for (const s of periodsDueForInvoicing(schedules, asOf, INVOICE_LEAD_DAYS)) {
-        try {
-          if (await invoiceSchedule(tx, fa, s, lease, now)) summary.invoiced += 1;
-        } catch (err) {
-          if (err instanceof ApiError && err.code === 'conflict') continue;
-          throw err;
+  const cid = correlationId ?? `rent-job:${asOf}`;
+  const ctx = systemContext(cid);
+  const fa = systemFinanceActor(cid);
+  const summary: RentRunSummary = {
+    leases: 0,
+    invoiced: 0,
+    skipped: 0,
+    overdue: 0,
+    transitions: 0,
+    failed: 0,
+    expiredInvitations: 0,
+  };
+  const leaseIds = await withActor(db, ctx, async (tx) =>
+    (
+      await tx
+        .select({ id: schema.leases.id })
+        .from(schema.leases)
+        .where(
+          or(
+            inArray(schema.leases.status, ['active', 'expiring']),
+            sql`exists (select 1 from rent_schedules rs where rs.lease_id = ${schema.leases.id}
+                  and rs.status in ('invoiced', 'partially_paid', 'overdue'))`,
+          ),
+        )
+        .orderBy(asc(schema.leases.createdAt), asc(schema.leases.id))
+    ).map((r) => r.id),
+  );
+  for (const leaseId of leaseIds) {
+    try {
+      const step = await withActor(db, ctx, async (tx) => {
+        await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`lease:${leaseId}`}))`);
+        const [lease] = await tx.select().from(schema.leases).where(eq(schema.leases.id, leaseId));
+        if (!lease) return null;
+        let invoiced = 0;
+        let skipped = 0;
+        if (lease.status === 'active' || lease.status === 'expiring') {
+          if (await invoiceDeposit(tx, fa, lease, now)) invoiced += 1;
+          const schedules = await tx
+            .select()
+            .from(schema.rentSchedules)
+            .where(eq(schema.rentSchedules.leaseId, lease.id))
+            .orderBy(asc(schema.rentSchedules.dueDate));
+          for (const s of periodsDueForInvoicing(schedules, asOf, INVOICE_LEAD_DAYS)) {
+            if (await invoiceSchedule(tx, fa, s, lease, now)) invoiced += 1;
+            else skipped += 1;
+          }
         }
-      }
-      summary.overdue += await syncAllocations(tx, lease, asOf);
+        const overdue = await syncAllocations(tx, lease, asOf);
+        const transition = await advanceLifecycle(tx, lease, asOf, cid);
+        return { invoiced, skipped, overdue, transition };
+      });
+      if (!step) continue;
+      summary.leases += 1;
+      summary.invoiced += step.invoiced;
+      summary.skipped += step.skipped;
+      summary.overdue += step.overdue;
+      if (step.transition) summary.transitions += 1;
+    } catch (err) {
+      summary.failed += 1;
+      log.error({ err, leaseId, correlationId: cid }, 'rent job step failed for a lease');
     }
+  }
+  summary.expiredInvitations = await withActor(db, ctx, async (tx) => {
     const expired = await tx
       .update(schema.leaseParties)
       .set({ accessStatus: 'expired', invitationTokenHash: null })
-      .where(and(eq(schema.leaseParties.accessStatus, 'invited'), lt(schema.leaseParties.invitationExpiresAt, now)))
+      .where(
+        and(
+          eq(schema.leaseParties.accessStatus, 'invited'),
+          lt(schema.leaseParties.invitationExpiresAt, now),
+        ),
+      )
       .returning({ id: schema.leaseParties.id });
-    summary.expiredInvitations = expired.length;
-    return summary;
+    return expired.length;
   });
+  return summary;
 }
 
-export async function runSlaJob(db: Database, now: Date = new Date()): Promise<{ breached: number; recurring: number }> {
+export async function runSlaJob(
+  db: Database,
+  now: Date = new Date(),
+): Promise<{ breached: number; recurring: number }> {
   return withActor(db, systemContext('work_orders.sla_check'), async (tx) => {
     let breached = 0;
     const open = await tx
       .select()
       .from(schema.workOrders)
-      .where(and(lt(schema.workOrders.slaDueAt, now), inArray(schema.workOrders.status, [...OPEN_WORK])));
+      .where(
+        and(lt(schema.workOrders.slaDueAt, now), inArray(schema.workOrders.status, [...OPEN_WORK])),
+      );
     for (const row of open) {
       const [already] = await tx
         .select({ id: schema.auditEvents.id })
@@ -357,7 +537,11 @@ export async function runSlaJob(db: Database, now: Date = new Date()): Promise<{
         action: 'work_order.sla_breached',
         entityType: 'work_order',
         entityId: row.id,
-        after: { status: row.status, slaDueAt: row.slaDueAt?.toISOString() ?? null, priority: row.priority },
+        after: {
+          status: row.status,
+          slaDueAt: row.slaDueAt?.toISOString() ?? null,
+          priority: row.priority,
+        },
       });
       await appendOutbox(tx, {
         eventType: 'work_order.sla_breached',
@@ -387,12 +571,22 @@ export async function runSlaJob(db: Database, now: Date = new Date()): Promise<{
       const due = await tx
         .select()
         .from(schema.assets)
-        .where(and(sql`${schema.assets.nextServiceAt} <= ${asOf}`, sql`${schema.assets.serviceIntervalDays} IS NOT NULL`));
+        .where(
+          and(
+            sql`${schema.assets.nextServiceAt} <= ${asOf}`,
+            sql`${schema.assets.serviceIntervalDays} IS NOT NULL`,
+          ),
+        );
       for (const asset of due) {
         const [openForAsset] = await tx
           .select({ id: schema.workOrders.id })
           .from(schema.workOrders)
-          .where(and(eq(schema.workOrders.assetId, asset.id), inArray(schema.workOrders.status, [...OPEN_WORK])))
+          .where(
+            and(
+              eq(schema.workOrders.assetId, asset.id),
+              inArray(schema.workOrders.status, [...OPEN_WORK]),
+            ),
+          )
           .limit(1);
         if (!openForAsset) {
           const [row] = await tx
@@ -408,7 +602,11 @@ export async function runSlaJob(db: Database, now: Date = new Date()): Promise<{
               priority: 'normal',
               status: 'requested',
               slaDueAt: slaDueAt('normal', now),
-              recurring: { assetId: asset.id, intervalDays: asset.serviceIntervalDays, dueOn: asset.nextServiceAt },
+              recurring: {
+                assetId: asset.id,
+                intervalDays: asset.serviceIntervalDays,
+                dueOn: asset.nextServiceAt,
+              },
             })
             .returning();
           await tx.insert(schema.auditEvents).values({
@@ -442,9 +640,15 @@ export async function runSlaJob(db: Database, now: Date = new Date()): Promise<{
 
 export function registerRentalHandlers(runner: JobRunner): void {
   runner.register('rent.generate_due_charges', async ({ db, log, job }) => {
-    const summary = await runRentJob(db, new Date(), job.correlationId ?? undefined);
-    if (summary.invoiced > 0 || summary.overdue > 0 || summary.expiredInvitations > 0)
-      log.info(summary, 'rent invoicing run');
+    const summary = await runRentJob(db, log, new Date(), job.correlationId ?? undefined);
+    if (
+      summary.invoiced > 0 ||
+      summary.overdue > 0 ||
+      summary.transitions > 0 ||
+      summary.failed > 0 ||
+      summary.expiredInvitations > 0
+    )
+      log.info(summary, 'rent job run');
   });
 
   runner.register('work_orders.sla_check', async ({ db, log }) => {

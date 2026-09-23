@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
-import { getSessionKey, webCryptoSupported } from './crypto';
+import { getSessionKey, purgeOtherSessionKeys, webCryptoSupported } from './crypto';
 import {
   createIndexedDbStorage,
   createMemoryStorage,
@@ -56,6 +56,7 @@ export function useDraftStore(userId: string): DraftStoreState {
           'This browser has no WebCrypto, so drafts cannot be encrypted and will not be stored.';
       } else {
         try {
+          purgeOtherSessionKeys(userId);
           key = await getSessionKey(userId);
           if (!key)
             problem =

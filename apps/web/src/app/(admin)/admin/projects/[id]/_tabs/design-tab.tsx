@@ -23,10 +23,9 @@ export async function DesignTab({ identity, shell }: { identity: RequestIdentity
             successMessage="Design option created"
             fields={[
               { name: 'title', label: 'Title', required: true, wide: true },
-              { name: 'description', label: 'Description', type: 'textarea' },
-              { name: 'drawingFileIds', label: 'Drawing file ids (comma separated)', hint: 'Uploaded, scanned files of this organisation.' },
+              { name: 'description', label: 'Description', type: 'textarea', emptyAs: 'null' },
+              { name: 'drawingFileIds', label: 'Drawing file ids (comma separated)', hint: 'Uploaded, scanned files of this organisation.', list: true },
             ]}
-            toBody={(v) => ({ title: v.title, description: v.description || null, drawingFileIds: String(v.drawingFileIds ?? '').split(',').map((s) => s.trim()).filter(Boolean) })}
           />
         ) : null
       }
@@ -75,7 +74,7 @@ export async function DesignTab({ identity, shell }: { identity: RequestIdentity
                   path={`/api/v1/design-options/${d.id}/comments`}
                   successMessage="Comment added"
                   fields={[{ name: 'body', label: 'Comment', type: 'textarea', required: true }]}
-                  toBody={(v) => ({ body: v.body, anchor: null })}
+                  extraBody={{ anchor: null }}
                 />
                 {d.isCurrentVersion ? (
                   <FormDialog
@@ -86,10 +85,9 @@ export async function DesignTab({ identity, shell }: { identity: RequestIdentity
                     successMessage="New version created"
                     fields={[
                       { name: 'reason', label: 'Reason', required: true, wide: true },
-                      { name: 'description', label: 'Description', type: 'textarea' },
-                      { name: 'drawingFileIds', label: 'Drawing file ids (comma separated)' },
+                      { name: 'description', label: 'Description', type: 'textarea', emptyAs: 'null' },
+                      { name: 'drawingFileIds', label: 'Drawing file ids (comma separated)', list: true },
                     ]}
-                    toBody={(v) => ({ reason: v.reason, description: v.description || null, drawingFileIds: String(v.drawingFileIds ?? '').split(',').map((s) => s.trim()).filter(Boolean) })}
                   />
                 ) : null}
               </div>

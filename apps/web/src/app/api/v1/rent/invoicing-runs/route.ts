@@ -1,16 +1,17 @@
-import { z } from 'zod';
-import { ApiError, uuidSchema, dateOnlySchema } from '@simplexd/contracts';
-import { getIdentity } from '@/lib/auth/session';
-import { json, parseJson, route } from '@/lib/api/respond';
-import { requireStaff } from '@/lib/auth/session';
+import { rentInvoicingRunInputSchema } from '@simplexd/contracts';
 import { getDb } from '@simplexd/db';
-import { runRentInvoicing } from '@/server/rentals/schedules';
+import { requireStaff } from '@/lib/auth/session';
+import { json, parseJson, route } from '@/lib/api/respond';
+import { runRentInvoicing } from '@/server/rentals/jobs';
 import '@/lib/api/registry/rentals';
 
 export const dynamic = 'force-dynamic';
-/** POST /api/v1/rent/invoicing-runs — staff `rentals.manage`: run the due-rent invoicing job now. */
+
+/** POST /api/v1/rent/invoicing-runs — staff `rentals.manage`: run the rent job now (same steps as the hourly job). */
 export const POST = route(async (req, ctx) => {
   await requireStaff('rentals.manage');
-  const body = await parseJson(req, z.object({ asOf: dateOnlySchema.optional(), leadDays: z.number().int().min(0).max(90).optional() }));
-  return json(await runRentInvoicing(getDb(), { ...body, correlationId: ctx.correlationId }), { correlationId: ctx.correlationId });
+  const body = await parseJson(req, rentInvoicingRunInputSchema);
+  return json(await runRentInvoicing(getDb(), { ...body, correlationId: ctx.correlationId }), {
+    correlationId: ctx.correlationId,
+  });
 });

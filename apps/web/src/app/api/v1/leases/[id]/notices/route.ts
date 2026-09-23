@@ -13,5 +13,8 @@ export const POST = route<{ params: Promise<{ id: string }> }>(async (req, ctx) 
   if (!identity.session) throw new ApiError('unauthenticated', 'sign in required');
   const { id } = await params(ctx, idParams);
   const body = await parseJson(req, leaseNoticeSchema);
-  return json(await postLeaseNotice(identity, id, body, { correlationId: ctx.correlationId }), { status: 201, correlationId: ctx.correlationId });
+  return json(await postLeaseNotice(identity, id, body, { correlationId: ctx.correlationId }), {
+    status: 201,
+    correlationId: ctx.correlationId,
+  });
 });

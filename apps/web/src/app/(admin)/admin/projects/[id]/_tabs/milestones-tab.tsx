@@ -34,11 +34,10 @@ export async function MilestonesTab({ identity, shell }: { identity: RequestIden
               successMessage="Milestone created"
               fields={[
                 { name: 'name', label: 'Name', required: true, wide: true },
-                { name: 'plannedDate', label: 'Planned date', type: 'date' },
-                { name: 'forecastDate', label: 'Forecast date', type: 'date' },
-                { name: 'description', label: 'Description', type: 'textarea' },
+                { name: 'plannedDate', label: 'Planned date', type: 'date', emptyAs: 'null' },
+                { name: 'forecastDate', label: 'Forecast date', type: 'date', emptyAs: 'null' },
+                { name: 'description', label: 'Description', type: 'textarea', emptyAs: 'null' },
               ]}
-              toBody={(v) => ({ ...v, plannedDate: v.plannedDate || null, forecastDate: v.forecastDate || null, description: v.description || null })}
             />
           ) : null
         }
@@ -98,10 +97,9 @@ export async function MilestonesTab({ identity, shell }: { identity: RequestIden
                     disabled={!mfa}
                     disabledReason="Verify your authenticator first"
                     fields={[
-                      { name: 'paymentInvoiceId', label: 'Payment invoice id (optional)', hint: 'UUID of an existing invoice' },
+                      { name: 'paymentInvoiceId', label: 'Payment invoice id (optional)', hint: 'UUID of an existing invoice', emptyAs: 'null' },
                       { name: 'note', label: 'Note', type: 'textarea' },
                     ]}
-                    toBody={(v) => ({ paymentInvoiceId: v.paymentInvoiceId || null, note: v.note || undefined })}
                   />
                 ) : null}
               </div>

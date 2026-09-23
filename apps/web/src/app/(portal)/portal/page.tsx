@@ -42,7 +42,10 @@ function KpiCard({
       </CardHeader>
       <CardContent className="flex flex-col gap-2">
         {children}
-        <Link href={href} className="sx-touch inline-flex items-center text-sm font-medium text-primary underline">
+        <Link
+          href={href}
+          className="sx-touch inline-flex items-center text-sm font-medium text-primary underline"
+        >
           {linkLabel}
         </Link>
       </CardContent>
@@ -50,7 +53,11 @@ function KpiCard({
   );
 }
 
-export default async function PortalHomePage({ searchParams }: { searchParams: Promise<{ denied?: string }> }) {
+export default async function PortalHomePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ denied?: string }>;
+}) {
   const identity = await requireSignedIn('/portal');
   const params = await searchParams;
   const cards = await loadHomeCards(identity);
@@ -63,15 +70,22 @@ export default async function PortalHomePage({ searchParams }: { searchParams: P
         description="What changed, what needs you, what is due and what happens next. Every figure opens its records."
         actions={
           hasOrg ? (
-            <Link href="/portal/requests/new" className="sx-touch inline-flex items-center rounded-md bg-primary px-4 text-sm font-medium text-fg-on-primary hover:bg-primary-hover">
+            <Link
+              href="/portal/requests/new"
+              className="sx-touch inline-flex items-center rounded-md bg-primary px-4 text-sm font-medium text-fg-on-primary hover:bg-primary-hover"
+            >
               Request a service
             </Link>
           ) : undefined
         }
       />
       {params.denied === 'admin' ? (
-        <p role="status" className="rounded-md border border-warning/40 bg-warning-soft p-3 text-sm">
-          You do not have permission to open the admin console. Your customer portal is shown instead.
+        <p
+          role="status"
+          className="rounded-md border border-warning/40 bg-warning-soft p-3 text-sm"
+        >
+          You do not have permission to open the admin console. Your customer portal is shown
+          instead.
         </p>
       ) : null}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
@@ -163,16 +177,28 @@ export default async function PortalHomePage({ searchParams }: { searchParams: P
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-wrap gap-3">
-          <Link href="/portal/requests" className="sx-touch inline-flex items-center text-sm font-medium text-primary underline">
+          <Link
+            href="/portal/requests"
+            className="sx-touch inline-flex items-center text-sm font-medium text-primary underline"
+          >
             View requests
           </Link>
-          <Link href="/portal/scenarios" className="sx-touch inline-flex items-center text-sm font-medium text-primary underline">
+          <Link
+            href="/portal/scenarios"
+            className="sx-touch inline-flex items-center text-sm font-medium text-primary underline"
+          >
             Saved scenarios
           </Link>
-          <Link href="/portal/tasks" className="sx-touch inline-flex items-center text-sm font-medium text-primary underline">
+          <Link
+            href="/portal/tasks"
+            className="sx-touch inline-flex items-center text-sm font-medium text-primary underline"
+          >
             Tasks awaiting you
           </Link>
-          <Link href="/portal/notifications" className="sx-touch inline-flex items-center text-sm font-medium text-primary underline">
+          <Link
+            href="/portal/notifications"
+            className="sx-touch inline-flex items-center text-sm font-medium text-primary underline"
+          >
             Notifications
           </Link>
         </CardContent>

@@ -113,6 +113,17 @@ const routes: Record<string, OutboxRoute> = {
   'delivery.discrepancy.supplier_notified': () => [
     { type: 'notifications.dispatch', queue: 'notifications' },
   ],
+  // Property management (apps/web/src/server/rentals, apps/web/src/server/maintenance); the
+  // rent and SLA jobs are scheduled, so these events only fan out notifications.
+  'tenant.invited': () => [{ type: 'notifications.dispatch', queue: 'notifications' }],
+  'tenant.notice': () => [{ type: 'notifications.dispatch', queue: 'notifications' }],
+  'lease.transitioned': () => [{ type: 'notifications.dispatch', queue: 'notifications' }],
+  'lease.renewed': () => [{ type: 'notifications.dispatch', queue: 'notifications' }],
+  'rent.invoice_issued': () => [{ type: 'notifications.dispatch', queue: 'notifications' }],
+  'rent.overdue': () => [{ type: 'notifications.dispatch', queue: 'notifications' }],
+  'owner_statement.issued': () => [{ type: 'notifications.dispatch', queue: 'notifications' }],
+  'payout.transitioned': () => [{ type: 'notifications.dispatch', queue: 'notifications' }],
+  'work_order.sla_breached': () => [{ type: 'notifications.dispatch', queue: 'notifications' }],
 };
 
 export function routeOutboxEvent(event: OutboxRow): ReturnType<OutboxRoute> {

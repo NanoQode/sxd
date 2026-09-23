@@ -452,8 +452,8 @@ function BidEditor({
     }
   }
 
-  const canEdit =
-    tenderOpen && !deadlinePassed && ['draft', 'submitted', 'withdrawn'].includes(fullBid.status);
+  // Withdrawn, disqualified, evaluated and later states are terminal for the bidder.
+  const canEdit = tenderOpen && !deadlinePassed && ['draft', 'submitted'].includes(fullBid.status);
   const deadlineError = submit.isError && isApiCode(submit.error, 'deadline_passed');
 
   return (
@@ -483,9 +483,12 @@ function BidEditor({
       </div>
       {deadlineError ? (
         <Alert tone="danger" title="Deadline passed">
-          The server clock passed the submission deadline before your submit arrived. Your latest
-          content is saved as an unsubmitted revision, but it cannot be submitted.
-          {fullBid.submittedAt ? ' Your earlier submission stands.' : ''}
+          The server clock passed the submission deadline before your submit arrived, so nothing
+          changed on the server: the submission is atomic and was refused as a whole. Your edits
+          remain only in this tab.
+          {fullBid.submittedAt
+            ? ' Your earlier submission stands exactly as it was.'
+            : ' No bid was submitted.'}
         </Alert>
       ) : submit.isError ? (
         <Alert tone="danger" title="Submission failed">
@@ -505,10 +508,9 @@ function BidEditor({
         >
           {deadlinePassed
             ? 'Revisions and submissions are no longer accepted.'
-            : 'This bid can no longer be edited.'}
-          {fullBid.status === 'withdrawn' && !deadlinePassed
-            ? ' You may still create a new revision and submit again before the deadline.'
-            : ''}
+            : fullBid.status === 'withdrawn'
+              ? 'A withdrawn bid is final: it cannot be revised, resubmitted or reopened.'
+              : 'This bid can no longer be edited.'}
         </Alert>
       ) : null}
       {errors.length > 0 ? (
@@ -813,7 +815,7 @@ function BidEditor({
           >
             {fullBid.status === 'submitted' ? 'Re-submit bid' : 'Submit bid'}
           </Button>
-          {fullBid.status === 'submitted' && canEdit ? (
+          {canEdit ? (
             <Button type="button" variant="danger" onClick={() => setWithdrawOpen(true)}>
               Withdraw bid
             </Button>
@@ -828,7 +830,7 @@ function BidEditor({
       <Dialog open={withdrawOpen} onOpenChange={setWithdrawOpen}>
         <DialogContent
           title="Withdraw this bid?"
-          description="Withdrawal is recorded with your reason. You can submit again before the deadline."
+          description="Withdrawal is final and recorded with your reason. A withdrawn bid cannot be revised, resubmitted or reopened for this tender."
         >
           <Field
             label="Reason"

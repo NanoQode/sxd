@@ -21,6 +21,7 @@ import {
   EmptyState,
   PageHeader,
   StatusBadge,
+  buttonVariants,
   humanize,
   useToast,
   formatDateTimeLabel,
@@ -29,42 +30,33 @@ import { partnerFetch, withQuery } from '@/lib/partner/api';
 import { usePartner } from '@/lib/partner/context';
 import { OfflineError, syncVisitDraft } from '@/lib/partner/offline/sync';
 import type { Draft, LockedDraft, VisitDraft } from '@/lib/partner/offline/types';
-import { notifyDraftsChanged, useDrafts, useOnline } from '@/lib/partner/offline/use-draft-store';
+import {
+  notifyDraftsChanged,
+  useDrafts,
+  useOnline,
+  type DraftStoreState,
+} from '@/lib/partner/offline/use-draft-store';
 import { putBytes } from '@/lib/partner/upload';
-import { DualTime, LoadingBlock, RequestFailed } from '../common';
+import { DualTime, LoadingBlock, NotAvailable, RequestFailed } from '../common';
+import { FieldCapture } from './field-capture';
+import { syncStateLabel, syncStateTone } from './sync-state';
 
-export function syncStateTone(
-  state: Draft['syncState'],
-): 'warning' | 'danger' | 'success' | 'info' {
-  switch (state) {
-    case 'synced':
-      return 'success';
-    case 'rejected':
-      return 'danger';
-    case 'syncing':
-      return 'info';
-    default:
-      return 'warning';
-  }
-}
+type DraftsState = DraftStoreState & {
+  drafts: Array<Draft | LockedDraft>;
+  loading: boolean;
+  refresh: () => void;
+};
 
-export function syncStateLabel(state: Draft['syncState']): string {
-  switch (state) {
-    case 'unsynced':
-      return 'Unsynced';
-    case 'syncing':
-      return 'Syncing…';
-    case 'partial':
-      return 'Partly synced';
-    case 'synced':
-      return 'Synced';
-    case 'rejected':
-      return 'Rejected by server';
-  }
-}
-
-function LocalDrafts({ userId }: { userId: string }) {
-  const { drafts, loading, store, sealingProblem, persistent, refresh } = useDrafts(userId);
+function LocalDrafts({
+  state,
+  zone,
+  onOpen,
+}: {
+  state: DraftsState;
+  zone: string;
+  onOpen: (offlineClientId: string) => void;
+}) {
+  const { drafts, loading, store, sealingProblem, persistent, refresh } = state;
   const online = useOnline();
   const { toast } = useToast();
   const [busy, setBusy] = useState<string | null>(null);
@@ -125,7 +117,8 @@ function LocalDrafts({ userId }: { userId: string }) {
           }
           onClick={async () => {
             for (const d of visits)
-              if (d.kind === 'visit' && d.syncState !== 'synced') await sync(d);
+              if (d.kind === 'visit' && d.syncState !== 'synced' && d.findingsMarkdown.trim())
+                await sync(d);
           }}
         >
           <RefreshCw aria-hidden="true" className="h-4 w-4" />
@@ -168,7 +161,7 @@ function LocalDrafts({ userId }: { userId: string }) {
                     </Badge>
                   </p>
                   <p className="text-xs text-fg-muted">
-                    Updated {formatDateTimeLabel(d.updatedAt)}
+                    Updated {formatDateTimeLabel(d.updatedAt, zone)}
                     {d.kind === 'visit' && d.lastSyncError
                       ? ` · last sync: ${d.lastSyncError.code}: ${d.lastSyncError.reason}`
                       : ''}
@@ -181,19 +174,19 @@ function LocalDrafts({ userId }: { userId: string }) {
                       Captured in a previous browser session; the key is gone so it cannot be read
                       or synced. It can only be discarded.
                     </p>
+                  ) : d.kind === 'visit' && !d.findingsMarkdown.trim() ? (
+                    <p className="text-xs text-fg-muted">
+                      Write findings before syncing; the server requires them.
+                    </p>
                   ) : null}
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {d.kind === 'visit' ? (
                     <>
-                      <Link
-                        href={`/partner/visits/${d.offlineClientId}`}
-                        className="sx-transition inline-flex h-9 items-center rounded-md border border-border-strong px-3 text-sm hover:bg-bg-sunken"
-                      >
+                      <Button variant="secondary" onClick={() => onOpen(d.offlineClientId)}>
                         Open
-                      </Link>
+                      </Button>
                       <Button
-                        size="sm"
                         disabled={!online || busy !== null || !d.findingsMarkdown.trim()}
                         loading={busy === d.offlineClientId}
                         onClick={() => void sync(d)}
@@ -203,7 +196,6 @@ function LocalDrafts({ userId }: { userId: string }) {
                     </>
                   ) : null}
                   <Button
-                    size="sm"
                     variant="ghost"
                     onClick={() => setDiscarding(d)}
                     aria-label={`Discard draft ${d.title}`}
@@ -244,8 +236,17 @@ function LocalDrafts({ userId }: { userId: string }) {
 
 export function VisitsList() {
   const p = usePartner();
+  const online = useOnline();
   const params = useSearchParams();
   const filterProject = params.get('projectId');
+  const draftsState = useDrafts(p.userId);
+  /** Draft opened in place: works offline because it needs no navigation. */
+  const [inline, setInline] = useState<string | null>(null);
+  const draftBySiteVisit = new Map(
+    draftsState.drafts
+      .filter((d): d is VisitDraft => d.kind === 'visit' && d.siteVisitId !== null)
+      .map((d) => [d.siteVisitId as string, d.offlineClientId]),
+  );
   const projects = useQuery({
     queryKey: ['partner', 'projects'],
     queryFn: () => partnerFetch<Page<ProjectDto>>(withQuery('/api/v1/projects', { limit: 100 })),
@@ -262,12 +263,30 @@ export function VisitsList() {
         ),
     })),
   });
+  // Only visits assigned to this user: staff inspectors can read other visits on
+  // their projects, but this view is their own work list.
   const rows = projectList.flatMap((pr, i) => {
     const q = visitQueries[i];
     return (q?.data?.items ?? [])
-      .filter((v) => v.inspectorUserId === p.userId || p.isStaffInspector)
+      .filter((v) => v.inspectorUserId === p.userId)
       .map((v) => ({ ...v, projectName: pr.name }));
   });
+  // Creating a visit in the field is a staff inspector capability on the server.
+  const canStartFieldVisit = p.isStaffInspector;
+
+  if (inline) {
+    return (
+      <FieldCapture
+        key={inline}
+        target={inline}
+        projectId={null}
+        onExit={() => {
+          setInline(null);
+          draftsState.refresh();
+        }}
+      />
+    );
+  }
   const anyLoading = projects.isPending || visitQueries.some((q) => q.isPending);
   const failures = visitQueries.filter((q) => q.isError);
 
@@ -277,7 +296,7 @@ export function VisitsList() {
         title="Visits"
         description="Visits assigned to you, with instructions and checklist. Capture works offline; drafts stay encrypted on this device until you sync."
       />
-      <LocalDrafts userId={p.userId} />
+      <LocalDrafts state={draftsState} zone={p.timeZone} onOpen={setInline} />
       <Card>
         <CardHeader>
           <CardTitle>Assigned visits</CardTitle>
@@ -304,7 +323,17 @@ export function VisitsList() {
                   tone="warning"
                   title={`${failures.length} project${failures.length === 1 ? '' : 's'} could not be loaded`}
                 >
-                  Their visits are not listed. Retry from the page header.
+                  <p>Their visits are not listed.</p>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    className="mt-2"
+                    onClick={() => {
+                      for (const q of failures) void q.refetch();
+                    }}
+                  >
+                    Try again
+                  </Button>
                 </Alert>
               ) : null}
               <DataTable
@@ -314,7 +343,11 @@ export function VisitsList() {
                 rowLabel={(v) =>
                   `${v.projectName} ${v.scheduledAt ? formatDateTimeLabel(v.scheduledAt, p.timeZone) : ''}`
                 }
-                emptyMessage="No visits are scheduled for you on these projects. You can still start a field visit from a project below."
+                emptyMessage={
+                  canStartFieldVisit
+                    ? 'No visits are scheduled for you on these projects. You can still start a field visit from a project below.'
+                    : 'No visits are scheduled for you on these projects yet.'
+                }
                 columns={[
                   { key: 'project', header: 'Project', cell: (v) => v.projectName },
                   {
@@ -335,35 +368,63 @@ export function VisitsList() {
                   {
                     key: 'action',
                     header: 'Action',
-                    cell: (v) => (
-                      <Link href={`/partner/visits/${v.id}`} className="text-primary underline">
-                        {v.status === 'scheduled' || v.status === 'in_progress'
-                          ? 'Capture'
-                          : 'View'}
-                      </Link>
-                    ),
+                    cell: (v) => {
+                      const local = draftBySiteVisit.get(v.id);
+                      if (local) {
+                        return <Button onClick={() => setInline(local)}>Continue draft</Button>;
+                      }
+                      if (!online) {
+                        return (
+                          <span className="text-xs text-fg-muted">
+                            Needs a connection the first time
+                          </span>
+                        );
+                      }
+                      return (
+                        <Link
+                          href={`/partner/visits/${v.id}`}
+                          className={buttonVariants({
+                            variant:
+                              v.status === 'scheduled' || v.status === 'in_progress'
+                                ? 'primary'
+                                : 'secondary',
+                          })}
+                        >
+                          {v.status === 'scheduled' || v.status === 'in_progress'
+                            ? 'Capture'
+                            : 'View'}
+                        </Link>
+                      );
+                    },
                   },
                 ]}
               />
-              <div>
-                <h3 className="text-sm font-medium">Start a field visit</h3>
-                <p className="text-xs text-fg-muted">
-                  For work not scheduled in advance. The visit is created on the server when you
-                  sync.
-                </p>
-                <ul className="mt-2 flex flex-wrap gap-2">
-                  {projectList.map((pr) => (
-                    <li key={pr.id}>
-                      <Link
-                        href={`/partner/visits/new?projectId=${pr.id}`}
-                        className="sx-transition inline-flex h-9 items-center rounded-md border border-border-strong px-3 text-sm hover:bg-bg-sunken"
-                      >
-                        {pr.name} · {humanize(pr.kind)}
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </div>
+              {canStartFieldVisit ? (
+                <div>
+                  <h3 className="text-sm font-medium">Start a field visit</h3>
+                  <p className="text-xs text-fg-muted">
+                    For work not scheduled in advance. The visit is created on the server when you
+                    sync.
+                  </p>
+                  <ul className="mt-2 flex flex-wrap gap-2">
+                    {projectList.map((pr) => (
+                      <li key={pr.id}>
+                        <Link
+                          href={`/partner/visits/new?projectId=${pr.id}`}
+                          className={buttonVariants({ variant: 'secondary' })}
+                        >
+                          {pr.name} · {humanize(pr.kind)}
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : (
+                <NotAvailable
+                  title="Start an unscheduled visit"
+                  reason="the server lets only staff inspectors create a visit from the field. Ask your SimplexD contact to schedule the visit for you; it then appears above and works offline."
+                />
+              )}
             </>
           )}
         </CardContent>

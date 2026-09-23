@@ -1,7 +1,15 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { uuidSchema } from '@simplexd/contracts';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, EmptyState, PageHeader } from '@simplexd/ui';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  EmptyState,
+  PageHeader,
+} from '@simplexd/ui';
 import { requireSignedIn } from '@/lib/auth/session';
 import { financeActorForPage, findAttemptByReference } from '@/lib/portal/server/finance';
 import { PaymentOutcome } from '@/components/portal/payment-outcome';
@@ -23,10 +31,16 @@ export default async function PaymentReturnPage({
 }) {
   const { reference: referenceParam, attempt: attemptParam, trxref } = await searchParams;
   const reference = referenceParam ?? trxref ?? null;
-  const identity = await requireSignedIn(`/portal/payments/return?${new URLSearchParams({ ...(reference ? { reference } : {}), ...(attemptParam ? { attempt: attemptParam } : {}) }).toString()}`);
+  const identity = await requireSignedIn(
+    `/portal/payments/return?${new URLSearchParams({ ...(reference ? { reference } : {}), ...(attemptParam ? { attempt: attemptParam } : {}) }).toString()}`,
+  );
   let attempt: { id: string; reference: string } | null = null;
   if (attemptParam && uuidSchema.safeParse(attemptParam).success) {
-    attempt = await getPaymentAttempt(getFinanceRuntime(), financeActorForPage(identity), attemptParam).catch(() => null);
+    attempt = await getPaymentAttempt(
+      getFinanceRuntime(),
+      financeActorForPage(identity),
+      attemptParam,
+    ).catch(() => null);
   } else if (reference && /^[A-Za-z0-9.=-]{1,100}$/.test(reference)) {
     attempt = await findAttemptByReference(identity, reference);
   }
@@ -44,7 +58,10 @@ export default async function PaymentReturnPage({
       <Card>
         <CardHeader>
           <CardTitle>Verification</CardTitle>
-          <CardDescription>Settlement happens only when the provider reports success and the reference, amount and currency match the attempt exactly.</CardDescription>
+          <CardDescription>
+            Settlement happens only when the provider reports success and the reference, amount and
+            currency match the attempt exactly.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           {!attempt ? (
@@ -57,7 +74,10 @@ export default async function PaymentReturnPage({
                   : 'Open an invoice and start a payment to get here.'
               }
               action={
-                <Link href="/portal/invoices" className="sx-touch inline-flex items-center rounded-md bg-primary px-4 text-sm font-medium text-fg-on-primary">
+                <Link
+                  href="/portal/invoices"
+                  className="sx-touch inline-flex items-center rounded-md bg-primary px-4 text-sm font-medium text-fg-on-primary"
+                >
                   Go to invoices
                 </Link>
               }

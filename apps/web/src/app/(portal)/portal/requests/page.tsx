@@ -8,7 +8,17 @@ import { listServiceRequests } from '@/server/requests/queries';
 export const metadata: Metadata = { title: 'Requests' };
 export const dynamic = 'force-dynamic';
 
-const STATUS_FILTERS = ['inquiry', 'triage', 'quoted', 'accepted', 'in_progress', 'delivered', 'completed', 'paused', 'cancelled'] as const;
+const STATUS_FILTERS = [
+  'inquiry',
+  'triage',
+  'quoted',
+  'accepted',
+  'in_progress',
+  'delivered',
+  'completed',
+  'paused',
+  'cancelled',
+] as const;
 
 export default async function RequestsPage({
   searchParams,
@@ -32,7 +42,10 @@ export default async function RequestsPage({
         description="Every service request follows the same pipeline: inquiry, triage, quotation, acceptance, work, review, delivery and completion."
         actions={
           hasOrg ? (
-            <Link href="/portal/requests/new" className="sx-touch inline-flex items-center rounded-md bg-primary px-4 text-sm font-medium text-fg-on-primary hover:bg-primary-hover">
+            <Link
+              href="/portal/requests/new"
+              className="sx-touch inline-flex items-center rounded-md bg-primary px-4 text-sm font-medium text-fg-on-primary hover:bg-primary-hover"
+            >
               New request
             </Link>
           ) : undefined
@@ -57,7 +70,9 @@ export default async function RequestsPage({
       </nav>
       {page.items.length === 0 ? (
         <EmptyState
-          title={status.success ? `No ${status.data.replace(/_/g, ' ')} requests` : 'No requests yet'}
+          title={
+            status.success ? `No ${status.data.replace(/_/g, ' ')} requests` : 'No requests yet'
+          }
           description={
             hasOrg
               ? 'Requests appear here as soon as you start a service. You can also turn a saved scenario into a request.'
@@ -65,11 +80,17 @@ export default async function RequestsPage({
           }
           action={
             hasOrg ? (
-              <Link href="/portal/requests/new" className="sx-touch inline-flex items-center rounded-md bg-primary px-4 text-sm font-medium text-fg-on-primary">
+              <Link
+                href="/portal/requests/new"
+                className="sx-touch inline-flex items-center rounded-md bg-primary px-4 text-sm font-medium text-fg-on-primary"
+              >
                 Start a request
               </Link>
             ) : (
-              <Link href="/onboarding" className="sx-touch inline-flex items-center rounded-md bg-primary px-4 text-sm font-medium text-fg-on-primary">
+              <Link
+                href="/onboarding"
+                className="sx-touch inline-flex items-center rounded-md bg-primary px-4 text-sm font-medium text-fg-on-primary"
+              >
                 Set up organisation
               </Link>
             )
@@ -86,7 +107,10 @@ export default async function RequestsPage({
               key: 'reference',
               header: 'Reference',
               cell: (r) => (
-                <Link href={`/portal/requests/${r.id}`} className="font-mono text-primary underline">
+                <Link
+                  href={`/portal/requests/${r.id}`}
+                  className="font-mono text-primary underline"
+                >
                   {r.reference}
                 </Link>
               ),
@@ -94,7 +118,12 @@ export default async function RequestsPage({
             { key: 'title', header: 'Title', cell: (r) => r.title },
             { key: 'service', header: 'Service', cell: (r) => r.serviceName },
             { key: 'status', header: 'Status', cell: (r) => <StatusBadge status={r.status} /> },
-            { key: 'market', header: 'Market', cell: (r) => r.marketName ?? '—', hideOnMobile: true },
+            {
+              key: 'market',
+              header: 'Market',
+              cell: (r) => r.marketName ?? '—',
+              hideOnMobile: true,
+            },
             { key: 'created', header: 'Created', cell: (r) => formatDateLabel(r.createdAt, zone) },
           ]}
         />

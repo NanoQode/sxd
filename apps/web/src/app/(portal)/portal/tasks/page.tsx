@@ -9,7 +9,11 @@ import { listMyTasks } from '@/server/tasks/service';
 export const metadata: Metadata = { title: 'Tasks' };
 export const dynamic = 'force-dynamic';
 
-export default async function TasksPage({ searchParams }: { searchParams: Promise<{ cursor?: string }> }) {
+export default async function TasksPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ cursor?: string }>;
+}) {
   const identity = await requireSignedIn('/portal/tasks');
   const { cursor } = await searchParams;
   const page = await listMyTasks(identity, { limit: 50, cursor });
@@ -23,7 +27,10 @@ export default async function TasksPage({ searchParams }: { searchParams: Promis
       />
       <TasksList tasks={page.items} zone={zone} canComplete={Boolean(caps.organizationId)} />
       {page.nextCursor ? (
-        <Link href={`/portal/tasks?cursor=${encodeURIComponent(page.nextCursor)}`} className="sx-touch inline-flex items-center rounded-md border border-border-strong px-4 text-sm">
+        <Link
+          href={`/portal/tasks?cursor=${encodeURIComponent(page.nextCursor)}`}
+          className="sx-touch inline-flex items-center rounded-md border border-border-strong px-4 text-sm"
+        >
           Load more
         </Link>
       ) : null}

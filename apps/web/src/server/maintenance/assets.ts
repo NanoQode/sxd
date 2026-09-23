@@ -43,12 +43,27 @@ function ref(organizationId: string, id?: string): ResourceRef {
 }
 
 function assertManage(identity: RequestIdentity, r: ResourceRef): void {
-  assertAllowed(authorizeAny(identity.actor, [{ staff: 'maintenance.manage' }, { org: 'org.properties.manage' }], r));
+  assertAllowed(
+    authorizeAny(
+      identity.actor,
+      [{ staff: 'maintenance.manage' }, { org: 'org.properties.manage' }],
+      r,
+    ),
+  );
 }
 
 function assertRead(identity: RequestIdentity, r: ResourceRef): void {
   assertAllowed(
-    authorizeAny(identity.actor, [{ staff: 'maintenance.manage' }, { staff: 'customers.read' }, { staff: 'estates.manage' }, { org: 'org.read' }], r),
+    authorizeAny(
+      identity.actor,
+      [
+        { staff: 'maintenance.manage' },
+        { staff: 'customers.read' },
+        { staff: 'estates.manage' },
+        { org: 'org.read' },
+      ],
+      r,
+    ),
   );
 }
 
@@ -87,13 +102,29 @@ async function withWarranties(tx: DbExecutor, rows: AssetRow[]): Promise<AssetDt
   const warranties = await tx
     .select()
     .from(schema.warranties)
-    .where(inArray(schema.warranties.assetId, rows.map((r) => r.id)))
+    .where(
+      inArray(
+        schema.warranties.assetId,
+        rows.map((r) => r.id),
+      ),
+    )
     .orderBy(asc(schema.warranties.expiresAt));
   const asOf = today();
-  return rows.map((r) => toDto(r, warranties.filter((w) => w.assetId === r.id), asOf));
+  return rows.map((r) =>
+    toDto(
+      r,
+      warranties.filter((w) => w.assetId === r.id),
+      asOf,
+    ),
+  );
 }
 
-async function requireAsset(tx: DbExecutor, identity: RequestIdentity, id: string, mode: 'read' | 'manage'): Promise<AssetRow> {
+async function requireAsset(
+  tx: DbExecutor,
+  identity: RequestIdentity,
+  id: string,
+  mode: 'read' | 'manage',
+): Promise<AssetRow> {
   const [row] = await tx.select().from(schema.assets).where(eq(schema.assets.id, id));
   if (!row) throw new ApiError('not_found', 'asset not found');
   if (mode === 'manage') assertManage(identity, ref(row.organizationId, row.id));
@@ -101,14 +132,26 @@ async function requireAsset(tx: DbExecutor, identity: RequestIdentity, id: strin
   return row;
 }
 
-export async function createAsset(identity: RequestIdentity, input: AssetCreate, options: ServiceOptions = {}): Promise<AssetDto> {
+export async function createAsset(
+  identity: RequestIdentity,
+  input: AssetCreate,
+  options: ServiceOptions = {},
+): Promise<AssetDto> {
   requireFlag(identity, FEATURES.preventiveMaintenance);
   requireUserId(identity);
   return withActor(getDb(), ctxFor(identity, options), async (tx) => {
     const property = await requireProperty(tx, identity, input.propertyId, 'read');
     assertManage(identity, ref(property.organizationId));
     if (input.estateId) {
-      const [estate] = await tx.select({ id: schema.estates.id }).from(schema.estates).where(and(eq(schema.estates.id, input.estateId), eq(schema.estates.organizationId, property.organizationId)));
+      const [estate] = await tx
+        .select({ id: schema.estates.id })
+        .from(schema.estates)
+        .where(
+          and(
+            eq(schema.estates.id, input.estateId),
+            eq(schema.estates.organizationId, property.organizationId),
+          ),
+        );
       if (!estate) throw new ApiError('validation_failed', 'unknown estate for this organisation');
     }
     const [row] = await tx
@@ -132,14 +175,23 @@ export async function createAsset(identity: RequestIdentity, input: AssetCreate,
       entityType: 'asset',
       entityId: row!.id,
       organizationId: property.organizationId,
-      after: { name: input.name, category: input.category, nextServiceAt: input.nextServiceAt ?? null },
+      after: {
+        name: input.name,
+        category: input.category,
+        nextServiceAt: input.nextServiceAt ?? null,
+      },
       correlationId: options.correlationId,
     });
     return (await withWarranties(tx, [row!]))[0]!;
   });
 }
 
-export async function updateAsset(identity: RequestIdentity, id: string, input: AssetUpdate, options: ServiceOptions = {}): Promise<AssetDto> {
+export async function updateAsset(
+  identity: RequestIdentity,
+  id: string,
+  input: AssetUpdate,
+  options: ServiceOptions = {},
+): Promise<AssetDto> {
   requireFlag(identity, FEATURES.preventiveMaintenance);
   requireUserId(identity);
   return withActor(getDb(), ctxFor(identity, options), async (tx) => {
@@ -153,7 +205,9 @@ export async function updateAsset(identity: RequestIdentity, id: string, input: 
         ...(input.installedAt !== undefined ? { installedAt: input.installedAt } : {}),
         ...(input.condition !== undefined ? { condition: input.condition } : {}),
         ...(input.nextServiceAt !== undefined ? { nextServiceAt: input.nextServiceAt } : {}),
-        ...(input.serviceIntervalDays !== undefined ? { serviceIntervalDays: input.serviceIntervalDays } : {}),
+        ...(input.serviceIntervalDays !== undefined
+          ? { serviceIntervalDays: input.serviceIntervalDays }
+          : {}),
         ...(input.notes !== undefined ? { notes: input.notes } : {}),
         ...(input.estateId !== undefined ? { estateId: input.estateId } : {}),
       })
@@ -164,7 +218,11 @@ export async function updateAsset(identity: RequestIdentity, id: string, input: 
       entityType: 'asset',
       entityId: id,
       organizationId: current.organizationId,
-      before: { name: current.name, condition: current.condition, nextServiceAt: current.nextServiceAt },
+      before: {
+        name: current.name,
+        condition: current.condition,
+        nextServiceAt: current.nextServiceAt,
+      },
       after: input,
       correlationId: options.correlationId,
     });
@@ -174,10 +232,17 @@ export async function updateAsset(identity: RequestIdentity, id: string, input: 
 
 export async function getAsset(identity: RequestIdentity, id: string): Promise<AssetDto> {
   requireFlag(identity, FEATURES.preventiveMaintenance);
-  return withActor(getDb(), identity.ctx, async (tx) => (await withWarranties(tx, [await requireAsset(tx, identity, id, 'read')]))[0]!);
+  return withActor(
+    getDb(),
+    identity.ctx,
+    async (tx) => (await withWarranties(tx, [await requireAsset(tx, identity, id, 'read')]))[0]!,
+  );
 }
 
-export async function listAssets(identity: RequestIdentity, query: AssetListQuery): Promise<Page<AssetDto>> {
+export async function listAssets(
+  identity: RequestIdentity,
+  query: AssetListQuery,
+): Promise<Page<AssetDto>> {
   requireFlag(identity, FEATURES.preventiveMaintenance);
   requireUserId(identity);
   const staff = isStaffIdentity(identity);
@@ -194,24 +259,40 @@ export async function listAssets(identity: RequestIdentity, query: AssetListQuer
           orgId ? eq(schema.assets.organizationId, orgId) : undefined,
           query.propertyId ? eq(schema.assets.propertyId, query.propertyId) : undefined,
           query.estateId ? eq(schema.assets.estateId, query.estateId) : undefined,
-          query.serviceDueBefore ? lte(schema.assets.nextServiceAt, query.serviceDueBefore) : undefined,
-          cursor ? or(lt(schema.assets.createdAt, cursor.createdAt), and(eq(schema.assets.createdAt, cursor.createdAt), lt(schema.assets.id, cursor.id))) : undefined,
+          query.serviceDueBefore
+            ? lte(schema.assets.nextServiceAt, query.serviceDueBefore)
+            : undefined,
+          cursor
+            ? or(
+                lt(schema.assets.createdAt, cursor.createdAt),
+                and(eq(schema.assets.createdAt, cursor.createdAt), lt(schema.assets.id, cursor.id)),
+              )
+            : undefined,
         ),
       )
       .orderBy(desc(schema.assets.createdAt), desc(schema.assets.id))
       .limit(query.limit + 1);
     const page = rows.slice(0, query.limit);
     const last = rows.length > query.limit ? page[page.length - 1] : null;
-    return { items: await withWarranties(tx, page), nextCursor: last ? encodeCursor(last.createdAt, last.id) : null };
+    return {
+      items: await withWarranties(tx, page),
+      nextCursor: last ? encodeCursor(last.createdAt, last.id) : null,
+    };
   });
 }
 
-export async function addWarranty(identity: RequestIdentity, assetId: string, input: WarrantyCreate, options: ServiceOptions = {}): Promise<AssetDto> {
+export async function addWarranty(
+  identity: RequestIdentity,
+  assetId: string,
+  input: WarrantyCreate,
+  options: ServiceOptions = {},
+): Promise<AssetDto> {
   requireFlag(identity, FEATURES.preventiveMaintenance);
   requireUserId(identity);
   return withActor(getDb(), ctxFor(identity, options), async (tx) => {
     const asset = await requireAsset(tx, identity, assetId, 'manage');
-    if (input.startsAt && input.startsAt > input.expiresAt) throw new ApiError('validation_failed', 'warranty expires before it starts');
+    if (input.startsAt && input.startsAt > input.expiresAt)
+      throw new ApiError('validation_failed', 'warranty expires before it starts');
     const [w] = await tx
       .insert(schema.warranties)
       .values({

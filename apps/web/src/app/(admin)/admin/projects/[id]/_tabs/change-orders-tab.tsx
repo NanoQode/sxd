@@ -32,9 +32,8 @@ export async function ChangeOrdersTab({ identity, shell }: { identity: RequestId
                 { name: 'scheduleDeltaDays', label: 'Schedule delta (days)', type: 'number', defaultValue: 0, min: -3650, max: 3650 },
                 { name: 'requiresCustomerApproval', label: 'Requires customer approval', type: 'checkbox', defaultValue: true },
                 { name: 'requiresStaffApproval', label: 'Requires staff approval', type: 'checkbox', defaultValue: true },
-                { name: 'description', label: 'Description', type: 'textarea' },
+                { name: 'description', label: 'Description', type: 'textarea', emptyAs: 'null' },
               ]}
-              toBody={(v) => ({ ...v, description: v.description || null })}
             />
           ) : null
         }

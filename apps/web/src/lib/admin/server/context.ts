@@ -8,8 +8,9 @@ import {
   type ResourceRef,
   type StaffPermission,
 } from '@simplexd/domain/authz';
-import { createFinanceRuntime, type FinanceActor, type FinanceRuntime } from '@simplexd/finance';
+import type { FinanceActor, FinanceRuntime } from '@simplexd/finance';
 import type { RequestIdentity } from '@/lib/auth/session';
+import { getFinanceRuntime } from '@/server/finance/runtime';
 
 /**
  * Helpers for admin page read models. Every function here runs under the
@@ -75,15 +76,10 @@ export async function orgNames(tx: Transaction, ids: Iterable<string | null | un
   return map;
 }
 
-const cache = globalThis as unknown as { __simplexdAdminFinanceRuntime?: FinanceRuntime };
-
-/** Finance runtime and actor for server components (no HTTP request in scope). */
+/** Finance runtime (shared with the API routes) and actor for server components. */
 export function financeFor(identity: RequestIdentity): { rt: FinanceRuntime; fa: FinanceActor } {
-  if (!cache.__simplexdAdminFinanceRuntime) {
-    cache.__simplexdAdminFinanceRuntime = createFinanceRuntime({ db: getDb() });
-  }
   return {
-    rt: cache.__simplexdAdminFinanceRuntime,
+    rt: getFinanceRuntime(),
     fa: {
       actor: identity.actor,
       ctx: { ...identity.ctx },
@@ -104,4 +100,16 @@ export function maskEmail(email: string): string {
 export function maskPhone(phone: string | null): string | null {
   if (!phone) return null;
   return `${phone.slice(0, 4)}***${phone.slice(-2)}`;
+}
+
+/** A server read that may be refused (permission, MFA, feature flag) without failing the page. */
+export type Loaded<T> = { ok: true; value: T } | { ok: false; code: string; message: string };
+
+export async function attempt<T>(fn: () => Promise<T>): Promise<Loaded<T>> {
+  try {
+    return { ok: true, value: await fn() };
+  } catch (err) {
+    if (err instanceof ApiError) return { ok: false, code: err.code, message: err.message };
+    throw err;
+  }
 }

@@ -175,11 +175,12 @@ export function invoiceIssued(input: InvoiceIssuedInput): JournalDraft {
       }),
     );
     lines.push(
+      // journal_lines.entity_id is a uuid, so the line stays linked to the invoice;
+      // the owner is carried in organization_id (text), which is how owner
+      // statements group the liability.
       credit(ACCOUNTS.RENT_COLLECTED_PAYABLE_TO_OWNERS, subtotal, {
-        entityType: 'organization',
-        ...(invoice.ownerOrganizationId
-          ? { entityId: invoice.ownerOrganizationId, organizationId: invoice.ownerOrganizationId }
-          : {}),
+        ...entity,
+        organizationId: invoice.ownerOrganizationId ?? invoice.organizationId,
         memo: `Rent payable to owner for ${label}`,
       }),
     );

@@ -3,7 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Eye, Upload } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import type { EvidenceDto, Page, ProjectDto } from '@simplexd/contracts';
 import {
   Alert,
@@ -26,9 +26,29 @@ import {
 import { errorMessage } from '@/lib/api/client-fetch';
 import { partnerFetch, withQuery } from '@/lib/partner/api';
 import { usePartner } from '@/lib/partner/context';
+import { classifyFailure } from '@/lib/partner/offline/sync';
 import { newOfflineClientId } from '@/lib/partner/offline/types';
 import { openSignedDownload, uploadFile } from '@/lib/partner/upload';
 import { DualTime, LoadingBlock, RequestFailed } from '../common';
+
+/** An uploaded file waiting for its malware scan before it can be linked. */
+interface PendingLink {
+  fileId: string;
+  name: string;
+  projectId: string;
+  body: {
+    fileId: string;
+    kind: 'photo' | 'video' | 'document';
+    caption: string | null;
+    siteVisitId: string | null;
+    /** Stable across retries, so a lost response never links the file twice. */
+    offlineClientId: string;
+  };
+  state: 'waiting' | 'linking' | 'refused';
+  reason: string | null;
+}
+
+const RETRY_MS = 15_000;
 
 export function EvidencePage() {
   const p = usePartner();
@@ -39,6 +59,7 @@ export function EvidencePage() {
   const siteVisitId = params.get('siteVisitId');
   const [caption, setCaption] = useState('');
   const [stage, setStage] = useState<string | null>(null);
+  const [pending, setPending] = useState<PendingLink[]>([]);
   const projects = useQuery({
     queryKey: ['partner', 'projects'],
     queryFn: () => partnerFetch<Page<ProjectDto>>(withQuery('/api/v1/projects', { limit: 100 })),
@@ -55,6 +76,43 @@ export function EvidencePage() {
       ),
     enabled: effectiveProject !== '',
   });
+  /** Links an uploaded file; quarantined files stay in the waiting list. */
+  const link = useCallback(
+    async (item: PendingLink): Promise<'linked' | 'waiting' | 'refused'> => {
+      setPending((list) =>
+        list.map((x) => (x.fileId === item.fileId ? { ...x, state: 'linking' } : x)),
+      );
+      try {
+        await partnerFetch<EvidenceDto & { idempotentReplay: boolean }>(
+          `/api/v1/projects/${item.projectId}/evidence`,
+          { body: item.body },
+        );
+        setPending((list) => list.filter((x) => x.fileId !== item.fileId));
+        void qc.invalidateQueries({ queryKey: ['partner', 'evidence'] });
+        return 'linked';
+      } catch (err) {
+        const kind = classifyFailure(err);
+        const next: PendingLink['state'] = kind === 'definitive' ? 'refused' : 'waiting';
+        setPending((list) =>
+          list.map((x) =>
+            x.fileId === item.fileId ? { ...x, state: next, reason: errorMessage(err) } : x,
+          ),
+        );
+        return next;
+      }
+    },
+    [qc],
+  );
+
+  // While files wait for their scan, retry the link periodically.
+  useEffect(() => {
+    if (!pending.some((x) => x.state === 'waiting')) return;
+    const t = setInterval(() => {
+      for (const item of pending) if (item.state === 'waiting') void link(item);
+    }, RETRY_MS);
+    return () => clearInterval(t);
+  }, [pending, link]);
+
   const upload = useMutation({
     mutationFn: async (file: File) => {
       const res = await uploadFile(
@@ -63,45 +121,44 @@ export function EvidencePage() {
         setStage,
       );
       if (res.outcome === 'rejected')
-        throw new Error(res.file.statusReason ?? 'the file was rejected');
+        throw new Error(res.file.statusReason ?? 'the file was rejected after inspection');
       setStage('link');
-      const kind = file.type.startsWith('image/')
+      const kind: PendingLink['body']['kind'] = file.type.startsWith('image/')
         ? 'photo'
         : file.type.startsWith('video/')
           ? 'video'
           : 'document';
-      return partnerFetch<EvidenceDto & { idempotentReplay: boolean }>(
-        `/api/v1/projects/${effectiveProject}/evidence`,
-        {
-          body: {
-            fileId: res.file.id,
-            kind,
-            caption: caption.trim() || null,
-            siteVisitId: siteVisitId ?? null,
-            offlineClientId: newOfflineClientId('evidence'),
-          },
+      const item: PendingLink = {
+        fileId: res.file.id,
+        name: file.name,
+        projectId: effectiveProject,
+        body: {
+          fileId: res.file.id,
+          kind,
+          caption: caption.trim() || null,
+          siteVisitId: siteVisitId ?? null,
+          offlineClientId: newOfflineClientId('evidence'),
         },
-      );
+        state: 'linking',
+        reason: null,
+      };
+      setPending((list) => [...list, item]);
+      return link(item);
     },
-    onSuccess: () => {
-      toast({ tone: 'success', title: 'Evidence linked' });
+    onSuccess: (outcome) => {
       setCaption('');
-      void qc.invalidateQueries({ queryKey: ['partner', 'evidence'] });
+      if (outcome === 'linked') toast({ tone: 'success', title: 'Evidence linked' });
+      else if (outcome === 'waiting')
+        toast({
+          tone: 'info',
+          title: 'Uploaded; waiting for the malware scan',
+          description:
+            'It is linked automatically once the scan passes while this page is open, or use Try linking now.',
+        });
+      else toast({ tone: 'danger', title: 'The server refused to link the file' });
     },
-    onError: (err) => {
-      const msg = errorMessage(err);
-      toast({
-        tone: 'danger',
-        title:
-          msg.includes('malware') || msg.includes('scan')
-            ? 'Uploaded, scan pending'
-            : 'Could not add evidence',
-        description:
-          msg.includes('malware') || msg.includes('scan')
-            ? 'The file is being scanned. Link it from the field-capture sync later, or retry here once the scan passes.'
-            : msg,
-      });
-    },
+    onError: (err) =>
+      toast({ tone: 'danger', title: 'Could not add evidence', description: errorMessage(err) }),
     onSettled: () => setStage(null),
   });
 
@@ -185,6 +242,71 @@ export function EvidencePage() {
               </div>
             </CardContent>
           </Card>
+          {pending.length > 0 ? (
+            <Card>
+              <CardHeader>
+                <CardTitle>Waiting to be linked</CardTitle>
+                <p className="text-xs text-fg-muted">
+                  Uploaded files become evidence only after the malware scan passes. Retries run
+                  every {RETRY_MS / 1000} seconds while this page is open; the same link id is
+                  reused, so nothing is linked twice.
+                </p>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-2">
+                  {pending.map((x) => (
+                    <li
+                      key={x.fileId}
+                      className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border p-3 text-sm"
+                    >
+                      <div className="min-w-0">
+                        <p className="flex flex-wrap items-center gap-2 font-medium">
+                          {x.name}
+                          <Badge
+                            tone={
+                              x.state === 'refused'
+                                ? 'danger'
+                                : x.state === 'linking'
+                                  ? 'info'
+                                  : 'warning'
+                            }
+                          >
+                            {x.state === 'refused'
+                              ? 'Refused'
+                              : x.state === 'linking'
+                                ? 'Linking…'
+                                : 'Scan pending'}
+                          </Badge>
+                        </p>
+                        {x.reason ? <p className="text-xs text-fg-muted">{x.reason}</p> : null}
+                      </div>
+                      <div className="flex gap-2">
+                        {x.state !== 'refused' ? (
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            loading={x.state === 'linking'}
+                            onClick={() => void link(x)}
+                          >
+                            Try linking now
+                          </Button>
+                        ) : null}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() =>
+                            setPending((list) => list.filter((y) => y.fileId !== x.fileId))
+                          }
+                        >
+                          Dismiss
+                        </Button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
+          ) : null}
           {evidence.isPending ? (
             <LoadingBlock label="Loading evidence" />
           ) : evidence.isError ? (

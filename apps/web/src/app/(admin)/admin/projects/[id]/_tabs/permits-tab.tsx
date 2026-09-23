@@ -34,20 +34,8 @@ export async function PermitsTab({ identity, shell }: { identity: RequestIdentit
               { name: 'statutorySource', label: 'Source of the statutory figure', type: 'textarea', hint: 'Regulation, circular or official page. Required when a target is entered.' },
               { name: 'notes', label: 'Notes', type: 'textarea' },
             ]}
-            toBody={(v) => ({
-              jurisdiction: v.jurisdiction,
-              authority: v.authority,
-              permitType: v.permitType,
-              documentType: v.documentType || null,
-              applicationReference: v.applicationReference || null,
-              feesKobo: v.feesKobo || null,
-              propertyId: p.propertyId,
-              statutoryTarget:
-                v.statutoryDays && v.statutorySource
-                  ? { days: Number(v.statutoryDays), basis: v.statutoryBasis || 'business', sourceNote: v.statutorySource }
-                  : null,
-              notes: v.notes || null,
-            })}
+            transform="permitApplication"
+            extraBody={{ propertyId: p.propertyId }}
           />
         ) : null
       }
@@ -99,9 +87,8 @@ export async function PermitsTab({ identity, shell }: { identity: RequestIdentit
                   fields={[
                     { name: 'eventType', label: 'Event', type: 'select', required: true, options: permitEventTypeSchema.options.map((e) => ({ value: e, label: humanize(e) })) },
                     { name: 'occurredAt', label: 'Occurred on', type: 'date', required: true },
-                    { name: 'note', label: 'Note', type: 'textarea' },
+                    { name: 'note', label: 'Note', type: 'textarea', emptyAs: 'null' },
                   ]}
-                  toBody={(v) => ({ ...v, note: v.note || null })}
                 />
               </div>
             ) : null}

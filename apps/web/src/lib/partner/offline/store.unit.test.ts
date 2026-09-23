@@ -1,20 +1,35 @@
 import { describe, expect, it } from 'vitest';
-import type { SiteVisitSyncResult } from '@simplexd/contracts';
-import { decryptJson, getSessionKey, hasSessionKey, type KeyStore } from './crypto';
-import { createMemoryStorage, recordKey } from './storage';
-import { createDraftStore } from './store';
+import type { SiteVisitSyncItem, SiteVisitSyncResult } from '@simplexd/contracts';
+import { ApiClientError } from '@/lib/api/client-fetch';
 import {
+  decryptJson,
+  getSessionKey,
+  hasSessionKey,
+  purgeOtherSessionKeys,
+  type KeyStore,
+} from './crypto';
+import { createMemoryStorage, recordKey, type DraftStorage } from './storage';
+import { createDraftStore, type DraftStore } from './store';
+import {
+  OfflineError,
   applySyncResult,
   buildSyncItem,
+  classifyFailure,
+  evidenceOfflineId,
   isDraftFullyConfirmed,
+  syncReportDraft,
   syncVisitDraft,
   type SyncDeps,
 } from './sync';
-import type { PhotoDraft, VisitDraft } from './types';
+import type { PhotoDraft, ReportDraft, VisitDraft } from './types';
 
 function memoryKeyStore(): KeyStore {
   const m = new Map<string, string>();
   return {
+    get length() {
+      return m.size;
+    },
+    key: (i) => [...m.keys()][i] ?? null,
     getItem: (k) => m.get(k) ?? null,
     setItem: (k, v) => void m.set(k, v),
     removeItem: (k) => void m.delete(k),
@@ -145,9 +160,192 @@ describe('offline draft store', () => {
   });
 });
 
-describe('sync result handling', () => {
-  const at = '2026-09-23T10:00:00.000Z';
+describe('session keys on a shared device', () => {
+  it("purges another user's key left in the tab, so their drafts stay sealed", async () => {
+    const storage = createMemoryStorage();
+    const keys = memoryKeyStore();
+    keys.setItem('unrelated', 'kept');
+    const keyA = await getSessionKey('user-a', keys);
+    await createDraftStore({ userId: 'user-a', key: keyA, storage }).put(visit());
+    // User A's session expires without sign-out; user B opens the workspace in the same tab.
+    expect(purgeOtherSessionKeys('user-b', keys)).toBe(1);
+    expect(hasSessionKey('user-a', keys)).toBe(false);
+    expect(keys.getItem('unrelated')).toBe('kept');
+    // Even user A's own store, re-created later in this tab, now sees a locked draft.
+    const later = createDraftStore({
+      userId: 'user-a',
+      key: await getSessionKey('user-a', keys),
+      storage,
+    });
+    expect((await later.list())[0]?.kind).toBe('locked');
+  });
+});
 
+/* -------------------------------------------------------------------------- */
+/* Sync against a fake server that keys records the way the real one does      */
+/* -------------------------------------------------------------------------- */
+
+const PROJECT = '6f1d2a3b-0000-4000-8000-000000000001';
+const SCHEDULED = '6f1d2a3b-0000-4000-8000-0000000000aa';
+const at = '2026-09-23T10:00:00.000Z';
+
+function apiError(status: number, code: string, message: string) {
+  return new ApiClientError(status, { error: { code, message, correlationId: 'corr-1' } });
+}
+
+/**
+ * Mirrors the server contracts that matter for duplicates: visits replay on
+ * their offline id, evidence replays on its offline id (the server's own
+ * site-visit sync links files as `${offlineClientId}:${fileId}`), files are
+ * quarantined until "scanned".
+ */
+function fakeServer() {
+  const visits = new Map<string, { id: string; submits: number }>();
+  const evidence = new Map<string, { id: string; fileId: string; caption: string | null }>();
+  const fileStatus = new Map<string, 'scanning' | 'clean' | 'infected'>();
+  const calls: string[] = [];
+  let nextFile = 0;
+  let failNext: ((path: string) => Error | null) | null = null;
+  let dropResponseOf: string | null = null;
+
+  function linkEvidence(body: {
+    fileId: string;
+    offlineClientId: string;
+    caption?: string | null;
+  }) {
+    const existing = evidence.get(body.offlineClientId);
+    if (existing) return { ...existing, idempotentReplay: true };
+    const status = fileStatus.get(body.fileId);
+    if (status === 'scanning')
+      throw apiError(409, 'file_quarantined', 'the file has not passed malware scanning yet');
+    if (status !== 'clean') throw apiError(422, 'file_rejected', `the file is ${status}`);
+    const row = {
+      id: `ev-${evidence.size + 1}`,
+      fileId: body.fileId,
+      caption: body.caption ?? null,
+    };
+    evidence.set(body.offlineClientId, row);
+    return { ...row, idempotentReplay: false };
+  }
+
+  const api: SyncDeps['api'] = async <T>(path: string, init?: { body?: unknown }) => {
+    calls.push(path);
+    const injected = failNext?.(path) ?? null;
+    if (injected) {
+      failNext = null;
+      throw injected;
+    }
+    let response: unknown;
+    if (path === '/api/v1/files/upload-intents') {
+      nextFile += 1;
+      const fileId = `00000000-0000-4000-8000-${String(nextFile).padStart(12, '0')}`;
+      fileStatus.set(fileId, 'scanning');
+      response = {
+        fileId,
+        status: 'pending_upload',
+        expiresAt: at,
+        upload: { kind: 'single', method: 'PUT', url: `https://s3.local/${fileId}`, headers: {} },
+      };
+    } else if (/\/api\/v1\/files\/.+\/finalize$/.test(path)) {
+      response = { outcome: 'scanning', file: { statusReason: null } };
+    } else if (path === `/api/v1/projects/${PROJECT}/evidence`) {
+      response = linkEvidence(init?.body as { fileId: string; offlineClientId: string });
+    } else if (path === '/api/v1/site-visits/sync') {
+      const item = (init?.body as { items: SiteVisitSyncItem[] }).items[0]!;
+      const existing = visits.get(item.offlineClientId);
+      const id = existing?.id ?? item.siteVisitId ?? SCHEDULED.replace('aa', 'bb');
+      visits.set(item.offlineClientId, { id, submits: (existing?.submits ?? 0) + 1 });
+      const linked = item.evidenceFileIds.map((fileId) => {
+        try {
+          const r = linkEvidence({ fileId, offlineClientId: `${item.offlineClientId}:${fileId}` });
+          return {
+            fileId,
+            outcome: r.idempotentReplay ? ('replayed' as const) : ('created' as const),
+            evidenceId: r.id,
+            reason: null,
+          };
+        } catch (err) {
+          return {
+            fileId,
+            outcome: 'rejected' as const,
+            evidenceId: null,
+            reason: (err as Error).message,
+          };
+        }
+      });
+      response = {
+        results: [
+          {
+            offlineClientId: item.offlineClientId,
+            outcome: existing ? 'replayed' : 'created',
+            siteVisitId: id,
+            code: null,
+            reason: null,
+            evidence: linked,
+          },
+        ],
+      };
+    } else {
+      throw new Error(`unexpected ${path}`);
+    }
+    if (dropResponseOf && path === dropResponseOf) {
+      dropResponseOf = null;
+      throw new TypeError('Failed to fetch');
+    }
+    return response as T;
+  };
+
+  return {
+    api,
+    calls,
+    visits,
+    evidence,
+    scanAll(status: 'clean' | 'infected' = 'clean') {
+      for (const k of fileStatus.keys()) fileStatus.set(k, status);
+    },
+    failOnce(fn: (path: string) => Error | null) {
+      failNext = fn;
+    },
+    /** The server processes the request but the response never reaches the device. */
+    loseResponseOf(path: string) {
+      dropResponseOf = path;
+    },
+  };
+}
+
+async function draftWithPhotos(
+  over: Partial<VisitDraft>,
+  photoIds: string[],
+): Promise<{ store: DraftStore; storage: DraftStorage; draft: VisitDraft }> {
+  const storage = createMemoryStorage();
+  const key = await getSessionKey('user-a', memoryKeyStore());
+  const store = createDraftStore({ userId: 'user-a', key, storage });
+  const draft = visit({
+    ...over,
+    photos: photoIds.map((id) => photo({ id, caption: `caption ${id}` })),
+  });
+  await store.put(draft);
+  for (const id of photoIds) {
+    await store.putPhotoBytes(draft.offlineClientId, id, 'image/jpeg', new Uint8Array([1]).buffer);
+  }
+  return { store, storage, draft };
+}
+
+function depsFor(server: ReturnType<typeof fakeServer>, store: DraftStore) {
+  let uploads = 0;
+  const deps: SyncDeps = {
+    api: server.api,
+    uploadBytes: async () => {
+      uploads += 1;
+    },
+    store,
+    now: () => new Date(at),
+    isOnline: () => true,
+  };
+  return { deps, uploads: () => uploads };
+}
+
+describe('sync result handling', () => {
   it('treats created and replayed alike and folds per-file outcomes', () => {
     const d = visit({
       photos: [
@@ -158,16 +356,11 @@ describe('sync result handling', () => {
     const result: SiteVisitSyncResult = {
       offlineClientId: d.offlineClientId,
       outcome: 'replayed',
-      siteVisitId: '6f1d2a3b-0000-4000-8000-0000000000aa',
+      siteVisitId: SCHEDULED,
       code: null,
       reason: null,
       evidence: [
-        {
-          fileId: 'f1',
-          outcome: 'replayed',
-          evidenceId: '6f1d2a3b-0000-4000-8000-0000000000e1',
-          reason: null,
-        },
+        { fileId: 'f1', outcome: 'replayed', evidenceId: 'e1', reason: null },
         {
           fileId: 'f2',
           outcome: 'rejected',
@@ -177,27 +370,16 @@ describe('sync result handling', () => {
       ],
     };
     const next = applySyncResult(d, result, at);
-    expect(next.serverVisitId).toBe(result.siteVisitId);
+    expect(next.serverVisitId).toBe(SCHEDULED);
     expect(next.syncState).toBe('partial');
-    expect(next.photos[0]).toMatchObject({
-      state: 'linked',
-      evidenceId: result.evidence[0]!.evidenceId,
-    });
+    expect(next.photos[0]).toMatchObject({ state: 'linked', evidenceId: 'e1' });
     expect(next.photos[1]).toMatchObject({ state: 'uploaded', retryable: true });
     expect(isDraftFullyConfirmed(next)).toBe(false);
     const done = applySyncResult(
       next,
       {
         ...result,
-        outcome: 'replayed',
-        evidence: [
-          {
-            fileId: 'f2',
-            outcome: 'created',
-            evidenceId: '6f1d2a3b-0000-4000-8000-0000000000e2',
-            reason: null,
-          },
-        ],
+        evidence: [{ fileId: 'f2', outcome: 'created', evidenceId: 'e2', reason: null }],
       },
       at,
     );
@@ -223,128 +405,152 @@ describe('sync result handling', () => {
       code: 'forbidden',
       reason: 'partner is not assigned to this resource',
     });
+    expect(isDraftFullyConfirmed(next)).toBe(false);
   });
 
-  it('builds a sync item that carries GPS as labelled user-provided data and only uploaded files', () => {
-    const item = buildSyncItem(
-      visit({ photos: [photo({ fileId: 'f1', state: 'uploaded' }), photo({ id: 'p2' })] }),
-    );
-    expect(item.projectId).toBeDefined();
+  it('builds a sync item with GPS labelled as user-provided and links photos separately', () => {
+    const item = buildSyncItem(visit({ photos: [photo({ fileId: 'f1', state: 'uploaded' })] }));
+    expect(item.projectId).toBe(PROJECT);
     expect(item.siteVisitId).toBeUndefined();
-    expect(item.evidenceFileIds).toEqual(['f1']);
+    expect(item.evidenceFileIds).toEqual([]);
     expect((item.checklist as { capture: { gps: { note: string } } }).capture.gps.note).toMatch(
       /not proof/i,
     );
+    expect(buildSyncItem(visit({ siteVisitId: SCHEDULED })).siteVisitId).toBe(SCHEDULED);
   });
 
-  it('uploads each photo once, links idempotently and clears the draft only after confirmation', async () => {
-    const storage = createMemoryStorage();
-    const key = await getSessionKey('user-a', memoryKeyStore());
-    const store = createDraftStore({ userId: 'user-a', key, storage });
-    const siteVisitId = '6f1d2a3b-0000-4000-8000-0000000000aa';
-    const draft = visit({
-      siteVisitId,
-      photos: [
-        photo({ id: 'p1' }),
-        photo({ id: 'p2', fileId: 'f2', state: 'uploaded', retryable: true }),
-      ],
-    });
-    await store.put(draft);
-    await store.putPhotoBytes(
-      draft.offlineClientId,
+  it('uses the same evidence key as the server so the two link paths cannot duplicate', () => {
+    expect(evidenceOfflineId('visit_abc12345', 'f1')).toBe('visit_abc12345:f1');
+  });
+
+  it('classifies failures: only definitive API refusals reject', () => {
+    expect(classifyFailure(new TypeError('Failed to fetch'))).toBe('transient');
+    expect(classifyFailure(apiError(503, 'internal_error', 'down'))).toBe('transient');
+    expect(classifyFailure(apiError(401, 'unauthenticated', 'expired'))).toBe('transient');
+    expect(classifyFailure(apiError(429, 'rate_limited', 'slow down'))).toBe('transient');
+    expect(classifyFailure(apiError(409, 'file_quarantined', 'scan'))).toBe('quarantined');
+    expect(classifyFailure(apiError(422, 'file_rejected', 'infected'))).toBe('definitive');
+    expect(classifyFailure(apiError(403, 'forbidden', 'no'))).toBe('definitive');
+  });
+});
+
+describe('syncVisitDraft', () => {
+  it('scheduled visit: uploads once, links with metadata, replays, clears only when all photos are linked', async () => {
+    const server = fakeServer();
+    const { store, storage, draft } = await draftWithPhotos({ siteVisitId: SCHEDULED }, [
       'p1',
-      'image/jpeg',
-      new Uint8Array([1, 2, 3]).buffer,
-    );
-    const calls: string[] = [];
-    let uploads = 0;
-    let scanPending = true;
-    const api: SyncDeps['api'] = async <T>(path: string, init?: { body?: unknown }) => {
-      calls.push(path);
-      if (path === '/api/v1/files/upload-intents') {
-        return {
-          fileId: 'f1',
-          status: 'pending_upload',
-          expiresAt: at,
-          upload: { kind: 'single', method: 'PUT', url: 'https://s3.local/f1', headers: {} },
-        } as T;
-      }
-      if (path === '/api/v1/files/f1/finalize')
-        return { outcome: 'scanning', file: { statusReason: null } } as T;
-      if (path.endsWith('/evidence')) {
-        const body = init?.body as { fileId: string; offlineClientId: string };
-        expect(body.offlineClientId).toBe(
-          `${draft.offlineClientId}.${body.fileId === 'f1' ? 'p1' : 'p2'}`,
-        );
-        if (body.fileId === 'f2' && scanPending) {
-          throw Object.assign(new Error('the file has not passed malware scanning yet'), {
-            code: 'file_quarantined',
-          });
-        }
-        return { id: `ev-${body.fileId}`, idempotentReplay: false } as T;
-      }
-      if (path === '/api/v1/site-visits/sync') {
-        const item = (init?.body as { items: Array<{ evidenceFileIds: string[] }> }).items[0]!;
-        return {
-          results: [
-            {
-              offlineClientId: draft.offlineClientId,
-              outcome: 'created',
-              siteVisitId,
-              code: null,
-              reason: null,
-              evidence: item.evidenceFileIds.map((fileId) => ({
-                fileId,
-                outcome: fileId === 'f2' && scanPending ? 'rejected' : 'replayed',
-                evidenceId: fileId === 'f2' && scanPending ? null : `ev-${fileId}`,
-                reason:
-                  fileId === 'f2' && scanPending
-                    ? 'the file has not passed malware scanning yet'
-                    : null,
-              })),
-            },
-          ],
-        } as T;
-      }
-      throw new Error(`unexpected ${path}`);
-    };
-    const deps: SyncDeps = {
-      api,
-      uploadBytes: async () => {
-        uploads += 1;
-      },
-      store,
-      now: () => new Date(at),
-      isOnline: () => true,
-    };
+      'p2',
+    ]);
+    const { deps, uploads } = depsFor(server, store);
+
+    // First attempt: files are still being scanned.
     const first = await syncVisitDraft(draft, deps);
-    expect(uploads).toBe(1);
-    expect(first.cleared).toBe(false);
+    expect(uploads()).toBe(2);
     expect(first.visitOutcome).toBe('created');
+    expect(first.cleared).toBe(false);
     expect(first.draft.syncState).toBe('partial');
-    expect(first.draft.photos.find((p) => p.id === 'p1')).toMatchObject({
-      fileId: 'f1',
-      state: 'linked',
-    });
-    expect(first.draft.photos.find((p) => p.id === 'p2')).toMatchObject({
-      state: 'uploaded',
-      retryable: true,
-    });
+    expect(first.draft.photos.every((p) => p.state === 'uploaded' && p.retryable)).toBe(true);
+    expect(first.message).toMatch(/waiting for the malware scan/);
     expect((await store.get(draft.offlineClientId))?.kind).toBe('visit');
 
-    // Second attempt after the scan: no new upload, p1 is not re-linked, and the draft clears.
-    scanPending = false;
-    calls.length = 0;
+    // Scan passes; the retry links both photos and replays the visit.
+    server.scanAll('clean');
+    server.calls.length = 0;
     const second = await syncVisitDraft(first.draft, deps);
-    expect(uploads).toBe(1);
-    expect(calls.filter((c) => c === '/api/v1/files/upload-intents')).toHaveLength(0);
-    expect(calls.filter((c) => c.endsWith('/evidence'))).toHaveLength(1);
+    expect(uploads()).toBe(2);
+    expect(server.calls.filter((c) => c.endsWith('/upload-intents'))).toHaveLength(0);
+    expect(second.visitOutcome).toBe('replayed');
     expect(second.cleared).toBe(true);
+    expect(server.visits.get(draft.offlineClientId)?.submits).toBe(2);
+    expect(server.evidence.size).toBe(2);
+    expect([...server.evidence.values()].map((e) => e.caption).sort()).toEqual([
+      'caption p1',
+      'caption p2',
+    ]);
     expect(await store.get(draft.offlineClientId)).toBeNull();
-    expect(await storage.getBlob('user-a|visit_abc12345|p1')).toBeUndefined();
+    expect(await storage.getBlob(`user-a|${draft.offlineClientId}|p1`)).toBeUndefined();
   });
 
-  it('keeps the draft intact when the network fails mid-way', async () => {
+  it('field visit: the visit is created first, then photos are linked to it', async () => {
+    const server = fakeServer();
+    const { store, draft } = await draftWithPhotos({}, ['p1']);
+    const { deps } = depsFor(server, store);
+    server.scanAll('clean');
+    // Files are marked clean as soon as they exist in this run.
+    const origApi = deps.api;
+    deps.api = async <T>(path: string, init?: { body?: unknown }) => {
+      const r = await origApi<T>(path, init);
+      server.scanAll('clean');
+      return r;
+    };
+    const out = await syncVisitDraft(draft, deps);
+    expect(out.visitOutcome).toBe('created');
+    expect(out.cleared).toBe(true);
+    const syncIdx = server.calls.indexOf('/api/v1/site-visits/sync');
+    const linkIdx = server.calls.findIndex((c) => c.endsWith('/evidence'));
+    expect(syncIdx).toBeGreaterThan(-1);
+    expect(linkIdx).toBeGreaterThan(syncIdx);
+    expect(server.evidence.size).toBe(1);
+  });
+
+  it('a lost response followed by a retry replays instead of duplicating', async () => {
+    const server = fakeServer();
+    const { store, draft } = await draftWithPhotos({ siteVisitId: SCHEDULED }, ['p1']);
+    const { deps } = depsFor(server, store);
+    const first = await syncVisitDraft(draft, deps); // uploads; link is quarantined
+    server.scanAll('clean');
+    // The server links the evidence and records the visit, but both responses are lost.
+    server.loseResponseOf(`/api/v1/projects/${PROJECT}/evidence`);
+    const second = await syncVisitDraft(first.draft, deps);
+    expect(second.cleared).toBe(false);
+    expect(second.draft.lastSyncError?.reason).toBe('Failed to fetch');
+    server.loseResponseOf('/api/v1/site-visits/sync');
+    const third = await syncVisitDraft(second.draft, deps);
+    expect(third.cleared).toBe(false);
+    const fourth = await syncVisitDraft(third.draft, deps);
+    expect(fourth.cleared).toBe(true);
+    expect(fourth.visitOutcome).toBe('replayed');
+    expect(server.evidence.size).toBe(1);
+    expect(server.visits.size).toBe(1);
+  });
+
+  it('a network failure while linking keeps the photo instead of rejecting it', async () => {
+    const server = fakeServer();
+    const { store, draft } = await draftWithPhotos({ siteVisitId: SCHEDULED }, ['p1']);
+    const { deps } = depsFor(server, store);
+    const first = await syncVisitDraft(draft, deps);
+    server.scanAll('clean');
+    server.failOnce((path) =>
+      path.endsWith('/evidence') ? new TypeError('Failed to fetch') : null,
+    );
+    const second = await syncVisitDraft(first.draft, deps);
+    expect(second.cleared).toBe(false);
+    expect(second.draft.photos[0]).toMatchObject({ state: 'uploaded' });
+    expect(second.draft.syncState).toBe('partial');
+    expect((await store.get(draft.offlineClientId))?.kind).toBe('visit');
+    const third = await syncVisitDraft(second.draft, deps);
+    expect(third.cleared).toBe(true);
+    expect(server.evidence.size).toBe(1);
+  });
+
+  it('a photo the server refuses keeps the draft with the reason until it is removed', async () => {
+    const server = fakeServer();
+    const { store, draft } = await draftWithPhotos({ siteVisitId: SCHEDULED }, ['p1']);
+    const { deps } = depsFor(server, store);
+    const first = await syncVisitDraft(draft, deps);
+    server.scanAll('infected');
+    const second = await syncVisitDraft(first.draft, deps);
+    expect(second.cleared).toBe(false);
+    expect(second.draft.photos[0]).toMatchObject({ state: 'rejected', retryable: false });
+    expect(second.message).toMatch(/refused/);
+    expect((await store.get(draft.offlineClientId))?.kind).toBe('visit');
+    // The inspector removes the refused photo; the next sync replays and clears.
+    const third = await syncVisitDraft({ ...second.draft, photos: [] }, deps);
+    expect(third.cleared).toBe(true);
+    expect(third.visitOutcome).toBe('replayed');
+  });
+
+  it('keeps the draft intact when the network fails before anything reaches the server', async () => {
     const storage = createMemoryStorage();
     const key = await getSessionKey('user-a', memoryKeyStore());
     const store = createDraftStore({ userId: 'user-a', key, storage });
@@ -359,8 +565,112 @@ describe('sync result handling', () => {
       isOnline: () => true,
     });
     expect(outcome.cleared).toBe(false);
+    expect(outcome.visitOutcome).toBe('not_attempted');
     expect(outcome.draft.syncState).toBe('unsynced');
     expect(outcome.draft.lastSyncError?.reason).toBe('Failed to fetch');
     expect((await store.get(draft.offlineClientId))?.kind).toBe('visit');
+  });
+
+  it('refuses to start while offline', async () => {
+    const { store, draft } = await draftWithPhotos({}, []);
+    await expect(
+      syncVisitDraft(draft, {
+        api: async () => {
+          throw new Error('should not be called');
+        },
+        uploadBytes: async () => undefined,
+        store,
+        isOnline: () => false,
+      }),
+    ).rejects.toBeInstanceOf(OfflineError);
+  });
+});
+
+describe('syncReportDraft', () => {
+  function reportDraft(over: Partial<ReportDraft> = {}): ReportDraft {
+    return {
+      kind: 'report',
+      offlineClientId: 'report_abc12345',
+      userId: 'user-a',
+      projectId: PROJECT,
+      reportId: null,
+      title: 'Inspection report',
+      reportKind: 'inspection',
+      summary: 'Summary',
+      bodyMarkdown: 'Body',
+      scopeLimitations: '',
+      siteVisitId: null,
+      createdAt: at,
+      updatedAt: at,
+      syncState: 'unsynced',
+      serverReportId: null,
+      lastSyncAt: null,
+      lastSyncError: null,
+      ...over,
+    };
+  }
+
+  it('does not post a duplicate revision when an earlier attempt already landed', async () => {
+    const storage = createMemoryStorage();
+    const store = createDraftStore({
+      userId: 'user-a',
+      key: await getSessionKey('user-a', memoryKeyStore()),
+      storage,
+    });
+    const draft = reportDraft({ reportId: 'r1', offlineClientId: 'report_rev12345' });
+    await store.put(draft);
+    const posted: string[] = [];
+    const out = await syncReportDraft(draft, {
+      api: async <T>(path: string, init?: { body?: unknown }) => {
+        if (init?.body) posted.push(path);
+        return {
+          id: 'r1',
+          version: 3,
+          currentVersion: 2,
+          revisions: [
+            {
+              version: 2,
+              createdBy: 'user-a',
+              bodyMarkdown: 'Body',
+              summary: 'Summary',
+              scopeLimitations: null,
+            },
+          ],
+        } as T;
+      },
+      uploadBytes: async () => undefined,
+      store,
+      isOnline: () => true,
+    });
+    expect(out.cleared).toBe(true);
+    expect(posted).toEqual([]);
+    expect(out.message).toMatch(/nothing was duplicated/);
+  });
+
+  it('marks network failures unsynced and API refusals rejected', async () => {
+    const storage = createMemoryStorage();
+    const store = createDraftStore({
+      userId: 'user-a',
+      key: await getSessionKey('user-a', memoryKeyStore()),
+      storage,
+    });
+    const draft = reportDraft();
+    await store.put(draft);
+    const base = { uploadBytes: async () => undefined, store, isOnline: () => true };
+    const net = await syncReportDraft(draft, {
+      ...base,
+      api: async () => {
+        throw new TypeError('Failed to fetch');
+      },
+    });
+    expect(net.draft.syncState).toBe('unsynced');
+    const refused = await syncReportDraft(draft, {
+      ...base,
+      api: async () => {
+        throw apiError(403, 'forbidden', 'not assigned');
+      },
+    });
+    expect(refused.draft.syncState).toBe('rejected');
+    expect((await store.get(draft.offlineClientId))?.kind).toBe('report');
   });
 });

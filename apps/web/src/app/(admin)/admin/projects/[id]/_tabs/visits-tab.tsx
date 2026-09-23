@@ -30,9 +30,9 @@ export async function VisitsTab({ identity, shell }: { identity: RequestIdentity
               fields={[
                 { name: 'inspectorUserId', label: 'Inspector', type: 'select', required: true, options: inspectors, hint: 'Staff inspectors and accepted partner assignments.' },
                 { name: 'scheduledAt', label: 'Scheduled at', type: 'datetime', required: true },
-                { name: 'instructions', label: 'Instructions and checklist notes', type: 'textarea' },
+                { name: 'instructions', label: 'Instructions and checklist notes', type: 'textarea', emptyAs: 'null' },
               ]}
-              toBody={(v) => ({ ...v, instructions: v.instructions || null, serviceRequestId: p.serviceRequestId, propertyId: p.propertyId })}
+              extraBody={{ serviceRequestId: p.serviceRequestId, propertyId: p.propertyId }}
             />
           ) : null
         }
