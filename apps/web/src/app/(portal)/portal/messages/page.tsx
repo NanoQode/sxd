@@ -1,14 +1,17 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import { Badge, DataTable, EmptyState, PageHeader, formatDateTimeLabel, humanize } from '@simplexd/ui';
 import { requireSignedIn } from '@/lib/auth/session';
-import { listConversations } from '@/server/portal/lists';
+import { listConversations } from '@/server/conversations/service';
 
 export const metadata: Metadata = { title: 'Messages' };
 export const dynamic = 'force-dynamic';
 
-export default async function MessagesPage() {
+export default async function MessagesPage({ searchParams }: { searchParams: Promise<{ status?: string; cursor?: string }> }) {
   const identity = await requireSignedIn('/portal/messages');
-  const conversations = await listConversations(identity);
+  const { status: statusParam, cursor } = await searchParams;
+  const status = statusParam === 'closed' || statusParam === 'all' ? statusParam : 'open';
+  const page = await listConversations(identity, { status, limit: 50, cursor });
   const zone = identity.profile?.timeZone ?? 'Africa/Lagos';
   return (
     <div className="space-y-6">
@@ -16,15 +19,27 @@ export default async function MessagesPage() {
         title="Messages"
         description="Conversations with your assigned team. Internal staff-only messages are never included in your view."
       />
-      {conversations.length === 0 ? (
+      <nav aria-label="Filter conversations" className="flex flex-wrap gap-2">
+        {(['open', 'closed', 'all'] as const).map((s) => (
+          <Link
+            key={s}
+            href={`/portal/messages?status=${s}`}
+            aria-current={status === s ? 'page' : undefined}
+            className={`sx-touch inline-flex items-center rounded-full border px-3 text-sm ${status === s ? 'border-primary bg-primary-soft text-primary' : 'border-border text-fg-muted'}`}
+          >
+            {humanize(s)}
+          </Link>
+        ))}
+      </nav>
+      {page.items.length === 0 ? (
         <EmptyState
-          title="No conversations yet"
+          title={status === 'open' ? 'No open conversations' : 'No conversations'}
           description="A conversation with your team opens when a request is triaged and a contact is assigned. Until then, notes on a request are the fastest way to reach us."
         />
       ) : (
         <DataTable
           caption="Conversations"
-          rows={conversations}
+          rows={page.items}
           rowKey={(c) => c.id}
           rowLabel={(c) => c.subject}
           columns={[
@@ -32,9 +47,11 @@ export default async function MessagesPage() {
               key: 'subject',
               header: 'Subject',
               cell: (c) => (
-                <span className="flex items-center gap-2 font-medium">
-                  {c.subject}
-                  {c.unread ? <Badge tone="primary">Unread</Badge> : null}
+                <span className="flex items-center gap-2">
+                  <Link href={`/portal/messages/${c.id}`} className="font-medium text-primary underline">
+                    {c.subject}
+                  </Link>
+                  {c.unreadCount > 0 ? <Badge tone="primary">{c.unreadCount} unread</Badge> : null}
                 </span>
               ),
             },
@@ -44,6 +61,11 @@ export default async function MessagesPage() {
           ]}
         />
       )}
+      {page.nextCursor ? (
+        <Link href={`/portal/messages?${new URLSearchParams({ status, cursor: page.nextCursor }).toString()}`} className="sx-touch inline-flex items-center rounded-md border border-border-strong px-4 text-sm">
+          Load older conversations
+        </Link>
+      ) : null}
     </div>
   );
 }

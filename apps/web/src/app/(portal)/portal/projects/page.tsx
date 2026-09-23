@@ -33,7 +33,15 @@ export default async function ProjectsPage() {
           rowKey={(p) => p.id}
           rowLabel={(p) => p.name}
           columns={[
-            { key: 'name', header: 'Project', cell: (p) => <span className="font-medium">{p.name}</span> },
+            {
+              key: 'name',
+              header: 'Project',
+              cell: (p) => (
+                <Link href={`/portal/projects/${p.id}`} className="font-medium text-primary underline">
+                  {p.name}
+                </Link>
+              ),
+            },
             { key: 'kind', header: 'Kind', cell: (p) => humanize(p.kind) },
             { key: 'status', header: 'Status', cell: (p) => <StatusBadge status={p.status} /> },
             { key: 'target', header: 'Target completion', cell: (p) => p.forecastCompletionDate ?? p.targetCompletionDate ?? '—' },
@@ -41,7 +49,14 @@ export default async function ProjectsPage() {
             {
               key: 'approvals',
               header: 'Needs you',
-              cell: (p) => (p.pendingApprovals > 0 ? <Badge tone="warning">{p.pendingApprovals} approval(s)</Badge> : <span className="text-fg-muted">Nothing pending</span>),
+              cell: (p) =>
+                p.pendingApprovals > 0 ? (
+                  <Link href={`/portal/projects/${p.id}?tab=decisions`}>
+                    <Badge tone="warning">{p.pendingApprovals} approval(s)</Badge>
+                  </Link>
+                ) : (
+                  <span className="text-fg-muted">Nothing pending</span>
+                ),
             },
           ]}
         />

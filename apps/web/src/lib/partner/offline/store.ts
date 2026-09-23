@@ -28,8 +28,16 @@ export interface DraftStore {
   get(offlineClientId: string): Promise<Draft | LockedDraft | null>;
   put(draft: Draft): Promise<void>;
   delete(offlineClientId: string): Promise<void>;
-  putPhotoBytes(offlineClientId: string, photoId: string, mime: string, bytes: ArrayBuffer): Promise<void>;
-  getPhotoBytes(offlineClientId: string, photoId: string): Promise<{ mime: string; bytes: ArrayBuffer } | null>;
+  putPhotoBytes(
+    offlineClientId: string,
+    photoId: string,
+    mime: string,
+    bytes: ArrayBuffer,
+  ): Promise<void>;
+  getPhotoBytes(
+    offlineClientId: string,
+    photoId: string,
+  ): Promise<{ mime: string; bytes: ArrayBuffer } | null>;
   deletePhotoBytes(offlineClientId: string, photoId: string): Promise<void>;
 }
 
@@ -73,7 +81,7 @@ export function createDraftStore(options: {
     if (!key) return toLocked(record);
     try {
       const sensitive = await decryptJson<Record<string, unknown>>(key, record.sealed);
-      return { ...record.open, ...sensitive } as Draft;
+      return { ...record.open, ...sensitive } as unknown as Draft;
     } catch {
       return toLocked(record);
     }

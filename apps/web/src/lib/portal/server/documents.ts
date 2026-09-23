@@ -36,10 +36,22 @@ export interface LibraryFolder {
 }
 
 const FOLDERS: Array<{ key: LibraryFolderKey; label: string; description: string }> = [
-  { key: 'unattached', label: 'Organisation documents', description: 'Contracts, letters and surveys kept on your account.' },
+  {
+    key: 'unattached',
+    label: 'Organisation documents',
+    description: 'Contracts, letters and surveys kept on your account.',
+  },
   { key: 'service_request', label: 'Requests', description: 'Files shared on service requests.' },
-  { key: 'project', label: 'Projects', description: 'Drawings, evidence and deliverables on projects.' },
-  { key: 'property', label: 'Properties', description: 'Title documents, owner authorities and surveys.' },
+  {
+    key: 'project',
+    label: 'Projects',
+    description: 'Drawings, evidence and deliverables on projects.',
+  },
+  {
+    key: 'property',
+    label: 'Properties',
+    description: 'Title documents, owner authorities and surveys.',
+  },
   { key: 'invoice', label: 'Invoices', description: 'Bank transfer proofs and payment documents.' },
   { key: 'site_visit', label: 'Site visits', description: 'Evidence captured during inspections.' },
   { key: 'content_page', label: 'Other', description: 'Files attached to other records.' },
@@ -63,16 +75,25 @@ export async function loadDocumentLibrary(identity: RequestIdentity): Promise<Li
       .orderBy(desc(schema.fileObjects.createdAt))
       .limit(500);
 
-    const idsBy = (type: string) =>
-      [...new Set(files.filter((f) => f.entityType === type && f.entityId).map((f) => f.entityId!))];
+    const idsBy = (type: string) => [
+      ...new Set(files.filter((f) => f.entityType === type && f.entityId).map((f) => f.entityId!)),
+    ];
     const labels = new Map<string, { label: string; href: string }>();
     const requestIds = idsBy('service_request');
     if (requestIds.length > 0) {
       const rows = await tx
-        .select({ id: schema.serviceRequests.id, reference: schema.serviceRequests.reference, title: schema.serviceRequests.title })
+        .select({
+          id: schema.serviceRequests.id,
+          reference: schema.serviceRequests.reference,
+          title: schema.serviceRequests.title,
+        })
         .from(schema.serviceRequests)
         .where(inArray(schema.serviceRequests.id, requestIds));
-      for (const r of rows) labels.set(r.id, { label: `${r.reference} · ${r.title}`, href: `/portal/requests/${r.id}?tab=documents` });
+      for (const r of rows)
+        labels.set(r.id, {
+          label: `${r.reference} · ${r.title}`,
+          href: `/portal/requests/${r.id}?tab=documents`,
+        });
     }
     const projectIds = idsBy('project');
     if (projectIds.length > 0) {
@@ -80,7 +101,8 @@ export async function loadDocumentLibrary(identity: RequestIdentity): Promise<Li
         .select({ id: schema.projects.id, name: schema.projects.name })
         .from(schema.projects)
         .where(inArray(schema.projects.id, projectIds));
-      for (const r of rows) labels.set(r.id, { label: r.name, href: `/portal/projects/${r.id}?tab=media` });
+      for (const r of rows)
+        labels.set(r.id, { label: r.name, href: `/portal/projects/${r.id}?tab=media` });
     }
     const propertyIds = idsBy('property');
     if (propertyIds.length > 0) {
@@ -88,7 +110,8 @@ export async function loadDocumentLibrary(identity: RequestIdentity): Promise<Li
         .select({ id: schema.properties.id, name: schema.properties.name })
         .from(schema.properties)
         .where(inArray(schema.properties.id, propertyIds));
-      for (const r of rows) labels.set(r.id, { label: r.name, href: `/portal/properties/${r.id}?tab=documents` });
+      for (const r of rows)
+        labels.set(r.id, { label: r.name, href: `/portal/properties/${r.id}?tab=documents` });
     }
     const invoiceIds = idsBy('invoice');
     if (invoiceIds.length > 0) {
@@ -96,7 +119,8 @@ export async function loadDocumentLibrary(identity: RequestIdentity): Promise<Li
         .select({ id: schema.invoices.id, number: schema.invoices.number })
         .from(schema.invoices)
         .where(inArray(schema.invoices.id, invoiceIds));
-      for (const r of rows) labels.set(r.id, { label: `Invoice ${r.number}`, href: `/portal/invoices/${r.id}` });
+      for (const r of rows)
+        labels.set(r.id, { label: `Invoice ${r.number}`, href: `/portal/invoices/${r.id}` });
     }
 
     const grouped = new Map<LibraryFolderKey, LibraryEntry[]>();

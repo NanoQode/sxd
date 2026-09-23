@@ -43,12 +43,16 @@ export function financeActorForPage(identity: RequestIdentity): FinanceActor {
 
 function notFoundToNull<T>(promise: Promise<T>): Promise<T | null> {
   return promise.catch((err: unknown) => {
-    if (err instanceof ApiError && (err.code === 'not_found' || err.code === 'forbidden')) return null;
+    if (err instanceof ApiError && (err.code === 'not_found' || err.code === 'forbidden'))
+      return null;
     throw err;
   });
 }
 
-export async function loadQuotesForRequest(identity: RequestIdentity, requestId: string): Promise<QuoteDto[]> {
+export async function loadQuotesForRequest(
+  identity: RequestIdentity,
+  requestId: string,
+): Promise<QuoteDto[]> {
   return listQuotesForRequest(getFinanceRuntime(), financeActorForPage(identity), requestId);
 }
 
@@ -56,7 +60,10 @@ export async function loadQuote(identity: RequestIdentity, id: string): Promise<
   return notFoundToNull(getQuote(getFinanceRuntime(), financeActorForPage(identity), id));
 }
 
-export async function loadInvoicesForRequest(identity: RequestIdentity, requestId: string): Promise<InvoiceDto[]> {
+export async function loadInvoicesForRequest(
+  identity: RequestIdentity,
+  requestId: string,
+): Promise<InvoiceDto[]> {
   if (!identity.ctx.organizationId) return [];
   const page = await listInvoices(getFinanceRuntime(), financeActorForPage(identity), {
     serviceRequestId: requestId,
@@ -72,7 +79,10 @@ export interface InvoiceDetail {
   bankReceipts: BankTransferReceiptDto[];
 }
 
-export async function loadInvoiceDetail(identity: RequestIdentity, id: string): Promise<InvoiceDetail | null> {
+export async function loadInvoiceDetail(
+  identity: RequestIdentity,
+  id: string,
+): Promise<InvoiceDetail | null> {
   const rt = getFinanceRuntime();
   const fa = financeActorForPage(identity);
   const invoice = await notFoundToNull(getInvoice(rt, fa, id));

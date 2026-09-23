@@ -49,7 +49,11 @@ export function validateForPurpose(file: File, purpose: FilePurpose): string | n
   if (!policy.allowedMime.includes(mime)) {
     return `${file.name}: ${mime || 'unknown type'} is not accepted for this purpose. Accepted: ${describeMimes(policy.allowedMime)}.`;
   }
-  const family = mime.startsWith('image/') ? 'image' : mime.startsWith('video/') ? 'video' : 'document';
+  const family = mime.startsWith('image/')
+    ? 'image'
+    : mime.startsWith('video/')
+      ? 'video'
+      : 'document';
   const cap = Math.min(policy.maxBytes, policy.maxBytesByFamily[family] || policy.maxBytes);
   if (file.size > cap) {
     return `${file.name} is ${(file.size / (1024 * 1024)).toFixed(1)} MB; the limit for this purpose is ${Math.round(cap / (1024 * 1024))} MB.`;
@@ -75,7 +79,8 @@ function describeMimes(mimes: readonly string[]): string {
 async function sha256Hex(file: File): Promise<string | undefined> {
   // Hashing very large files in the browser is slow; the server verifies the
   // declared size and sniffs content regardless, so skip past 256 MB.
-  if (file.size > 256 * 1024 * 1024 || typeof crypto === 'undefined' || !crypto.subtle) return undefined;
+  if (file.size > 256 * 1024 * 1024 || typeof crypto === 'undefined' || !crypto.subtle)
+    return undefined;
   try {
     const digest = await crypto.subtle.digest('SHA-256', await file.arrayBuffer());
     return Array.from(new Uint8Array(digest))
@@ -108,7 +113,8 @@ function putWithProgress(
         reject(new Error(`storage answered ${xhr.status} while receiving the file`));
       }
     };
-    xhr.onerror = () => reject(new Error('the upload connection failed; check your network and try again'));
+    xhr.onerror = () =>
+      reject(new Error('the upload connection failed; check your network and try again'));
     xhr.onabort = () => reject(new DOMException('upload cancelled', 'AbortError'));
     if (signal) {
       if (signal.aborted) {
@@ -187,10 +193,13 @@ export async function uploadFile(file: File, options: UploadOptions): Promise<Up
 
   report({ phase: 'finalizing', percent: 100, bytesSent: file.size, bytesTotal: file.size });
   try {
-    const finalized = await portalFetch<FileFinalizeResponse>(`/api/v1/files/${intent.fileId}/finalize`, {
-      body: { ...(sha256 ? { sha256 } : {}), ...(parts ? { parts } : {}) },
-      signal: options.signal,
-    });
+    const finalized = await portalFetch<FileFinalizeResponse>(
+      `/api/v1/files/${intent.fileId}/finalize`,
+      {
+        body: { ...(sha256 ? { sha256 } : {}), ...(parts ? { parts } : {}) },
+        signal: options.signal,
+      },
+    );
     report({ phase: 'scanning', percent: 100, bytesSent: file.size, bytesTotal: file.size });
     return { file: finalized.file, outcome: finalized.outcome };
   } catch (err) {
@@ -202,7 +211,13 @@ export async function uploadFile(file: File, options: UploadOptions): Promise<Up
   }
 }
 
-export const SETTLED_FILE_STATUSES = new Set(['clean', 'infected', 'scan_failed', 'rejected', 'deleted']);
+export const SETTLED_FILE_STATUSES = new Set([
+  'clean',
+  'infected',
+  'scan_failed',
+  'rejected',
+  'deleted',
+]);
 
 /** Polls until the scanner reports; resolves with the final file record. */
 export async function waitForScan(
@@ -218,5 +233,7 @@ export async function waitForScan(
     await new Promise((resolve) => setTimeout(resolve, interval));
   }
   if (last) return last;
-  throw new Error('the scan is taking longer than expected; the file will appear once it is cleared');
+  throw new Error(
+    'the scan is taking longer than expected; the file will appear once it is cleared',
+  );
 }

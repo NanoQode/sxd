@@ -14,7 +14,10 @@ export function formatBytes(bytes: number | null | undefined): string {
 }
 
 /** Kobo string to naira with sign, e.g. "-₦12,500.00". Never floating-point arithmetic on money. */
-export function koboToNaira(kobo: string | null | undefined, options: { whole?: boolean } = {}): string {
+export function koboToNaira(
+  kobo: string | null | undefined,
+  options: { whole?: boolean } = {},
+): string {
   if (kobo === null || kobo === undefined || kobo === '') return '—';
   const negative = kobo.startsWith('-');
   const digits = negative ? kobo.slice(1) : kobo;
@@ -31,7 +34,11 @@ export function isPositiveKobo(kobo: string | null | undefined): boolean {
 }
 
 /** Wall-clock label in a zone with the zone's abbreviation, DST safe via IANA rules. */
-export function formatInZone(iso: string | Date, zone: string, format = "EEE d LLL yyyy, HH:mm 'ZZZZ'"): string {
+export function formatInZone(
+  iso: string | Date,
+  zone: string,
+  format = "EEE d LLL yyyy, HH:mm 'ZZZZ'",
+): string {
   const dt =
     typeof iso === 'string' ? DateTime.fromISO(iso, { setZone: true }) : DateTime.fromJSDate(iso);
   const zoned = dt.setZone(zone);

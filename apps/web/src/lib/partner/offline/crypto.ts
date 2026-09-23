@@ -53,7 +53,9 @@ function subtle(): SubtleCrypto {
 }
 
 export function webCryptoSupported(): boolean {
-  return Boolean(globalThis.crypto?.subtle) && typeof globalThis.crypto.getRandomValues === 'function';
+  return (
+    Boolean(globalThis.crypto?.subtle) && typeof globalThis.crypto.getRandomValues === 'function'
+  );
 }
 
 function defaultKeyStore(): KeyStore | null {
@@ -96,7 +98,10 @@ export function hasSessionKey(userId: string, store: KeyStore | null = defaultKe
 }
 
 /** Forget the session key (sign-out); encrypted drafts become unreadable. */
-export function discardSessionKey(userId: string, store: KeyStore | null = defaultKeyStore()): void {
+export function discardSessionKey(
+  userId: string,
+  store: KeyStore | null = defaultKeyStore(),
+): void {
   store?.removeItem(`${KEY_PREFIX}${userId}`);
 }
 

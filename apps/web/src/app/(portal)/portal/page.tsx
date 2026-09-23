@@ -83,8 +83,8 @@ export default async function PortalHomePage({ searchParams }: { searchParams: P
               ? 'Nothing needs your decision right now. Approvals appear when a change order, milestone or quote is waiting on you.'
               : 'Change orders, milestones or quotes are waiting for your decision.'
           }
-          href={cards.approvalsPending.href}
-          linkLabel="Open projects"
+          href="/portal/approvals"
+          linkLabel="Open approvals"
         />
         <KpiCard
           title="Upcoming visits"
@@ -116,8 +116,8 @@ export default async function PortalHomePage({ searchParams }: { searchParams: P
               ? 'Reports appear here once a reviewer releases them for your engagement.'
               : 'Reviewed and released reports for your organisation.'
           }
-          href={cards.latestReports.href}
-          linkLabel="Open documents"
+          href="/portal/reports"
+          linkLabel="Open reports"
         >
           {cards.latestReports.items.length > 0 ? (
             <ul className="space-y-1 text-sm">
@@ -168,6 +168,12 @@ export default async function PortalHomePage({ searchParams }: { searchParams: P
           </Link>
           <Link href="/portal/scenarios" className="sx-touch inline-flex items-center text-sm font-medium text-primary underline">
             Saved scenarios
+          </Link>
+          <Link href="/portal/tasks" className="sx-touch inline-flex items-center text-sm font-medium text-primary underline">
+            Tasks awaiting you
+          </Link>
+          <Link href="/portal/notifications" className="sx-touch inline-flex items-center text-sm font-medium text-primary underline">
+            Notifications
           </Link>
         </CardContent>
       </Card>

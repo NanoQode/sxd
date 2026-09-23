@@ -17,3 +17,4 @@ export * from './files';
 export * from './appointments';
 export * from './notifications';
 export * from './integrations';
+export * from './rentals';

@@ -1,6 +1,8 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import { Badge, Card, CardContent, CardDescription, CardHeader, CardTitle, DataTable, EmptyState, PageHeader, StatusBadge, formatDateTimeLabel, humanize } from '@simplexd/ui';
 import { requireSignedIn } from '@/lib/auth/session';
+import { LinkButton } from '@/components/portal/link-button';
 import { listAppointments, type AppointmentListItem } from '@/server/portal/lists';
 
 export const metadata: Metadata = { title: 'Appointments' };
@@ -13,7 +15,9 @@ function columns(zone: string) {
       header: 'When',
       cell: (a: AppointmentListItem) => (
         <div className="text-sm">
-          <p>{formatDateTimeLabel(a.startsAt, zone)}</p>
+          <Link href={`/portal/appointments/${a.id}`} className="font-medium text-primary underline">
+            {formatDateTimeLabel(a.startsAt, zone)}
+          </Link>
           {zone !== a.businessTimeZone ? (
             <p className="text-xs text-fg-muted">{formatDateTimeLabel(a.startsAt, a.businessTimeZone)} business time</p>
           ) : null}
@@ -30,6 +34,8 @@ function columns(zone: string) {
         a.meetingProvider === 'google_meet' ? (
           a.conferenceStatus === 'ready' && a.hasMeetingUrl ? (
             <Badge tone="success">Meet link ready</Badge>
+          ) : a.conferenceStatus === 'failed' ? (
+            <Badge tone="danger">Meet link failed</Badge>
           ) : (
             <Badge tone="warning">Meet link pending</Badge>
           )
@@ -50,6 +56,7 @@ export default async function AppointmentsPage() {
       <PageHeader
         title="Appointments"
         description={`Consultations, viewings and site visits shown in your time zone (${zone}) and the business time zone (Africa/Lagos) where they differ.`}
+        actions={<LinkButton href="/portal/appointments/new">Book an appointment</LinkButton>}
       />
       <Card>
         <CardHeader>
@@ -60,7 +67,8 @@ export default async function AppointmentsPage() {
           {upcoming.length === 0 ? (
             <EmptyState
               title="No upcoming appointments"
-              description="Booking with live availability, Google Calendar and Meet arrives in Wave 3. Until then the team schedules visits with you by message and they appear here."
+              description="Pick a slot from live availability; a hold keeps it for a few minutes while you confirm."
+              action={<LinkButton href="/portal/appointments/new">Book an appointment</LinkButton>}
             />
           ) : (
             <DataTable caption="Upcoming appointments" rows={upcoming} rowKey={(a) => a.id} rowLabel={(a) => `${humanize(a.kind)} ${formatDateTimeLabel(a.startsAt, zone)}`} columns={columns(zone)} />

@@ -51,6 +51,8 @@ export interface VisitDraft {
   /** Existing scheduled visit; null when the visit was created in the field. */
   siteVisitId: string | null;
   title: string;
+  /** Staff instructions copied at capture time so they are readable offline (sealed). */
+  instructions: string;
   findingsMarkdown: string;
   checklist: ChecklistItem[];
   weather: string;
