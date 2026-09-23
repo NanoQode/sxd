@@ -21,7 +21,8 @@ export default async function MfaPage({
       />
       {params.welcome ? (
         <Alert tone="success" title="Administrator account created">
-          Finish by enrolling an authenticator app so publication and configuration actions are available.
+          Finish by enrolling an authenticator app so publication and configuration actions are
+          available.
         </Alert>
       ) : null}
       {params.required && !identity.actor.mfaVerified ? (

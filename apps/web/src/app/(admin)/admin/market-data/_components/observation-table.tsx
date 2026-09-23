@@ -10,13 +10,20 @@ import { ReviewActions } from './review-actions';
 
 function valueLabel(o: AdminObservationDto): string {
   if (o.value !== null) return `${o.value.toLocaleString('en-NG')} ${o.unit}`;
-  if (o.valueLow !== null || o.valueHigh !== null) return `${o.valueLow ?? '?'}–${o.valueHigh ?? '?'} ${o.unit}`;
+  if (o.valueLow !== null || o.valueHigh !== null)
+    return `${o.valueLow ?? '?'}–${o.valueHigh ?? '?'} ${o.unit}`;
   if (o.valueText) return o.valueText;
   return '—';
 }
 
 export function reviewStatusTone(status: string) {
-  return status === 'verified' ? 'success' : status === 'rejected' ? 'danger' : status === 'disputed' || status === 'stale' ? 'warning' : 'info';
+  return status === 'verified'
+    ? 'success'
+    : status === 'rejected'
+      ? 'danger'
+      : status === 'disputed' || status === 'stale'
+        ? 'warning'
+        : 'info';
 }
 
 export function ObservationTable({
@@ -43,7 +50,10 @@ export function ObservationTable({
       header: 'Metric',
       cell: (o) => (
         <div className="min-w-0">
-          <Link href={`/admin/market-data/observations/${o.id}`} className="font-medium text-primary underline-offset-2 hover:underline">
+          <Link
+            href={`/admin/market-data/observations/${o.id}`}
+            className="font-medium text-primary underline-offset-2 hover:underline"
+          >
             {o.metric}
           </Link>
           <p className="text-xs text-fg-muted">
@@ -52,14 +62,20 @@ export function ObservationTable({
         </div>
       ),
     },
-    { key: 'value', header: 'Value', cell: (o) => <span className="whitespace-nowrap text-sm">{valueLabel(o)}</span> },
+    {
+      key: 'value',
+      header: 'Value',
+      cell: (o) => <span className="whitespace-nowrap text-sm">{valueLabel(o)}</span>,
+    },
     {
       key: 'geo',
       header: 'Geography',
       cell: (o) => (
         <span className="text-xs">
           {humanize(o.geographyLevel)}
-          <span className="block text-fg-muted">{showMarket ? (o.marketName ?? o.stateName ?? o.geographyLabel) : o.geographyLabel}</span>
+          <span className="block text-fg-muted">
+            {showMarket ? (o.marketName ?? o.stateName ?? o.geographyLabel) : o.geographyLabel}
+          </span>
         </span>
       ),
     },
@@ -70,7 +86,10 @@ export function ObservationTable({
       cell: (o) => (
         <span className="text-xs">
           {o.source.title}
-          <span className="block text-fg-muted">retrieved {fmtDay(o.retrievedAt)}{o.sampleSize !== null ? ` · n=${o.sampleSize}` : ''}</span>
+          <span className="block text-fg-muted">
+            retrieved {fmtDay(o.retrievedAt)}
+            {o.sampleSize !== null ? ` · n=${o.sampleSize}` : ''}
+          </span>
         </span>
       ),
     },
@@ -79,7 +98,13 @@ export function ObservationTable({
       header: 'Interpretation',
       cell: (o) => (
         <span className="flex flex-wrap gap-1">
-          <Badge tone={reviewStatusTone(o.interpretation.reviewStatus)}>{humanize(o.interpretation.reviewStatus === 'source_read_pending_business_review' ? 'pending review' : o.interpretation.reviewStatus)}</Badge>
+          <Badge tone={reviewStatusTone(o.interpretation.reviewStatus)}>
+            {humanize(
+              o.interpretation.reviewStatus === 'source_read_pending_business_review'
+                ? 'pending review'
+                : o.interpretation.reviewStatus,
+            )}
+          </Badge>
           <StatusBadge status={o.interpretation.publicationState} />
           {o.interpretation.rankEligible ? <Badge tone="gold">Rank-eligible</Badge> : null}
           <span className="text-xs text-fg-muted">v{o.interpretation.version}</span>

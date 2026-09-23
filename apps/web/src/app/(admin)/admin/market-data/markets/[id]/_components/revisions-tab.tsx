@@ -18,7 +18,8 @@ function diff(left: Record<string, unknown>, right: Record<string, unknown>) {
   }));
 }
 
-const show = (v: unknown) => (v === null || v === undefined ? '—' : typeof v === 'object' ? JSON.stringify(v) : String(v));
+const show = (v: unknown) =>
+  v === null || v === undefined ? '—' : typeof v === 'object' ? JSON.stringify(v) : String(v);
 
 /** Revision list, side-by-side diff of any two snapshots, and rollback (which creates a new revision). */
 export function RevisionsTab({
@@ -52,23 +53,60 @@ export function RevisionsTab({
       method: 'POST',
       body: { revisionVersion: rollback.version, expectedVersion: currentVersion, reason },
     });
-    toast({ title: `Rolled back to revision ${rollback.version}`, description: 'A new revision was created and audited.', tone: 'success' });
+    toast({
+      title: `Rolled back to revision ${rollback.version}`,
+      description: 'A new revision was created and audited.',
+      tone: 'success',
+    });
     router.refresh();
   }
 
   const columns: Column<MarketRevisionDto>[] = [
-    { key: 'version', header: 'Version', cell: (r) => <span className="font-mono">v{r.version}{r.version === currentVersion ? <span className="ml-1 text-xs text-fg-muted">(current)</span> : null}</span> },
+    {
+      key: 'version',
+      header: 'Version',
+      cell: (r) => (
+        <span className="font-mono">
+          v{r.version}
+          {r.version === currentVersion ? (
+            <span className="ml-1 text-xs text-fg-muted">(current)</span>
+          ) : null}
+        </span>
+      ),
+    },
     { key: 'reason', header: 'Change reason', cell: (r) => r.changeReason ?? '—' },
     { key: 'by', header: 'By', cell: (r) => r.changedByName ?? r.changedBy ?? 'import' },
-    { key: 'when', header: 'When', cell: (r) => <span className="text-xs">{fmtDate(r.createdAt)}</span> },
+    {
+      key: 'when',
+      header: 'When',
+      cell: (r) => <span className="text-xs">{fmtDate(r.createdAt)}</span>,
+    },
     {
       key: 'actions',
       header: 'Actions',
       cell: (r) => (
         <div className="flex flex-wrap gap-1">
-          <Button size="sm" variant="ghost" onClick={() => setA(r.version)} aria-pressed={a === r.version}>Left</Button>
-          <Button size="sm" variant="ghost" onClick={() => setB(r.version)} aria-pressed={b === r.version}>Right</Button>
-          {canEdit && r.version !== currentVersion ? <Button size="sm" variant="secondary" onClick={() => setRollback(r)}>Roll back to this</Button> : null}
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => setA(r.version)}
+            aria-pressed={a === r.version}
+          >
+            Left
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => setB(r.version)}
+            aria-pressed={b === r.version}
+          >
+            Right
+          </Button>
+          {canEdit && r.version !== currentVersion ? (
+            <Button size="sm" variant="secondary" onClick={() => setRollback(r)}>
+              Roll back to this
+            </Button>
+          ) : null}
         </div>
       ),
     },
@@ -77,9 +115,17 @@ export function RevisionsTab({
   return (
     <div className="space-y-6">
       <Alert tone="info" title="History is never rewritten">
-        Every edit, publication change and rollback appends a revision. Rolling back restores the content fields of an earlier revision as a new version, keeping publication state as it is.
+        Every edit, publication change and rollback appends a revision. Rolling back restores the
+        content fields of an earlier revision as a new version, keeping publication state as it is.
       </Alert>
-      <DataTable columns={columns} rows={items} rowKey={(r) => r.id} rowLabel={(r) => `Revision ${r.version}`} caption="Revisions" emptyMessage="No revisions recorded yet; the first edit captures the imported baseline." />
+      <DataTable
+        columns={columns}
+        rows={items}
+        rowKey={(r) => r.id}
+        rowLabel={(r) => `Revision ${r.version}`}
+        caption="Revisions"
+        emptyMessage="No revisions recorded yet; the first edit captures the imported baseline."
+      />
       {a !== null && b !== null ? (
         <section aria-labelledby="rev-diff" className="space-y-2">
           <div className="flex flex-wrap items-center justify-between gap-2">
@@ -87,7 +133,12 @@ export function RevisionsTab({
               Compare v{a} (left) with v{b} (right)
             </h3>
             <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" className="h-4 w-4 accent-[var(--sx-primary)]" checked={onlyChanged} onChange={(e) => setOnlyChanged(e.target.checked)} />
+              <input
+                type="checkbox"
+                className="h-4 w-4 accent-[var(--sx-primary)]"
+                checked={onlyChanged}
+                onChange={(e) => setOnlyChanged(e.target.checked)}
+              />
               Changed fields only
             </label>
           </div>
@@ -96,20 +147,43 @@ export function RevisionsTab({
               <caption className="sr-only">Side-by-side revision diff</caption>
               <thead className="bg-bg-sunken text-left text-xs uppercase tracking-wide text-fg-muted">
                 <tr>
-                  <th scope="col" className="px-3 py-2 font-medium">Field</th>
-                  <th scope="col" className="px-3 py-2 font-medium">v{a}</th>
-                  <th scope="col" className="px-3 py-2 font-medium">v{b}</th>
+                  <th scope="col" className="px-3 py-2 font-medium">
+                    Field
+                  </th>
+                  <th scope="col" className="px-3 py-2 font-medium">
+                    v{a}
+                  </th>
+                  <th scope="col" className="px-3 py-2 font-medium">
+                    v{b}
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {lines.length === 0 ? (
-                  <tr><td colSpan={3} className="px-3 py-4 text-center text-fg-muted">No differences.</td></tr>
+                  <tr>
+                    <td colSpan={3} className="px-3 py-4 text-center text-fg-muted">
+                      No differences.
+                    </td>
+                  </tr>
                 ) : null}
                 {lines.map((l) => (
-                  <tr key={l.field} className={l.changed ? 'border-t border-border bg-warning-soft/40' : 'border-t border-border'}>
-                    <th scope="row" className="px-3 py-2 text-left font-mono text-xs font-medium">{l.field}</th>
-                    <td className="px-3 py-2 align-top break-all font-mono text-xs">{show(l.left)}</td>
-                    <td className="px-3 py-2 align-top break-all font-mono text-xs">{show(l.right)}</td>
+                  <tr
+                    key={l.field}
+                    className={
+                      l.changed
+                        ? 'border-t border-border bg-warning-soft/40'
+                        : 'border-t border-border'
+                    }
+                  >
+                    <th scope="row" className="px-3 py-2 text-left font-mono text-xs font-medium">
+                      {l.field}
+                    </th>
+                    <td className="px-3 py-2 align-top break-all font-mono text-xs">
+                      {show(l.left)}
+                    </td>
+                    <td className="px-3 py-2 align-top break-all font-mono text-xs">
+                      {show(l.right)}
+                    </td>
                   </tr>
                 ))}
               </tbody>

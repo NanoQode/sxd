@@ -3,7 +3,11 @@ import { requireSignedIn } from '@/lib/auth/session';
 import { PageHeader } from '@simplexd/ui';
 import { getNotificationPreferences } from '@/server/portal/notification-preferences';
 import { listConsents } from '@/server/portal/profile';
-import { listMembers, listMemberships, listPendingInvitations } from '@/server/portal/organizations';
+import {
+  listMembers,
+  listMemberships,
+  listPendingInvitations,
+} from '@/server/portal/organizations';
 import { ConsentsSection } from './consents-section';
 import { DangerZone } from './danger-zone';
 import { NotificationPreferencesForm } from './notification-preferences-form';
@@ -35,10 +39,17 @@ export default async function SettingsPage() {
   const marketingGranted = consents.find((c) => c.purpose === 'marketing_email')?.granted ?? false;
   return (
     <div className="space-y-8">
-      <PageHeader title="Settings" description="Your profile, notifications, organisation and privacy choices." />
+      <PageHeader
+        title="Settings"
+        description="Your profile, notifications, organisation and privacy choices."
+      />
       <nav aria-label="Settings sections" className="flex flex-wrap gap-2">
         {SECTIONS.map((s) => (
-          <a key={s.id} href={`#${s.id}`} className="sx-touch inline-flex items-center rounded-full border border-border px-3 text-sm text-fg-muted hover:text-fg">
+          <a
+            key={s.id}
+            href={`#${s.id}`}
+            className="sx-touch inline-flex items-center rounded-full border border-border px-3 text-sm text-fg-muted hover:text-fg"
+          >
             {s.label}
           </a>
         ))}
@@ -57,13 +68,24 @@ export default async function SettingsPage() {
           countryOfResidence={identity.profile?.countryOfResidence ?? null}
         />
       </section>
-      <section id="notifications" aria-labelledby="notifications-heading" className="scroll-mt-24 space-y-4">
+      <section
+        id="notifications"
+        aria-labelledby="notifications-heading"
+        className="scroll-mt-24 space-y-4"
+      >
         <h2 id="notifications-heading" className="text-lg font-semibold">
           Notifications
         </h2>
-        <NotificationPreferencesForm initial={notificationPreferences} hasPhone={Boolean(identity.profile?.phoneE164)} />
+        <NotificationPreferencesForm
+          initial={notificationPreferences}
+          hasPhone={Boolean(identity.profile?.phoneE164)}
+        />
       </section>
-      <section id="organisation" aria-labelledby="organisation-heading" className="scroll-mt-24 space-y-4">
+      <section
+        id="organisation"
+        aria-labelledby="organisation-heading"
+        className="scroll-mt-24 space-y-4"
+      >
         <h2 id="organisation-heading" className="text-lg font-semibold">
           Organisation
         </h2>
@@ -79,7 +101,11 @@ export default async function SettingsPage() {
         <h2 id="consents-heading" className="text-lg font-semibold">
           Consents
         </h2>
-        <ConsentsSection consents={consents} marketingGranted={marketingGranted} timeZone={identity.profile?.timeZone ?? 'Africa/Lagos'} />
+        <ConsentsSection
+          consents={consents}
+          marketingGranted={marketingGranted}
+          timeZone={identity.profile?.timeZone ?? 'Africa/Lagos'}
+        />
       </section>
       <section id="danger" aria-labelledby="danger-heading" className="scroll-mt-24 space-y-4">
         <h2 id="danger-heading" className="text-lg font-semibold">

@@ -13,7 +13,10 @@ export default async function FeatureFlagsPage() {
   const items = await listFeatureFlags(adminContext(identity));
   return (
     <div className="space-y-4">
-      <PageHeader title="Feature flags" description="Expansion workflows stay off until staffed. Regulated features are gated behind review and can only be enabled by typing the flag key." />
+      <PageHeader
+        title="Feature flags"
+        description="Expansion workflows stay off until staffed. Regulated features are gated behind review and can only be enabled by typing the flag key."
+      />
       <FeatureFlagsManager items={items} />
     </div>
   );

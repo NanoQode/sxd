@@ -37,7 +37,11 @@ export default async function ContentEditorPage({ params }: { params: Promise<{ 
         }
         actions={<StatusBadge status={detail.status} />}
       />
-      <ContentEditor detail={detail} canPublish={canPublish} currentUserId={identity.session!.user.id} />
+      <ContentEditor
+        detail={detail}
+        canPublish={canPublish}
+        currentUserId={identity.session!.user.id}
+      />
     </div>
   );
 }

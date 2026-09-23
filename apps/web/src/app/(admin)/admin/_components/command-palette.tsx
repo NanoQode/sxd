@@ -38,7 +38,10 @@ export function CommandPalette({
   const listId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
   const [query, setQuery] = useState('');
-  const [marketResults, setMarketResults] = useState<{ q: string; items: Result[] }>({ q: '', items: [] });
+  const [marketResults, setMarketResults] = useState<{ q: string; items: Result[] }>({
+    q: '',
+    items: [],
+  });
   const [loading, setLoading] = useState(false);
   const [activeRaw, setActive] = useState(0);
   const trimmed = query.trim();
@@ -89,8 +92,20 @@ export function CommandPalette({
   const results = useMemo<Result[]>(() => {
     const q = query.trim().toLowerCase();
     const sectionResults: Result[] = [
-      ...sections.map((s) => ({ id: `section-${s.key}`, label: s.label, hint: s.plannedWave ? `Planned for wave ${s.plannedWave}` : 'Section', href: s.href, kind: 'section' as const })),
-      ...subNav.map((s) => ({ id: `sub-${s.href}`, label: s.label, hint: sections.find((n) => n.key === s.parent)?.label ?? 'Page', href: s.href, kind: 'section' as const })),
+      ...sections.map((s) => ({
+        id: `section-${s.key}`,
+        label: s.label,
+        hint: s.plannedWave ? `Planned for wave ${s.plannedWave}` : 'Section',
+        href: s.href,
+        kind: 'section' as const,
+      })),
+      ...subNav.map((s) => ({
+        id: `sub-${s.href}`,
+        label: s.label,
+        hint: sections.find((n) => n.key === s.parent)?.label ?? 'Page',
+        href: s.href,
+        kind: 'section' as const,
+      })),
     ].filter((r) => !q || r.label.toLowerCase().includes(q) || r.hint.toLowerCase().includes(q));
     return [...sectionResults.slice(0, q ? 12 : 30), ...markets];
   }, [query, sections, subNav, markets]);
@@ -118,7 +133,11 @@ export function CommandPalette({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent title="Search" description="Jump to a section or a market by name or alias." size="md">
+      <DialogContent
+        title="Search"
+        description="Jump to a section or a market by name or alias."
+        size="md"
+      >
         <div className="space-y-3">
           <input
             ref={inputRef}
@@ -164,7 +183,9 @@ export function CommandPalette({
                     <span className="block truncate font-medium">{r.label}</span>
                     <span className="block truncate text-xs text-fg-muted">{r.hint}</span>
                   </span>
-                  {i === active ? <CornerDownLeft aria-hidden="true" className="h-4 w-4 shrink-0" /> : null}
+                  {i === active ? (
+                    <CornerDownLeft aria-hidden="true" className="h-4 w-4 shrink-0" />
+                  ) : null}
                 </li>
               );
             })}

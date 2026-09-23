@@ -56,7 +56,11 @@ export async function cacheDelete(prefix: string): Promise<void> {
   for (const k of memory.keys()) if (k.startsWith(prefix)) memory.delete(k);
 }
 
-export async function cached<T>(key: string, ttlSeconds: number, load: () => Promise<T>): Promise<T> {
+export async function cached<T>(
+  key: string,
+  ttlSeconds: number,
+  load: () => Promise<T>,
+): Promise<T> {
   const hit = await cacheGet<T>(key);
   if (hit !== null) return hit;
   const value = await load();

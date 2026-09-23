@@ -18,7 +18,10 @@ export default async function SourcesPage() {
         title="Sources"
         description="Every observation and coordinate cites a registered source with its license and permitted use. A source read is not a business or legal verification."
       />
-      <SourcesManager items={items} canEdit={hasStaffPermission(identity.actor, 'market_data.edit')} />
+      <SourcesManager
+        items={items}
+        canEdit={hasStaffPermission(identity.actor, 'market_data.edit')}
+      />
     </div>
   );
 }

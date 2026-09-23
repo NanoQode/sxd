@@ -34,7 +34,10 @@ export function StatTile({
     </Card>
   );
   return href ? (
-    <Link href={href} className="block rounded-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus">
+    <Link
+      href={href}
+      className="block rounded-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+    >
       {body}
     </Link>
   ) : (
@@ -50,11 +53,18 @@ export function DefinitionList({
   className?: string;
 }) {
   return (
-    <dl className={cn('grid grid-cols-1 gap-x-6 gap-y-2 text-sm sm:grid-cols-[max-content_1fr]', className)}>
+    <dl
+      className={cn(
+        'grid grid-cols-1 gap-x-6 gap-y-2 text-sm sm:grid-cols-[max-content_1fr]',
+        className,
+      )}
+    >
       {items.map((item, i) => (
         <div key={i} className="contents">
           <dt className="text-fg-muted">{item.term}</dt>
-          <dd className="min-w-0 break-words">{item.value ?? <span className="text-fg-subtle">—</span>}</dd>
+          <dd className="min-w-0 break-words">
+            {item.value ?? <span className="text-fg-subtle">—</span>}
+          </dd>
         </div>
       ))}
     </dl>
@@ -77,7 +87,11 @@ export function fmtDate(iso: string | null | undefined): string {
   if (!iso) return '—';
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return iso;
-  return d.toLocaleString('en-NG', { timeZone: 'Africa/Lagos', dateStyle: 'medium', timeStyle: 'short' });
+  return d.toLocaleString('en-NG', {
+    timeZone: 'Africa/Lagos',
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  });
 }
 
 export function fmtDay(iso: string | null | undefined): string {

@@ -5,7 +5,22 @@ import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { Alert, Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Field, Input, NativeSelect, ReduceMotionToggle, ThemeToggle, useToast } from '@simplexd/ui';
+import {
+  Alert,
+  Badge,
+  Button,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  Field,
+  Input,
+  NativeSelect,
+  ReduceMotionToggle,
+  ThemeToggle,
+  useToast,
+} from '@simplexd/ui';
 import { apiFetch, errorMessage } from '@/lib/api/client-fetch';
 import { authClient } from '@/lib/auth/client';
 
@@ -31,7 +46,9 @@ const FALLBACK_ZONES = [
 
 export function timeZoneOptions(): string[] {
   try {
-    const supported = (Intl as unknown as { supportedValuesOf?: (k: string) => string[] }).supportedValuesOf?.('timeZone');
+    const supported = (
+      Intl as unknown as { supportedValuesOf?: (k: string) => string[] }
+    ).supportedValuesOf?.('timeZone');
     if (supported && supported.length > 0) return supported;
   } catch {
     /* fall back */
@@ -73,7 +90,12 @@ export function ProfileForm({
   }, [timeZone]);
   const form = useForm<Values>({
     resolver: zodResolver(schema),
-    defaultValues: { name, phone: phoneE164 ?? '', timeZone, countryOfResidence: countryOfResidence ?? '' },
+    defaultValues: {
+      name,
+      phone: phoneE164 ?? '',
+      timeZone,
+      countryOfResidence: countryOfResidence ?? '',
+    },
   });
 
   const onSubmit = form.handleSubmit(async (values) => {
@@ -86,14 +108,21 @@ export function ProfileForm({
       if ((values.phone ?? '') !== (phoneE164 ?? '')) {
         await apiFetch('/api/v1/me/phone', {
           method: 'PATCH',
-          body: { phone: values.phone ? values.phone : null, defaultCountry: values.countryOfResidence || 'NG' },
+          body: {
+            phone: values.phone ? values.phone : null,
+            defaultCountry: values.countryOfResidence || 'NG',
+          },
         });
       }
       const prefs: Record<string, unknown> = {};
       if (values.timeZone !== timeZone) prefs['timeZone'] = values.timeZone;
-      if ((values.countryOfResidence ?? '') !== (countryOfResidence ?? '') && values.countryOfResidence)
+      if (
+        (values.countryOfResidence ?? '') !== (countryOfResidence ?? '') &&
+        values.countryOfResidence
+      )
         prefs['countryOfResidence'] = values.countryOfResidence.toUpperCase();
-      if (Object.keys(prefs).length > 0) await apiFetch('/api/v1/me/preferences', { method: 'PATCH', body: prefs });
+      if (Object.keys(prefs).length > 0)
+        await apiFetch('/api/v1/me/preferences', { method: 'PATCH', body: prefs });
       toast({ title: 'Profile saved', tone: 'success' });
       router.refresh();
     } catch (err) {
@@ -111,7 +140,9 @@ export function ProfileForm({
     <Card>
       <CardHeader>
         <CardTitle>Your details</CardTitle>
-        <CardDescription>Your email is your sign-in identity; contact support to change it.</CardDescription>
+        <CardDescription>
+          Your email is your sign-in identity; contact support to change it.
+        </CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={onSubmit} noValidate className="space-y-4">
@@ -124,13 +155,24 @@ export function ProfileForm({
             {({ id }) => (
               <div className="flex flex-wrap items-center gap-2">
                 <Input id={id} value={email} readOnly aria-readonly className="max-w-md" />
-                {emailVerified ? <Badge tone="success">Verified</Badge> : <Badge tone="warning">Not verified</Badge>}
+                {emailVerified ? (
+                  <Badge tone="success">Verified</Badge>
+                ) : (
+                  <Badge tone="warning">Not verified</Badge>
+                )}
               </div>
             )}
           </Field>
           <Field label="Full name" required error={errors.name?.message}>
             {({ id, describedBy, invalid }) => (
-              <Input id={id} autoComplete="name" aria-describedby={describedBy} aria-invalid={invalid} className="max-w-md" {...form.register('name')} />
+              <Input
+                id={id}
+                autoComplete="name"
+                aria-describedby={describedBy}
+                aria-invalid={invalid}
+                className="max-w-md"
+                {...form.register('name')}
+              />
             )}
           </Field>
           <div className="grid gap-4 sm:grid-cols-2">
@@ -141,21 +183,59 @@ export function ProfileForm({
             >
               {({ id, describedBy, invalid }) => (
                 <div className="flex flex-wrap items-center gap-2">
-                  <Input id={id} type="tel" autoComplete="tel" inputMode="tel" aria-describedby={describedBy} aria-invalid={invalid} className="max-w-xs" {...form.register('phone')} />
-                  {phoneE164 ? phoneVerified ? <Badge tone="success">Verified</Badge> : <Badge tone="neutral">Unverified</Badge> : null}
+                  <Input
+                    id={id}
+                    type="tel"
+                    autoComplete="tel"
+                    inputMode="tel"
+                    aria-describedby={describedBy}
+                    aria-invalid={invalid}
+                    className="max-w-xs"
+                    {...form.register('phone')}
+                  />
+                  {phoneE164 ? (
+                    phoneVerified ? (
+                      <Badge tone="success">Verified</Badge>
+                    ) : (
+                      <Badge tone="neutral">Unverified</Badge>
+                    )
+                  ) : null}
                 </div>
               )}
             </Field>
-            <Field label="Country of residence" hint="Two-letter code, e.g. NG, GB, US." error={errors.countryOfResidence?.message}>
+            <Field
+              label="Country of residence"
+              hint="Two-letter code, e.g. NG, GB, US."
+              error={errors.countryOfResidence?.message}
+            >
               {({ id, describedBy, invalid }) => (
-                <Input id={id} maxLength={2} autoComplete="country" aria-describedby={describedBy} aria-invalid={invalid} className="max-w-[8rem] uppercase" {...form.register('countryOfResidence')} />
+                <Input
+                  id={id}
+                  maxLength={2}
+                  autoComplete="country"
+                  aria-describedby={describedBy}
+                  aria-invalid={invalid}
+                  className="max-w-[8rem] uppercase"
+                  {...form.register('countryOfResidence')}
+                />
               )}
             </Field>
           </div>
-          <Field label="Time zone" required hint="Appointments show in this zone alongside Africa/Lagos." error={errors.timeZone?.message}>
+          <Field
+            label="Time zone"
+            required
+            hint="Appointments show in this zone alongside Africa/Lagos."
+            error={errors.timeZone?.message}
+          >
             {({ id, describedBy, invalid }) => (
               <div className="flex flex-wrap items-center gap-2">
-                <NativeSelect id={id} aria-describedby={describedBy} aria-invalid={invalid} className="max-w-md" {...form.register('timeZone')}>
+                <NativeSelect
+                  id={id}
+                  aria-describedby={describedBy}
+                  aria-invalid={invalid}
+                  className="max-w-md"
+                  {...form.register('timeZone')}
+                >
                   {zones.map((z) => (
                     <option key={z} value={z}>
                       {z}
@@ -170,7 +250,9 @@ export function ProfileForm({
           </Field>
           <div className="space-y-2 rounded-md border border-border p-3">
             <p className="text-sm font-medium">Appearance</p>
-            <p className="text-sm text-fg-muted">Saved to your profile immediately; your choice overrides any organisation default.</p>
+            <p className="text-sm text-fg-muted">
+              Saved to your profile immediately; your choice overrides any organisation default.
+            </p>
             <div className="flex flex-wrap items-center gap-4">
               <ThemeToggle />
               <ReduceMotionToggle />

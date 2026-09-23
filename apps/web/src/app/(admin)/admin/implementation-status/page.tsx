@@ -34,7 +34,10 @@ export default async function ImplementationStatusPage() {
         description="Requirement-by-requirement account of the build against the brief, maintained in the repository as IMPLEMENTATION-STATUS.md."
       />
       {markdown ? (
-        <article className="sx-prose max-w-none text-sm" dangerouslySetInnerHTML={{ __html: renderMarkdown(markdown) }} />
+        <article
+          className="sx-prose max-w-none text-sm"
+          dangerouslySetInnerHTML={{ __html: renderMarkdown(markdown) }}
+        />
       ) : (
         <Alert tone="info" title="Status file not bundled in this deployment">
           Read <code>IMPLEMENTATION-STATUS.md</code> at the repository root. The file is not copied

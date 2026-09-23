@@ -184,7 +184,9 @@ export function AdminShell({
           >
             <Search aria-hidden="true" className="h-4 w-4" />
             <span className="flex-1 truncate text-left">Search sections and markets</span>
-            <kbd className="hidden rounded border border-border px-1 text-[10px] sm:inline">Ctrl K</kbd>
+            <kbd className="hidden rounded border border-border px-1 text-[10px] sm:inline">
+              Ctrl K
+            </kbd>
           </button>
           <ThemeToggle compact />
           <Link
@@ -201,7 +203,11 @@ export function AdminShell({
         </header>
         {!mfaVerified && !pathname.startsWith('/admin/security/mfa') ? (
           <div className="border-b border-border bg-warning-soft px-4 py-2 sm:px-6">
-            <Alert tone="warning" title="Authenticator not enrolled" className="border-0 bg-transparent p-0">
+            <Alert
+              tone="warning"
+              title="Authenticator not enrolled"
+              className="border-0 bg-transparent p-0"
+            >
               Sensitive actions (publishing market data, changing policies, managing roles, settings
               and integrations) require a verified authenticator.{' '}
               <Link href="/admin/security/mfa" className="font-medium text-primary underline">

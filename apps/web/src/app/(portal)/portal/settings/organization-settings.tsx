@@ -53,7 +53,9 @@ export function OrganizationSettings({
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [name, setName] = useState(active?.name ?? '');
-  const [ownershipType, setOwnershipType] = useState<'individual' | 'company'>(active?.ownershipType ?? 'individual');
+  const [ownershipType, setOwnershipType] = useState<'individual' | 'company'>(
+    active?.ownershipType ?? 'individual',
+  );
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteRole, setInviteRole] = useState<InvitableOrgRole>('member');
   const [busy, setBusy] = useState<string | null>(null);
@@ -72,13 +74,18 @@ export function OrganizationSettings({
   }
   const canManage = active.role === 'owner';
   const canInvite = active.role === 'owner' || active.role === 'member';
-  const otherOwners = members.filter((m) => m.role === 'owner' && m.userId !== currentUserId).length;
+  const otherOwners = members.filter(
+    (m) => m.role === 'owner' && m.userId !== currentUserId,
+  ).length;
 
   async function saveOrganization() {
     setBusy('org');
     setError(null);
     try {
-      await apiFetch('/api/v1/me/organizations', { method: 'PATCH', body: { name: name.trim(), ownershipType } });
+      await apiFetch('/api/v1/me/organizations', {
+        method: 'PATCH',
+        body: { name: name.trim(), ownershipType },
+      });
       toast({ title: 'Organisation updated', tone: 'success' });
       router.refresh();
     } catch (err) {
@@ -92,9 +99,16 @@ export function OrganizationSettings({
     setBusy('invite');
     setError(null);
     try {
-      await apiFetch('/api/v1/me/organizations/invitations', { method: 'POST', body: { email: inviteEmail.trim(), role: inviteRole } });
+      await apiFetch('/api/v1/me/organizations/invitations', {
+        method: 'POST',
+        body: { email: inviteEmail.trim(), role: inviteRole },
+      });
       setInviteEmail('');
-      toast({ title: 'Invitation sent', description: 'The invitation email is queued and expires in 7 days.', tone: 'success' });
+      toast({
+        title: 'Invitation sent',
+        description: 'The invitation email is queued and expires in 7 days.',
+        tone: 'success',
+      });
       router.refresh();
     } catch (err) {
       setError(errorMessage(err));
@@ -128,7 +142,8 @@ export function OrganizationSettings({
       return;
     }
     const remaining = memberships.filter((m) => m.organizationId !== active.organizationId);
-    if (remaining[0]) await authClient.organization.setActive({ organizationId: remaining[0].organizationId });
+    if (remaining[0])
+      await authClient.organization.setActive({ organizationId: remaining[0].organizationId });
     queryClient.clear();
     setLeaveOpen(false);
     setBusy(null);
@@ -148,7 +163,12 @@ export function OrganizationSettings({
         <CardHeader>
           <CardTitle>{active.name}</CardTitle>
           <CardDescription>
-            Your role: <Badge tone="primary">{humanize(active.role)}</Badge>. {ORG_ROLE_DESCRIPTIONS[(active.role === 'tenant' ? 'member' : active.role) as InvitableOrgRole]}
+            Your role: <Badge tone="primary">{humanize(active.role)}</Badge>.{' '}
+            {
+              ORG_ROLE_DESCRIPTIONS[
+                (active.role === 'tenant' ? 'member' : active.role) as InvitableOrgRole
+              ]
+            }
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -161,11 +181,26 @@ export function OrganizationSettings({
               className="grid gap-4 sm:grid-cols-2"
             >
               <Field label="Organisation name" required>
-                {({ id }) => <Input id={id} value={name} onChange={(e) => setName(e.target.value)} minLength={2} maxLength={120} />}
-              </Field>
-              <Field label="Ownership type" hint="Individual or company; affects invoicing details and document requirements.">
                 {({ id }) => (
-                  <NativeSelect id={id} value={ownershipType} onChange={(e) => setOwnershipType(e.target.value as 'individual' | 'company')}>
+                  <Input
+                    id={id}
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    minLength={2}
+                    maxLength={120}
+                  />
+                )}
+              </Field>
+              <Field
+                label="Ownership type"
+                hint="Individual or company; affects invoicing details and document requirements."
+              >
+                {({ id }) => (
+                  <NativeSelect
+                    id={id}
+                    value={ownershipType}
+                    onChange={(e) => setOwnershipType(e.target.value as 'individual' | 'company')}
+                  >
                     <option value="individual">Individual or household</option>
                     <option value="company">Company</option>
                   </NativeSelect>
@@ -179,12 +214,14 @@ export function OrganizationSettings({
             </form>
           ) : (
             <p className="text-sm text-fg-muted">
-              Ownership type: {humanize(active.ownershipType)}. Only owners can change organisation settings.
+              Ownership type: {humanize(active.ownershipType)}. Only owners can change organisation
+              settings.
             </p>
           )}
           {memberships.length > 1 ? (
             <p className="text-sm text-fg-muted">
-              You belong to {memberships.length} organisations. Switch between them from the header; switching resets what is shown.
+              You belong to {memberships.length} organisations. Switch between them from the header;
+              switching resets what is shown.
             </p>
           ) : null}
         </CardContent>
@@ -193,7 +230,9 @@ export function OrganizationSettings({
       <Card>
         <CardHeader>
           <CardTitle>Members</CardTitle>
-          <CardDescription>Household members and advisers with explicit view, comment or approval rights.</CardDescription>
+          <CardDescription>
+            Household members and advisers with explicit view, comment or approval rights.
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <DataTable
@@ -203,10 +242,32 @@ export function OrganizationSettings({
             rowLabel={(m) => m.name}
             emptyMessage="Members could not be listed for your role."
             columns={[
-              { key: 'name', header: 'Name', cell: (m) => <span className="font-medium">{m.name}{m.userId === currentUserId ? ' (you)' : ''}</span> },
+              {
+                key: 'name',
+                header: 'Name',
+                cell: (m) => (
+                  <span className="font-medium">
+                    {m.name}
+                    {m.userId === currentUserId ? ' (you)' : ''}
+                  </span>
+                ),
+              },
               { key: 'email', header: 'Email', cell: (m) => m.email },
-              { key: 'role', header: 'Role', cell: (m) => <Badge tone={m.role === 'owner' ? 'primary' : 'neutral'}>{humanize(m.role)}</Badge> },
-              { key: 'since', header: 'Since', cell: (m) => formatDateLabel(m.createdAt), hideOnMobile: true },
+              {
+                key: 'role',
+                header: 'Role',
+                cell: (m) => (
+                  <Badge tone={m.role === 'owner' ? 'primary' : 'neutral'}>
+                    {humanize(m.role)}
+                  </Badge>
+                ),
+              },
+              {
+                key: 'since',
+                header: 'Since',
+                cell: (m) => formatDateLabel(m.createdAt),
+                hideOnMobile: true,
+              },
             ]}
           />
           {canInvite ? (
@@ -218,11 +279,24 @@ export function OrganizationSettings({
               className="grid gap-4 rounded-md border border-border p-3 sm:grid-cols-[1fr_auto_auto] sm:items-end"
             >
               <Field label="Invite by email" required>
-                {({ id }) => <Input id={id} type="email" value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)} required />}
+                {({ id }) => (
+                  <Input
+                    id={id}
+                    type="email"
+                    value={inviteEmail}
+                    onChange={(e) => setInviteEmail(e.target.value)}
+                    required
+                  />
+                )}
               </Field>
               <Field label="Role" hint={ORG_ROLE_DESCRIPTIONS[inviteRole]}>
                 {({ id }) => (
-                  <NativeSelect id={id} value={inviteRole} onChange={(e) => setInviteRole(e.target.value as InvitableOrgRole)} className="min-w-[10rem]">
+                  <NativeSelect
+                    id={id}
+                    value={inviteRole}
+                    onChange={(e) => setInviteRole(e.target.value as InvitableOrgRole)}
+                    className="min-w-[10rem]"
+                  >
                     {INVITABLE_ROLES.filter((r) => r !== 'owner' || canManage).map((r) => (
                       <option key={r} value={r}>
                         {humanize(r)}
@@ -243,13 +317,24 @@ export function OrganizationSettings({
               <h3 className="mb-2 text-sm font-medium">Pending invitations</h3>
               <ul className="space-y-2">
                 {invitations.map((inv) => (
-                  <li key={inv.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border p-3 text-sm">
+                  <li
+                    key={inv.id}
+                    className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border p-3 text-sm"
+                  >
                     <span>
-                      <span className="font-medium">{inv.email}</span> as {humanize(inv.role)} · {inv.status === 'expired' ? 'expired' : `expires ${formatDateLabel(inv.expiresAt)}`}
+                      <span className="font-medium">{inv.email}</span> as {humanize(inv.role)} ·{' '}
+                      {inv.status === 'expired'
+                        ? 'expired'
+                        : `expires ${formatDateLabel(inv.expiresAt)}`}
                       {inv.inviterName ? ` · invited by ${inv.inviterName}` : ''}
                     </span>
                     {canInvite ? (
-                      <Button variant="secondary" size="sm" loading={busy === `revoke:${inv.id}`} onClick={() => void revoke(inv.id)}>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        loading={busy === `revoke:${inv.id}`}
+                        onClick={() => void revoke(inv.id)}
+                      >
                         Revoke
                       </Button>
                     ) : null}
@@ -271,16 +356,33 @@ export function OrganizationSettings({
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Button variant="danger" disabled={active.role === 'owner' && otherOwners === 0} onClick={() => setLeaveOpen(true)}>
+          <Button
+            variant="danger"
+            disabled={active.role === 'owner' && otherOwners === 0}
+            onClick={() => setLeaveOpen(true)}
+          >
             Leave {active.name}
           </Button>
           <Dialog open={leaveOpen} onOpenChange={setLeaveOpen}>
-            <DialogContent title={`Leave ${active.name}?`} description="This removes your membership now. An owner can invite you again later." size="sm">
+            <DialogContent
+              title={`Leave ${active.name}?`}
+              description="This removes your membership now. An owner can invite you again later."
+              size="sm"
+            >
               <DialogFooter>
-                <Button variant="ghost" onClick={() => setLeaveOpen(false)} disabled={busy === 'leave'}>
+                <Button
+                  variant="ghost"
+                  onClick={() => setLeaveOpen(false)}
+                  disabled={busy === 'leave'}
+                >
                   Stay
                 </Button>
-                <Button variant="danger" onClick={() => void leave()} loading={busy === 'leave'} loadingLabel="Leaving">
+                <Button
+                  variant="danger"
+                  onClick={() => void leave()}
+                  loading={busy === 'leave'}
+                  loadingLabel="Leaving"
+                >
                   Leave organisation
                 </Button>
               </DialogFooter>

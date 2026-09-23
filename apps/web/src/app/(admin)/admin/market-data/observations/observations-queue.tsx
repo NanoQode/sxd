@@ -54,61 +54,108 @@ export function ObservationsQueue({
     <div className="space-y-4">
       <div className="grid grid-cols-1 gap-3 rounded-lg border border-border bg-bg-elevated p-3 sm:grid-cols-2 lg:grid-cols-4">
         <Field label="Search">
-          {({ id }) => <Input id={id} value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Metric, cohort, source, market" />}
+          {({ id }) => (
+            <Input
+              id={id}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Metric, cohort, source, market"
+            />
+          )}
         </Field>
         <Field label="Review status">
           {({ id }) => (
-            <NativeSelect id={id} value={filters.reviewStatus} onChange={(e) => setFilters({ reviewStatus: e.target.value || null, pendingOnly: e.target.value ? false : null, page: 1 })}>
+            <NativeSelect
+              id={id}
+              value={filters.reviewStatus}
+              onChange={(e) =>
+                setFilters({
+                  reviewStatus: e.target.value || null,
+                  pendingOnly: e.target.value ? false : null,
+                  page: 1,
+                })
+              }
+            >
               <option value="">Any</option>
               {REVIEW_STATUSES.map((s) => (
-                <option key={s} value={s}>{humanize(s === 'source_read_pending_business_review' ? 'pending review' : s)}</option>
+                <option key={s} value={s}>
+                  {humanize(s === 'source_read_pending_business_review' ? 'pending review' : s)}
+                </option>
               ))}
             </NativeSelect>
           )}
         </Field>
         <Field label="Publication">
           {({ id }) => (
-            <NativeSelect id={id} value={filters.publicationState} onChange={(e) => setFilters({ publicationState: e.target.value || null, page: 1 })}>
+            <NativeSelect
+              id={id}
+              value={filters.publicationState}
+              onChange={(e) => setFilters({ publicationState: e.target.value || null, page: 1 })}
+            >
               <option value="">Any</option>
               {PUBLICATION_STATES.map((s) => (
-                <option key={s} value={s}>{humanize(s)}</option>
+                <option key={s} value={s}>
+                  {humanize(s)}
+                </option>
               ))}
             </NativeSelect>
           )}
         </Field>
         <Field label="Geography">
           {({ id }) => (
-            <NativeSelect id={id} value={filters.geographyLevel} onChange={(e) => setFilters({ geographyLevel: e.target.value || null, page: 1 })}>
+            <NativeSelect
+              id={id}
+              value={filters.geographyLevel}
+              onChange={(e) => setFilters({ geographyLevel: e.target.value || null, page: 1 })}
+            >
               <option value="">Any level</option>
               {GEOGRAPHY_LEVELS.map((s) => (
-                <option key={s} value={s}>{humanize(s)}</option>
+                <option key={s} value={s}>
+                  {humanize(s)}
+                </option>
               ))}
             </NativeSelect>
           )}
         </Field>
         <Field label="Metric">
           {({ id }) => (
-            <NativeSelect id={id} value={filters.metric} onChange={(e) => setFilters({ metric: e.target.value || null, page: 1 })}>
+            <NativeSelect
+              id={id}
+              value={filters.metric}
+              onChange={(e) => setFilters({ metric: e.target.value || null, page: 1 })}
+            >
               <option value="">Any metric</option>
               {metrics.map((m) => (
-                <option key={m} value={m}>{m}</option>
+                <option key={m} value={m}>
+                  {m}
+                </option>
               ))}
             </NativeSelect>
           )}
         </Field>
         <Field label="Market">
           {({ id }) => (
-            <NativeSelect id={id} value={filters.marketId} onChange={(e) => setFilters({ marketId: e.target.value || null, page: 1 })}>
+            <NativeSelect
+              id={id}
+              value={filters.marketId}
+              onChange={(e) => setFilters({ marketId: e.target.value || null, page: 1 })}
+            >
               <option value="">Any market</option>
               {markets.map((m) => (
-                <option key={m.id} value={m.id}>{m.name}</option>
+                <option key={m.id} value={m.id}>
+                  {m.name}
+                </option>
               ))}
             </NativeSelect>
           )}
         </Field>
         <Field label="Rank eligibility">
           {({ id }) => (
-            <NativeSelect id={id} value={filters.rankEligible} onChange={(e) => setFilters({ rankEligible: e.target.value || null, page: 1 })}>
+            <NativeSelect
+              id={id}
+              value={filters.rankEligible}
+              onChange={(e) => setFilters({ rankEligible: e.target.value || null, page: 1 })}
+            >
               <option value="">Any</option>
               <option value="true">Rank-eligible</option>
               <option value="false">Not rank-eligible</option>
@@ -116,16 +163,51 @@ export function ObservationsQueue({
           )}
         </Field>
         <div className="flex items-end gap-2">
-          <Button variant={showingPending ? 'primary' : 'secondary'} onClick={() => setFilters({ pendingOnly: showingPending ? false : true, reviewStatus: null, page: 1 })}>
+          <Button
+            variant={showingPending ? 'primary' : 'secondary'}
+            onClick={() =>
+              setFilters({
+                pendingOnly: showingPending ? false : true,
+                reviewStatus: null,
+                page: 1,
+              })
+            }
+          >
             {showingPending ? 'Showing pending only' : 'Pending only'}
           </Button>
-          <Button variant="ghost" onClick={() => setFilters({ q: null, reviewStatus: null, publicationState: null, geographyLevel: null, metric: null, marketId: null, rankEligible: null, pendingOnly: false, page: null })}>
+          <Button
+            variant="ghost"
+            onClick={() =>
+              setFilters({
+                q: null,
+                reviewStatus: null,
+                publicationState: null,
+                geographyLevel: null,
+                metric: null,
+                marketId: null,
+                rankEligible: null,
+                pendingOnly: false,
+                page: null,
+              })
+            }
+          >
             Clear
           </Button>
         </div>
       </div>
-      {showingPending && result.total === 0 ? <Alert tone="success" title="Nothing awaiting review">Every current interpretation has been reviewed.</Alert> : null}
-      <ObservationTable items={result.items} actorId={actorId} canPublish={canPublish} canEdit={canEdit} caption="Observation queue" emptyMessage="No observations match these filters." />
+      {showingPending && result.total === 0 ? (
+        <Alert tone="success" title="Nothing awaiting review">
+          Every current interpretation has been reviewed.
+        </Alert>
+      ) : null}
+      <ObservationTable
+        items={result.items}
+        actorId={actorId}
+        canPublish={canPublish}
+        canEdit={canEdit}
+        caption="Observation queue"
+        emptyMessage="No observations match these filters."
+      />
       <Pagination page={result.page} pageSize={result.pageSize} total={result.total} />
     </div>
   );

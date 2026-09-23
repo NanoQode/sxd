@@ -5,7 +5,12 @@ import { usePathname } from 'next/navigation';
 import { cn } from '@simplexd/ui';
 
 const links = [
-  { href: '/admin/market-data', label: 'Markets', exact: false, prefix: '/admin/market-data/markets' },
+  {
+    href: '/admin/market-data',
+    label: 'Markets',
+    exact: false,
+    prefix: '/admin/market-data/markets',
+  },
   { href: '/admin/market-data/observations', label: 'Observations' },
   { href: '/admin/market-data/sources', label: 'Sources' },
   { href: '/admin/market-data/imports', label: 'Imports' },

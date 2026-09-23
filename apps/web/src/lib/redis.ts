@@ -19,7 +19,11 @@ export function getRedis(): Redis | null {
     connectTimeout: 3000,
   });
   client.on('error', (err) => logger().warn({ err: err.message }, 'redis error'));
-  client.connect().catch((err) => logger().warn({ err: err.message }, 'redis connect failed; using in-process fallbacks'));
+  client
+    .connect()
+    .catch((err) =>
+      logger().warn({ err: err.message }, 'redis connect failed; using in-process fallbacks'),
+    );
   globalRef.__sxRedis = client;
   return client;
 }

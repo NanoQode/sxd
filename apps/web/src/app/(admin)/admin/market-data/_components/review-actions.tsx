@@ -42,14 +42,72 @@ interface DecisionMeta {
 }
 
 const META: Record<Decision, DecisionMeta> = {
-  approve: { label: 'Approve', title: 'Approve (mark verified)', description: 'Business review passed. Publication is a separate step.', tone: 'primary', requireNote: false, permission: 'publish' },
-  reject: { label: 'Reject', title: 'Reject observation', description: 'The observation stays inspectable but is excluded from panels and ranking.', tone: 'danger', requireNote: true, permission: 'publish' },
-  dispute: { label: 'Dispute', title: 'Raise a dispute', description: 'Marks the evidence as challenged; it is excluded from ranking until resolved.', tone: 'danger', requireNote: true, permission: 'edit' },
-  mark_stale: { label: 'Mark stale', title: 'Mark as stale', description: 'Stale evidence remains inspectable but is excluded from default ranking.', tone: 'primary', requireNote: false, permission: 'edit' },
-  publish: { label: 'Publish', title: 'Publish to the public evidence panel', description: 'Requires the approver permission and a different person from the submitter. Local medians need enough deduplicated comparables.', tone: 'primary', requireNote: false, permission: 'publish' },
-  unpublish: { label: 'Unpublish', title: 'Unpublish', description: 'Removes it from public panels; history is kept.', tone: 'danger', requireNote: true, permission: 'publish' },
-  mark_rank_eligible: { label: 'Mark rank-eligible', title: 'Mark as rank-eligible', description: 'Allows the ranking engine to use this published, verified, local observation. Give the evidence basis.', tone: 'primary', requireNote: true, permission: 'publish' },
-  mark_rank_ineligible: { label: 'Mark rank-ineligible', title: 'Exclude from ranking', description: 'Records why this observation must not feed the ranking.', tone: 'primary', requireNote: true, permission: 'edit' },
+  approve: {
+    label: 'Approve',
+    title: 'Approve (mark verified)',
+    description: 'Business review passed. Publication is a separate step.',
+    tone: 'primary',
+    requireNote: false,
+    permission: 'publish',
+  },
+  reject: {
+    label: 'Reject',
+    title: 'Reject observation',
+    description: 'The observation stays inspectable but is excluded from panels and ranking.',
+    tone: 'danger',
+    requireNote: true,
+    permission: 'publish',
+  },
+  dispute: {
+    label: 'Dispute',
+    title: 'Raise a dispute',
+    description: 'Marks the evidence as challenged; it is excluded from ranking until resolved.',
+    tone: 'danger',
+    requireNote: true,
+    permission: 'edit',
+  },
+  mark_stale: {
+    label: 'Mark stale',
+    title: 'Mark as stale',
+    description: 'Stale evidence remains inspectable but is excluded from default ranking.',
+    tone: 'primary',
+    requireNote: false,
+    permission: 'edit',
+  },
+  publish: {
+    label: 'Publish',
+    title: 'Publish to the public evidence panel',
+    description:
+      'Requires the approver permission and a different person from the submitter. Local medians need enough deduplicated comparables.',
+    tone: 'primary',
+    requireNote: false,
+    permission: 'publish',
+  },
+  unpublish: {
+    label: 'Unpublish',
+    title: 'Unpublish',
+    description: 'Removes it from public panels; history is kept.',
+    tone: 'danger',
+    requireNote: true,
+    permission: 'publish',
+  },
+  mark_rank_eligible: {
+    label: 'Mark rank-eligible',
+    title: 'Mark as rank-eligible',
+    description:
+      'Allows the ranking engine to use this published, verified, local observation. Give the evidence basis.',
+    tone: 'primary',
+    requireNote: true,
+    permission: 'publish',
+  },
+  mark_rank_ineligible: {
+    label: 'Mark rank-ineligible',
+    title: 'Exclude from ranking',
+    description: 'Records why this observation must not feed the ranking.',
+    tone: 'primary',
+    requireNote: true,
+    permission: 'edit',
+  },
 };
 
 function available(t: ReviewTarget): Decision[] {
@@ -60,9 +118,11 @@ function available(t: ReviewTarget): Decision[] {
   if (i.reviewStatus !== 'rejected') out.push('reject');
   if (i.reviewStatus !== 'disputed' && i.reviewStatus !== 'rejected') out.push('dispute');
   if (i.reviewStatus !== 'stale' && i.reviewStatus !== 'rejected') out.push('mark_stale');
-  if (i.publicationState !== 'published' && (pending || i.reviewStatus === 'verified')) out.push('publish');
+  if (i.publicationState !== 'published' && (pending || i.reviewStatus === 'verified'))
+    out.push('publish');
   if (i.publicationState === 'published') out.push('unpublish');
-  if (i.publicationState === 'published' && i.reviewStatus === 'verified' && !i.rankEligible) out.push('mark_rank_eligible');
+  if (i.publicationState === 'published' && i.reviewStatus === 'verified' && !i.rankEligible)
+    out.push('mark_rank_eligible');
   if (i.rankEligible) out.push('mark_rank_ineligible');
   return out;
 }
@@ -140,12 +200,17 @@ export function ReviewActions({
     }
   }
 
-  if (decisions.length === 0) return <span className="text-xs text-fg-subtle">No actions available</span>;
+  if (decisions.length === 0)
+    return <span className="text-xs text-fg-subtle">No actions available</span>;
 
   const meta = decision ? META[decision] : null;
   const showComparables = decision === 'publish' || decision === 'mark_rank_eligible';
   const blockedByComparables = Boolean(showComparables && comp?.applicable && !comp.satisfied);
-  const sodBlocked = Boolean(meta && (decision === 'approve' || decision === 'publish' || decision === 'mark_rank_eligible') && ownWork);
+  const sodBlocked = Boolean(
+    meta &&
+    (decision === 'approve' || decision === 'publish' || decision === 'mark_rank_eligible') &&
+    ownWork,
+  );
 
   return (
     <>
@@ -154,7 +219,13 @@ export function ReviewActions({
           <Button
             key={d}
             size="sm"
-            variant={META[d].tone === 'danger' ? 'secondary' : d === 'publish' || d === 'approve' ? 'primary' : 'secondary'}
+            variant={
+              META[d].tone === 'danger'
+                ? 'secondary'
+                : d === 'publish' || d === 'approve'
+                  ? 'primary'
+                  : 'secondary'
+            }
             onClick={() => openDecision(d)}
           >
             {META[d].label}
@@ -170,59 +241,98 @@ export function ReviewActions({
         tone={meta?.tone ?? 'primary'}
         onConfirm={async () => {
           if (!decision) return;
-          if (meta?.requireNote && note.trim().length < 3) throw new Error('A note of at least 3 characters is required.');
-          if (decision === 'mark_rank_ineligible' && reasonNotRankEligible.trim().length < 3) throw new Error('Give the reason the observation is not rank-eligible.');
-          if (decision === 'publish' && blockedByComparables && !contextual) throw new Error('Publish as contextual evidence or collect more comparables first.');
+          if (meta?.requireNote && note.trim().length < 3)
+            throw new Error('A note of at least 3 characters is required.');
+          if (decision === 'mark_rank_ineligible' && reasonNotRankEligible.trim().length < 3)
+            throw new Error('Give the reason the observation is not rank-eligible.');
+          if (decision === 'publish' && blockedByComparables && !contextual)
+            throw new Error('Publish as contextual evidence or collect more comparables first.');
           await submit(decision);
         }}
       >
         {sodBlocked ? (
           <Alert tone="warning" title="Separation of duties">
-            You submitted this interpretation. Another data approver must {decision === 'approve' ? 'approve' : decision === 'publish' ? 'publish' : 'mark'} it; the server will refuse this action (own_work).
+            You submitted this interpretation. Another data approver must{' '}
+            {decision === 'approve' ? 'approve' : decision === 'publish' ? 'publish' : 'mark'} it;
+            the server will refuse this action (own_work).
           </Alert>
         ) : null}
         {showComparables ? (
           <div className="rounded-md border border-border bg-bg-sunken p-3 text-sm">
             <p className="font-medium">Comparables check</p>
-            {loadingComp ? <p className="text-fg-muted">Counting deduplicated comparables…</p> : null}
-            {comp === null ? <p className="text-fg-muted">Could not load the comparables summary.</p> : null}
+            {loadingComp ? (
+              <p className="text-fg-muted">Counting deduplicated comparables…</p>
+            ) : null}
+            {comp === null ? (
+              <p className="text-fg-muted">Could not load the comparables summary.</p>
+            ) : null}
             {comp && !comp.applicable ? (
               <p className="text-fg-muted">
-                Not a local median ({target.statistic}, {target.geographyLevel.replace(/_/g, ' ')}); the publication threshold does not apply.
+                Not a local median ({target.statistic}, {target.geographyLevel.replace(/_/g, ' ')});
+                the publication threshold does not apply.
               </p>
             ) : null}
             {comp?.applicable ? (
               <ul className="mt-1 space-y-0.5 text-fg-muted">
                 <li>
-                  Deduplicated local comparables for this metric and cohort: <strong className="text-fg">{comp.count}</strong> of{' '}
+                  Deduplicated local comparables for this metric and cohort:{' '}
+                  <strong className="text-fg">{comp.count}</strong> of{' '}
                   <strong className="text-fg">{comp.minComparables}</strong> required
                 </li>
                 <li>
-                  Source concentration: {comp.sourceConcentration === null ? '—' : `${Math.round(comp.sourceConcentration * 100)}%`}
+                  Source concentration:{' '}
+                  {comp.sourceConcentration === null
+                    ? '—'
+                    : `${Math.round(comp.sourceConcentration * 100)}%`}
                   {comp.largestSourceTitle ? ` (${comp.largestSourceTitle})` : ''}
                 </li>
               </ul>
             ) : null}
             {decision === 'publish' && blockedByComparables ? (
               <label className="mt-3 flex items-start gap-2 text-sm">
-                <input type="checkbox" className="mt-0.5 h-4 w-4 accent-[var(--sx-primary)]" checked={contextual} onChange={(e) => setContextual(e.target.checked)} />
+                <input
+                  type="checkbox"
+                  className="mt-0.5 h-4 w-4 accent-[var(--sx-primary)]"
+                  checked={contextual}
+                  onChange={(e) => setContextual(e.target.checked)}
+                />
                 <span>
-                  Publish as contextual evidence (not a local median). It will never be rank-eligible and the reason is recorded on the interpretation.
+                  Publish as contextual evidence (not a local median). It will never be
+                  rank-eligible and the reason is recorded on the interpretation.
                 </span>
               </label>
             ) : null}
             {decision === 'mark_rank_eligible' && blockedByComparables ? (
-              <p className="mt-2 text-danger">Below the comparables threshold; collect more comparables before marking rank-eligible.</p>
+              <p className="mt-2 text-danger">
+                Below the comparables threshold; collect more comparables before marking
+                rank-eligible.
+              </p>
             ) : null}
           </div>
         ) : null}
         {decision === 'mark_rank_ineligible' ? (
           <Field label="Reason not rank-eligible" required>
-            {({ id }) => <Input id={id} value={reasonNotRankEligible} onChange={(e) => setReasonNotRankEligible(e.target.value)} />}
+            {({ id }) => (
+              <Input
+                id={id}
+                value={reasonNotRankEligible}
+                onChange={(e) => setReasonNotRankEligible(e.target.value)}
+              />
+            )}
           </Field>
         ) : null}
-        <Field label={meta?.requireNote ? 'Note (required)' : 'Note (optional)'} required={meta?.requireNote}>
-          {({ id }) => <Textarea id={id} className="min-h-20" value={note} onChange={(e) => setNote(e.target.value)} />}
+        <Field
+          label={meta?.requireNote ? 'Note (required)' : 'Note (optional)'}
+          required={meta?.requireNote}
+        >
+          {({ id }) => (
+            <Textarea
+              id={id}
+              className="min-h-20"
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+            />
+          )}
         </Field>
       </ActionDialog>
     </>

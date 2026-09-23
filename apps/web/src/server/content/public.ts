@@ -7,7 +7,10 @@ import { renderMarkdown } from '@/lib/markdown';
 
 const anonymous = { userId: null, organizationId: null, staff: false } as const;
 
-function toPublished(page: typeof schema.contentPages.$inferSelect, rev: typeof schema.contentRevisions.$inferSelect): PublishedContent {
+function toPublished(
+  page: typeof schema.contentPages.$inferSelect,
+  rev: typeof schema.contentRevisions.$inferSelect,
+): PublishedContent {
   return {
     slug: page.slug,
     kind: page.kind,
@@ -29,9 +32,18 @@ export async function getPublishedContent(slug: string): Promise<PublishedConten
         .from(schema.contentPages)
         .innerJoin(
           schema.contentRevisions,
-          and(eq(schema.contentRevisions.pageId, schema.contentPages.id), eq(schema.contentRevisions.revision, schema.contentPages.publishedRevision)),
+          and(
+            eq(schema.contentRevisions.pageId, schema.contentPages.id),
+            eq(schema.contentRevisions.revision, schema.contentPages.publishedRevision),
+          ),
         )
-        .where(and(eq(schema.contentPages.slug, slug), eq(schema.contentPages.status, 'published'), isNotNull(schema.contentPages.publishedRevision))),
+        .where(
+          and(
+            eq(schema.contentPages.slug, slug),
+            eq(schema.contentPages.status, 'published'),
+            isNotNull(schema.contentPages.publishedRevision),
+          ),
+        ),
     );
     const row = rows[0];
     return row ? toPublished(row.page, row.rev) : null;
@@ -39,7 +51,9 @@ export async function getPublishedContent(slug: string): Promise<PublishedConten
 }
 
 /** Lists published pages of a kind (FAQs, resources, policies, goal paths…), ordered. */
-export async function listPublishedContent(kind: PublishedContent['kind']): Promise<PublishedContent[]> {
+export async function listPublishedContent(
+  kind: PublishedContent['kind'],
+): Promise<PublishedContent[]> {
   return cached(`content-kind:${kind}`, 60, async () => {
     const now = new Date();
     const rows = await withActor(getDb(), anonymous, (tx) =>
@@ -48,12 +62,21 @@ export async function listPublishedContent(kind: PublishedContent['kind']): Prom
         .from(schema.contentPages)
         .innerJoin(
           schema.contentRevisions,
-          and(eq(schema.contentRevisions.pageId, schema.contentPages.id), eq(schema.contentRevisions.revision, schema.contentPages.publishedRevision)),
+          and(
+            eq(schema.contentRevisions.pageId, schema.contentPages.id),
+            eq(schema.contentRevisions.revision, schema.contentPages.publishedRevision),
+          ),
         )
         .where(
           and(
             eq(schema.contentPages.kind, kind),
-            or(eq(schema.contentPages.status, 'published'), and(eq(schema.contentPages.status, 'scheduled'), lte(schema.contentPages.publishAt, now))),
+            or(
+              eq(schema.contentPages.status, 'published'),
+              and(
+                eq(schema.contentPages.status, 'scheduled'),
+                lte(schema.contentPages.publishAt, now),
+              ),
+            ),
             isNotNull(schema.contentPages.publishedRevision),
           ),
         )

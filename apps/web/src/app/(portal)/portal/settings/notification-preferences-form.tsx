@@ -2,7 +2,20 @@
 
 import { useState } from 'react';
 import type { NotificationPreferenceItem, NotificationPreferencesDto } from '@simplexd/contracts';
-import { Alert, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Field, Input, NativeSelect, Switch, useToast } from '@simplexd/ui';
+import {
+  Alert,
+  Button,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  Field,
+  Input,
+  NativeSelect,
+  Switch,
+  useToast,
+} from '@simplexd/ui';
 import { apiFetch, errorMessage } from '@/lib/api/client-fetch';
 
 const CHANNELS: Array<{ key: NotificationPreferenceItem['channel']; label: string }> = [
@@ -10,15 +23,41 @@ const CHANNELS: Array<{ key: NotificationPreferenceItem['channel']; label: strin
   { key: 'sms', label: 'SMS' },
   { key: 'in_app', label: 'In-app' },
 ];
-const CATEGORIES: Array<{ key: NotificationPreferenceItem['category']; label: string; description: string }> = [
-  { key: 'security', label: 'Security', description: 'Sign-in, password and access changes. Always on.' },
-  { key: 'transactional', label: 'Transactional', description: 'Quotes, invoices, reports and decisions on your requests.' },
-  { key: 'reminders', label: 'Reminders', description: 'Upcoming visits, due invoices and pending approvals.' },
+const CATEGORIES: Array<{
+  key: NotificationPreferenceItem['category'];
+  label: string;
+  description: string;
+}> = [
+  {
+    key: 'security',
+    label: 'Security',
+    description: 'Sign-in, password and access changes. Always on.',
+  },
+  {
+    key: 'transactional',
+    label: 'Transactional',
+    description: 'Quotes, invoices, reports and decisions on your requests.',
+  },
+  {
+    key: 'reminders',
+    label: 'Reminders',
+    description: 'Upcoming visits, due invoices and pending approvals.',
+  },
   { key: 'digests', label: 'Digests', description: 'Daily or weekly summaries of activity.' },
-  { key: 'marketing', label: 'Marketing', description: 'Product news and offers. Requires your consent.' },
+  {
+    key: 'marketing',
+    label: 'Marketing',
+    description: 'Product news and offers. Requires your consent.',
+  },
 ];
 
-export function NotificationPreferencesForm({ initial, hasPhone }: { initial: NotificationPreferencesDto; hasPhone: boolean }) {
+export function NotificationPreferencesForm({
+  initial,
+  hasPhone,
+}: {
+  initial: NotificationPreferencesDto;
+  hasPhone: boolean;
+}) {
   const { toast } = useToast();
   const [items, setItems] = useState<NotificationPreferenceItem[]>(initial.items);
   const [quietEnabled, setQuietEnabled] = useState(Boolean(initial.quietHours));
@@ -28,18 +67,27 @@ export function NotificationPreferencesForm({ initial, hasPhone }: { initial: No
   const [error, setError] = useState<string | null>(null);
   const locked = new Set(initial.lockedCategories);
 
-  function update(channel: NotificationPreferenceItem['channel'], category: NotificationPreferenceItem['category'], patch: Partial<NotificationPreferenceItem>) {
-    setItems((prev) => prev.map((i) => (i.channel === channel && i.category === category ? { ...i, ...patch } : i)));
+  function update(
+    channel: NotificationPreferenceItem['channel'],
+    category: NotificationPreferenceItem['category'],
+    patch: Partial<NotificationPreferenceItem>,
+  ) {
+    setItems((prev) =>
+      prev.map((i) => (i.channel === channel && i.category === category ? { ...i, ...patch } : i)),
+    );
   }
 
   async function save() {
     setBusy(true);
     setError(null);
     try {
-      const saved = await apiFetch<NotificationPreferencesDto>('/api/v1/me/notification-preferences', {
-        method: 'PUT',
-        body: { items, quietHours: quietEnabled ? { start: quietStart, end: quietEnd } : null },
-      });
+      const saved = await apiFetch<NotificationPreferencesDto>(
+        '/api/v1/me/notification-preferences',
+        {
+          method: 'PUT',
+          body: { items, quietHours: quietEnabled ? { start: quietStart, end: quietEnd } : null },
+        },
+      );
       setItems(saved.items);
       toast({ title: 'Notification preferences saved', tone: 'success' });
     } catch (err) {
@@ -54,7 +102,8 @@ export function NotificationPreferencesForm({ initial, hasPhone }: { initial: No
       <CardHeader>
         <CardTitle>Channels and categories</CardTitle>
         <CardDescription>
-          Choose how you hear from us. Security messages follow product policy and stay on. SMS needs a phone number on your profile.
+          Choose how you hear from us. Security messages follow product policy and stay on. SMS
+          needs a phone number on your profile.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-5">
@@ -83,7 +132,9 @@ export function NotificationPreferencesForm({ initial, hasPhone }: { initial: No
             </thead>
             <tbody>
               {CATEGORIES.map((cat) => {
-                const emailItem = items.find((i) => i.channel === 'email' && i.category === cat.key);
+                const emailItem = items.find(
+                  (i) => i.channel === 'email' && i.category === cat.key,
+                );
                 return (
                   <tr key={cat.key} className="border-t border-border align-top">
                     <th scope="row" className="py-3 pr-3 text-left font-normal">
@@ -102,7 +153,9 @@ export function NotificationPreferencesForm({ initial, hasPhone }: { initial: No
                             label={`${cat.label} by ${c.label}`}
                             onCheckedChange={(v) => update(c.key, cat.key, { enabled: v })}
                           />
-                          {c.key === 'sms' && !hasPhone ? <p className="mt-1 text-xs text-fg-subtle">Add a phone first</p> : null}
+                          {c.key === 'sms' && !hasPhone ? (
+                            <p className="mt-1 text-xs text-fg-subtle">Add a phone first</p>
+                          ) : null}
                         </td>
                       );
                     })}
@@ -112,7 +165,11 @@ export function NotificationPreferencesForm({ initial, hasPhone }: { initial: No
                           aria-label={`${cat.label} digest frequency`}
                           className="h-9 max-w-[9rem] text-sm"
                           value={emailItem?.digest ?? 'none'}
-                          onChange={(e) => update('email', cat.key, { digest: e.target.value as NotificationPreferenceItem['digest'] })}
+                          onChange={(e) =>
+                            update('email', cat.key, {
+                              digest: e.target.value as NotificationPreferenceItem['digest'],
+                            })
+                          }
                         >
                           <option value="none">Immediately</option>
                           <option value="daily">Daily</option>
@@ -130,21 +187,43 @@ export function NotificationPreferencesForm({ initial, hasPhone }: { initial: No
         </div>
         <div className="space-y-3 rounded-md border border-border p-3">
           <div className="flex items-center gap-3">
-            <Switch checked={quietEnabled} onCheckedChange={setQuietEnabled} id="quiet-hours" label="Quiet hours for non-urgent notifications" />
+            <Switch
+              checked={quietEnabled}
+              onCheckedChange={setQuietEnabled}
+              id="quiet-hours"
+              label="Quiet hours for non-urgent notifications"
+            />
             <label htmlFor="quiet-hours" className="text-sm font-medium">
               Quiet hours for non-urgent notifications
             </label>
           </div>
           <p className="text-sm text-fg-muted">
-            Reminders, digests and marketing are held until quiet hours end (in {initial.timeZone ?? 'your time zone'}). Security and urgent decisions are never held.
+            Reminders, digests and marketing are held until quiet hours end (in{' '}
+            {initial.timeZone ?? 'your time zone'}). Security and urgent decisions are never held.
           </p>
           {quietEnabled ? (
             <div className="flex flex-wrap gap-4">
               <Field label="From">
-                {({ id }) => <Input id={id} type="time" value={quietStart} onChange={(e) => setQuietStart(e.target.value)} className="max-w-[9rem]" />}
+                {({ id }) => (
+                  <Input
+                    id={id}
+                    type="time"
+                    value={quietStart}
+                    onChange={(e) => setQuietStart(e.target.value)}
+                    className="max-w-[9rem]"
+                  />
+                )}
               </Field>
               <Field label="Until">
-                {({ id }) => <Input id={id} type="time" value={quietEnd} onChange={(e) => setQuietEnd(e.target.value)} className="max-w-[9rem]" />}
+                {({ id }) => (
+                  <Input
+                    id={id}
+                    type="time"
+                    value={quietEnd}
+                    onChange={(e) => setQuietEnd(e.target.value)}
+                    className="max-w-[9rem]"
+                  />
+                )}
               </Field>
             </div>
           ) : null}

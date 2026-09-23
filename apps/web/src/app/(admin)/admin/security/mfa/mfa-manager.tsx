@@ -82,7 +82,10 @@ export function MfaManager({ enabled, email }: { enabled: boolean; email: string
       const res = await authClient.twoFactor.disable({ password });
       if (res.error) throw new Error(res.error.message ?? 'Could not disable the authenticator.');
       setPassword('');
-      toast({ title: 'Authenticator disabled', description: 'Sensitive actions are locked until you enrol again.' });
+      toast({
+        title: 'Authenticator disabled',
+        description: 'Sensitive actions are locked until you enrol again.',
+      });
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not disable the authenticator.');
@@ -102,7 +105,10 @@ export function MfaManager({ enabled, email }: { enabled: boolean; email: string
               <CardTitle>Status</CardTitle>
               <CardDescription>{email}</CardDescription>
             </div>
-            <StatusBadge status={enabled ? 'verified' : 'disabled'} label={enabled ? 'Authenticator verified' : 'Not enrolled'} />
+            <StatusBadge
+              status={enabled ? 'verified' : 'disabled'}
+              label={enabled ? 'Authenticator verified' : 'Not enrolled'}
+            />
           </div>
         </CardHeader>
       </Card>
@@ -157,11 +163,19 @@ export function MfaManager({ enabled, email }: { enabled: boolean; email: string
             <div className="flex flex-col items-start gap-4 sm:flex-row">
               {qr ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={qr} alt="QR code for your authenticator app" width={220} height={220} className="rounded-md border border-border bg-white p-1" />
+                <img
+                  src={qr}
+                  alt="QR code for your authenticator app"
+                  width={220}
+                  height={220}
+                  className="rounded-md border border-border bg-white p-1"
+                />
               ) : null}
               <div className="min-w-0 space-y-2 text-sm">
                 <p className="text-fg-muted">Manual entry secret:</p>
-                <code className="block break-all rounded bg-bg-sunken p-2 font-mono text-xs">{secret ?? totpUri}</code>
+                <code className="block break-all rounded bg-bg-sunken p-2 font-mono text-xs">
+                  {secret ?? totpUri}
+                </code>
               </div>
             </div>
             <div>
@@ -207,8 +221,8 @@ export function MfaManager({ enabled, email }: { enabled: boolean; email: string
           <CardHeader>
             <CardTitle>Disable the authenticator</CardTitle>
             <CardDescription>
-              Disabling removes access to publication, policy, role, settings and integration actions
-              until you enrol again. This is recorded.
+              Disabling removes access to publication, policy, role, settings and integration
+              actions until you enrol again. This is recorded.
             </CardDescription>
           </CardHeader>
           <CardContent>

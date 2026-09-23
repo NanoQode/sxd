@@ -5,34 +5,49 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { Alert, Button, ErrorSummary, Field, Input, NativeSelect, Textarea, useToast } from '@simplexd/ui';
+import {
+  Alert,
+  Button,
+  ErrorSummary,
+  Field,
+  Input,
+  NativeSelect,
+  Textarea,
+  useToast,
+} from '@simplexd/ui';
 import { apiFetch, errorMessage } from '@/lib/api/client-fetch';
 import { AVAILABILITY, ZONES, humanize } from '../../_lib/params';
 import { NigeriaPointPicker, insideNigeria } from './point-picker';
 
-const schema = z.object({
-  name: z.string().trim().min(1, 'Enter the market name').max(120),
-  slug: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'Lowercase letters, digits and hyphens'),
-  aliases: z.string().max(500),
-  stateId: z.string().uuid('Choose a state'),
-  geopoliticalZone: z.enum(ZONES),
-  displayOrder: z.number().int().min(0),
-  selectionBasis: z.string().max(500),
-  lon: z.number({ message: 'Longitude must be a number' }),
-  lat: z.number({ message: 'Latitude must be a number' }),
-  coordinateSourceId: z.string(),
-  coordinateAccuracy: z.string().max(200),
-  parentMarketId: z.string(),
-  overlapNote: z.string().max(500),
-  serviceAvailability: z.enum(AVAILABILITY),
-  profileMarkdown: z.string().max(20_000),
-  supplyMappingMethod: z.string().max(500),
-  changeReason: z.string().max(500),
-}).superRefine((v, ctx) => {
-  if (!insideNigeria(v.lon, v.lat)) {
-    ctx.addIssue({ code: 'custom', path: ['lon'], message: 'Coordinates must fall inside Nigeria (lon 2.5–15, lat 4–14; longitude first)' });
-  }
-});
+const schema = z
+  .object({
+    name: z.string().trim().min(1, 'Enter the market name').max(120),
+    slug: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'Lowercase letters, digits and hyphens'),
+    aliases: z.string().max(500),
+    stateId: z.string().uuid('Choose a state'),
+    geopoliticalZone: z.enum(ZONES),
+    displayOrder: z.number().int().min(0),
+    selectionBasis: z.string().max(500),
+    lon: z.number({ message: 'Longitude must be a number' }),
+    lat: z.number({ message: 'Latitude must be a number' }),
+    coordinateSourceId: z.string(),
+    coordinateAccuracy: z.string().max(200),
+    parentMarketId: z.string(),
+    overlapNote: z.string().max(500),
+    serviceAvailability: z.enum(AVAILABILITY),
+    profileMarkdown: z.string().max(20_000),
+    supplyMappingMethod: z.string().max(500),
+    changeReason: z.string().max(500),
+  })
+  .superRefine((v, ctx) => {
+    if (!insideNigeria(v.lon, v.lat)) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['lon'],
+        message: 'Coordinates must fall inside Nigeria (lon 2.5–15, lat 4–14; longitude first)',
+      });
+    }
+  });
 type Values = z.infer<typeof schema>;
 
 export interface MarketFormInitial {
@@ -114,7 +129,10 @@ export function MarketForm({
     const payload = {
       name: v.name,
       slug: v.slug,
-      aliases: v.aliases.split(',').map((a) => a.trim()).filter(Boolean),
+      aliases: v.aliases
+        .split(',')
+        .map((a) => a.trim())
+        .filter(Boolean),
       stateId: v.stateId,
       geopoliticalZone: v.geopoliticalZone,
       displayOrder: v.displayOrder,
@@ -132,7 +150,11 @@ export function MarketForm({
       if (editing && initial?.id) {
         await apiFetch(`/api/v1/admin/markets/${initial.id}`, {
           method: 'PATCH',
-          body: { ...payload, expectedVersion: initial.version, changeReason: v.changeReason.trim() },
+          body: {
+            ...payload,
+            expectedVersion: initial.version,
+            changeReason: v.changeReason.trim(),
+          },
         });
         toast({ title: 'Market updated', tone: 'success' });
         router.push(`/admin/market-data/markets/${initial.id}`);
@@ -149,12 +171,18 @@ export function MarketForm({
     }
   });
 
-  const errors = Object.entries(formState.errors).map(([k, e]) => ({ id: `mf-${k}`, message: e?.message ?? k }));
+  const errors = Object.entries(formState.errors).map(([k, e]) => ({
+    id: `mf-${k}`,
+    message: e?.message ?? k,
+  }));
 
   return (
     <form onSubmit={onSubmit} noValidate className="space-y-6">
       {serverError ? (
-        <Alert tone="danger" title={editing ? 'Could not save the market' : 'Could not create the market'}>
+        <Alert
+          tone="danger"
+          title={editing ? 'Could not save the market' : 'Could not create the market'}
+        >
           {serverError}
         </Alert>
       ) : null}
@@ -174,19 +202,44 @@ export function MarketForm({
               aria-invalid={invalid}
               {...register('name', {
                 onChange: (e) => {
-                  if (!editing && !formState.dirtyFields.slug) setValue('slug', slugify(`ng-${e.target.value}`));
+                  if (!editing && !formState.dirtyFields.slug)
+                    setValue('slug', slugify(`ng-${e.target.value}`));
                 },
               })}
             />
           )}
         </Field>
-        <Field label="Slug (stable id)" htmlFor="mf-slug" required error={formState.errors.slug?.message} hint="Used in URLs and imports; keep it stable.">
-          {({ id, describedBy, invalid }) => <Input id={id} aria-describedby={describedBy} aria-invalid={invalid} {...register('slug')} />}
+        <Field
+          label="Slug (stable id)"
+          htmlFor="mf-slug"
+          required
+          error={formState.errors.slug?.message}
+          hint="Used in URLs and imports; keep it stable."
+        >
+          {({ id, describedBy, invalid }) => (
+            <Input
+              id={id}
+              aria-describedby={describedBy}
+              aria-invalid={invalid}
+              {...register('slug')}
+            />
+          )}
         </Field>
-        <Field label="Aliases" htmlFor="mf-aliases" hint="Comma separated alternative spellings, e.g. Shagamu.">
-          {({ id, describedBy }) => <Input id={id} aria-describedby={describedBy} {...register('aliases')} />}
+        <Field
+          label="Aliases"
+          htmlFor="mf-aliases"
+          hint="Comma separated alternative spellings, e.g. Shagamu."
+        >
+          {({ id, describedBy }) => (
+            <Input id={id} aria-describedby={describedBy} {...register('aliases')} />
+          )}
         </Field>
-        <Field label="State / FCT" htmlFor="mf-stateId" required error={formState.errors.stateId?.message}>
+        <Field
+          label="State / FCT"
+          htmlFor="mf-stateId"
+          required
+          error={formState.errors.stateId?.message}
+        >
           {({ id, describedBy, invalid }) => (
             <NativeSelect
               id={id}
@@ -195,7 +248,8 @@ export function MarketForm({
               {...register('stateId', {
                 onChange: (e) => {
                   const s = states.find((x) => x.id === e.target.value);
-                  if (s) setValue('geopoliticalZone', s.geopoliticalZone as Values['geopoliticalZone']);
+                  if (s)
+                    setValue('geopoliticalZone', s.geopoliticalZone as Values['geopoliticalZone']);
                 },
               })}
             >
@@ -219,12 +273,32 @@ export function MarketForm({
             </NativeSelect>
           )}
         </Field>
-        <Field label="Display order" htmlFor="mf-displayOrder" error={formState.errors.displayOrder?.message}>
-          {({ id, invalid }) => <Input id={id} type="number" min={0} aria-invalid={invalid} {...register('displayOrder', { valueAsNumber: true })} />}
+        <Field
+          label="Display order"
+          htmlFor="mf-displayOrder"
+          error={formState.errors.displayOrder?.message}
+        >
+          {({ id, invalid }) => (
+            <Input
+              id={id}
+              type="number"
+              min={0}
+              aria-invalid={invalid}
+              {...register('displayOrder', { valueAsNumber: true })}
+            />
+          )}
         </Field>
-        <Field label="Service availability" htmlFor="mf-serviceAvailability" hint="Operations decides this separately from map publication.">
+        <Field
+          label="Service availability"
+          htmlFor="mf-serviceAvailability"
+          hint="Operations decides this separately from map publication."
+        >
           {({ id, describedBy }) => (
-            <NativeSelect id={id} aria-describedby={describedBy} {...register('serviceAvailability')}>
+            <NativeSelect
+              id={id}
+              aria-describedby={describedBy}
+              {...register('serviceAvailability')}
+            >
               {AVAILABILITY.map((a) => (
                 <option key={a} value={a}>
                   {humanize(a)}
@@ -233,7 +307,11 @@ export function MarketForm({
             </NativeSelect>
           )}
         </Field>
-        <Field label="Parent market" htmlFor="mf-parentMarketId" hint="For overlapping metropolitan geographies (e.g. Ikeja within Lagos).">
+        <Field
+          label="Parent market"
+          htmlFor="mf-parentMarketId"
+          hint="For overlapping metropolitan geographies (e.g. Ikeja within Lagos)."
+        >
           {({ id, describedBy }) => (
             <NativeSelect id={id} aria-describedby={describedBy} {...register('parentMarketId')}>
               <option value="">None</option>
@@ -265,10 +343,28 @@ export function MarketForm({
         />
         <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
           <Field label="Longitude" htmlFor="mf-lon" required error={formState.errors.lon?.message}>
-            {({ id, invalid, describedBy }) => <Input id={id} type="number" step="0.0001" aria-invalid={invalid} aria-describedby={describedBy} {...register('lon', { valueAsNumber: true })} />}
+            {({ id, invalid, describedBy }) => (
+              <Input
+                id={id}
+                type="number"
+                step="0.0001"
+                aria-invalid={invalid}
+                aria-describedby={describedBy}
+                {...register('lon', { valueAsNumber: true })}
+              />
+            )}
           </Field>
           <Field label="Latitude" htmlFor="mf-lat" required error={formState.errors.lat?.message}>
-            {({ id, invalid, describedBy }) => <Input id={id} type="number" step="0.0001" aria-invalid={invalid} aria-describedby={describedBy} {...register('lat', { valueAsNumber: true })} />}
+            {({ id, invalid, describedBy }) => (
+              <Input
+                id={id}
+                type="number"
+                step="0.0001"
+                aria-invalid={invalid}
+                aria-describedby={describedBy}
+                {...register('lat', { valueAsNumber: true })}
+              />
+            )}
           </Field>
           <Field label="Coordinate source" htmlFor="mf-coordinateSourceId">
             {({ id }) => (
@@ -282,8 +378,14 @@ export function MarketForm({
               </NativeSelect>
             )}
           </Field>
-          <Field label="Coordinate accuracy" htmlFor="mf-coordinateAccuracy" hint="e.g. city centroid; not cadastral">
-            {({ id, describedBy }) => <Input id={id} aria-describedby={describedBy} {...register('coordinateAccuracy')} />}
+          <Field
+            label="Coordinate accuracy"
+            htmlFor="mf-coordinateAccuracy"
+            hint="e.g. city centroid; not cadastral"
+          >
+            {({ id, describedBy }) => (
+              <Input id={id} aria-describedby={describedBy} {...register('coordinateAccuracy')} />
+            )}
           </Field>
         </div>
       </fieldset>
@@ -296,14 +398,30 @@ export function MarketForm({
           {({ id }) => <Textarea id={id} className="min-h-20" {...register('overlapNote')} />}
         </Field>
         <Field label="Supply mapping method" htmlFor="mf-supplyMappingMethod">
-          {({ id }) => <Textarea id={id} className="min-h-20" {...register('supplyMappingMethod')} />}
+          {({ id }) => (
+            <Textarea id={id} className="min-h-20" {...register('supplyMappingMethod')} />
+          )}
         </Field>
         <Field label="Profile (Markdown)" htmlFor="mf-profileMarkdown" className="md:col-span-2">
           {({ id }) => <Textarea id={id} className="min-h-40" {...register('profileMarkdown')} />}
         </Field>
         {editing ? (
-          <Field label="Change reason" htmlFor="mf-changeReason" required error={formState.errors.changeReason?.message} hint="Recorded with the revision and audit entry." className="md:col-span-2">
-            {({ id, invalid, describedBy }) => <Input id={id} aria-invalid={invalid} aria-describedby={describedBy} {...register('changeReason')} />}
+          <Field
+            label="Change reason"
+            htmlFor="mf-changeReason"
+            required
+            error={formState.errors.changeReason?.message}
+            hint="Recorded with the revision and audit entry."
+            className="md:col-span-2"
+          >
+            {({ id, invalid, describedBy }) => (
+              <Input
+                id={id}
+                aria-invalid={invalid}
+                aria-describedby={describedBy}
+                {...register('changeReason')}
+              />
+            )}
           </Field>
         ) : null}
       </div>

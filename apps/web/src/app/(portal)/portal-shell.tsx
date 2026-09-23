@@ -19,7 +19,15 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useState, type ReactNode } from 'react';
 import type { OrganizationMembershipDto } from '@simplexd/contracts';
-import { Alert, Button, NativeSelect, ReduceMotionToggle, ThemeToggle, cn, formatDateTimeLabel } from '@simplexd/ui';
+import {
+  Alert,
+  Button,
+  NativeSelect,
+  ReduceMotionToggle,
+  ThemeToggle,
+  cn,
+  formatDateTimeLabel,
+} from '@simplexd/ui';
 import { authClient } from '@/lib/auth/client';
 
 const NAV: Array<{ href: string; label: string; icon: typeof LayoutDashboard; exact?: boolean }> = [
@@ -90,9 +98,9 @@ export function PortalShell({
           <ShieldAlert aria-hidden="true" className="h-4 w-4 text-danger" />
           <strong>Support impersonation active.</strong>
           <span>
-            Administrator <code className="font-mono">{impersonation.adminUserId}</code> is viewing this
-            account as {user.email}. Financial approvals, payments and settings changes are blocked. Expires{' '}
-            {formatDateTimeLabel(impersonation.expiresAt)}.
+            Administrator <code className="font-mono">{impersonation.adminUserId}</code> is viewing
+            this account as {user.email}. Financial approvals, payments and settings changes are
+            blocked. Expires {formatDateTimeLabel(impersonation.expiresAt)}.
           </span>
         </div>
       ) : null}
@@ -129,7 +137,12 @@ export function PortalShell({
               </Link>
             ) : null}
             <ThemeToggle compact />
-            <Button variant="ghost" size="sm" onClick={() => void signOut()} aria-label={`Sign out ${user.email}`}>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => void signOut()}
+              aria-label={`Sign out ${user.email}`}
+            >
               <LogOut aria-hidden="true" className="h-4 w-4" />
               <span className="hidden sm:inline">Sign out</span>
             </Button>
@@ -156,7 +169,9 @@ export function PortalShell({
                     aria-current={current ? 'page' : undefined}
                     className={cn(
                       'sx-transition sx-touch flex items-center gap-2 rounded-md px-3 text-sm whitespace-nowrap',
-                      current ? 'bg-primary-soft font-medium text-primary' : 'text-fg-muted hover:bg-bg-sunken hover:text-fg',
+                      current
+                        ? 'bg-primary-soft font-medium text-primary'
+                        : 'text-fg-muted hover:bg-bg-sunken hover:text-fg',
                     )}
                   >
                     <Icon aria-hidden="true" className="h-4 w-4" />

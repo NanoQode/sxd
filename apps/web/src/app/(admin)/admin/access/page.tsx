@@ -14,9 +14,19 @@ export default async function AccessPage() {
   const users = await listStaffUsers(adminContext(identity), { limit: 500 });
   return (
     <div className="space-y-4">
-      <PageHeader title="Access: staff roles" description="Granular permissions come from roles; resource relationships (assignments, grants) apply on top. Grants and revocations are audited." />
-      {!identity.actor.mfaVerified ? <Alert tone="warning">Granting or revoking roles requires a verified authenticator.</Alert> : null}
-      <StaffRolesManager users={users} actorId={identity.session!.user.id} roleDescriptions={STAFF_ROLE_DESCRIPTIONS} canManage={identity.actor.mfaVerified} />
+      <PageHeader
+        title="Access: staff roles"
+        description="Granular permissions come from roles; resource relationships (assignments, grants) apply on top. Grants and revocations are audited."
+      />
+      {!identity.actor.mfaVerified ? (
+        <Alert tone="warning">Granting or revoking roles requires a verified authenticator.</Alert>
+      ) : null}
+      <StaffRolesManager
+        users={users}
+        actorId={identity.session!.user.id}
+        roleDescriptions={STAFF_ROLE_DESCRIPTIONS}
+        canManage={identity.actor.mfaVerified}
+      />
     </div>
   );
 }

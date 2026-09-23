@@ -12,7 +12,12 @@ export function MarketTabs({
   tabs: Array<{ key: string; label: string; content: ReactNode }>;
   initialTab?: string;
 }) {
-  const [tab, setTab] = useQueryState('tab', parseAsString.withDefault(initialTab && tabs.some((t) => t.key === initialTab) ? initialTab : 'profile'));
+  const [tab, setTab] = useQueryState(
+    'tab',
+    parseAsString.withDefault(
+      initialTab && tabs.some((t) => t.key === initialTab) ? initialTab : 'profile',
+    ),
+  );
   return (
     <Tabs value={tab} onValueChange={(v) => void setTab(v === 'profile' ? null : v)}>
       <TabsList aria-label="Market sections">

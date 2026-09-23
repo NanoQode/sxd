@@ -15,8 +15,15 @@ export default async function RankingPoliciesPage() {
   const canManage = hasStaffPermission(identity.actor, 'market_data.policy.manage');
   return (
     <div className="space-y-4">
-      <PageHeader title="Ranking policies" description="Deterministic, versioned weights, bounds and confidence rubric. Saved recommendations record the version they used; activating a new version never rewrites old reports." />
-      {!canManage ? <Alert tone="info">Editing and activation need market_data.policy.manage with a verified authenticator.</Alert> : null}
+      <PageHeader
+        title="Ranking policies"
+        description="Deterministic, versioned weights, bounds and confidence rubric. Saved recommendations record the version they used; activating a new version never rewrites old reports."
+      />
+      {!canManage ? (
+        <Alert tone="info">
+          Editing and activation need market_data.policy.manage with a verified authenticator.
+        </Alert>
+      ) : null}
       <PoliciesList items={items} canManage={canManage && identity.actor.mfaVerified} />
     </div>
   );

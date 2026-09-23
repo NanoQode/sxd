@@ -22,7 +22,9 @@ for (const file of files) {
   await import(pathToFileURL(path.join(registryDir, file)).href);
 }
 
-const version = process.env.APP_VERSION ?? JSON.parse(fs.readFileSync(path.resolve(import.meta.dirname, '../package.json'), 'utf8')).version;
+const version =
+  process.env.APP_VERSION ??
+  JSON.parse(fs.readFileSync(path.resolve(import.meta.dirname, '../package.json'), 'utf8')).version;
 const doc = buildOpenApiDocument({
   title: 'SimplexD API',
   version,

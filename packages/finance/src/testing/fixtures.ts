@@ -91,16 +91,14 @@ export async function seedTenants(owner: Database): Promise<Tenants> {
     orgB: `fin_org_b_${sfx}`,
     serviceId: '',
   };
-  await owner
-    .insert(schema.user)
-    .values(
-      [t.userA, t.userB, t.opsUser, t.financeUser1, t.financeUser2].map((id) => ({
-        id,
-        name: id,
-        email: `${id}@example.test`,
-        emailVerified: true,
-      })),
-    );
+  await owner.insert(schema.user).values(
+    [t.userA, t.userB, t.opsUser, t.financeUser1, t.financeUser2].map((id) => ({
+      id,
+      name: id,
+      email: `${id}@example.test`,
+      emailVerified: true,
+    })),
+  );
   await owner.insert(schema.organization).values([
     { id: t.orgA, name: 'Org A', slug: t.orgA },
     { id: t.orgB, name: 'Org B', slug: t.orgB },
@@ -157,15 +155,13 @@ export async function insertServiceRequest(
       status: input.status ?? 'inquiry',
     })
     .returning({ id: schema.serviceRequests.id, reference: schema.serviceRequests.reference });
-  await owner
-    .insert(schema.engagementTransitions)
-    .values({
-      serviceRequestId: row!.id,
-      fromStatus: null,
-      toStatus: 'inquiry',
-      actorUserId: input.requestedByUserId,
-      actorType: 'customer',
-    });
+  await owner.insert(schema.engagementTransitions).values({
+    serviceRequestId: row!.id,
+    fromStatus: null,
+    toStatus: 'inquiry',
+    actorUserId: input.requestedByUserId,
+    actorType: 'customer',
+  });
   return row!;
 }
 

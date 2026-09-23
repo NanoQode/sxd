@@ -11,7 +11,11 @@ import { PolicyEditor } from './policy-editor';
 export const metadata: Metadata = { title: 'Ranking policy' };
 export const dynamic = 'force-dynamic';
 
-export default async function RankingPolicyPage({ params }: { params: Promise<{ version: string }> }) {
+export default async function RankingPolicyPage({
+  params,
+}: {
+  params: Promise<{ version: string }>;
+}) {
   const { version } = await params;
   const identity = await requireStaffPage('market_data.read_drafts');
   const v = Number(version);
@@ -23,10 +27,15 @@ export default async function RankingPolicyPage({ params }: { params: Promise<{ 
     if (err instanceof ApiError && err.code === 'not_found') notFound();
     throw err;
   }
-  const canManage = hasStaffPermission(identity.actor, 'market_data.policy.manage') && identity.actor.mfaVerified;
+  const canManage =
+    hasStaffPermission(identity.actor, 'market_data.policy.manage') && identity.actor.mfaVerified;
   return (
     <div className="space-y-4">
-      <PageHeader title={`Policy v${policy.version}: ${policy.name}`} eyebrow={policy.status} description="Bounds are fixed per version and never change with the map viewport. Equal or invalid bounds disable a metric with an error and block activation." />
+      <PageHeader
+        title={`Policy v${policy.version}: ${policy.name}`}
+        eyebrow={policy.status}
+        description="Bounds are fixed per version and never change with the map viewport. Equal or invalid bounds disable a metric with an error and block activation."
+      />
       <PolicyEditor policy={policy} canManage={canManage} />
     </div>
   );

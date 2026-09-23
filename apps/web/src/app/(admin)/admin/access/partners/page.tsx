@@ -13,7 +13,10 @@ export default async function PartnersQueuePage() {
   const items = await listPartnerQueue(adminContext(identity));
   return (
     <div className="space-y-4">
-      <PageHeader title="Partner verification" description="Record exactly what was checked; the partner badge later states that scope and expiry, never a generic 'verified'." />
+      <PageHeader
+        title="Partner verification"
+        description="Record exactly what was checked; the partner badge later states that scope and expiry, never a generic 'verified'."
+      />
       <PartnersQueue items={items} />
     </div>
   );

@@ -19,9 +19,20 @@ test('health endpoint reports database ok', async ({ request }) => {
 test('homepage renders and has no critical accessibility violations @a11y', async ({ page }) => {
   await page.goto('/');
   await expect(page.locator('main')).toBeVisible();
-  const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag22aa']).analyze();
-  const critical = results.violations.filter((v) => v.impact === 'critical' || v.impact === 'serious');
-  expect(critical, JSON.stringify(critical.map((v) => ({ id: v.id, nodes: v.nodes.length })), null, 2)).toEqual([]);
+  const results = await new AxeBuilder({ page })
+    .withTags(['wcag2a', 'wcag2aa', 'wcag22aa'])
+    .analyze();
+  const critical = results.violations.filter(
+    (v) => v.impact === 'critical' || v.impact === 'serious',
+  );
+  expect(
+    critical,
+    JSON.stringify(
+      critical.map((v) => ({ id: v.id, nodes: v.nodes.length })),
+      null,
+      2,
+    ),
+  ).toEqual([]);
 });
 
 test('sign-in page is keyboard operable and themed @a11y', async ({ page }) => {
@@ -29,7 +40,10 @@ test('sign-in page is keyboard operable and themed @a11y', async ({ page }) => {
   await page.keyboard.press('Tab');
   const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze();
   expect(results.violations.filter((v) => v.impact === 'critical')).toEqual([]);
-  await page.locator('[role="radiogroup"][aria-label="Colour theme"] [role="radio"]').nth(1).click();
+  await page
+    .locator('[role="radiogroup"][aria-label="Colour theme"] [role="radio"]')
+    .nth(1)
+    .click();
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
 });
 

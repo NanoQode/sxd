@@ -8,14 +8,14 @@ Every `developers.google.com` page in the brief is **blocked by this session's e
 
 What **was** reachable, and is used as the evidence base:
 
-| Source | What it is | Label used below |
-|---|---|---|
-| `https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest` — **revision `20260826`** (fetched 2026-09-23, 169,810 bytes) | Google's machine-readable Calendar v3 API description. The reference pages (`/reference/events`, `/reference/freebusy/query`, …) are generated from this document, so field/parameter descriptions, enums and per-method scopes below are the **same text** the reference pages show. | **Verified 2026-09-23 (discovery)** |
-| `https://accounts.google.com/.well-known/openid-configuration` | Google's OAuth 2.0 / OIDC discovery document (endpoints, PKCE methods). | **Verified 2026-09-23 (OIDC)** |
-| npm registry (direct, not proxied): `googleapis@181.0.0` (published 2026-09-14), `@googleapis/calendar@20.0.0`, `google-auth-library@11.1.0`, `googleapis-common@9.1.0` — README + compiled source + `.d.ts` | Official Google Node.js libraries. JSDoc in `google-auth-library` mirrors the OAuth docs' parameter text. | **Verified 2026-09-23 (lib)** |
-| `github.com/googleapis/google-api-nodejs-client` README, `github.com/googleapis/google-auth-library-nodejs` README, `raw.githubusercontent.com/googleworkspace/node-samples/main/calendar/quickstart/index.js`, `raw.githubusercontent.com/googleapis/google-auth-library-nodejs/main/samples/oauth2-codeVerifier.js`, `raw.githubusercontent.com/googleapis/google-api-nodejs-client/main/samples/oauth2.js` | Official Google READMEs and samples. | **Verified 2026-09-23 (lib)** |
-| WebSearch result snippets attributed to the official pages | Partial, model-summarised text. Treat as *likely correct but unconfirmed against the live page*. | **Search snippet only — NOT VERIFIED** |
-| Nothing fetched; from the brief or general knowledge | Explicitly flagged. | **NOT VERIFIED** |
+| Source                                                                                                                                                                                                                                                                                                                                                                                                        | What it is                                                                                                                                                                                                                                                                            | Label used below                       |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------- |
+| `https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest` — **revision `20260826`** (fetched 2026-09-23, 169,810 bytes)                                                                                                                                                                                                                                                                                 | Google's machine-readable Calendar v3 API description. The reference pages (`/reference/events`, `/reference/freebusy/query`, …) are generated from this document, so field/parameter descriptions, enums and per-method scopes below are the **same text** the reference pages show. | **Verified 2026-09-23 (discovery)**    |
+| `https://accounts.google.com/.well-known/openid-configuration`                                                                                                                                                                                                                                                                                                                                                | Google's OAuth 2.0 / OIDC discovery document (endpoints, PKCE methods).                                                                                                                                                                                                               | **Verified 2026-09-23 (OIDC)**         |
+| npm registry (direct, not proxied): `googleapis@181.0.0` (published 2026-09-14), `@googleapis/calendar@20.0.0`, `google-auth-library@11.1.0`, `googleapis-common@9.1.0` — README + compiled source + `.d.ts`                                                                                                                                                                                                  | Official Google Node.js libraries. JSDoc in `google-auth-library` mirrors the OAuth docs' parameter text.                                                                                                                                                                             | **Verified 2026-09-23 (lib)**          |
+| `github.com/googleapis/google-api-nodejs-client` README, `github.com/googleapis/google-auth-library-nodejs` README, `raw.githubusercontent.com/googleworkspace/node-samples/main/calendar/quickstart/index.js`, `raw.githubusercontent.com/googleapis/google-auth-library-nodejs/main/samples/oauth2-codeVerifier.js`, `raw.githubusercontent.com/googleapis/google-api-nodejs-client/main/samples/oauth2.js` | Official Google READMEs and samples.                                                                                                                                                                                                                                                  | **Verified 2026-09-23 (lib)**          |
+| WebSearch result snippets attributed to the official pages                                                                                                                                                                                                                                                                                                                                                    | Partial, model-summarised text. Treat as _likely correct but unconfirmed against the live page_.                                                                                                                                                                                      | **Search snippet only — NOT VERIFIED** |
+| Nothing fetched; from the brief or general knowledge                                                                                                                                                                                                                                                                                                                                                          | Explicitly flagged.                                                                                                                                                                                                                                                                   | **NOT VERIFIED**                       |
 
 Bottom line: **everything about request/response shapes, enums, field semantics and scopes is verified from Google's own discovery document; the guide-only prose (push-notification operational rules, OAuth page wording, scope sensitivity labels) is only partially verified and is flagged item by item.**
 
@@ -37,8 +37,22 @@ Verbatim from `https://accounts.google.com/.well-known/openid-configuration`:
   "revocation_endpoint": "https://oauth2.googleapis.com/revoke",
   "userinfo_endpoint": "https://openidconnect.googleapis.com/v1/userinfo",
   "jwks_uri": "https://www.googleapis.com/oauth2/v3/certs",
-  "response_types_supported": ["code", "token", "id_token", "code token", "code id_token", "token id_token", "code token id_token", "none"],
-  "grant_types_supported": ["authorization_code", "refresh_token", "urn:ietf:params:oauth:grant-type:device_code", "urn:ietf:params:oauth:grant-type:jwt-bearer"],
+  "response_types_supported": [
+    "code",
+    "token",
+    "id_token",
+    "code token",
+    "code id_token",
+    "token id_token",
+    "code token id_token",
+    "none"
+  ],
+  "grant_types_supported": [
+    "authorization_code",
+    "refresh_token",
+    "urn:ietf:params:oauth:grant-type:device_code",
+    "urn:ietf:params:oauth:grant-type:jwt-bearer"
+  ],
   "code_challenge_methods_supported": ["plain", "S256"],
   "scopes_supported": ["openid", "email", "profile"],
   "token_endpoint_auth_methods_supported": ["client_secret_post", "client_secret_basic"]
@@ -111,6 +125,7 @@ Token response fields as typed by the library (`credentials.d.ts`, `Credentials`
 > This tokens event only occurs in the first authorization, and you need to have set your `access_type` to `offline` when calling the `generateAuthUrl` method to receive the refresh token. If you have already given your app the requisite permissions without setting the appropriate constraints for receiving a refresh token, you will need to re-authorize the application to receive a fresh refresh token. You can revoke your app's access to your account [here](https://myaccount.google.com/permissions).
 
 > Refresh tokens may stop working after they are granted, either because:
+>
 > - The user has revoked your app's access
 > - The refresh token has not been used for 6 months
 > - The user changed passwords and the refresh token contains Gmail scopes
@@ -134,9 +149,11 @@ Endpoint `https://oauth2.googleapis.com/revoke`. Library implementation (verbati
 **Search snippet only — NOT VERIFIED**: "If the token is an access token and it has a corresponding refresh token, the refresh token will also be revoked"; success is HTTP 200, errors HTTP 400.
 
 ### 1.7 Incremental authorization — Verified 2026-09-23 (lib JSDoc)
+
 `include_granted_scopes: true` on `generateAuthUrl` (see 1.2). Verify what was actually granted via the `scope` field of the token response or `oauth2Client.getTokenInfo(accessToken).scopes` (README: "take a look at the scopes originally provisioned for the access token").
 
 ### 1.8 PKCE for web-server apps — Verified 2026-09-23 (OIDC + lib + official sample)
+
 Google's token endpoint advertises `code_challenge_methods_supported: ["plain","S256"]`, and the official web-server library flow supports it end to end. Official sample `samples/oauth2-codeVerifier.js` (verbatim):
 
 ```js
@@ -154,29 +171,27 @@ const r = await oAuth2Client.getToken({
 });
 ```
 
-**NOT VERIFIED**: whether the web-server doc page itself *recommends* PKCE for confidential clients (the page is blocked; the search snippet that describes PKCE is from the native-app page). It works for web-server clients (`GetTokenOptions.codeVerifier` is in the public API) and is harmless to add alongside `client_secret`.
+**NOT VERIFIED**: whether the web-server doc page itself _recommends_ PKCE for confidential clients (the page is blocked; the search snippet that describes PKCE is from the native-app page). It works for web-server clients (`GetTokenOptions.codeVerifier` is in the public API) and is harmless to add alongside `client_secret`.
 
 ### 1.9 Security guidance — Verified 2026-09-23 (lib JSDoc)
+
 `state` for CSRF (quoted in 1.2). Also from `GetTokenOptions`: `client_id`/`redirect_uri` passed to `getToken` "Must match any … option passed to a corresponding call to generateAuthUrl."
 
 ### 1.10 Token expiry and auto-refresh — Verified 2026-09-23 (lib source)
+
 `AuthClient` defaults: `DEFAULT_EAGER_REFRESH_THRESHOLD_MILLIS = 5 * 60 * 1000` and `forceRefreshOnFailure = false`. `isTokenExpiring()` returns true when `expiry_date <= Date.now() + eagerRefreshThresholdMillis`. Before each request, if there is no `access_token` or it is expiring, the client refreshes using `credentials.refresh_token` (throws `'No refresh token is set.'` if absent) and emits `'tokens'`. `refreshAccessToken()` still exists in 11.1.0 and is **not** marked `@deprecated` in the `.d.ts`; it refreshes explicitly and re-attaches the stored `refresh_token` to the new credentials.
 
 ### 1.11 Node.js samples — Verified 2026-09-23 (googleapis README, verbatim)
 
 ```js
-const {google} = require('googleapis');
+const { google } = require('googleapis');
 
-const oauth2Client = new google.auth.OAuth2(
-  YOUR_CLIENT_ID,
-  YOUR_CLIENT_SECRET,
-  YOUR_REDIRECT_URL
-);
+const oauth2Client = new google.auth.OAuth2(YOUR_CLIENT_ID, YOUR_CLIENT_SECRET, YOUR_REDIRECT_URL);
 
 // generate a url that asks permissions for Blogger and Google Calendar scopes
 const scopes = [
   'https://www.googleapis.com/auth/blogger',
-  'https://www.googleapis.com/auth/calendar'
+  'https://www.googleapis.com/auth/calendar',
 ];
 
 const url = oauth2Client.generateAuthUrl({
@@ -184,7 +199,7 @@ const url = oauth2Client.generateAuthUrl({
   access_type: 'offline',
 
   // If you only need one scope, you can pass it as a string
-  scope: scopes
+  scope: scopes,
 });
 ```
 
@@ -195,7 +210,7 @@ const url = oauth2Client.generateAuthUrl({
 ```js
 // This will provide an object with the access_token and refresh_token.
 // Save these somewhere safe so they can be used at a later time.
-const {tokens} = await oauth2Client.getToken(code)
+const { tokens } = await oauth2Client.getToken(code);
 oauth2Client.setCredentials(tokens);
 ```
 
@@ -211,7 +226,7 @@ oauth2Client.on('tokens', (tokens) => {
 
 ```js
 oauth2Client.setCredentials({
-  refresh_token: `STORED_REFRESH_TOKEN`
+  refresh_token: `STORED_REFRESH_TOKEN`,
 });
 ```
 
@@ -225,45 +240,50 @@ Page: `https://developers.google.com/workspace/calendar/api/auth` — **FETCH BL
 
 ### 2.1 All 17 scopes (verbatim descriptions)
 
-| Scope | Description |
-|---|---|
-| `https://www.googleapis.com/auth/calendar` | See, edit, share, and permanently delete all the calendars you can access using Google Calendar |
-| `https://www.googleapis.com/auth/calendar.readonly` | See and download any calendar you can access using your Google Calendar |
-| `https://www.googleapis.com/auth/calendar.events` | View and edit events on all your calendars |
-| `https://www.googleapis.com/auth/calendar.events.readonly` | View events on all your calendars |
-| `https://www.googleapis.com/auth/calendar.events.owned` | See, create, change, and delete events on Google calendars you own |
-| `https://www.googleapis.com/auth/calendar.events.owned.readonly` | See the events on Google calendars you own |
-| `https://www.googleapis.com/auth/calendar.events.freebusy` | See the availability on Google calendars you have access to |
-| `https://www.googleapis.com/auth/calendar.freebusy` | View your availability in your calendars |
-| `https://www.googleapis.com/auth/calendar.events.public.readonly` | See the events on public calendars |
-| `https://www.googleapis.com/auth/calendar.calendarlist` | See, add, and remove Google calendars you're subscribed to |
-| `https://www.googleapis.com/auth/calendar.calendarlist.readonly` | See the list of Google calendars you're subscribed to |
-| `https://www.googleapis.com/auth/calendar.calendars` | See and change the properties of Google calendars you have access to, and create secondary calendars |
-| `https://www.googleapis.com/auth/calendar.calendars.readonly` | See the title, description, default time zone, and other properties of Google calendars you have access to |
-| `https://www.googleapis.com/auth/calendar.acls` | See and change the sharing permissions of Google calendars you own |
-| `https://www.googleapis.com/auth/calendar.acls.readonly` | See the sharing permissions of Google calendars you own |
-| `https://www.googleapis.com/auth/calendar.settings.readonly` | View your Calendar settings |
-| `https://www.googleapis.com/auth/calendar.app.created` | Make secondary Google calendars, and see, create, change, and delete events on them |
+| Scope                                                             | Description                                                                                                |
+| ----------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `https://www.googleapis.com/auth/calendar`                        | See, edit, share, and permanently delete all the calendars you can access using Google Calendar            |
+| `https://www.googleapis.com/auth/calendar.readonly`               | See and download any calendar you can access using your Google Calendar                                    |
+| `https://www.googleapis.com/auth/calendar.events`                 | View and edit events on all your calendars                                                                 |
+| `https://www.googleapis.com/auth/calendar.events.readonly`        | View events on all your calendars                                                                          |
+| `https://www.googleapis.com/auth/calendar.events.owned`           | See, create, change, and delete events on Google calendars you own                                         |
+| `https://www.googleapis.com/auth/calendar.events.owned.readonly`  | See the events on Google calendars you own                                                                 |
+| `https://www.googleapis.com/auth/calendar.events.freebusy`        | See the availability on Google calendars you have access to                                                |
+| `https://www.googleapis.com/auth/calendar.freebusy`               | View your availability in your calendars                                                                   |
+| `https://www.googleapis.com/auth/calendar.events.public.readonly` | See the events on public calendars                                                                         |
+| `https://www.googleapis.com/auth/calendar.calendarlist`           | See, add, and remove Google calendars you're subscribed to                                                 |
+| `https://www.googleapis.com/auth/calendar.calendarlist.readonly`  | See the list of Google calendars you're subscribed to                                                      |
+| `https://www.googleapis.com/auth/calendar.calendars`              | See and change the properties of Google calendars you have access to, and create secondary calendars       |
+| `https://www.googleapis.com/auth/calendar.calendars.readonly`     | See the title, description, default time zone, and other properties of Google calendars you have access to |
+| `https://www.googleapis.com/auth/calendar.acls`                   | See and change the sharing permissions of Google calendars you own                                         |
+| `https://www.googleapis.com/auth/calendar.acls.readonly`          | See the sharing permissions of Google calendars you own                                                    |
+| `https://www.googleapis.com/auth/calendar.settings.readonly`      | View your Calendar settings                                                                                |
+| `https://www.googleapis.com/auth/calendar.app.created`            | Make secondary Google calendars, and see, create, change, and delete events on them                        |
 
 ### 2.2 (a) Reading free/busy only — Verified 2026-09-23 (discovery)
+
 `freebusy.query` accepts exactly: `calendar`, `calendar.events.freebusy`, `calendar.freebusy`, `calendar.readonly`.
-Minimal choice: **`https://www.googleapis.com/auth/calendar.freebusy`** (the user's own calendars) or `calendar.events.freebusy` (calendars the user has access to; this one is *also* accepted by `events.list`/`events.get`/`events.watch`, whereas `calendar.freebusy` is not).
+Minimal choice: **`https://www.googleapis.com/auth/calendar.freebusy`** (the user's own calendars) or `calendar.events.freebusy` (calendars the user has access to; this one is _also_ accepted by `events.list`/`events.get`/`events.watch`, whereas `calendar.freebusy` is not).
 
 ### 2.3 (b) Creating/updating/deleting events — Verified 2026-09-23 (discovery)
+
 `events.insert`, `events.patch`, `events.update`, `events.delete` all accept exactly: `calendar`, `calendar.app.created`, `calendar.events`, `calendar.events.owned`.
+
 - **`calendar.events.owned`** — narrowest for writing to calendars the user owns (e.g. `primary`).
 - `calendar.events` — needed if the target calendar is one the user can write to but does not own (shared/team calendar).
 - `calendar.app.created` — only events on secondary calendars the app itself created.
 - `calendar` — full access; avoid.
 
 ### 2.4 (c) Listing calendars — Verified 2026-09-23 (discovery)
+
 `calendarList.list` accepts exactly: `calendar`, `calendar.calendarlist`, `calendar.calendarlist.readonly`, `calendar.readonly`.
 Minimal: **`https://www.googleapis.com/auth/calendar.calendarlist.readonly`**. (`calendars.get` — properties/time zone of one calendar — accepts `calendar`, `calendar.app.created`, `calendar.calendars`, `calendar.calendars.readonly`, `calendar.readonly`.)
 
 A booking app therefore needs at minimum: `calendar.calendarlist.readonly` + `calendar.freebusy` (or `calendar.events.freebusy`) + `calendar.events.owned` (or `calendar.events`), plus `openid email` if you identify the user via ID token.
 
 ### 2.5 Sensitive / restricted classification — **NOT VERIFIED**
-The scopes page (blocked) carries per-scope sensitivity labels. Search snippets attributed to the official pages say only: "Sensitive scopes require review by Google and have a sensitive indicator on the Google Cloud Console's OAuth consent screen configuration page", an example of a sensitive scope is "reading events stored in Google Calendar", and "choose the most narrowly focused scope possible and avoid requesting scopes that your app doesn't require". One snippet claimed `calendar.calendarlist.readonly` is non-sensitive, but its provenance was a third-party GitHub issue, so I do not rely on it. **Action for the implementer:** add the chosen scopes in Cloud Console → *Google Auth Platform / OAuth consent screen → Data access*; the console flags each scope as Non-sensitive / Sensitive / Restricted and tells you whether verification is required. Expect the event-read/write scopes to be Sensitive (verification + privacy policy, 100-user cap while unverified — **NOT VERIFIED**). No Calendar scope appeared on any "restricted" list in the snippets (**NOT VERIFIED**).
+
+The scopes page (blocked) carries per-scope sensitivity labels. Search snippets attributed to the official pages say only: "Sensitive scopes require review by Google and have a sensitive indicator on the Google Cloud Console's OAuth consent screen configuration page", an example of a sensitive scope is "reading events stored in Google Calendar", and "choose the most narrowly focused scope possible and avoid requesting scopes that your app doesn't require". One snippet claimed `calendar.calendarlist.readonly` is non-sensitive, but its provenance was a third-party GitHub issue, so I do not rely on it. **Action for the implementer:** add the chosen scopes in Cloud Console → _Google Auth Platform / OAuth consent screen → Data access_; the console flags each scope as Non-sensitive / Sensitive / Restricted and tells you whether verification is required. Expect the event-read/write scopes to be Sensitive (verification + privacy policy, 100-user cap while unverified — **NOT VERIFIED**). No Calendar scope appeared on any "restricted" list in the snippets (**NOT VERIFIED**).
 
 ---
 
@@ -275,6 +295,7 @@ Page: `https://developers.google.com/workspace/calendar/api/v3/reference/freebus
 - Scopes: `calendar`, `calendar.events.freebusy`, `calendar.freebusy`, `calendar.readonly`.
 
 `FreeBusyRequest` (verbatim descriptions):
+
 - `timeMin` (string, date-time): "The start of the interval for the query formatted as per RFC3339."
 - `timeMax` (string, date-time): "The end of the interval for the query formatted as per RFC3339."
 - `timeZone` (string, default `UTC`): "Time zone used in the response. Optional. The default is UTC."
@@ -283,6 +304,7 @@ Page: `https://developers.google.com/workspace/calendar/api/v3/reference/freebus
 - `groupExpansionMax` (int32): "Maximal number of calendar identifiers to be provided for a single group. Optional. An error is returned for a group with more members than this value. Maximum value is 100."
 
 `FreeBusyResponse` (verbatim descriptions):
+
 - `kind`: `"calendar#freeBusy"`; `timeMin`/`timeMax`: "The start/end of the interval."
 - `calendars` (object keyed by calendar id → `FreeBusyCalendar`): "List of free/busy information for calendars."
   - `busy[]` (`TimePeriod`): "List of time ranges during which this calendar should be regarded as busy." — `start`: "The (inclusive) start of the time period." `end`: "The (exclusive) end of the time period."
@@ -308,9 +330,7 @@ Example (constructed from the verified schema — not copied from the page):
   "timeMax": "2026-10-02T04:00:00.000Z",
   "calendars": {
     "primary": {
-      "busy": [
-        { "start": "2026-10-01T13:00:00Z", "end": "2026-10-01T13:30:00Z" }
-      ]
+      "busy": [{ "start": "2026-10-01T13:00:00Z", "end": "2026-10-01T13:30:00Z" }]
     },
     "advisor@example.com": {
       "errors": [{ "domain": "global", "reason": "notFound" }],
@@ -323,7 +343,9 @@ Example (constructed from the verified schema — not copied from the page):
 Node (typed as `calendar_v3.Params$Resource$Freebusy$Query` with `requestBody: Schema$FreeBusyRequest`):
 
 ```js
-const { data } = await calendar.freebusy.query({ requestBody: { timeMin, timeMax, timeZone, items: [{ id: 'primary' }] } });
+const { data } = await calendar.freebusy.query({
+  requestBody: { timeMin, timeMax, timeZone, items: [{ id: 'primary' }] },
+});
 const busy = data.calendars?.primary?.busy ?? [];
 ```
 
@@ -336,11 +358,13 @@ Note (Verified, discovery): a calendar that fails still appears under `calendars
 Pages: `…/reference/events/insert`, `…/reference/events` — **FETCH BLOCKED**. Everything in 4.1–4.4 is **Verified 2026-09-23 (discovery)**; 4.5 (ETag/If-Match) is a mix, labelled.
 
 ### 4.1 `events.insert`
+
 `POST https://www.googleapis.com/calendar/v3/calendars/{calendarId}/events` — body `Event`, response `Event`. Scopes: `calendar`, `calendar.app.created`, `calendar.events`, `calendar.events.owned`.
 
 Path param `calendarId`: "Calendar identifier. To retrieve calendar IDs call the calendarList.list method. If you want to access the primary calendar of the currently logged in user, use the "primary" keyword."
 
 Query params (verbatim):
+
 - `conferenceDataVersion` (integer, 0–1): "Version number of conference data supported by the API client. Version 0 assumes no conference data support and ignores conference data in the event's body. Version 1 enables support for copying of ConferenceData as well as for creating new conferences using the createRequest field of conferenceData. The default is 0."
 - `sendUpdates` (enum `all` | `externalOnly` | `none`): "Whether to send notifications about the creation of the new event. Note that some emails might still be sent. The default is false."
   - `all`: "Notifications are sent to all guests."
@@ -354,11 +378,13 @@ Query params (verbatim):
 Required body fields (discovery `annotations.required`): **`start` and `end` are required for `calendar.events.insert` and `calendar.events.update`** (and `import`); `iCalUID` is required only for `import`. Everything else is optional.
 
 ### 4.2 `events.patch` / `events.update` / `events.delete`
+
 - `PATCH` / `PUT https://www.googleapis.com/calendar/v3/calendars/{calendarId}/events/{eventId}` — same scopes as insert. Query params: `conferenceDataVersion` (same text as insert), `sendUpdates` — "Guests who should receive notifications about the event update (for example, title changes, etc.)." with `all` / `externalOnly` / `none` ("No notifications are sent. For calendar migration tasks, consider using the Events.import method instead."), `maxAttendees`, `supportsAttachments`, `eventLabelVersion`, `alwaysIncludeEmail` ("Deprecated and ignored."), `sendNotifications` (deprecated).
 - `DELETE https://www.googleapis.com/calendar/v3/calendars/{calendarId}/events/{eventId}` — same scopes; params `sendUpdates` — "Guests who should receive notifications about the deletion of the event." (`all` / `externalOnly` / `none`), `sendNotifications` (deprecated). No body; empty response.
 - `update` (PUT) replaces the whole resource — send the full event; `patch` merges only supplied fields (Verified: `update` is PUT with body `Event`; PATCH semantics are standard — **the "merge" wording itself is NOT VERIFIED** since the page is blocked).
 
 ### 4.3 Event resource — field descriptions (verbatim)
+
 - `kind`: `"calendar#event"`. `etag`: "ETag of the resource." `id`: "Opaque identifier of the event. When creating new single or recurring events, you can specify their IDs. Provided IDs must follow these rules: - characters allowed in the ID are those used in base32hex encoding, i.e. lowercase letters a-v and digits 0-9 … - the length of the ID must be between 5 and 1024 characters - the ID must be unique per calendar … we recommend using an established UUID algorithm such as one described in RFC4122. If you do not specify an ID, it will be automatically generated by the server. Note that the icalUID and the id are not identical and only one of them should be supplied at event creation time."
 - `status`: "Status of the event. Optional. Possible values are: - "confirmed" - The event is confirmed. This is the default status. - "tentative" - The event is tentatively confirmed. - "cancelled" - The event is cancelled (deleted). The list method returns cancelled events only on incremental sync (when syncToken or updatedMin are specified) or if the showDeleted flag is set to true. The get method always returns them. … All other cancelled events represent deleted events. Clients should remove their locally synced copies. Such cancelled events will eventually disappear, so do not rely on them being available indefinitely. Deleted events are only guaranteed to have the id field populated."
 - `summary`: "Title of the event." `description`: "Description of the event. Can contain HTML. Optional." `location`: "Geographic location of the event as free-form text. Optional." `colorId`: "The color of the event. This is an ID referring to an entry in the event section of the colors definition (see the colors endpoint). Optional."
@@ -398,7 +424,7 @@ Required body fields (discovery `annotations.required`): **`start` and `end` are
   "summary": "Mortgage consultation — Jane Doe",
   "description": "Booked via Lendmax. <b>Bring</b> your ID.",
   "start": { "dateTime": "2026-10-01T10:00:00", "timeZone": "America/Toronto" },
-  "end":   { "dateTime": "2026-10-01T10:30:00", "timeZone": "America/Toronto" },
+  "end": { "dateTime": "2026-10-01T10:30:00", "timeZone": "America/Toronto" },
   "attendees": [
     { "email": "jane@example.com", "displayName": "Jane Doe", "responseStatus": "needsAction" }
   ],
@@ -408,7 +434,13 @@ Required body fields (discovery `annotations.required`): **`start` and `end` are
       "conferenceSolutionKey": { "type": "hangoutsMeet" }
     }
   },
-  "reminders": { "useDefault": false, "overrides": [ { "method": "email", "minutes": 1440 }, { "method": "popup", "minutes": 10 } ] },
+  "reminders": {
+    "useDefault": false,
+    "overrides": [
+      { "method": "email", "minutes": 1440 },
+      { "method": "popup", "minutes": 10 }
+    ]
+  },
   "extendedProperties": { "private": { "lendmaxBookingId": "bk_123" } },
   "guestsCanInviteOthers": false
 }
@@ -432,12 +464,22 @@ Response shape to expect (fields per verified schema; values illustrative):
       "status": { "statusCode": "success" }
     },
     "entryPoints": [
-      { "entryPointType": "video", "uri": "https://meet.google.com/aaa-bbbb-ccc", "label": "meet.google.com/aaa-bbbb-ccc" }
+      {
+        "entryPointType": "video",
+        "uri": "https://meet.google.com/aaa-bbbb-ccc",
+        "label": "meet.google.com/aaa-bbbb-ccc"
+      }
     ],
-    "conferenceSolution": { "key": { "type": "hangoutsMeet" }, "name": "Google Meet", "iconUri": "https://..." },
+    "conferenceSolution": {
+      "key": { "type": "hangoutsMeet" },
+      "name": "Google Meet",
+      "iconUri": "https://..."
+    },
     "conferenceId": "aaa-bbbb-ccc"
   },
-  "attendees": [ { "email": "jane@example.com", "displayName": "Jane Doe", "responseStatus": "needsAction" } ]
+  "attendees": [
+    { "email": "jane@example.com", "displayName": "Jane Doe", "responseStatus": "needsAction" }
+  ]
 }
 ```
 
@@ -451,22 +493,33 @@ const { data: ev } = await calendar.events.insert({
   calendarId: 'primary',
   conferenceDataVersion: 1,
   sendUpdates: 'all',
-  requestBody: { /* as above */ },
+  requestBody: {/* as above */},
 });
-const meetUrl = ev.conferenceData?.entryPoints?.find(e => e.entryPointType === 'video')?.uri ?? ev.hangoutLink;
+const meetUrl =
+  ev.conferenceData?.entryPoints?.find((e) => e.entryPointType === 'video')?.uri ?? ev.hangoutLink;
 ```
 
 ### 4.5 ETag / `If-Match` optimistic concurrency
+
 - Verified 2026-09-23 (discovery): every `Event` carries `etag` ("ETag of the resource."); `events.list` responses carry a collection `etag`.
 - **Search snippet only — NOT VERIFIED** (from `…/calendar/api/guides/version-resources`, blocked): "Etags are supported in the calendar API for two cases: on resource modifications to ensure that there has been no other write to this resource in the meantime (conditional modification) and on resource retrieval to only retrieve resource data if the resource has changed (conditional retrieval)." "If you want to update or delete a resource only if it has not changed since you last retrieved it, you can specify an If-Match header that contains the value of the etag from the previous retrieval." Mismatch → **412 Precondition Failed**; `If-None-Match` on `get` → **304 Not Modified** when unchanged. Recovery: `events.get` the latest, re-apply, retry with the fresh etag.
 - Verified 2026-09-23 (lib): the Node client lets you send the header. `googleapis-common@9.1.0` `createAPIRequest` merges `params.headers` (line 98: `headersToClassicHeaders(params.headers || {})`) and the per-call `options.headers` (`MethodOptions extends GaxiosOptions`, merged at line 235). Typed form:
 
 ```js
 await calendar.events.patch(
-  { calendarId: 'primary', eventId, conferenceDataVersion: 1, sendUpdates: 'all', requestBody: { start, end } },
-  { headers: { 'If-Match': storedEtag } }   // 412 → reload & retry
+  {
+    calendarId: 'primary',
+    eventId,
+    conferenceDataVersion: 1,
+    sendUpdates: 'all',
+    requestBody: { start, end },
+  },
+  { headers: { 'If-Match': storedEtag } }, // 412 → reload & retry
 );
-await calendar.events.delete({ calendarId: 'primary', eventId, sendUpdates: 'all' }, { headers: { 'If-Match': storedEtag } });
+await calendar.events.delete(
+  { calendarId: 'primary', eventId, sendUpdates: 'all' },
+  { headers: { 'If-Match': storedEtag } },
+);
 ```
 
 ---
@@ -476,9 +529,11 @@ await calendar.events.delete({ calendarId: 'primary', eventId, sendUpdates: 'all
 Page: `https://developers.google.com/workspace/calendar/api/guides/push` — **FETCH BLOCKED**. Schema/method facts are **Verified 2026-09-23 (discovery)**; operational rules are **Search snippet only** unless stated.
 
 ### 5.1 `events.watch` — Verified 2026-09-23 (discovery)
+
 `POST https://www.googleapis.com/calendar/v3/calendars/{calendarId}/events/watch` — body `Channel`, response `Channel`. Scopes: `calendar`, `calendar.app.created`, `calendar.events`, `calendar.events.freebusy`, `calendar.events.owned`, `calendar.events.owned.readonly`, `calendar.events.public.readonly`, `calendar.events.readonly`, `calendar.readonly`. It accepts the same filtering query params as `events.list` (`timeMin`, `timeMax`, `singleEvents`, `eventTypes`, `privateExtendedProperty`, `syncToken`, …).
 
 `Channel` (verbatim descriptions):
+
 - `id`: "A UUID or similar unique string that identifies this channel."
 - `type`: "The type of delivery mechanism used for this channel. Valid values are "web_hook" (or "webhook"). Both values refer to a channel where Http requests are used to deliver messages."
 - `address`: "The address where notifications are delivered for this channel."
@@ -517,6 +572,7 @@ Request/response example (constructed from schema):
 Store `id`, `resourceId`, `token`, `expiration` per user/calendar.
 
 ### 5.2 Notification messages — Search snippet only — NOT VERIFIED (attributed to the official push page)
+
 - Headers: `X-Goog-Channel-ID` ("the id that uniquely identifies the notification channel"), `X-Goog-Channel-Token` (your `token`, echoed — compare it before trusting the message), `X-Goog-Channel-Expiration` (human-readable expiry, present if the channel has one), `X-Goog-Resource-ID`, `X-Goog-Resource-URI` ("an API-version-specific identifier for the watched resource"), `X-Goog-Resource-State`, `X-Goog-Message-Number`.
 - `X-Goog-Resource-State` values: `sync`, `exists`, `not_exists`.
 - "After creating a notification channel to watch a resource, the Google Calendar API sends a sync message to indicate that notifications are starting" with `X-Goog-Resource-State: sync`; "Sync messages always have an X-Goog-Message-Number HTTP header value of 1."
@@ -524,14 +580,17 @@ Store `id`, `resourceId`, `token`, `expiration` per user/calendar.
 - Responding: "If your service … returns 500, 502, 503, or 504, the Google Calendar API retries with exponential backoff. Every other return status code is considered to be a message failure." Success codes reported as 200, 201, 202, 204 or 102. Respond fast (2xx) and do the sync asynchronously.
 
 ### 5.3 Receiver requirements — Search snippet only — NOT VERIFIED
+
 - HTTPS only: "the Google Calendar API is able to send notifications to this HTTPS address only if there's a valid SSL certificate installed on your web server. Invalid certificates include: Self-signed certificates, certificates signed by an untrusted source, certificates that have been revoked, and certificates that have a subject that doesn't match the target hostname."
 - Domain ownership must be verified / registered for the Cloud project (Search Console verification and adding the domain under the project's domain verification list) before `watch` will accept the `address`. (**NOT VERIFIED** wording.)
 
 ### 5.4 Expiration and renewal
+
 - **Search snippet only**: "A notification channel can have an expiration time, with a value determined either by your request or by any Google Calendar API internal limits or defaults (the more restrictive value is used)." Default TTL `604800` seconds (one week). "Currently, there's no automatic way to renew a notification channel. When a channel is close to its expiration, you must replace it with a new one by calling the watch method."
 - **Maximum lifetime: NOT VERIFIED.** No official text found stating a hard cap for Calendar (third-party blogs claim ~30 days; the brief guessed ~1 week). Do not assume: read `expiration` from the watch response, schedule renewal before it (e.g. daily job that re-`watch`es anything expiring within 24 h), and then `channels.stop` the old channel.
 
 ### 5.5 `channels.stop` — Verified 2026-09-23 (discovery)
+
 `POST https://www.googleapis.com/calendar/v3/channels/stop` — body `Channel` (use `id` + `resourceId`), empty response. Accepts any Calendar scope (all 14 read/write scopes are listed).
 
 ```json
@@ -541,6 +600,7 @@ Store `id`, `resourceId`, `token`, `expiration` per user/calendar.
 Node: `await calendar.channels.stop({ requestBody: { id, resourceId } });`
 
 ### 5.6 Resources that support watch — Verified 2026-09-23 (discovery; method existence)
+
 `events.watch`, `calendarList.watch`, `acl.watch`, `settings.watch` exist in the discovery document.
 
 ---
@@ -550,6 +610,7 @@ Node: `await calendar.channels.stop({ requestBody: { id, resourceId } });`
 Page: `https://developers.google.com/workspace/calendar/api/guides/sync` — **FETCH BLOCKED**. The normative rules are embedded verbatim in the discovery document's `events.list` `syncToken` parameter and the `Events` collection schema — **Verified 2026-09-23 (discovery)**. Guide prose is Search snippet only.
 
 ### 6.1 Verbatim rules (discovery)
+
 `events.list` → `GET https://www.googleapis.com/calendar/v3/calendars/{calendarId}/events`, response `Events`.
 
 - `syncToken`: "Token obtained from the nextSyncToken field returned on the last page of results from the previous list request. It makes the result of this list request contain only entries that have changed since then. All events deleted since the previous list request will always be in the result set and it is not allowed to set showDeleted to False. There are several query parameters that cannot be specified together with nextSyncToken to ensure consistency of the client state. These are: - iCalUID - orderBy - privateExtendedProperty - q - sharedExtendedProperty - timeMin - timeMax - updatedMin All other query parameters should be the same as for the initial synchronization to avoid undefined behavior. If the syncToken expires, the server will respond with a 410 GONE response code and the client should clear its storage and perform a full synchronization without any syncToken. Learn more about incremental synchronization. Optional. The default is to return all entries."
@@ -562,11 +623,13 @@ Page: `https://developers.google.com/workspace/calendar/api/guides/sync` — **F
 - `Event.status` (see 4.3): cancelled events on incremental sync "are only guaranteed to have the id field populated."
 
 ### 6.2 Guide prose — Search snippet only — NOT VERIFIED
-- "When no sync token is stored from the previous execution, the system performs a full sync." "Sync tokens aren't compatible with most filters, but you may want to limit your full sync to only a certain date range, such as syncing events up to a year old." (i.e. `timeMin`/`timeMax` may be used on the *initial* full-sync request; the resulting token then carries that constraint and you must not pass them again — consistent with the verified rule.)
+
+- "When no sync token is stored from the previous execution, the system performs a full sync." "Sync tokens aren't compatible with most filters, but you may want to limit your full sync to only a certain date range, such as syncing events up to a year old." (i.e. `timeMin`/`timeMax` may be used on the _initial_ full-sync request; the resulting token then carries that constraint and you must not pass them again — consistent with the verified rule.)
 - "If the result set is too large and the response gets paginated, then the nextSyncToken field is present only on the very last page." Store it only after draining all `nextPageToken` pages.
 - "If a sync token expires, Google returns 410 GONE and you must perform a fresh full sync." "The result will always contain deleted entries, so that the clients get the chance to remove them from storage."
 
 ### 6.3 Algorithm (derived from the verified rules)
+
 1. Full sync: `events.list({calendarId, singleEvents: true, showDeleted: true, timeMin?, pageToken})` loop until no `nextPageToken`; persist `nextSyncToken`.
 2. On each push notification (or on a timer): `events.list({calendarId, syncToken, singleEvents: true, showDeleted: true, pageToken})` — same non-forbidden params as step 1; apply upserts; `status === 'cancelled'` → delete locally; store the new `nextSyncToken` from the last page.
 3. On HTTP **410** (`GaxiosError` with `response.status === 410`): drop the stored token and local copy, redo step 1.
@@ -596,10 +659,10 @@ Page: `https://developers.google.com/workspace/calendar/api/guides/create-events
 - Calendar client: `google.calendar({version: 'v3', auth})` — verified in `googleapis@181.0.0` `build/src/apis/calendar/index.d.ts` (`export declare function calendar(options: calendar_v3.Options): calendar_v3.Calendar;`) and in Google's official quickstart `googleworkspace/node-samples/calendar/quickstart/index.js` (verbatim):
 
 ```js
-import {google} from 'googleapis';
+import { google } from 'googleapis';
 const SCOPES = ['https://www.googleapis.com/auth/calendar.readonly'];
 // ...
-const calendar = google.calendar({version: 'v3', auth});
+const calendar = google.calendar({ version: 'v3', auth });
 const result = await calendar.events.list({
   calendarId: 'primary',
   timeMin: new Date().toISOString(),
@@ -618,20 +681,20 @@ const result = await calendar.events.list({
 
 ## 9. Quick verification ledger
 
-| # | Item | Status |
-|---|---|---|
-| 1 | OAuth endpoints, params (`client_id, redirect_uri, response_type=code, scope, access_type=offline, prompt=consent, state, include_granted_scopes, login_hint, code_challenge[_method]`), token exchange/refresh bodies, revoke URL, refresh-token-only-on-first-consent, Testing-status 7-day expiry, auto-refresh threshold | Verified 2026-09-23 (OIDC / lib) |
-| 1 | `enable_granular_consent`, 100-token cap, revoke 200/400 semantics, full `invalid_grant` cause list, ~3600 s access-token lifetime, whether the web-server page recommends PKCE | Search snippet only / NOT VERIFIED |
-| 2 | Scope URLs, descriptions, per-method accepted scopes (free/busy, event CRUD, calendar list) | Verified 2026-09-23 (discovery) |
-| 2 | Sensitive/Restricted labels per scope, verification thresholds | NOT VERIFIED |
-| 3 | `freebusy.query` URL, request/response schema, error reasons, limits (50 calendars / 100 group members) | Verified 2026-09-23 (discovery) |
-| 4 | `events.insert/patch/update/delete` URLs, params (`conferenceDataVersion` 0/1, `sendUpdates` all/externalOnly/none, `sendNotifications` deprecated), scopes, required `start`/`end`, full Event schema incl. `conferenceData.createRequest{requestId, conferenceSolutionKey.type=hangoutsMeet, status.statusCode pending/success/failure}`, `entryPoints[].entryPointType=video/uri`, `hangoutLink`, `etag`, `sequence`, `status`, `reminders`, `attendees[].responseStatus` | Verified 2026-09-23 (discovery) |
-| 4 | `If-Match` → 412, `If-None-Match` → 304 guide wording | Search snippet only; header pass-through in Node client Verified (lib) |
-| 5 | `events.watch` / `channels.stop` URLs, scopes, `Channel` schema (`id, type=web_hook, address, token, expiration, resourceId, resourceUri`) | Verified 2026-09-23 (discovery) |
-| 5 | Notification headers & states, no-payload rule, HTTPS/valid-cert/domain-verification, 2xx + backoff on 5xx, default ttl 604800 s, no auto-renew | Search snippet only — NOT VERIFIED |
-| 5 | Hard maximum channel lifetime | NOT VERIFIED (no official number found) |
-| 6 | `syncToken` rules, forbidden params, `showDeleted` must not be false, 410 GONE → full resync, `nextSyncToken` only on last page | Verified 2026-09-23 (discovery) |
-| 7 | Meet creation requirements (`conferenceDataVersion=1`, unique `requestId`, async status) | Verified 2026-09-23 (discovery); polling guidance Search snippet only |
-| 8 | `googleapis` 181.0.0, `google.auth.OAuth2` API surface, `'tokens'` event, `google.calendar({version:'v3', auth})`, TypeScript namespaces, `@googleapis/calendar` | Verified 2026-09-23 (lib + official samples) |
+| #   | Item                                                                                                                                                                                                                                                                                                                                                                                                                                                                         | Status                                                                 |
+| --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| 1   | OAuth endpoints, params (`client_id, redirect_uri, response_type=code, scope, access_type=offline, prompt=consent, state, include_granted_scopes, login_hint, code_challenge[_method]`), token exchange/refresh bodies, revoke URL, refresh-token-only-on-first-consent, Testing-status 7-day expiry, auto-refresh threshold                                                                                                                                                 | Verified 2026-09-23 (OIDC / lib)                                       |
+| 1   | `enable_granular_consent`, 100-token cap, revoke 200/400 semantics, full `invalid_grant` cause list, ~3600 s access-token lifetime, whether the web-server page recommends PKCE                                                                                                                                                                                                                                                                                              | Search snippet only / NOT VERIFIED                                     |
+| 2   | Scope URLs, descriptions, per-method accepted scopes (free/busy, event CRUD, calendar list)                                                                                                                                                                                                                                                                                                                                                                                  | Verified 2026-09-23 (discovery)                                        |
+| 2   | Sensitive/Restricted labels per scope, verification thresholds                                                                                                                                                                                                                                                                                                                                                                                                               | NOT VERIFIED                                                           |
+| 3   | `freebusy.query` URL, request/response schema, error reasons, limits (50 calendars / 100 group members)                                                                                                                                                                                                                                                                                                                                                                      | Verified 2026-09-23 (discovery)                                        |
+| 4   | `events.insert/patch/update/delete` URLs, params (`conferenceDataVersion` 0/1, `sendUpdates` all/externalOnly/none, `sendNotifications` deprecated), scopes, required `start`/`end`, full Event schema incl. `conferenceData.createRequest{requestId, conferenceSolutionKey.type=hangoutsMeet, status.statusCode pending/success/failure}`, `entryPoints[].entryPointType=video/uri`, `hangoutLink`, `etag`, `sequence`, `status`, `reminders`, `attendees[].responseStatus` | Verified 2026-09-23 (discovery)                                        |
+| 4   | `If-Match` → 412, `If-None-Match` → 304 guide wording                                                                                                                                                                                                                                                                                                                                                                                                                        | Search snippet only; header pass-through in Node client Verified (lib) |
+| 5   | `events.watch` / `channels.stop` URLs, scopes, `Channel` schema (`id, type=web_hook, address, token, expiration, resourceId, resourceUri`)                                                                                                                                                                                                                                                                                                                                   | Verified 2026-09-23 (discovery)                                        |
+| 5   | Notification headers & states, no-payload rule, HTTPS/valid-cert/domain-verification, 2xx + backoff on 5xx, default ttl 604800 s, no auto-renew                                                                                                                                                                                                                                                                                                                              | Search snippet only — NOT VERIFIED                                     |
+| 5   | Hard maximum channel lifetime                                                                                                                                                                                                                                                                                                                                                                                                                                                | NOT VERIFIED (no official number found)                                |
+| 6   | `syncToken` rules, forbidden params, `showDeleted` must not be false, 410 GONE → full resync, `nextSyncToken` only on last page                                                                                                                                                                                                                                                                                                                                              | Verified 2026-09-23 (discovery)                                        |
+| 7   | Meet creation requirements (`conferenceDataVersion=1`, unique `requestId`, async status)                                                                                                                                                                                                                                                                                                                                                                                     | Verified 2026-09-23 (discovery); polling guidance Search snippet only  |
+| 8   | `googleapis` 181.0.0, `google.auth.OAuth2` API surface, `'tokens'` event, `google.calendar({version:'v3', auth})`, TypeScript namespaces, `@googleapis/calendar`                                                                                                                                                                                                                                                                                                             | Verified 2026-09-23 (lib + official samples)                           |
 
 Local evidence kept in `/tmp/claude-0/-home-user-sxd/3e8c99c9-a1b0-5c1a-b288-9d80f6eebedf/scratchpad/research/`: `calendar-v3-discovery.json` (rev 20260826), `googleapis-readme.md` (npm README of 181.0.0), and `pkgs/` (extracted `google-auth-library-11.1.0`, `googleapis-calendar-20.0.0`, `googleapis-common-9.1.0`, plus `googleapis-181.tgz`).

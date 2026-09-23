@@ -276,17 +276,16 @@ export const partnerProfiles = pgTable(
     organizationId: text().references(() => organization.id),
     partnerType: partnerTypeEnum().notNull(),
     displayName: text().notNull(),
-    credentials:
-      jsonObject<
-        Array<{
-          title: string;
-          issuer?: string;
-          reference?: string;
-          expiresAt?: string;
-          verifiedAt?: string;
-          checkedBy?: string;
-        }>
-      >(),
+    credentials: jsonObject<
+      Array<{
+        title: string;
+        issuer?: string;
+        reference?: string;
+        expiresAt?: string;
+        verifiedAt?: string;
+        checkedBy?: string;
+      }>
+    >(),
     coverageStateIds: uuid().array(),
     availabilityStatus: text().notNull().default('unknown'),
     conflictDisclosures: text(),

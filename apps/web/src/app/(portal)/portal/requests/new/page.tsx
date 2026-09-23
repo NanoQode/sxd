@@ -23,8 +23,12 @@ export default async function NewRequestPage({
       <div className="space-y-4">
         <PageHeader title="New request" />
         <Alert tone="warning" title="An organisation is required">
-          Service requests belong to a customer organisation so household members and advisers can share them.{' '}
-          <Link href="/onboarding?next=/portal/requests/new" className="font-medium text-primary underline">
+          Service requests belong to a customer organisation so household members and advisers can
+          share them.{' '}
+          <Link
+            href="/onboarding?next=/portal/requests/new"
+            className="font-medium text-primary underline"
+          >
             Set one up now
           </Link>
           .
@@ -53,13 +57,16 @@ export default async function NewRequestPage({
       />
       {preselectedScenario ? (
         <Alert tone="info" title={`Starting from scenario “${preselectedScenario.name}”`}>
-          The scenario stays linked to this request so the team sees your compared markets and assumptions.
+          The scenario stays linked to this request so the team sees your compared markets and
+          assumptions.
         </Alert>
       ) : null}
       <RequestForm
         services={services}
         markets={markets.map((m) => ({ id: m.id, label: `${m.name}, ${m.stateName}` }))}
-        scenarios={scenarios.filter((s) => !s.convertedServiceRequestId).map((s) => ({ id: s.id, name: s.name }))}
+        scenarios={scenarios
+          .filter((s) => !s.convertedServiceRequestId)
+          .map((s) => ({ id: s.id, name: s.name }))}
         initialServiceSlug={params.service ?? null}
         initialScenarioId={preselectedScenario?.id ?? null}
       />

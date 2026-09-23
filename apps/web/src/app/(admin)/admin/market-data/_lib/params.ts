@@ -10,7 +10,13 @@ export function cleanSearchParams(
   return out;
 }
 
-export const PUBLICATION_STATES = ['draft', 'in_review', 'published', 'unpublished', 'archived'] as const;
+export const PUBLICATION_STATES = [
+  'draft',
+  'in_review',
+  'published',
+  'unpublished',
+  'archived',
+] as const;
 export const ZONES = ['NC', 'NE', 'NW', 'SE', 'SS', 'SW'] as const;
 export const AVAILABILITY = [
   'pending_operations_confirmation',
@@ -27,7 +33,13 @@ export const REVIEW_STATUSES = [
   'superseded',
   'stale',
 ] as const;
-export const GEOGRAPHY_LEVELS = ['country', 'state_or_fct', 'city', 'neighborhood', 'site'] as const;
+export const GEOGRAPHY_LEVELS = [
+  'country',
+  'state_or_fct',
+  'city',
+  'neighborhood',
+  'site',
+] as const;
 export const STATISTICS = [
   'median',
   'mean',

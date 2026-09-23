@@ -5,7 +5,19 @@ import { asc, eq } from 'drizzle-orm';
 import { ApiError, uuidSchema } from '@simplexd/contracts';
 import { getDb, schema, withActor } from '@simplexd/db';
 import { authorizeStaff } from '@simplexd/domain/authz';
-import { Alert, Badge, Card, CardContent, CardDescription, CardHeader, CardTitle, PageHeader, formatDateTimeLabel, formatWholeNaira, humanize } from '@simplexd/ui';
+import {
+  Alert,
+  Badge,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  PageHeader,
+  formatDateTimeLabel,
+  formatWholeNaira,
+  humanize,
+} from '@simplexd/ui';
 import { requireStaffPage } from '@/lib/auth/session';
 import { getLeadDetail, listStaffAssignees } from '@/server/leads/admin';
 import { LeadActions } from './lead-actions';
@@ -27,7 +39,11 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
     listStaffAssignees(identity),
     withActor(getDb(), identity.ctx, (tx) =>
       tx
-        .select({ slug: schema.services.slug, name: schema.services.name, category: schema.services.category })
+        .select({
+          slug: schema.services.slug,
+          name: schema.services.name,
+          category: schema.services.category,
+        })
         .from(schema.services)
         .where(eq(schema.services.inquiryEnabled, true))
         .orderBy(asc(schema.services.sortOrder)),
@@ -47,7 +63,8 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
       />
       {lead.suspicious ? (
         <Alert tone="warning" title="Flagged by spam heuristics">
-          The honeypot field was filled or the form was submitted unusually fast. Review before contacting.
+          The honeypot field was filled or the form was submitted unusually fast. Review before
+          contacting.
         </Alert>
       ) : null}
       <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
@@ -55,7 +72,9 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
           <Card>
             <CardHeader>
               <CardTitle>Context</CardTitle>
-              <CardDescription>Everything the customer supplied; nothing here is re-asked when the lead converts.</CardDescription>
+              <CardDescription>
+                Everything the customer supplied; nothing here is re-asked when the lead converts.
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3 text-sm">
               <dl className="grid gap-x-6 gap-y-2 sm:grid-cols-2">
@@ -79,13 +98,20 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
                 </div>
                 <div>
                   <dt className="text-fg-muted">Markets</dt>
-                  <dd>{lead.markets.length > 0 ? lead.markets.map((m) => `${m.name} (${m.stateName})`).join(', ') : '—'}</dd>
+                  <dd>
+                    {lead.markets.length > 0
+                      ? lead.markets.map((m) => `${m.name} (${m.stateName})`).join(', ')
+                      : '—'}
+                  </dd>
                 </div>
                 <div>
                   <dt className="text-fg-muted">Scenario</dt>
                   <dd>
                     {lead.scenario ? (
-                      <Link href={`/explore?scenario=${lead.scenario.id}`} className="text-primary underline">
+                      <Link
+                        href={`/explore?scenario=${lead.scenario.id}`}
+                        className="text-primary underline"
+                      >
                         {lead.scenario.name} ({humanize(lead.scenario.objective)})
                       </Link>
                     ) : (
@@ -98,7 +124,8 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
                   <dd>
                     {lead.linkedUser ? (
                       <>
-                        {lead.linkedUser.name} ({lead.linkedUser.email}){lead.organizationName ? ` · ${lead.organizationName}` : ''}
+                        {lead.linkedUser.name} ({lead.linkedUser.email})
+                        {lead.organizationName ? ` · ${lead.organizationName}` : ''}
                       </>
                     ) : (
                       'No account with this email'
@@ -112,10 +139,15 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
               </dl>
               <div>
                 <p className="text-fg-muted">Message</p>
-                <p className="whitespace-pre-wrap rounded-md bg-bg-sunken p-3">{lead.message ?? 'No message.'}</p>
+                <p className="whitespace-pre-wrap rounded-md bg-bg-sunken p-3">
+                  {lead.message ?? 'No message.'}
+                </p>
               </div>
               {lead.convertedServiceRequestId ? (
-                <Alert tone="success" title={`Converted to ${lead.convertedReference ?? 'a service request'}`}>
+                <Alert
+                  tone="success"
+                  title={`Converted to ${lead.convertedReference ?? 'a service request'}`}
+                >
                   The request was created in inquiry for the customer&apos;s organisation.
                 </Alert>
               ) : null}
@@ -145,7 +177,12 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
           </Card>
         </div>
         <div>
-          <LeadActions lead={lead} assignees={assignees} services={services} canManage={canManage} />
+          <LeadActions
+            lead={lead}
+            assignees={assignees}
+            services={services}
+            canManage={canManage}
+          />
         </div>
       </div>
     </div>

@@ -14,9 +14,20 @@ export default async function FreshnessPage() {
   const items = await listFreshnessPolicies(adminContext(identity));
   return (
     <div className="space-y-4">
-      <PageHeader title="Freshness policies" description="Maximum age per data type. Stale records remain inspectable but are excluded from default ranking. An official report's own validity takes precedence when 'respect source validity' is on." />
-      <Alert tone="info">Freshness is computed from observation and publication dates, never from import time.</Alert>
-      <FreshnessEditor items={items} canManage={hasStaffPermission(identity.actor, 'market_data.policy.manage') && identity.actor.mfaVerified} />
+      <PageHeader
+        title="Freshness policies"
+        description="Maximum age per data type. Stale records remain inspectable but are excluded from default ranking. An official report's own validity takes precedence when 'respect source validity' is on."
+      />
+      <Alert tone="info">
+        Freshness is computed from observation and publication dates, never from import time.
+      </Alert>
+      <FreshnessEditor
+        items={items}
+        canManage={
+          hasStaffPermission(identity.actor, 'market_data.policy.manage') &&
+          identity.actor.mfaVerified
+        }
+      />
     </div>
   );
 }

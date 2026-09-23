@@ -1,7 +1,16 @@
 'use client';
 
 import { useState, type ReactNode } from 'react';
-import { Alert, Button, Dialog, DialogContent, DialogFooter, Field, Input, Textarea } from '@simplexd/ui';
+import {
+  Alert,
+  Button,
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  Field,
+  Input,
+  Textarea,
+} from '@simplexd/ui';
 import { errorMessage } from '@/lib/api/client-fetch';
 
 /**
@@ -92,7 +101,12 @@ export function ActionDialog({
           {confirmText ? (
             <Field label={`Type "${confirmText}" to confirm`} required>
               {({ id }) => (
-                <Input id={id} value={typed} onChange={(e) => setTyped(e.target.value)} autoComplete="off" />
+                <Input
+                  id={id}
+                  value={typed}
+                  onChange={(e) => setTyped(e.target.value)}
+                  autoComplete="off"
+                />
               )}
             </Field>
           ) : null}

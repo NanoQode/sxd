@@ -57,7 +57,11 @@ export default async function AdminOverviewPage() {
               label="Rank-eligible published evidence"
               value={counts.rankEligibleEvidence ?? 0}
               href="/admin/market-data/observations?rankEligible=true&publicationState=published"
-              hint={(counts.rankEligibleEvidence ?? 0) === 0 ? 'No evidence qualifies for ranking yet' : undefined}
+              hint={
+                (counts.rankEligibleEvidence ?? 0) === 0
+                  ? 'No evidence qualifies for ranking yet'
+                  : undefined
+              }
               tone={(counts.rankEligibleEvidence ?? 0) === 0 ? 'warning' : 'success'}
             />
             <StatTile

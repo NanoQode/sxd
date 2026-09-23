@@ -256,15 +256,13 @@ export async function addPermitEvent(
       throw invalidTransition(decision.message, { status: p.status, eventType: input.eventType });
     if (input.eventType === 'note' && !input.note)
       throw new ApiError('validation_failed', 'a note event needs a note');
-    await tx
-      .insert(schema.permitEvents)
-      .values({
-        permitApplicationId: id,
-        eventType: input.eventType,
-        occurredAt: input.occurredAt,
-        note: input.note ?? null,
-        actorUserId: actorId,
-      });
+    await tx.insert(schema.permitEvents).values({
+      permitApplicationId: id,
+      eventType: input.eventType,
+      occurredAt: input.occurredAt,
+      note: input.note ?? null,
+      actorUserId: actorId,
+    });
     let current = p;
     if (decision.changed) {
       const patch: Partial<typeof schema.permitApplications.$inferInsert> = {

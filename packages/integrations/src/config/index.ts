@@ -48,7 +48,9 @@ export interface LoadIntegrationOptions {
   appEnv?: string;
 }
 
-export function defaultIntegrationEnvironment(appEnv = process.env.APP_ENV): IntegrationEnvironmentKey {
+export function defaultIntegrationEnvironment(
+  appEnv = process.env.APP_ENV,
+): IntegrationEnvironmentKey {
   return appEnv === 'production' ? 'live' : 'test';
 }
 

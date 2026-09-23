@@ -54,22 +54,54 @@ export function NigeriaPointPicker({
         role="img"
         aria-labelledby={`${id}-title`}
         aria-describedby={`${id}-desc`}
-        className={onChange ? 'w-full cursor-crosshair rounded-md border border-border bg-bg-sunken' : 'w-full rounded-md border border-border bg-bg-sunken'}
+        className={
+          onChange
+            ? 'w-full cursor-crosshair rounded-md border border-border bg-bg-sunken'
+            : 'w-full rounded-md border border-border bg-bg-sunken'
+        }
         onClick={fromEvent}
       >
         <title id={`${id}-title`}>Reference point within the Nigeria bounding box</title>
         <desc id={`${id}-desc`}>
-          Longitude {lon.toFixed(4)}, latitude {lat.toFixed(4)}; {inside ? 'inside' : 'outside'} the box.
+          Longitude {lon.toFixed(4)}, latitude {lat.toFixed(4)}; {inside ? 'inside' : 'outside'} the
+          box.
         </desc>
         {[4, 6, 8, 10, 12, 14].map((l) => {
           const gy = height - ((l - BBOX.minLat) / (BBOX.maxLat - BBOX.minLat)) * height;
-          return <line key={`lat${l}`} x1={0} x2={width} y1={gy} y2={gy} stroke="var(--sx-border)" strokeDasharray="4 4" />;
+          return (
+            <line
+              key={`lat${l}`}
+              x1={0}
+              x2={width}
+              y1={gy}
+              y2={gy}
+              stroke="var(--sx-border)"
+              strokeDasharray="4 4"
+            />
+          );
         })}
         {[4, 6, 8, 10, 12, 14].map((l) => {
           const gx = ((l - BBOX.minLon) / (BBOX.maxLon - BBOX.minLon)) * width;
-          return <line key={`lon${l}`} y1={0} y2={height} x1={gx} x2={gx} stroke="var(--sx-border)" strokeDasharray="4 4" />;
+          return (
+            <line
+              key={`lon${l}`}
+              y1={0}
+              y2={height}
+              x1={gx}
+              x2={gx}
+              stroke="var(--sx-border)"
+              strokeDasharray="4 4"
+            />
+          );
         })}
-        <rect x={1} y={1} width={width - 2} height={height - 2} fill="none" stroke="var(--sx-border-strong)" />
+        <rect
+          x={1}
+          y={1}
+          width={width - 2}
+          height={height - 2}
+          fill="none"
+          stroke="var(--sx-border-strong)"
+        />
         {inside ? (
           <>
             <circle cx={x} cy={y} r={9} fill="var(--sx-map-marker-selected)" opacity={0.35} />
@@ -84,7 +116,9 @@ export function NigeriaPointPicker({
         </text>
       </svg>
       <figcaption className="mt-1 text-xs text-fg-muted">
-        {inside ? `Point at ${lon.toFixed(4)}, ${lat.toFixed(4)}` : 'The point is outside Nigeria and cannot be saved.'}
+        {inside
+          ? `Point at ${lon.toFixed(4)}, ${lat.toFixed(4)}`
+          : 'The point is outside Nigeria and cannot be saved.'}
       </figcaption>
     </figure>
   );

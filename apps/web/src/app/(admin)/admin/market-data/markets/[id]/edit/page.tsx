@@ -22,10 +22,18 @@ export default async function EditMarketPage({ params }: { params: Promise<{ id:
     if (err instanceof ApiError && err.code === 'not_found') notFound();
     throw err;
   }
-  const [states, sources, markets] = await Promise.all([listStates(ctx), listSources(ctx), listMarketOptions(ctx)]);
+  const [states, sources, markets] = await Promise.all([
+    listStates(ctx),
+    listSources(ctx),
+    listMarketOptions(ctx),
+  ]);
   return (
     <div className="space-y-6">
-      <PageHeader title={`Edit ${market.name}`} eyebrow={`Version ${market.version}`} description="Changes are saved as a new revision with your reason and can be rolled back." />
+      <PageHeader
+        title={`Edit ${market.name}`}
+        eyebrow={`Version ${market.version}`}
+        description="Changes are saved as a new revision with your reason and can be rolled back."
+      />
       <MarketForm
         initial={{
           id: market.id,

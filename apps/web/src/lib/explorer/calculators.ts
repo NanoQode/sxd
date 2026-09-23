@@ -373,9 +373,7 @@ export function emptyCalculatorResult(reason: string): CalculatorRunResult {
 }
 
 /** Points for one sensitivity dimension: x = the varied value, y = net yield % (null when unavailable). */
-export function sensitivitySeries(
-  cells: readonly SensitivityCellView[],
-): Array<{
+export function sensitivitySeries(cells: readonly SensitivityCellView[]): Array<{
   x: number;
   netYield: number | null;
   cashFlowAfterDebt: number | null;

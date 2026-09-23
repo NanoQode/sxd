@@ -16,8 +16,8 @@ export function PlannedSection({ sectionKey }: { sectionKey: string }) {
     <div className="space-y-6">
       <PageHeader title={section.title} eyebrow={`Planned · release wave ${section.wave}`} />
       <Alert tone="info" title={`This section is delivered in release wave ${section.wave}`}>
-        {WAVE_NAMES[section.wave] ?? `Release wave ${section.wave}`}. Nothing here is hidden behind a
-        feature flag; the workflows have not been built yet.
+        {WAVE_NAMES[section.wave] ?? `Release wave ${section.wave}`}. Nothing here is hidden behind
+        a feature flag; the workflows have not been built yet.
       </Alert>
       <Card>
         <CardHeader>

@@ -230,15 +230,13 @@ export async function confirmBankTransferReceipt(
       let receiptNumber: string | null = null;
       if (plan.receiptRequired) {
         receiptNumber = await nextDocumentNumber(tx, 'receipts', now);
-        await tx
-          .insert(schema.receipts)
-          .values({
-            organizationId: invoice.organizationId,
-            invoiceId: invoice.id,
-            allocationId,
-            number: receiptNumber,
-            amountKobo: plan.allocatedKobo,
-          });
+        await tx.insert(schema.receipts).values({
+          organizationId: invoice.organizationId,
+          invoiceId: invoice.id,
+          allocationId,
+          number: receiptNumber,
+          amountKobo: plan.allocatedKobo,
+        });
       }
       const [updated] = await tx
         .update(schema.bankTransferReceipts)

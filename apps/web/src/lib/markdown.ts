@@ -9,8 +9,33 @@ import sanitizeHtml from 'sanitize-html';
  */
 
 const allowedTags = [
-  'h2', 'h3', 'h4', 'p', 'br', 'strong', 'em', 'ul', 'ol', 'li', 'blockquote', 'a', 'img',
-  'table', 'thead', 'tbody', 'tr', 'th', 'td', 'code', 'pre', 'hr', 'figure', 'figcaption', 'span', 'sup', 'sub',
+  'h2',
+  'h3',
+  'h4',
+  'p',
+  'br',
+  'strong',
+  'em',
+  'ul',
+  'ol',
+  'li',
+  'blockquote',
+  'a',
+  'img',
+  'table',
+  'thead',
+  'tbody',
+  'tr',
+  'th',
+  'td',
+  'code',
+  'pre',
+  'hr',
+  'figure',
+  'figcaption',
+  'span',
+  'sup',
+  'sub',
 ];
 
 export function renderMarkdown(markdown: string): string {

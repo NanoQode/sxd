@@ -31,7 +31,11 @@ export function redactForAudit(value: unknown): unknown {
 }
 
 /** Appends an immutable audit entry inside the caller's transaction. */
-export async function recordAudit(tx: DbExecutor, identity: RequestIdentity | null, input: AuditInput): Promise<void> {
+export async function recordAudit(
+  tx: DbExecutor,
+  identity: RequestIdentity | null,
+  input: AuditInput,
+): Promise<void> {
   await tx.insert(schema.auditEvents).values({
     actorType: input.actorType ?? (identity?.session ? 'user' : 'anonymous'),
     actorUserId: identity?.session?.user.id ?? null,

@@ -90,7 +90,11 @@ export function MarketsTable({
   const search = searchState.q === filters.q ? searchState.text : filters.q;
   const setSearch = (text: string) => setSearchState({ q: filters.q, text });
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [bulk, setBulk] = useState<{ action: 'publish' | 'unpublish'; outcomes: BulkOutcome[] | null; error: string | null } | null>(null);
+  const [bulk, setBulk] = useState<{
+    action: 'publish' | 'unpublish';
+    outcomes: BulkOutcome[] | null;
+    error: string | null;
+  } | null>(null);
   const [views, setViews] = useState<SavedView[]>([]);
   const [saveOpen, setSaveOpen] = useState(false);
   const [viewName, setViewName] = useState('');
@@ -134,7 +138,10 @@ export function MarketsTable({
       body: { action: bulk.action, marketIds: [...selected], reason, preview: false },
     });
     const changed = res.outcomes.filter((o) => o.outcome === 'changed').length;
-    toast({ title: `${changed} market${changed === 1 ? '' : 's'} ${bulk.action === 'publish' ? 'published' : 'unpublished'}`, tone: 'success' });
+    toast({
+      title: `${changed} market${changed === 1 ? '' : 's'} ${bulk.action === 'publish' ? 'published' : 'unpublished'}`,
+      tone: 'success',
+    });
     setSelected(new Set());
     router.refresh();
   }
@@ -208,7 +215,10 @@ export function MarketsTable({
         header: 'Market',
         cell: (m) => (
           <div className="min-w-0">
-            <Link href={`/admin/market-data/markets/${m.id}`} className="font-medium text-primary underline-offset-2 hover:underline">
+            <Link
+              href={`/admin/market-data/markets/${m.id}`}
+              className="font-medium text-primary underline-offset-2 hover:underline"
+            >
               {m.name}
             </Link>
             <p className="truncate text-xs text-fg-muted">
@@ -220,8 +230,20 @@ export function MarketsTable({
         ),
       },
       { key: 'state', header: 'State', cell: (m) => `${m.stateName} (${m.geopoliticalZone})` },
-      { key: 'publication', header: 'Publication', cell: (m) => <StatusBadge status={m.publicationState} /> },
-      { key: 'availability', header: 'Service availability', cell: (m) => <Badge tone={m.serviceAvailability === 'available' ? 'success' : 'neutral'}>{humanize(m.serviceAvailability)}</Badge> },
+      {
+        key: 'publication',
+        header: 'Publication',
+        cell: (m) => <StatusBadge status={m.publicationState} />,
+      },
+      {
+        key: 'availability',
+        header: 'Service availability',
+        cell: (m) => (
+          <Badge tone={m.serviceAvailability === 'available' ? 'success' : 'neutral'}>
+            {humanize(m.serviceAvailability)}
+          </Badge>
+        ),
+      },
       {
         key: 'evidence',
         header: 'Evidence',
@@ -231,8 +253,18 @@ export function MarketsTable({
           </span>
         ),
       },
-      { key: 'version', header: 'Version', hideOnMobile: true, cell: (m) => <span className="font-mono text-xs">v{m.version}</span> },
-      { key: 'updated', header: 'Updated', hideOnMobile: true, cell: (m) => <span className="text-xs text-fg-muted">{fmtDate(m.updatedAt)}</span> },
+      {
+        key: 'version',
+        header: 'Version',
+        hideOnMobile: true,
+        cell: (m) => <span className="font-mono text-xs">v{m.version}</span>,
+      },
+      {
+        key: 'updated',
+        header: 'Updated',
+        hideOnMobile: true,
+        cell: (m) => <span className="text-xs text-fg-muted">{fmtDate(m.updatedAt)}</span>,
+      },
     );
     return cols;
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -247,11 +279,22 @@ export function MarketsTable({
       ) : null}
       <div className="grid grid-cols-1 gap-3 rounded-lg border border-border bg-bg-elevated p-3 sm:grid-cols-2 lg:grid-cols-6">
         <Field label="Search" className="lg:col-span-2">
-          {({ id }) => <Input id={id} placeholder="Name, slug or alias" value={search} onChange={(e) => setSearch(e.target.value)} />}
+          {({ id }) => (
+            <Input
+              id={id}
+              placeholder="Name, slug or alias"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          )}
         </Field>
         <Field label="State">
           {({ id }) => (
-            <NativeSelect id={id} value={filters.stateId} onChange={(e) => setFilters({ stateId: e.target.value || null, page: 1 })}>
+            <NativeSelect
+              id={id}
+              value={filters.stateId}
+              onChange={(e) => setFilters({ stateId: e.target.value || null, page: 1 })}
+            >
               <option value="">All states</option>
               {states.map((s) => (
                 <option key={s.id} value={s.id}>
@@ -263,7 +306,11 @@ export function MarketsTable({
         </Field>
         <Field label="Zone">
           {({ id }) => (
-            <NativeSelect id={id} value={filters.zone} onChange={(e) => setFilters({ zone: e.target.value || null, page: 1 })}>
+            <NativeSelect
+              id={id}
+              value={filters.zone}
+              onChange={(e) => setFilters({ zone: e.target.value || null, page: 1 })}
+            >
               <option value="">All zones</option>
               {ZONES.map((z) => (
                 <option key={z} value={z}>
@@ -275,7 +322,11 @@ export function MarketsTable({
         </Field>
         <Field label="Publication">
           {({ id }) => (
-            <NativeSelect id={id} value={filters.publicationState} onChange={(e) => setFilters({ publicationState: e.target.value || null, page: 1 })}>
+            <NativeSelect
+              id={id}
+              value={filters.publicationState}
+              onChange={(e) => setFilters({ publicationState: e.target.value || null, page: 1 })}
+            >
               <option value="">Any</option>
               {PUBLICATION_STATES.map((s) => (
                 <option key={s} value={s}>
@@ -287,7 +338,11 @@ export function MarketsTable({
         </Field>
         <Field label="Availability">
           {({ id }) => (
-            <NativeSelect id={id} value={filters.serviceAvailability} onChange={(e) => setFilters({ serviceAvailability: e.target.value || null, page: 1 })}>
+            <NativeSelect
+              id={id}
+              value={filters.serviceAvailability}
+              onChange={(e) => setFilters({ serviceAvailability: e.target.value || null, page: 1 })}
+            >
               <option value="">Any</option>
               {AVAILABILITY.map((s) => (
                 <option key={s} value={s}>
@@ -328,7 +383,12 @@ export function MarketsTable({
         <div className="flex flex-wrap items-end gap-2 lg:col-span-3">
           <Field label="Saved views" className="min-w-40 flex-1">
             {({ id }) => (
-              <NativeSelect id={id} value="" onFocus={refreshViews} onChange={(e) => e.target.value && applyView(e.target.value)}>
+              <NativeSelect
+                id={id}
+                value=""
+                onFocus={refreshViews}
+                onChange={(e) => e.target.value && applyView(e.target.value)}
+              >
                 <option value="">Apply a saved view…</option>
                 {views.map((v) => (
                   <option key={v.name} value={v.name}>
@@ -338,10 +398,31 @@ export function MarketsTable({
               </NativeSelect>
             )}
           </Field>
-          <Button variant="secondary" onClick={() => { refreshViews(); setSaveOpen(true); }}>
+          <Button
+            variant="secondary"
+            onClick={() => {
+              refreshViews();
+              setSaveOpen(true);
+            }}
+          >
             Save current view
           </Button>
-          <Button variant="ghost" onClick={() => setFilters({ q: null, stateId: null, zone: null, publicationState: null, serviceAvailability: null, pendingReview: null, sort: null, order: null, page: null })}>
+          <Button
+            variant="ghost"
+            onClick={() =>
+              setFilters({
+                q: null,
+                stateId: null,
+                zone: null,
+                publicationState: null,
+                serviceAvailability: null,
+                pendingReview: null,
+                sort: null,
+                order: null,
+                page: null,
+              })
+            }
+          >
             Clear
           </Button>
         </div>
@@ -353,7 +434,12 @@ export function MarketsTable({
           <Button size="sm" disabled={selected.size === 0} onClick={() => openBulk('publish')}>
             Publish selected
           </Button>
-          <Button size="sm" variant="secondary" disabled={selected.size === 0} onClick={() => openBulk('unpublish')}>
+          <Button
+            size="sm"
+            variant="secondary"
+            disabled={selected.size === 0}
+            onClick={() => openBulk('unpublish')}
+          >
             Unpublish selected
           </Button>
           {selected.size > 0 ? (
@@ -378,7 +464,9 @@ export function MarketsTable({
       <ActionDialog
         open={bulk !== null}
         onOpenChange={(o) => !o && setBulk(null)}
-        title={bulk?.action === 'publish' ? 'Publish selected markets' : 'Unpublish selected markets'}
+        title={
+          bulk?.action === 'publish' ? 'Publish selected markets' : 'Unpublish selected markets'
+        }
         description="Review the affected rows before confirming. Every change is audited with your reason."
         confirmLabel={bulk?.action === 'publish' ? 'Publish' : 'Unpublish'}
         tone={bulk?.action === 'unpublish' ? 'danger' : 'primary'}
@@ -386,13 +474,17 @@ export function MarketsTable({
         onConfirm={applyBulk}
       >
         {bulk?.error ? <Alert tone="danger">{bulk.error}</Alert> : null}
-        {bulk?.outcomes === null ? <p className="text-sm text-fg-muted">Preparing preview…</p> : null}
+        {bulk?.outcomes === null ? (
+          <p className="text-sm text-fg-muted">Preparing preview…</p>
+        ) : null}
         {bulk?.outcomes && bulk.outcomes.length > 0 ? (
           <ul className="max-h-64 divide-y divide-border overflow-y-auto rounded-md border border-border text-sm">
             {bulk.outcomes.map((o) => (
               <li key={o.id} className="flex items-center justify-between gap-2 px-3 py-2">
                 <span className="min-w-0 truncate">{o.name || o.id}</span>
-                <Badge tone={o.outcome === 'will_change' ? 'success' : 'neutral'}>{o.outcome === 'will_change' ? o.detail : `skipped: ${o.detail}`}</Badge>
+                <Badge tone={o.outcome === 'will_change' ? 'success' : 'neutral'}>
+                  {o.outcome === 'will_change' ? o.detail : `skipped: ${o.detail}`}
+                </Badge>
               </li>
             ))}
           </ul>
@@ -400,9 +492,15 @@ export function MarketsTable({
       </ActionDialog>
 
       <Dialog open={saveOpen} onOpenChange={setSaveOpen}>
-        <DialogContent title="Save this view" description="Saved on this device only; the URL itself is shareable." size="sm">
+        <DialogContent
+          title="Save this view"
+          description="Saved on this device only; the URL itself is shareable."
+          size="sm"
+        >
           <Field label="View name" required>
-            {({ id }) => <Input id={id} value={viewName} onChange={(e) => setViewName(e.target.value)} />}
+            {({ id }) => (
+              <Input id={id} value={viewName} onChange={(e) => setViewName(e.target.value)} />
+            )}
           </Field>
           {views.length > 0 ? (
             <ul className="mt-3 space-y-1 text-sm">
