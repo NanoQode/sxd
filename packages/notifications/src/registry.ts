@@ -1,4 +1,4 @@
-import { and, desc, eq } from 'drizzle-orm';
+import { desc, eq } from 'drizzle-orm';
 import { DateTime } from 'luxon';
 import { schema, systemContext, withActor, type DbExecutor } from '@simplexd/db';
 import { dispatchRequest } from './dispatch';
@@ -634,5 +634,3 @@ export async function dispatchOutboxEvent(
   }
   return { handled: true, requests: requests.length, outcomes, retryable: outcomes.some((o) => o.retryable) };
 }
-
-export { and };

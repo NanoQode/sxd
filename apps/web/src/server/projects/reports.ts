@@ -14,7 +14,7 @@ import {
   type ReportRevisionInput,
   type ReportSubmit,
 } from '@simplexd/contracts';
-import { appendOutbox, applyActorContext, getDb, schema, withActor, type Transaction } from '@simplexd/db';
+import { appendOutbox, getDb, schema, withActor, type Transaction } from '@simplexd/db';
 import { hasStaffPermission, type StaffRole } from '@simplexd/domain/authz';
 import {
   assertNotAuthor,
@@ -166,12 +166,6 @@ export async function createReport(
       const [v] = await tx.select({ projectId: schema.siteVisits.projectId }).from(schema.siteVisits).where(eq(schema.siteVisits.id, input.siteVisitId));
       if (!v || v.projectId !== projectId) throw new ApiError('validation_failed', 'siteVisitId does not belong to this project');
     }
-    if (!isStaffIdentity(identity)) {
-      // The reports policy references the row being inserted, which a non-privileged actor cannot see
-      // until it exists; access has been proven above (accepted partner assignment), so the insert alone
-      // runs with the check bypassed and the context is restored immediately after.
-      await applyActorContext(tx, { ...ctxFor(identity, options), bypass: true });
-    }
     const [row] = await tx
       .insert(schema.reports)
       .values({
@@ -187,7 +181,6 @@ export async function createReport(
         createdBy: actorId,
       })
       .returning();
-    if (!isStaffIdentity(identity)) await applyActorContext(tx, ctxFor(identity, options));
     if (input.initialRevision) await insertRevision(tx, row!.id, 1, input.initialRevision, actorId);
     await recordAudit(tx, identity, {
       action: 'report.drafted',

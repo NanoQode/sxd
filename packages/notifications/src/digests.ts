@@ -2,6 +2,7 @@ import { and, asc, desc, eq, gt, gte, inArray, isNull, lte, sql } from 'drizzle-
 import { claimJobs, completeJob, failJob, schema, systemContext, withActor } from '@simplexd/db';
 import { dispatchRequest } from './dispatch';
 import { resolveEnv } from './env';
+import { dispatchOutboxEvent } from './registry';
 import { DEFERRED_QUEUE, ProviderSet, executeDeferredSend, type DeferredJobPayload } from './send';
 import type { Db, NotificationCategory, PipelineOptions } from './types';
 
@@ -59,7 +60,6 @@ export async function sendDueReminders(db: Db, options: PipelineOptions = {}): P
       .orderBy(asc(schema.appointments.startsAt))
       .limit(200),
   );
-  const { dispatchOutboxEvent } = await import('./registry');
   for (const appt of due) {
     const sent = appt.remindersSent ?? [];
     if (sent.includes('24h')) continue;
