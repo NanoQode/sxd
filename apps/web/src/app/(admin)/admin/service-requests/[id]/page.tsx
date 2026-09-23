@@ -16,11 +16,17 @@ import { requireStaffPage } from '@/lib/auth/session';
 import { getStaffRequestView } from '@/lib/admin/server/service-requests';
 import { listInvitablePartners } from '@/lib/admin/server/partners';
 import { priorityLabel } from '@/lib/admin/sla';
+import { attempt } from '@/lib/admin/server/context';
+import { getEngagementWorkspace } from '@/server/engagements/workspace';
+import { listFilesForEntity } from '@/server/files/queries';
 import { AssignmentsPanel } from '@/components/admin/assignments-panel';
 import { EntityFiles } from '@/components/admin/entity-files';
+import { LoadError } from '@/components/admin/load-error';
 import { Money } from '@/components/admin/money';
 import { NotesPanel } from '@/components/admin/notes-panel';
 import { Section } from '@/components/admin/section';
+import { RequestReportsPanel } from '@/components/engagements/request-reports-panel';
+import { StaffItemManager } from '@/components/engagements/staff-item-manager';
 import { DefinitionList } from '../../_components/bits';
 import { QuotesPanel } from './_components/quotes-panel';
 import { TransitionsPanel } from './_components/transitions-panel';
@@ -70,6 +76,29 @@ export default async function ServiceRequestDetailPage({
     permissions.projects &&
     !view.project &&
     ['accepted', 'awaiting_payment', 'in_progress'].includes(r.status);
+  const requestClosed = ['completed', 'cancelled', 'rejected'].includes(r.status);
+  const [workspace, requestFiles] = await Promise.all([
+    attempt(() => getEngagementWorkspace(identity, r.id)),
+    attempt(() => listFilesForEntity(identity, { entityType: 'service_request', entityId: r.id, limit: 100 })),
+  ]);
+  // Items can be assigned to staff, or to partners whose assignment here is accepted or active.
+  const itemAssignees = [
+    ...view.staff.map((s) => ({
+      userId: s.userId,
+      name: s.name,
+      kind: 'staff' as const,
+      detail: s.roles.map(humanize).join(', '),
+    })),
+    ...view.assignments
+      .filter((a) => a.status === 'accepted' || a.status === 'active')
+      .filter((a) => !view.staff.some((s) => s.userId === a.assigneeUserId))
+      .map((a) => ({
+        userId: a.assigneeUserId,
+        name: a.assigneeName ?? a.assigneeUserId,
+        kind: 'partner' as const,
+        detail: humanize(a.role),
+      })),
+  ];
   return (
     <div className="space-y-6">
       <PageHeader
@@ -205,6 +234,56 @@ export default async function ServiceRequestDetailPage({
               taxTreatments={view.taxTreatments}
               canQuote={permissions.quote}
             />
+          </Section>
+
+          <Section
+            id="engagement-records"
+            title="Engagement records"
+            description="Title and document checklist, survey references, site findings, queries, red flags, conditions and closing tasks. Customer-visible items appear on the customer's request page; internal ones stay here. Assign items to staff or to partners with an accepted assignment."
+          >
+            {!workspace.ok ? (
+              <LoadError code={workspace.code} message={workspace.message} what="Engagement records" />
+            ) : (
+              <StaffItemManager
+                serviceRequestId={r.id}
+                items={workspace.value.items}
+                assignees={itemAssignees}
+                files={requestFiles.ok ? requestFiles.value.items : []}
+                canManage={workspace.value.canManageItems}
+                requestClosed={requestClosed}
+              >
+                {workspace.value.summary.total > 0 ? (
+                  <p className="text-xs text-fg-muted">
+                    {workspace.value.summary.open} open of {workspace.value.summary.total}
+                    {workspace.value.summary.redFlags.open > 0
+                      ? ` · ${workspace.value.summary.redFlags.open} open red flag(s), highest ${humanize(workspace.value.summary.redFlags.highestOpenSeverity ?? 'none')}`
+                      : ''}
+                    {workspace.value.summary.openCustomerQueries > 0
+                      ? ` · ${workspace.value.summary.openCustomerQueries} query(ies) awaiting the customer`
+                      : ''}
+                  </p>
+                ) : null}
+              </StaffItemManager>
+            )}
+          </Section>
+
+          <Section
+            id="request-reports"
+            title="Reports"
+            description="Decision memoranda and inspection reports drafted directly under this request from the active template. A named reviewer who is not the author approves; release freezes the version the customer sees and can export."
+          >
+            {!workspace.ok ? (
+              <LoadError code={workspace.code} message={workspace.message} what="Reports" />
+            ) : (
+              <RequestReportsPanel
+                serviceRequestId={r.id}
+                workflowTemplateKey={workspace.value.workflowTemplateKey}
+                requestTitle={r.title}
+                reports={workspace.value.reports}
+                canDraft={workspace.value.canDraftReports}
+                requestClosed={['cancelled', 'rejected'].includes(r.status)}
+              />
+            )}
           </Section>
 
           <Section

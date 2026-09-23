@@ -1,6 +1,8 @@
 import type { Metadata } from 'next';
 import { PageHeader } from '@simplexd/ui';
+import { getIdentity } from '@/lib/auth/session';
 import { LocationExplorer } from '@/components/explorer';
+import { explorerAccessFor } from '@/components/explorer/access';
 
 export const metadata: Metadata = {
   title: 'Explore locations',
@@ -9,7 +11,8 @@ export const metadata: Metadata = {
   alternates: { canonical: '/explore' },
 };
 
-export default function ExplorePage() {
+export default async function ExplorePage() {
+  const identity = await getIdentity();
   return (
     <div className="sx-container py-8">
       <PageHeader
@@ -18,7 +21,7 @@ export default function ExplorePage() {
         description="Filter fifty markets, compare up to four side by side, adjust scoring priorities and model your own scenario. Every figure carries its evidence badge; unknown data stays unknown and calculators are scenarios, not valuations."
       />
       <div className="mt-6">
-        <LocationExplorer variant="full" />
+        <LocationExplorer variant="full" access={explorerAccessFor(identity)} />
       </div>
     </div>
   );

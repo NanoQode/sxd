@@ -12,12 +12,22 @@ import {
   ReduceMotionToggle,
   ThemeToggle,
 } from '@simplexd/ui';
-import { isActivePath, PRIMARY_LINKS, SECONDARY_LINKS, type NavServiceItem } from './nav-data';
+import {
+  isActivePath,
+  PRIMARY_LINKS,
+  SECONDARY_LINKS,
+  type NavLink,
+  type NavServiceItem,
+} from './nav-data';
 import { SearchDialog } from './search-dialog';
 
 export interface HeaderNavProps {
   services: NavServiceItem[];
   signedIn: boolean;
+  /** Top-level links after the services menu (from the CMS when published). */
+  primaryLinks?: NavLink[];
+  /** Additional links shown in the mobile drawer (from the CMS when published). */
+  secondaryLinks?: NavLink[];
 }
 
 /**
@@ -25,7 +35,12 @@ export interface HeaderNavProps {
  * services on large screens, a focus-trapped drawer on small screens, and a
  * search dialog available at every size.
  */
-export function HeaderNav({ services, signedIn }: HeaderNavProps) {
+export function HeaderNav({
+  services,
+  signedIn,
+  primaryLinks = PRIMARY_LINKS,
+  secondaryLinks = SECONDARY_LINKS,
+}: HeaderNavProps) {
   const pathname = usePathname();
   const [searchOpen, setSearchOpen] = useState(false);
   // The drawer is open only for the path it was opened on, so navigation closes it
@@ -41,7 +56,7 @@ export function HeaderNav({ services, signedIn }: HeaderNavProps) {
       <nav aria-label="Primary" className="hidden lg:block">
         <ul className="flex items-center gap-1">
           <ServicesMenu services={services} pathname={pathname} />
-          {PRIMARY_LINKS.map((link) => (
+          {primaryLinks.map((link) => (
             <li key={link.href}>
               <NavAnchor href={link.href} active={isActivePath(pathname, link.href)}>
                 {link.label}
@@ -95,6 +110,8 @@ export function HeaderNav({ services, signedIn }: HeaderNavProps) {
               pathname={pathname}
               accountHref={accountHref}
               accountLabel={accountLabel}
+              primaryLinks={primaryLinks}
+              secondaryLinks={secondaryLinks}
             />
           </DialogContent>
         </Dialog>
@@ -241,11 +258,15 @@ function MobileMenu({
   pathname,
   accountHref,
   accountLabel,
+  primaryLinks,
+  secondaryLinks,
 }: {
   services: NavServiceItem[];
   pathname: string;
   accountHref: string;
   accountLabel: string;
+  primaryLinks: NavLink[];
+  secondaryLinks: NavLink[];
 }) {
   const item =
     'sx-transition sx-touch flex items-center rounded-md px-3 text-base hover:bg-bg-sunken focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-focus';
@@ -284,7 +305,7 @@ function MobileMenu({
         </ul>
       </details>
       <ul className="flex flex-col">
-        {PRIMARY_LINKS.map((link) => (
+        {primaryLinks.map((link) => (
           <li key={link.href}>
             <Link
               href={link.href}
@@ -297,7 +318,7 @@ function MobileMenu({
         ))}
       </ul>
       <ul className="flex flex-col border-t border-border pt-2">
-        {SECONDARY_LINKS.map((link) => (
+        {secondaryLinks.map((link) => (
           <li key={link.href}>
             <Link
               href={link.href}

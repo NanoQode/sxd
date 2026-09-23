@@ -11,6 +11,8 @@ import { JsonLd, serviceJsonLd, serviceOfferJsonLd } from '@/components/public/j
 import { basisLabel, priceStatusLabel } from '@/components/public/price-anchor';
 import { Prose, Section } from '@/components/public/section';
 import { ServiceIcon } from '@/components/public/service-icon';
+import { WhatYouNeed } from '@/components/public/what-you-need';
+import { publicDocumentRequirements } from '@/server/admin/configuration/document-requirements';
 import { getServiceCoverageSummary, type ServiceCatalogItem } from '@/server/services/catalog';
 import { absoluteUrl, loadCatalog, publicMetadata, siteUrl } from '../../_lib/site-data';
 
@@ -41,6 +43,8 @@ export default async function ServiceDetailPage({ params }: { params: Params }) 
   if (!service) notFound();
   const planned = service.category === 'expansion';
   const coverage = await getServiceCoverageSummary(service.id).catch(() => null);
+  // Non-sensitive requirements only; identity documents are never listed publicly.
+  const requirements = planned ? [] : await publicDocumentRequirements(service.id).catch(() => []);
   const requestHref = planned
     ? `/book?service=${service.slug}&interest=1`
     : `/book?service=${service.slug}`;
@@ -159,6 +163,8 @@ export default async function ServiceDetailPage({ params }: { params: Params }) 
               {service.completionEvidence ?? 'Documented outcome per activated workflow template.'}
             </p>
           </section>
+
+          {!planned ? <WhatYouNeed items={requirements} /> : null}
 
           <section aria-labelledby="workflow-heading" className="mt-8">
             <h2 id="workflow-heading" className="text-xl font-semibold">

@@ -45,11 +45,14 @@ export const FLOOD_PREFERENCES = ['any', 'low_only', 'exclude_high', 'unknown_ok
 export const TEAM_PREFERENCES = ['any', 'available_only', 'available_or_on_request'] as const;
 export const MODES = ['evidence', 'assumption'] as const;
 export const VIEWS = ['map', 'list'] as const;
+/** Account-gated actions a visitor can resume after signing in (see account-gate.ts). */
+export const RESUME_INTENTS = ['save', 'share', 'verify', 'service', 'report'] as const;
 export const METRIC_KEYS = metricKeySchema.options;
 
 export type Zone = (typeof ZONES)[number];
 export type ExplorerMode = (typeof MODES)[number];
 export type ExplorerView = (typeof VIEWS)[number];
+export type ResumeIntent = (typeof RESUME_INTENTS)[number];
 export type AmenityPreference = (typeof AMENITY_PREFERENCES)[number];
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -126,6 +129,8 @@ export const explorerParsers = {
   scenario: parseAsString,
   shared: parseAsString,
   priorities: parseAsPriorities.withDefault({}),
+  /** Set when sign-in interrupted an account-gated action; consumed once after the visitor returns. */
+  resume: parseAsStringLiteral(RESUME_INTENTS),
 };
 
 export type ExplorerParams = inferParserType<typeof explorerParsers>;

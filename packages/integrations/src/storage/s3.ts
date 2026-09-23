@@ -7,6 +7,7 @@ import {
   DeleteObjectCommand,
   GetObjectCommand,
   HeadObjectCommand,
+  ListObjectsV2Command,
   PutObjectCommand,
   S3Client,
   UploadPartCommand,
@@ -312,6 +313,21 @@ export class S3StorageProvider implements StorageProvider {
     await this.transport.send(
       new DeleteObjectCommand({ Bucket: this.bucketName(location.bucket), Key: location.key }),
     );
+  }
+
+  /** Lists every key in a bucket, following continuation tokens (reconciliation tooling). */
+  async listKeys(bucket: StorageBucket): Promise<string[]> {
+    const Bucket = this.bucketName(bucket);
+    const keys: string[] = [];
+    let ContinuationToken: string | undefined;
+    do {
+      const page = await this.transport.send(
+        new ListObjectsV2Command({ Bucket, ContinuationToken, MaxKeys: 1000 }),
+      );
+      for (const object of page.Contents ?? []) if (object.Key) keys.push(object.Key);
+      ContinuationToken = page.IsTruncated ? page.NextContinuationToken : undefined;
+    } while (ContinuationToken);
+    return keys.sort();
   }
 
   async createSignedDownloadUrl(input: SignedDownloadInput): Promise<SignedDownload> {

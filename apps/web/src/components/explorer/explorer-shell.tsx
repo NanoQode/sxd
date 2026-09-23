@@ -2,7 +2,7 @@
 
 import { ArrowRight, List, Map as MapIcon, SlidersHorizontal } from 'lucide-react';
 import Link from 'next/link';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Alert, Button, NativeSelect, cn } from '@simplexd/ui';
 import {
   COPY,
@@ -122,6 +122,9 @@ export function ExplorerShell() {
     rankedBySlug,
     assumptions,
     stateOptions,
+    requireAccount,
+    resumeIntent,
+    clearResumeIntent,
   } = ctx;
   const [comparisonOpen, setComparisonOpen] = useState(false);
   const [report, setReport] = useState<ReportBundle | null>(null);
@@ -129,6 +132,15 @@ export function ExplorerShell() {
   const [saveOpen, setSaveOpen] = useState(false);
   const [verificationOpen, setVerificationOpen] = useState(false);
   const exploreHref = useMemo(() => buildExploreHref(params), [params]);
+
+  // Back from sign-in: re-open the dialog for the action the visitor chose.
+  // The state itself came back through the URL and the stored draft.
+  useEffect(() => {
+    if (!resumeIntent) return;
+    if (resumeIntent === 'verify') setVerificationOpen(true);
+    else if (resumeIntent === 'report') setComparisonOpen(true);
+    else setSaveOpen(true);
+  }, [resumeIntent]);
   const stateNames = useMemo(
     () => new Map(stateOptions.map((s) => [s.id, s.name])),
     [stateOptions],
@@ -145,16 +157,24 @@ export function ExplorerShell() {
   );
   const locationPanel = (
     <LocationPanel
-      onSaveScenario={() => setSaveOpen(true)}
-      onRequestVerification={() => setVerificationOpen(true)}
+      onSaveScenario={() => {
+        if (requireAccount('save')) setSaveOpen(true);
+      }}
+      onRequestVerification={() => {
+        if (requireAccount('verify')) setVerificationOpen(true);
+      }}
     />
   );
   const comparison = (
     <ComparisonDialog
       open={comparisonOpen}
-      onOpenChange={setComparisonOpen}
+      onOpenChange={(open) => {
+        setComparisonOpen(open);
+        if (!open) clearResumeIntent();
+      }}
       onReportGenerated={(bundle) => {
         setComparisonOpen(false);
+        clearResumeIntent();
         setReport(bundle);
       }}
     />

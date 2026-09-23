@@ -5,24 +5,30 @@ import { ActionBarProvider, StickyActionBar } from '@/components/public/action-b
 import { CONSENT_COOKIE, parseConsentCookie } from '@/components/public/analytics';
 import { ConsentBanner } from '@/components/public/consent-banner';
 import { PageViewTracker } from '@/components/public/page-view-tracker';
+import { SiteBanners } from '@/components/public/site-banner';
 import { SiteFooter } from '@/components/public/site-footer';
 import { SiteHeader } from '@/components/public/site-header';
-import { contentBySlug, navServices } from './_lib/site-data';
+import { contentBySlug, loadBanners, loadNavigation, navServices } from './_lib/site-data';
 
 /**
- * Public website shell: skip link, banner with primary navigation, main
- * landmark, footer with policies and contact from the CMS, contextual mobile
- * action bar and the analytics consent sheet. Nothing here tracks before consent.
+ * Public website shell: skip link, CMS announcement banners, banner with
+ * primary navigation (links from published navigation pages, defaults
+ * otherwise), main landmark, footer with policies and contact from the CMS,
+ * contextual mobile action bar and the analytics consent sheet. Nothing here
+ * tracks before consent.
  */
 export default async function PublicLayout({ children }: { children: ReactNode }) {
-  const [identity, cookieStore, services, contact, privacy, terms] = await Promise.all([
-    getIdentity(),
-    cookies(),
-    navServices(),
-    contentBySlug('contact', 'contact'),
-    contentBySlug('privacy', 'policy'),
-    contentBySlug('terms', 'policy'),
-  ]);
+  const [identity, cookieStore, services, contact, privacy, terms, banners, navigation] =
+    await Promise.all([
+      getIdentity(),
+      cookies(),
+      navServices(),
+      contentBySlug('contact', 'contact'),
+      contentBySlug('privacy', 'policy'),
+      contentBySlug('terms', 'policy'),
+      loadBanners(),
+      loadNavigation(),
+    ]);
   const consentRaw = cookieStore.get(CONSENT_COOKIE)?.value;
   const consent = consentRaw ? parseConsentCookie(`${CONSENT_COOKIE}=${consentRaw}`) : null;
 
@@ -35,11 +41,23 @@ export default async function PublicLayout({ children }: { children: ReactNode }
         Skip to content
       </a>
       <div className="flex min-h-dvh flex-col">
-        <SiteHeader services={services} signedIn={Boolean(identity.session)} />
+        <SiteBanners banners={banners} />
+        <SiteHeader
+          services={services}
+          signedIn={Boolean(identity.session)}
+          primaryLinks={navigation.primary}
+          secondaryLinks={navigation.secondary}
+        />
         <main id="main" tabIndex={-1} className="flex-1 pb-24 outline-none md:pb-0">
           {children}
         </main>
-        <SiteFooter services={services} contact={contact} policies={{ privacy, terms }} />
+        <SiteFooter
+          services={services}
+          contact={contact}
+          policies={{ privacy, terms }}
+          exploreLinks={navigation.footerExplore}
+          companyLinks={navigation.footerCompany}
+        />
       </div>
       <StickyActionBar />
       <ConsentBanner initialConsent={consent} />

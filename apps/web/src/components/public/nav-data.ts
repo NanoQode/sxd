@@ -76,6 +76,25 @@ export const SECONDARY_LINKS: NavLink[] = [
   { href: '/contact', label: 'Contact' },
 ];
 
+/** Footer "Explore" column defaults (a published navigation page for the slot replaces them). */
+export const FOOTER_EXPLORE_LINKS: NavLink[] = [
+  { href: '/explore', label: 'Location explorer' },
+  { href: '/locations', label: 'All locations' },
+  { href: '/properties', label: 'Properties' },
+  { href: '/projects', label: 'Projects' },
+  { href: '/resources', label: 'Resources' },
+  { href: '/how-it-works', label: 'How it works' },
+  { href: '/diaspora', label: 'For the diaspora' },
+  { href: '/local-nigeria', label: 'For local owners' },
+];
+
+/** Footer "Company" column defaults; the policy links are always appended after them. */
+export const FOOTER_COMPANY_LINKS: NavLink[] = [
+  { href: '/about', label: 'About' },
+  { href: '/book', label: 'Book a consultation' },
+  { href: '/sign-in', label: 'Sign in' },
+];
+
 /** Static pages the search dialog can find without a network request. */
 export const SEARCHABLE_PAGES: Array<NavLink & { keywords: string }> = [
   { href: '/services', label: 'All services', keywords: 'services catalogue deliverables' },

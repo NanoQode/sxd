@@ -18,6 +18,8 @@ import {
   ownerDistributionApproved,
   ownerPayoutSettled,
   partnerFeeAccrued,
+  partnerInvoiceAcceptanceReversed,
+  partnerInvoiceAccepted,
   refundApproved,
   refundSettled,
   revenueAccountForInvoiceKind,
@@ -207,6 +209,34 @@ describe('every builder returns a balanced journal', () => {
         engagement: { id: 'sr-1', organizationId: 'org-cust' },
         amountKobo: 300_000n,
       }),
+    ],
+    [
+      'partnerInvoiceAccepted',
+      partnerInvoiceAccepted({
+        payout: {
+          id: 'pi-1',
+          organizationId: 'org-cust',
+          amountKobo: 450_000n,
+          status: 'first_approved',
+          reference: 'VND-0007',
+        },
+        source: { type: 'purchase_order', id: 'po-9' },
+      }),
+    ],
+    [
+      'partnerInvoiceAcceptanceReversed',
+      partnerInvoiceAcceptanceReversed(
+        {
+          payout: {
+            id: 'pi-1',
+            organizationId: 'org-cust',
+            amountKobo: 450_000n,
+            status: 'first_approved',
+          },
+          source: { type: 'assignment', id: 'as-3' },
+        },
+        'finance withdrew the acceptance',
+      ),
     ],
   ];
 
@@ -548,6 +578,62 @@ describe('tax, owners and partners', () => {
       settlementReference: 'STMT-1',
     });
     expect(netForAccount(settled, ACCOUNTS.BANK)).toBe(-1_000_000n);
+  });
+
+  it('posts a partner invoice as a payable only once finance has accepted it', () => {
+    const payout = {
+      id: 'pi-2',
+      organizationId: 'org-cust',
+      amountKobo: 250_000n,
+      partnerOrganizationId: 'org-vendor',
+      reference: 'INV-22',
+    };
+    for (const status of ['proposed', 'approved', 'rejected', 'settled'] as const) {
+      expect(() =>
+        partnerInvoiceAccepted({
+          payout: { ...payout, status },
+          source: { type: 'purchase_order', id: 'po-1' },
+        }),
+      ).toThrow(/first_approved/);
+    }
+    expect(() =>
+      partnerInvoiceAccepted({
+        payout: { ...payout, status: 'first_approved', amountKobo: 0n },
+        source: { type: 'assignment', id: 'as-1' },
+      }),
+    ).toThrow();
+    const materials = partnerInvoiceAccepted({
+      payout: { ...payout, status: 'first_approved' },
+      source: { type: 'purchase_order', id: 'po-1' },
+    });
+    expect(materials.businessEventRef).toBe('payout:pi-2:accepted');
+    expect(accountsDebited(materials)).toEqual([
+      ACCOUNTS.MAINTENANCE_AND_ESTATE_EXPENSES_RECOVERABLE,
+    ]);
+    expect(accountsCredited(materials)).toEqual([ACCOUNTS.PARTNER_AND_SUPPLIER_PAYABLES]);
+    expect(netForAccount(materials, ACCOUNTS.PARTNER_AND_SUPPLIER_PAYABLES)).toBe(-250_000n);
+    // The payable line is tagged with the partner's organisation so payables can be grouped per partner.
+    expect(materials.lines[1]!.organizationId).toBe('org-vendor');
+    const services = partnerInvoiceAccepted({
+      payout: { ...payout, status: 'first_approved' },
+      source: { type: 'assignment', id: 'as-1' },
+    });
+    expect(accountsDebited(services)).toEqual([ACCOUNTS.PARTNER_PROFESSIONAL_FEES]);
+    expect(services.lines.some((l) => isRevenueAccount(l.accountCode))).toBe(false);
+    const reversal = partnerInvoiceAcceptanceReversed(
+      { payout: { ...payout, status: 'first_approved' }, source: { type: 'assignment', id: 'as-1' } },
+      'rejected after acceptance',
+    );
+    expect(reversal.reversalOfBusinessEventRef).toBe('payout:pi-2:accepted');
+    expect(reversal.businessEventRef).toBe('payout:pi-2:accepted:reversed');
+    expect(netForAccount(reversal, ACCOUNTS.PARTNER_AND_SUPPLIER_PAYABLES)).toBe(250_000n);
+    // Settlement of the accepted invoice discharges the same payable.
+    const settled = ownerPayoutSettled({
+      payout: { ...payout, status: 'submitted' },
+      settlementReference: 'STMT-9',
+    });
+    expect(netForAccount(settled, ACCOUNTS.PARTNER_AND_SUPPLIER_PAYABLES)).toBe(250_000n);
+    expect(netForAccount(settled, ACCOUNTS.BANK)).toBe(-250_000n);
   });
 
   it('computes management fees in basis points with bpsOf', () => {

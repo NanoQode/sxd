@@ -1,7 +1,9 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { buttonVariants, cn, EmptyState } from '@simplexd/ui';
+import { getIdentity } from '@/lib/auth/session';
 import { LocationExplorer } from '@/components/explorer';
+import { explorerAccessFor } from '@/components/explorer/access';
 import { ConsultationForm } from '@/components/public/consultation-form';
 import { readPrefill } from '@/components/public/consultation-schema';
 import { DEFAULT_FAQS, HERO, SITE } from '@/components/public/defaults';
@@ -19,6 +21,7 @@ import {
   excerpt,
   faqsFromContent,
   loadCatalog,
+  loadGoalPaths,
   publicMetadata,
   siteUrl,
   type SearchParams,
@@ -34,13 +37,16 @@ export const metadata: Metadata = publicMetadata({
 export default async function HomePage({ searchParams }: { searchParams: SearchParams }) {
   const params = await searchParams;
   const prefill = readPrefill(params);
-  const [catalog, caseStudies, testimonials, faqPages, evidencePages] = await Promise.all([
-    loadCatalog(),
-    contentByKind('case_study'),
-    contentByKind('testimonial'),
-    contentByKind('faq'),
-    contentByKind('evidence_standard'),
-  ]);
+  const [catalog, caseStudies, testimonials, faqPages, evidencePages, goals, identity] =
+    await Promise.all([
+      loadCatalog(),
+      contentByKind('case_study'),
+      contentByKind('testimonial'),
+      contentByKind('faq'),
+      contentByKind('evidence_standard'),
+      loadGoalPaths(),
+      getIdentity(),
+    ]);
   const faqs = faqPages.length > 0 ? faqsFromContent(faqPages) : DEFAULT_FAQS;
   const evidence = evidenceStandardsFromContent(evidencePages);
   const serviceNames = Object.fromEntries((catalog?.core ?? []).map((s) => [s.slug, s.name]));
@@ -111,7 +117,7 @@ export default async function HomePage({ searchParams }: { searchParams: SearchP
 
       {/* 2. Location explorer near the top */}
       <section aria-label="Location explorer" className="sx-container pb-10 sm:pb-14">
-        <LocationExplorer variant="homepage" />
+        <LocationExplorer variant="homepage" access={explorerAccessFor(identity)} />
         <p className="mt-3 text-sm text-fg-muted">
           Explore anonymously. Each market shows its evidence badges, service availability and what
           is still missing; saving a scenario or requesting verification asks for an account.{' '}
@@ -162,7 +168,7 @@ export default async function HomePage({ searchParams }: { searchParams: SearchP
         title="Buy safely, build with oversight, manage, or invest and compare"
         description="Each path combines the services that produce the evidence you need and carries your choices into the consultation request."
       >
-        <GoalPaths serviceNames={serviceNames} />
+        <GoalPaths serviceNames={serviceNames} goals={goals} />
       </Section>
 
       {/* 5. How it works, case studies, sample reports, evidence standards */}

@@ -15,3 +15,4 @@ export {
   type DevVerifyResult,
 } from './local-dev';
 export * from './factory';
+export * from './reconcile';

@@ -267,6 +267,10 @@ export const conversationEntityTypeSchema = z.enum([
   'site_visit',
   'report',
   'defect',
+  // Commercial entities partners work on; their assignees are the invited or named partners.
+  'tender',
+  'purchase_order',
+  'rfq',
 ]);
 
 export const conversationCreateSchema = z

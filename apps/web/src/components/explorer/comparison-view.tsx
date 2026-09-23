@@ -158,8 +158,16 @@ export function ComparisonDialog({
   onOpenChange: (open: boolean) => void;
   onReportGenerated: (bundle: ReportBundle) => void;
 }) {
-  const { compareMarkets, filters, mode, priorities, assumptions, rankedBySlug, scenario } =
-    useExplorer();
+  const {
+    compareMarkets,
+    filters,
+    mode,
+    priorities,
+    assumptions,
+    rankedBySlug,
+    scenario,
+    requireAccount,
+  } = useExplorer();
   const ids = useMemo(() => compareMarkets.map((m) => m.id), [compareMarkets]);
   const body = useMemo<ComparisonRequest>(
     () => ({
@@ -184,6 +192,8 @@ export function ComparisonDialog({
   const warnings = [...new Set([...serverWarnings, ...clientWarnings])];
 
   const generate = async () => {
+    // The dated report saves the scenario and stores a snapshot, so it needs an account.
+    if (!requireAccount('report')) return;
     const generated = await scenario.generateReport();
     if (generated) onReportGenerated({ generated, comparison: comparison.data ?? null });
   };

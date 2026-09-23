@@ -1,6 +1,7 @@
 'use client';
 
 import { keepPreviousData, useQuery, type UseQueryResult } from '@tanstack/react-query';
+import { useRouter } from 'next/navigation';
 import { useQueryStates, type Nullable } from 'nuqs';
 import {
   createContext,
@@ -26,13 +27,18 @@ import type {
   ScenarioDto,
 } from '@simplexd/contracts';
 import {
+  ANONYMOUS_ACCESS,
   DEFAULT_ASSUMPTIONS,
   FILTER_PARAM_KEYS,
   applyClientFilters,
   applyQuery,
   assumptionsAreUsable,
   buildCalculatorRequest,
+  buildExploreHref,
+  buildResumeHref,
   buildRows,
+  buildSignInHref,
+  decideScenarioAction,
   explorerParsers,
   filterGeoJson,
   filtersFromParams,
@@ -49,11 +55,13 @@ import {
   runCalculators,
   saveDraft,
   toggleCompare as toggleCompareList,
+  type AccountAccess,
   type CalculatorRunResult,
   type ExplorerMode,
   type ExplorerParams,
   type ExplorerVariant,
   type ExplorerView,
+  type GatedAction,
   type MarketRows,
   type StateOption,
 } from '@/lib/explorer';
@@ -110,6 +118,20 @@ export interface ExplorerContextValue {
   scenario: ScenarioState;
   /** Id of the last scenario saved on this device, offered when nothing is open. */
   lastScenarioId: string | null;
+  /** Who the server rendered the explorer for and whether anonymous server-side saves are allowed. */
+  access: AccountAccess;
+  /**
+   * Account gate (brief §5). Returns true when the action may proceed. Otherwise the
+   * draft is stored, the visitor goes to sign-in with the full explorer URL in
+   * `next` and the action in `resume`, and false is returned.
+   */
+  requireAccount: (action: GatedAction) => boolean;
+  /** Action interrupted by sign-in, restored once after the visitor comes back signed in. */
+  resumeIntent: GatedAction | null;
+  clearResumeIntent: () => void;
+  /** Sign-in and sign-up links that bring the visitor back to this explorer state. */
+  signInHref: string;
+  signUpHref: string;
 }
 
 const ExplorerContext = createContext<ExplorerContextValue | null>(null);
@@ -124,13 +146,16 @@ const isEmptyPriorities = (p: Priorities): boolean => Object.keys(p).length === 
 
 export function ExplorerProvider({
   variant,
+  access = ANONYMOUS_ACCESS,
   children,
 }: {
   variant: ExplorerVariant;
+  access?: AccountAccess;
   children: ReactNode;
 }) {
   const [params, setParams] = useExplorerParams();
   const { toast } = useToast();
+  const router = useRouter();
   const isDesktop = useMediaQuery(DESKTOP_QUERY);
 
   const filters = useMemo(() => filtersFromParams(params), [params]);
@@ -141,6 +166,7 @@ export function ExplorerProvider({
   const [assumptions, setAssumptionsState] = useState<ScenarioAssumptions>(DEFAULT_ASSUMPTIONS);
   const [scenarioName, setScenarioName] = useState('');
   const [lastScenarioId, setLastScenarioId] = useState<string | null>(null);
+  const [resumeIntent, setResumeIntent] = useState<GatedAction | null>(null);
 
   /* ------------------------------------------------------------------ */
   /* Data                                                                */
@@ -422,6 +448,12 @@ export function ExplorerProvider({
     const timer = window.setTimeout(() => {
       const initial = initialParamsRef.current;
       setLastScenarioId(loadLastScenarioId());
+      if (initial.resume) {
+        // The action interrupted by sign-in resumes once, only for a signed-in
+        // visitor; the param is consumed so a reload does not repeat it.
+        if (access.signedIn) setResumeIntent(initial.resume);
+        void setParams({ resume: null });
+      }
       if (initial.scenario || initial.shared) return;
       const draft = loadDraft();
       if (!draft) return;
@@ -432,22 +464,55 @@ export function ExplorerProvider({
       }
     }, 0);
     return () => window.clearTimeout(timer);
-  }, [setParams]);
+  }, [setParams, access.signedIn]);
+
+  const draftInput = useMemo(
+    () => ({
+      name: scenarioName === '' ? null : scenarioName,
+      assumptions,
+      priorities,
+      mode,
+      scenarioId: scenario.id,
+      compare: compareSlugs,
+    }),
+    [assumptions, scenarioName, priorities, mode, scenario.id, compareSlugs],
+  );
 
   useEffect(() => {
     if (!draftRestoredRef.current) return;
     const timer = window.setTimeout(() => {
-      saveDraft({
-        name: scenarioName === '' ? null : scenarioName,
-        assumptions,
-        priorities,
-        mode,
-        scenarioId: scenario.id,
-        compare: compareSlugs,
-      });
+      saveDraft(draftInput);
     }, 500);
     return () => window.clearTimeout(timer);
-  }, [assumptions, scenarioName, priorities, mode, scenario.id, compareSlugs]);
+  }, [draftInput]);
+
+  /* ------------------------------------------------------------------ */
+  /* Account gate (brief §5)                                             */
+  /* ------------------------------------------------------------------ */
+
+  const explorerPath = variant === 'full' ? '/explore' : '/';
+  const signInHref = useMemo(
+    () => buildSignInHref(buildExploreHref(params, {}, explorerPath)),
+    [params, explorerPath],
+  );
+  const signUpHref = useMemo(
+    () => buildSignInHref(buildExploreHref(params, {}, explorerPath), 'sign-up'),
+    [params, explorerPath],
+  );
+
+  const requireAccount = useCallback(
+    (action: GatedAction): boolean => {
+      const decision = decideScenarioAction(action, access);
+      if (decision.kind === 'proceed') return true;
+      // Flush the draft now: the debounced save may not have run before navigation.
+      saveDraft(draftInput);
+      router.push(buildSignInHref(buildResumeHref(params, action, explorerPath)));
+      return false;
+    },
+    [access, draftInput, params, explorerPath, router],
+  );
+
+  const clearResumeIntent = useCallback(() => setResumeIntent(null), []);
 
   /* ------------------------------------------------------------------ */
 
@@ -494,6 +559,12 @@ export function ExplorerProvider({
       calculatorsUsable,
       scenario,
       lastScenarioId,
+      access,
+      requireAccount,
+      resumeIntent,
+      clearResumeIntent,
+      signInHref,
+      signUpHref,
     }),
     [
       variant,
@@ -533,6 +604,12 @@ export function ExplorerProvider({
       calculatorsUsable,
       scenario,
       lastScenarioId,
+      access,
+      requireAccount,
+      resumeIntent,
+      clearResumeIntent,
+      signInHref,
+      signUpHref,
     ],
   );
 

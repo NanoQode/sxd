@@ -12,7 +12,11 @@ const ORIGIN = 'http://localhost:3000';
 
 function request(
   path: string,
-  init: { method?: string; headers?: Record<string, string>; cookies?: Record<string, string> } = {},
+  init: {
+    method?: string;
+    headers?: Record<string, string>;
+    cookies?: Record<string, string>;
+  } = {},
 ): NextRequest {
   const headers = new Headers(init.headers);
   if (init.cookies)
@@ -39,7 +43,13 @@ beforeEach(() => {
   process.env.S3_ENDPOINT = 'http://127.0.0.1:9000';
 });
 afterEach(() => {
-  for (const key of ['APP_URL', 'TRUSTED_ORIGINS', 'MAP_TILE_HOSTS', 'PUBLIC_MEDIA_HOSTNAMES', 'S3_ENDPOINT'])
+  for (const key of [
+    'APP_URL',
+    'TRUSTED_ORIGINS',
+    'MAP_TILE_HOSTS',
+    'PUBLIC_MEDIA_HOSTNAMES',
+    'S3_ENDPOINT',
+  ])
     if (savedEnv[key] === undefined) delete process.env[key];
     else process.env[key] = savedEnv[key];
 });
@@ -69,8 +79,10 @@ describe('content security policy', () => {
         return [name, rest.join(' ')];
       }),
     );
-    expect(directives["default-src"]).toBe("'self'");
-    expect(directives['script-src']).toMatch(/^'self' 'nonce-[^']+' 'strict-dynamic' https:\/\/js\.paystack\.co/);
+    expect(directives['default-src']).toBe("'self'");
+    expect(directives['script-src']).toMatch(
+      /^'self' 'nonce-[^']+' 'strict-dynamic' https:\/\/js\.paystack\.co/,
+    );
     expect(directives['object-src']).toBe("'none'");
     expect(directives['base-uri']).toBe("'self'");
     expect(directives['form-action']).toBe("'self'");
@@ -121,12 +133,13 @@ describe('cross-site request guard', () => {
   });
 
   it('allows same-origin and navigation requests, and non-browser clients without either header', () => {
-    for (const headers of [
+    const allowed: Record<string, string>[] = [
       { 'sec-fetch-site': 'same-origin' },
       { 'sec-fetch-site': 'none' },
       {},
       { 'sec-fetch-site': 'same-origin', origin: ORIGIN },
-    ]) {
+    ];
+    for (const headers of allowed) {
       const res = proxy(request('/api/v1/leads', { method: 'POST', headers }));
       expect(blocked(res), JSON.stringify(headers)).toBe(false);
     }
@@ -158,13 +171,23 @@ describe('cross-site request guard', () => {
 
   it('never blocks GET/HEAD, non-API paths or provider webhooks', () => {
     const cross = { 'sec-fetch-site': 'cross-site', origin: 'https://evil.example' };
-    expect(blocked(proxy(request('/api/v1/markets', { method: 'GET', headers: cross })))).toBe(false);
-    expect(blocked(proxy(request('/api/v1/markets', { method: 'HEAD', headers: cross })))).toBe(false);
+    expect(blocked(proxy(request('/api/v1/markets', { method: 'GET', headers: cross })))).toBe(
+      false,
+    );
+    expect(blocked(proxy(request('/api/v1/markets', { method: 'HEAD', headers: cross })))).toBe(
+      false,
+    );
     expect(blocked(proxy(request('/sign-in', { method: 'POST', headers: cross })))).toBe(false);
-    expect(blocked(proxy(request('/api/v1/webhooks/paystack', { method: 'POST', headers: cross })))).toBe(false);
-    expect(blocked(proxy(request('/api/v1/webhooks/termii', { method: 'POST', headers: cross })))).toBe(false);
+    expect(
+      blocked(proxy(request('/api/v1/webhooks/paystack', { method: 'POST', headers: cross }))),
+    ).toBe(false);
+    expect(
+      blocked(proxy(request('/api/v1/webhooks/termii', { method: 'POST', headers: cross }))),
+    ).toBe(false);
     // The exemption is a prefix, not a substring.
-    expect(blocked(proxy(request('/api/v1/admin/webhooks/replay', { method: 'POST', headers: cross })))).toBe(true);
+    expect(
+      blocked(proxy(request('/api/v1/admin/webhooks/replay', { method: 'POST', headers: cross }))),
+    ).toBe(true);
   });
 });
 

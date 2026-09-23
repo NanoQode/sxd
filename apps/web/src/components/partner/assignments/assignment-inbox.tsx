@@ -188,6 +188,14 @@ export function AssignmentInbox() {
                     {a.status === 'accepted' ? (
                       <Badge tone="info">Waiting for staff to activate</Badge>
                     ) : null}
+                    {(a.status === 'accepted' || a.status === 'active') && a.serviceRequestId ? (
+                      <Link
+                        href={`/partner/items?serviceRequestId=${a.serviceRequestId}`}
+                        className="text-sm text-primary underline"
+                      >
+                        Assigned items
+                      </Link>
+                    ) : null}
                     {(a.status === 'accepted' || a.status === 'active') && a.projectId ? (
                       <>
                         <Link

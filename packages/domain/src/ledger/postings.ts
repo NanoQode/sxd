@@ -1058,6 +1058,86 @@ export interface PartnerFeeAccruedInput {
   estateSegment?: string | null;
 }
 
+export type PartnerInvoiceSourceType = 'purchase_order' | 'assignment';
+
+export interface PartnerInvoiceAcceptedInput {
+  /** The `payouts` row (kind `partner_invoice`) finance accepted; status must be `first_approved`. */
+  payout: {
+    id: string;
+    organizationId: string;
+    currency?: string;
+    amountKobo: Kobo;
+    status: PayoutStatusLike;
+    partnerUserId?: string | null;
+    partnerOrganizationId?: string | null;
+    reference?: string | null;
+  };
+  /** What the partner is billing: materials on a purchase order or work on an assignment. */
+  source: { type: PartnerInvoiceSourceType; id: string };
+  estateSegment?: string | null;
+}
+
+/** Expense account a partner invoice hits: materials are recoverable project costs (5200), assignments professional fees (5300). */
+export function expenseAccountForPartnerInvoice(source: PartnerInvoiceSourceType): AccountCode {
+  return source === 'purchase_order'
+    ? ACCOUNTS.MAINTENANCE_AND_ESTATE_EXPENSES_RECOVERABLE
+    : ACCOUNTS.PARTNER_PROFESSIONAL_FEES;
+}
+
+/**
+ * Partner invoice accepted by finance (first approval): Dr 5200|5300 / Cr 2400.
+ * The payable exists from acceptance; the second approval authorises payment
+ * without posting, and settlement discharges it through `ownerPayoutSettled`.
+ * A rejection after acceptance reverses this journal.
+ */
+export function partnerInvoiceAccepted(input: PartnerInvoiceAcceptedInput): JournalDraft {
+  const { payout, source } = input;
+  if (payout.status !== 'first_approved') {
+    throw new JournalError(
+      `partner invoice ${payout.id} is ${payout.status}; the payable posts only when finance accepts it (status first_approved)`,
+      { payoutId: payout.id, status: payout.status },
+    );
+  }
+  const amount = assertPositiveKobo('payout.amountKobo', payout.amountKobo);
+  const entity = { entityType: 'payout', entityId: payout.id };
+  const label = payout.reference ? `partner invoice ${payout.reference}` : `partner invoice`;
+  const expense = expenseAccountForPartnerInvoice(source.type);
+  return base(
+    `payout:${payout.id}:accepted`,
+    `Partner invoice ${payout.reference ?? payout.id} accepted (${source.type} ${source.id})`,
+    'payout',
+    payout.id,
+    payout.currency,
+    { organizationId: payout.organizationId, estateSegment: input.estateSegment },
+    [
+      debit(expense, amount, {
+        ...entity,
+        memo:
+          source.type === 'purchase_order'
+            ? `Materials billed on ${label}`
+            : `Professional services billed on ${label}`,
+      }),
+      credit(ACCOUNTS.PARTNER_AND_SUPPLIER_PAYABLES, amount, {
+        ...entity,
+        memo: `Owed to partner for ${label}`,
+        ...(payout.partnerOrganizationId ? { organizationId: payout.partnerOrganizationId } : {}),
+      }),
+    ],
+  );
+}
+
+/** Reversal of `partnerInvoiceAccepted` when finance withdraws its acceptance. */
+export function partnerInvoiceAcceptanceReversed(
+  input: PartnerInvoiceAcceptedInput,
+  reason: string,
+): JournalDraft {
+  return reverse(
+    partnerInvoiceAccepted({ ...input, payout: { ...input.payout, status: 'first_approved' } }),
+    `payout:${input.payout.id}:accepted:reversed`,
+    reason,
+  );
+}
+
 /** Partner professional fee accrued for an engagement: Dr 5300 / Cr 2400. Paid later via `ownerPayoutSettled`. */
 export function partnerFeeAccrued(input: PartnerFeeAccruedInput): JournalDraft {
   const { engagement } = input;

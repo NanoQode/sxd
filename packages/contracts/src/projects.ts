@@ -764,6 +764,10 @@ export const siteVisitDtoSchema = z.object({
   reviewedAt: isoDateTimeSchema.nullable(),
   offlineClientId: z.string().nullable(),
   evidenceCount: z.number().int(),
+  /** Started by the inspector in the field without a scheduled visit (no `scheduledAt`). */
+  unscheduled: z.boolean(),
+  /** The inspector's stated reason for an unscheduled visit. */
+  unscheduledReason: z.string().nullable(),
   createdAt: isoDateTimeSchema,
   updatedAt: isoDateTimeSchema,
 });
@@ -817,6 +821,8 @@ export const siteVisitSyncItemSchema = z.object({
   siteVisitId: uuidSchema.optional(),
   projectId: uuidSchema.optional(),
   scheduledAt: isoDateTimeSchema.optional(),
+  /** Required when an assigned partner creates the visit from the field; flags it unscheduled. */
+  unscheduledReason: z.string().trim().min(5).max(2000).optional(),
   startedAt: isoDateTimeSchema.optional(),
   submittedAt: isoDateTimeSchema.optional(),
   findingsMarkdown: z.string().trim().min(1).max(100_000),

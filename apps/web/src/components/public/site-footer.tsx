@@ -3,12 +3,21 @@ import type { PublishedContent } from '@simplexd/contracts';
 import { Badge } from '@simplexd/ui';
 import { CONTACT_FALLBACK, SITE } from './defaults';
 import { FooterControls } from './footer-controls';
-import type { NavServiceItem } from './nav-data';
+import {
+  FOOTER_COMPANY_LINKS,
+  FOOTER_EXPLORE_LINKS,
+  type NavLink,
+  type NavServiceItem,
+} from './nav-data';
 
 export interface FooterData {
   services: NavServiceItem[];
   contact: PublishedContent | null;
   policies: { privacy: PublishedContent | null; terms: PublishedContent | null };
+  /** "Explore" column (from the CMS `footer-explore` navigation slot when published). */
+  exploreLinks?: NavLink[];
+  /** "Company" column; the policy links are always appended. */
+  companyLinks?: NavLink[];
 }
 
 function policyReviewed(page: PublishedContent | null): boolean {
@@ -20,7 +29,13 @@ function contactField(page: PublishedContent | null, key: string): string | null
   return typeof v === 'string' && v.trim() ? v.trim() : null;
 }
 
-export function SiteFooter({ services, contact, policies }: FooterData) {
+export function SiteFooter({
+  services,
+  contact,
+  policies,
+  exploreLinks = FOOTER_EXPLORE_LINKS,
+  companyLinks = FOOTER_COMPANY_LINKS,
+}: FooterData) {
   const email = contactField(contact, 'email');
   const phone = contactField(contact, 'phone');
   const whatsapp = contactField(contact, 'whatsapp');
@@ -106,19 +121,10 @@ export function SiteFooter({ services, contact, policies }: FooterData) {
         <nav aria-label="Explore" className="text-sm">
           <h2 className="font-semibold">Explore</h2>
           <ul className="mt-2 space-y-1.5">
-            {[
-              ['/explore', 'Location explorer'],
-              ['/locations', 'All locations'],
-              ['/properties', 'Properties'],
-              ['/projects', 'Projects'],
-              ['/resources', 'Resources'],
-              ['/how-it-works', 'How it works'],
-              ['/diaspora', 'For the diaspora'],
-              ['/local-nigeria', 'For local owners'],
-            ].map(([href, label]) => (
-              <li key={href}>
-                <Link href={href!} className="text-fg-muted hover:text-fg hover:underline">
-                  {label}
+            {exploreLinks.map((link) => (
+              <li key={link.href}>
+                <Link href={link.href} className="text-fg-muted hover:text-fg hover:underline">
+                  {link.label}
                 </Link>
               </li>
             ))}
@@ -127,21 +133,13 @@ export function SiteFooter({ services, contact, policies }: FooterData) {
         <nav aria-label="Company and policies" className="text-sm">
           <h2 className="font-semibold">Company</h2>
           <ul className="mt-2 space-y-1.5">
-            <li>
-              <Link href="/about" className="text-fg-muted hover:text-fg hover:underline">
-                About
-              </Link>
-            </li>
-            <li>
-              <Link href="/book" className="text-fg-muted hover:text-fg hover:underline">
-                Book a consultation
-              </Link>
-            </li>
-            <li>
-              <Link href="/sign-in" className="text-fg-muted hover:text-fg hover:underline">
-                Sign in
-              </Link>
-            </li>
+            {companyLinks.map((link) => (
+              <li key={link.href}>
+                <Link href={link.href} className="text-fg-muted hover:text-fg hover:underline">
+                  {link.label}
+                </Link>
+              </li>
+            ))}
             <li>
               <Link
                 href="/policies/privacy"

@@ -4,7 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { ArrowRight, Copy, Save, Share2, ShieldQuestion, UserCheck } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import {
@@ -19,15 +19,19 @@ import {
   useToast,
 } from '@simplexd/ui';
 import { formatDateTimeLabel } from '@simplexd/ui/format';
-import { emailSchema } from '@simplexd/contracts';
+import { emailSchema, type ScenarioDto } from '@simplexd/contracts';
 import { useSession } from '@/lib/auth/client';
 import { defaultScenarioName } from '@/lib/explorer';
 import { useExplorer } from './explorer-context';
 
 /**
- * Save (anonymous or owned), share, claim, request local verification and
- * start a service from the current scenario. The scenario id is kept in the
- * URL and localStorage so a reload preserves it.
+ * Save, share, claim, request local verification and start a service from the
+ * current scenario. The scenario id is kept in the URL and localStorage so a
+ * reload preserves it. Every action passes the account gate first (brief §5):
+ * an anonymous visitor is sent to sign-in with the explorer state preserved
+ * and, on return, the dialog for the action they chose opens again pre-filled
+ * (`resumeIntent`); sharing and starting a service continue right after the
+ * confirming save so nothing is created silently.
  */
 
 const verificationSchema = z.object({
@@ -55,8 +59,22 @@ export function ScenarioActions({
   onVerificationOpenChange: (open: boolean) => void;
   compact?: boolean;
 }) {
-  const { scenario, scenarioName, setScenarioName, filters, selectedSlug, mode } = useExplorer();
+  const {
+    scenario,
+    scenarioName,
+    setScenarioName,
+    filters,
+    selectedSlug,
+    mode,
+    access,
+    requireAccount,
+    resumeIntent,
+    clearResumeIntent,
+    signInHref,
+    signUpHref,
+  } = useExplorer();
   const { data: session } = useSession();
+  const signedIn = access.signedIn || Boolean(session);
   const { toast } = useToast();
   const router = useRouter();
   const [nameDraft, setNameDraft] = useState('');
@@ -68,19 +86,30 @@ export function ScenarioActions({
     defaultValues: { contactName: '', email: session?.user.email ?? '', message: '' },
   });
 
+  // The dialog can be opened from the location panel or by a resumed intent
+  // as well as from here: pre-fill the name whenever it opens.
+  useEffect(() => {
+    if (saveOpen) setNameDraft(scenarioName || defaultScenarioName(filters.objective));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [saveOpen]);
+
+  const bookHref = (scenarioId: string): string =>
+    `/book?scenario=${encodeURIComponent(scenarioId)}${
+      selectedSlug ? `&market=${encodeURIComponent(selectedSlug)}` : ''
+    }`;
+
   const openSave = () => {
-    setNameDraft(scenarioName || defaultScenarioName(filters.objective));
+    if (!requireAccount('save')) return;
     onSaveOpenChange(true);
   };
 
-  const submitSave = async () => {
-    const name = nameDraft.trim() || defaultScenarioName(filters.objective);
-    setScenarioName(name);
-    const saved = await scenario.save(name);
-    if (saved) onSaveOpenChange(false);
+  const closeSave = () => {
+    onSaveOpenChange(false);
+    clearResumeIntent();
   };
 
-  const share = async () => {
+  const shareSaved = async (saved: ScenarioDto | null) => {
+    if (!saved) return;
     const url = await scenario.share();
     if (!url) return;
     setShareUrl(url);
@@ -92,21 +121,57 @@ export function ScenarioActions({
     }
   };
 
+  const submitSave = async () => {
+    const name = nameDraft.trim() || defaultScenarioName(filters.objective);
+    setScenarioName(name);
+    const saved = await scenario.save(name);
+    if (!saved) return;
+    onSaveOpenChange(false);
+    const continuation = resumeIntent;
+    clearResumeIntent();
+    // The visitor clicked Share or Start a service before signing in: the
+    // confirming save above is the one click they get, then the action finishes.
+    if (continuation === 'share') await shareSaved(saved);
+    else if (continuation === 'service') router.push(bookHref(saved.id));
+  };
+
+  const share = async () => {
+    if (!requireAccount('share')) return;
+    const saved = scenario.dto && !scenario.dirty ? scenario.dto : await scenario.save();
+    await shareSaved(saved);
+  };
+
   const startService = async () => {
+    if (!requireAccount('service')) return;
     const saved = scenario.dto && !scenario.dirty ? scenario.dto : await scenario.save();
     if (!saved) return;
-    router.push(
-      `/book?scenario=${encodeURIComponent(saved.id)}${selectedSlug ? `&market=${encodeURIComponent(selectedSlug)}` : ''}`,
-    );
+    router.push(bookHref(saved.id));
+  };
+
+  const openVerification = () => {
+    if (!requireAccount('verify')) return;
+    onVerificationOpenChange(true);
+  };
+
+  const closeVerification = () => {
+    onVerificationOpenChange(false);
+    clearResumeIntent();
   };
 
   const submitVerification = form.handleSubmit(async (values) => {
     const ok = await scenario.requestVerification(values);
     if (ok) {
-      onVerificationOpenChange(false);
+      closeVerification();
       form.reset({ contactName: values.contactName, email: values.email, message: '' });
     }
   });
+
+  const saveDescription =
+    resumeIntent === 'share'
+      ? 'Filters, priorities, compared markets and assumptions are stored with a policy version. The private share link is created right after this save.'
+      : resumeIntent === 'service'
+        ? 'Filters, priorities, compared markets and assumptions are stored with a policy version. You continue to the booking form right after this save.'
+        : 'Filters, priorities, compared markets and assumptions are stored with a policy version so the result can be reproduced.';
 
   const status = scenario.shared
     ? 'Viewing a shared scenario (read-only). Save a copy to edit it.'
@@ -173,29 +238,18 @@ export function ScenarioActions({
             <Share2 aria-hidden="true" className="h-4 w-4" /> Share link
           </Button>
         ) : null}
-        <Button variant="secondary" onClick={() => onVerificationOpenChange(true)}>
+        <Button variant="secondary" onClick={openVerification}>
           <ShieldQuestion aria-hidden="true" className="h-4 w-4" /> Request local verification
         </Button>
-        {scenario.dto && !scenario.dirty ? (
-          <Link
-            href={`/book?scenario=${encodeURIComponent(scenario.dto.id)}${selectedSlug ? `&market=${encodeURIComponent(selectedSlug)}` : ''}`}
-            className="inline-flex"
-          >
-            <Button variant="accent">
-              Start a service <ArrowRight aria-hidden="true" className="h-4 w-4" />
-            </Button>
-          </Link>
-        ) : (
-          <Button
-            variant="accent"
-            onClick={() => void startService()}
-            loading={scenario.busy === 'saving'}
-            loadingLabel="Saving…"
-          >
-            Start a service <ArrowRight aria-hidden="true" className="h-4 w-4" />
-          </Button>
-        )}
-        {scenario.dto?.isAnonymous && session ? (
+        <Button
+          variant="accent"
+          onClick={() => void startService()}
+          loading={scenario.busy === 'saving' && !saveOpen}
+          loadingLabel="Saving…"
+        >
+          Start a service <ArrowRight aria-hidden="true" className="h-4 w-4" />
+        </Button>
+        {scenario.dto?.isAnonymous && signedIn ? (
           <Button
             variant="secondary"
             onClick={() => void scenario.claim()}
@@ -206,20 +260,37 @@ export function ScenarioActions({
           </Button>
         ) : null}
       </div>
-      {!session && !scenario.dto ? (
-        <p className="text-xs text-fg-muted">
-          Anonymous saves stay on this device and in the link.{' '}
-          <Link href="/sign-in" className="underline">
-            Sign in
-          </Link>{' '}
-          to keep scenarios in your account.
+      {!signedIn && !scenario.dto ? (
+        <p className="text-xs text-fg-muted" data-testid="account-hint">
+          {access.anonymousSavesAllowed ? (
+            <>
+              Anonymous saves stay on this device and in the link.{' '}
+              <Link href={signInHref} className="underline">
+                Sign in
+              </Link>{' '}
+              to keep scenarios in your account.
+            </>
+          ) : (
+            <>
+              Exploring, filtering, comparing and calculator estimates need no account. Saving,
+              sharing, local verification and starting a service do:{' '}
+              <Link href={signInHref} className="underline">
+                sign in
+              </Link>{' '}
+              or{' '}
+              <Link href={signUpHref} className="underline">
+                create an account
+              </Link>{' '}
+              and your filters, compared markets and assumptions come with you.
+            </>
+          )}
         </p>
       ) : null}
 
-      <Dialog open={saveOpen} onOpenChange={onSaveOpenChange}>
+      <Dialog open={saveOpen} onOpenChange={(open) => (open ? onSaveOpenChange(true) : closeSave())}>
         <DialogContent
           title={scenario.shared ? 'Save a copy of this scenario' : 'Save scenario'}
-          description="Filters, priorities, compared markets and assumptions are stored with a policy version so the result can be reproduced."
+          description={saveDescription}
         >
           <Field label="Scenario name">
             {({ id }) => (
@@ -235,7 +306,7 @@ export function ScenarioActions({
             )}
           </Field>
           <DialogFooter>
-            <Button variant="ghost" onClick={() => onSaveOpenChange(false)}>
+            <Button variant="ghost" onClick={closeSave}>
               Cancel
             </Button>
             <Button
@@ -249,7 +320,10 @@ export function ScenarioActions({
         </DialogContent>
       </Dialog>
 
-      <Dialog open={verificationOpen} onOpenChange={onVerificationOpenChange}>
+      <Dialog
+        open={verificationOpen}
+        onOpenChange={(open) => (open ? onVerificationOpenChange(true) : closeVerification())}
+      >
         <DialogContent
           title="Request local verification"
           description="A SimplexD researcher checks the local evidence behind this scenario (comparables, supplier quotes, approvals, site checks) and replies by email. The scenario is saved first."
@@ -297,7 +371,7 @@ export function ScenarioActions({
               )}
             </Field>
             <DialogFooter>
-              <Button variant="ghost" type="button" onClick={() => onVerificationOpenChange(false)}>
+              <Button variant="ghost" type="button" onClick={closeVerification}>
                 Cancel
               </Button>
               <Button type="submit" loading={scenario.busy === 'verifying'} loadingLabel="Sending…">

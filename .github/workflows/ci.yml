@@ -47,6 +47,9 @@ jobs:
           --health-cmd "redis-cli ping" --health-interval 5s --health-timeout 3s --health-retries 20
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Full history so the secret scan covers every commit in the push or pull request.
+          fetch-depth: 0
       - uses: pnpm/action-setup@v4
         with:
           version: 10.33.0
@@ -56,6 +59,14 @@ jobs:
           cache: pnpm
       - name: Install
         run: pnpm install --frozen-lockfile
+      - name: Audit production dependencies (fails on high or critical advisories)
+        run: pnpm audit --prod --audit-level high
+      - name: Scan for committed secrets
+        uses: gitleaks/gitleaks-action@v2.3.9
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Only required for repositories owned by a GitHub organisation.
+          GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
       - name: Prepare database roles and extensions
         run: |
           PGPASSWORD=simplexd_owner_local psql -h 127.0.0.1 -U simplexd_owner -d simplexd_test -v ON_ERROR_STOP=1 <<'SQL'

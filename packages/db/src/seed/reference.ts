@@ -956,9 +956,10 @@ export async function seedReferenceData(
         {
           key: 'core.anonymous_scenarios',
           name: 'Anonymous scenario saving',
-          description: 'Allow visitors to save scenarios before creating an account.',
+          description:
+            'Allow visitors to save scenarios server-side before creating an account. Off by default: exploring, filtering, comparing and calculator estimates stay anonymous, while saving, sharing, local verification and starting a service ask for an account and carry the explorer state through sign-in.',
           category: 'core',
-          enabled: true,
+          enabled: false,
         },
         {
           key: 'core.bank_transfer_receipts',

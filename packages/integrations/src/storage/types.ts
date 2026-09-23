@@ -123,6 +123,8 @@ export interface StorageProvider {
   deleteObject(location: ObjectLocation): Promise<void>;
   /** Refused for the quarantine bucket: unscanned or failed-scan objects are never downloadable. */
   createSignedDownloadUrl(input: SignedDownloadInput): Promise<SignedDownload>;
+  /** Every key in a bucket (operational tooling: storage reconciliation). */
+  listKeys(bucket: StorageBucket): Promise<string[]>;
 }
 
 export type StorageErrorCode =

@@ -21,6 +21,8 @@ import {
   Search,
   ServerCog,
   Settings,
+  SlidersHorizontal,
+  TrendingUp,
   ShoppingCart,
   UserCheck,
   Users,
@@ -56,6 +58,8 @@ const icons: Record<NavIcon, typeof Home> = {
   integrations: Plug,
   settings: Settings,
   operations: ServerCog,
+  services: SlidersHorizontal,
+  analytics: TrendingUp,
   audit: Activity,
 };
 

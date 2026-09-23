@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { ArrowRight, Compass, Hammer, KeyRound, TrendingUp, type LucideIcon } from 'lucide-react';
 import { buttonVariants, cn } from '@simplexd/ui';
-import { GOAL_PATHS, type GoalKey } from './defaults';
+import { GOAL_PATHS, type GoalKey, type GoalPath } from './defaults';
 
 const icons: Record<GoalKey, LucideIcon> = {
   buy_safely: KeyRound,
@@ -10,10 +10,17 @@ const icons: Record<GoalKey, LucideIcon> = {
   invest_and_compare: TrendingUp,
 };
 
-export function GoalPaths({ serviceNames }: { serviceNames: Record<string, string> }) {
+/** Homepage goal cards; `goals` comes from published `goal_path` pages when present. */
+export function GoalPaths({
+  serviceNames,
+  goals = GOAL_PATHS,
+}: {
+  serviceNames: Record<string, string>;
+  goals?: GoalPath[];
+}) {
   return (
     <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-      {GOAL_PATHS.map((goal) => {
+      {goals.map((goal) => {
         const Icon = icons[goal.key];
         return (
           <li

@@ -32,7 +32,9 @@ Backups can be encrypted with `age` (`BACKUP_ENCRYPTION_RECIPIENT`) and uploaded
 4. Point a staging web container at the restored database
    (`DATABASE_URL=...simplexd_restore`) and check: sign-in works for an administrator,
    a project page opens, an invoice shows the same balance, and a private file download
-   resolves against the bucket (object references intact).
+   resolves against the bucket (object references intact). Run the storage reconciliation
+   (`pnpm --filter @simplexd/worker reconcile:storage`, see step 5 of the disaster recovery
+   steps) against the restored database and bucket; it must report no missing objects.
 5. Record the drill (date, archive, duration, issues) in the operations log.
 
 ### Drill log
@@ -49,9 +51,15 @@ Backups can be encrypted with `age` (`BACKUP_ENCRYPTION_RECIPIENT`) and uploaded
 3. Restore with `restore.sh` into the fresh `simplexd` database (it must be empty).
 4. If WAL archives are available, perform point-in-time recovery according to the
    PostgreSQL documentation before starting the application.
-5. Restore or re-point object storage; run the object reconciliation query in
-   Admin → Settings → Storage (compares `file_objects` against bucket listings and lists
-   missing objects).
+5. Restore or re-point object storage, then reconcile it (read-only) with
+   `pnpm --filter @simplexd/worker reconcile:storage` (or `node dist/cli/reconcile-storage.js`
+   in the worker image, with `DATABASE_URL` and the `STORAGE_PROVIDER`/`S3_*` variables of the
+   restored environment). It compares `file_objects` against the bucket listings and prints
+   missing objects (row without object; exit code 1), orphan keys (object without a live row),
+   objects lingering for removed rows and pending uploads. `--json` prints the full report and
+   `--ignore-prefix <prefix>` skips keys the platform writes outside `file_objects`
+   (`healthchecks/` by default). Nothing is deleted or modified; fix missing objects from the
+   bucket backup or mark the rows, and review orphans before removing anything.
 6. Run `./deploy/deploy.sh --no-build` (or build) and verify health, then re-enable DNS.
 
 ## Retention and privacy

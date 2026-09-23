@@ -22,13 +22,21 @@ import { JsonLd, placeJsonLd } from '@/components/public/json-ld';
 import { ZONE_NAMES } from '@/components/public/market-card';
 import { ObservationTable } from '@/components/public/observation-table';
 import { Prose } from '@/components/public/section';
-import { absoluteUrl, loadMarket, publicMetadata, siteUrl } from '../../_lib/site-data';
+import { locationIsIncomplete } from '@/components/public/site-content';
+import {
+  absoluteUrl,
+  excerpt,
+  loadLocationIntro,
+  loadMarket,
+  publicMetadata,
+  siteUrl,
+} from '../../_lib/site-data';
 
 type Params = Promise<{ slug: string }>;
 
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
   const { slug } = await params;
-  const result = await loadMarket(slug);
+  const [result, intro] = await Promise.all([loadMarket(slug), loadLocationIntro(slug)]);
   if (result.status === 'missing')
     return { title: 'Location not found', robots: { index: false, follow: false } };
   if (result.status === 'unavailable') {
@@ -40,14 +48,20 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
     });
   }
   const m = result.market;
-  const incomplete =
-    m.evidence.localObservations + m.evidence.regionalContextObservations === 0 &&
-    !m.profileMarkdown;
+  const incomplete = locationIsIncomplete({
+    localObservations: m.evidence.localObservations,
+    regionalContextObservations: m.evidence.regionalContextObservations,
+    profileMarkdown: m.profileMarkdown,
+    hasIntro: Boolean(intro),
+  });
   return publicMetadata({
-    title: `${m.name}, ${m.stateName}${m.isFederalCapital ? '' : ' State'}`,
-    description: `${m.name} property market evidence: ${m.evidence.localObservations} local observation${m.evidence.localObservations === 1 ? '' : 's'}, ${m.evidence.regionalContextObservations} statewide context figures, service availability ${humanize(m.serviceAvailability).toLowerCase()}, and what is still missing.`,
+    title: intro?.seo?.title ?? `${m.name}, ${m.stateName}${m.isFederalCapital ? '' : ' State'}`,
+    description:
+      intro?.seo?.description ??
+      (intro ? excerpt(intro) : null) ??
+      `${m.name} property market evidence: ${m.evidence.localObservations} local observation${m.evidence.localObservations === 1 ? '' : 's'}, ${m.evidence.regionalContextObservations} statewide context figures, service availability ${humanize(m.serviceAvailability).toLowerCase()}, and what is still missing.`,
     path: `/locations/${m.slug}`,
-    noindex: incomplete,
+    noindex: incomplete || Boolean(intro?.seo?.noindex),
   });
 }
 
@@ -56,7 +70,7 @@ type SupplierQuote = MarketDetailDto['supplierQuotes'][number];
 
 export default async function LocationDetailPage({ params }: { params: Params }) {
   const { slug } = await params;
-  const result = await loadMarket(slug);
+  const [result, intro] = await Promise.all([loadMarket(slug), loadLocationIntro(slug)]);
   if (result.status === 'missing') notFound();
   const base = siteUrl();
 
@@ -238,6 +252,21 @@ export default async function LocationDetailPage({ params }: { params: Params })
 
       <div className="sx-container grid gap-8 pb-10 lg:grid-cols-[2fr_1fr]">
         <div className="min-w-0 space-y-10">
+          {intro ? (
+            <section aria-labelledby="intro-heading">
+              <h2 id="intro-heading" className="text-xl font-semibold">
+                {intro.title}
+              </h2>
+              <Prose html={intro.bodyHtml} className="mt-2" />
+              {intro.publishedAt ? (
+                <p className="mt-2 text-xs text-fg-subtle">
+                  Editorial introduction published {formatDateLabel(intro.publishedAt)}; figures
+                  below carry their own sources and dates.
+                </p>
+              ) : null}
+            </section>
+          ) : null}
+
           <section aria-labelledby="profile-heading">
             <h2 id="profile-heading" className="text-xl font-semibold">
               Profile

@@ -19,18 +19,23 @@ import {
   humanize,
 } from '@simplexd/ui';
 import { requireSignedIn } from '@/lib/auth/session';
+import { documentStage } from '@/lib/services/document-requirements';
 import { koboToNaira } from '@/lib/portal/format';
 import { listRequestAppointments } from '@/lib/portal/server/appointments';
 import { loadInvoicesForRequest, loadQuotesForRequest } from '@/lib/portal/server/finance';
 import { capabilityNote, customerCapabilities } from '@/lib/portal/server/permissions';
+import { DocumentsWeNeed } from '@/components/portal/documents-we-need';
 import { FilesPanel } from '@/components/portal/files-panel';
 import { LinkButton } from '@/components/portal/link-button';
 import { NotesPanel } from '@/components/portal/notes-panel';
 import { QuoteCard } from '@/components/portal/quote-panel';
 import { SectionTabs, resolveTab } from '@/components/portal/section-tabs';
 import { StartConversation } from '@/components/portal/start-conversation';
+import { PortalWorkspace, workspaceLabel } from '@/components/engagements/portal-workspace';
 import { listAssignments } from '@/server/assignments/service';
 import { listConversations } from '@/server/conversations/service';
+import { requirementsForCustomer } from '@/server/admin/configuration/document-requirements';
+import { getEngagementWorkspace } from '@/server/engagements/workspace';
 import { listFilesForEntity } from '@/server/files/queries';
 import { getServiceRequestDetail } from '@/server/requests/queries';
 import { intakeLabel } from '@/server/requests/services';
@@ -39,7 +44,15 @@ import { RequestActions } from './request-actions';
 export const metadata: Metadata = { title: 'Request' };
 export const dynamic = 'force-dynamic';
 
-const TABS = ['overview', 'quotes', 'invoices', 'team', 'documents', 'appointments'] as const;
+const TABS = [
+  'overview',
+  'workspace',
+  'quotes',
+  'invoices',
+  'team',
+  'documents',
+  'appointments',
+] as const;
 
 export default async function RequestDetailPage({
   params,
@@ -63,14 +76,26 @@ export default async function RequestDetailPage({
   const intakeEntries = Object.entries(detail.intake);
   const basePath = `/portal/requests/${id}`;
 
-  const [quotes, invoices] = await Promise.all([
+  const [quotes, invoices, workspace] = await Promise.all([
     tab === 'quotes' || tab === 'overview'
       ? loadQuotesForRequest(identity, id)
       : Promise.resolve([]),
     tab === 'invoices' || tab === 'overview'
       ? loadInvoicesForRequest(identity, id)
       : Promise.resolve([]),
+    // The engagement workspace (checklist, findings, queries, red flags, released
+    // reports) is loaded for its own tab and for the "waiting on you" counts.
+    tab === 'workspace' || tab === 'overview'
+      ? getEngagementWorkspace(identity, id).catch((err) => {
+          if (err instanceof ApiError && err.code === 'forbidden') return null;
+          throw err;
+        })
+      : Promise.resolve(null),
   ]);
+  const workspaceTab = workspaceLabel(detail.serviceSlug.includes('inspection') ? 'virtual_inspection' : workspace?.workflowTemplateKey ?? '');
+  const awaitingCustomer = workspace
+    ? workspace.summary.openCustomerQueries + workspace.summary.openDocumentRequests
+    : 0;
   const closed = ['completed', 'cancelled', 'rejected'].includes(detail.status);
   const conversationId =
     tab === 'overview'
@@ -111,6 +136,14 @@ export default async function RequestDetailPage({
         label="Request sections"
         tabs={[
           { value: 'overview', label: 'Overview' },
+          {
+            value: 'workspace',
+            label: workspaceTab,
+            badge:
+              awaitingCustomer > 0 ? (
+                <Badge tone="warning">{awaitingCustomer} for you</Badge>
+              ) : undefined,
+          },
           {
             value: 'quotes',
             label: 'Quotes',
@@ -208,12 +241,26 @@ export default async function RequestDetailPage({
               </CardContent>
             </Card>
 
-            {openQuotes > 0 || unpaid > 0 ? (
+            {openQuotes > 0 || unpaid > 0 || awaitingCustomer > 0 ? (
               <Card>
                 <CardHeader>
                   <CardTitle>Waiting on you</CardTitle>
                 </CardHeader>
                 <CardContent className="flex flex-wrap gap-3">
+                  {awaitingCustomer > 0 ? (
+                    <LinkButton href={`${basePath}?tab=workspace`} variant="primary" size="sm">
+                      {workspace!.summary.openCustomerQueries > 0
+                        ? `Answer ${workspace!.summary.openCustomerQueries === 1 ? 'the query' : `${workspace!.summary.openCustomerQueries} queries`}`
+                        : ''}
+                      {workspace!.summary.openCustomerQueries > 0 &&
+                      workspace!.summary.openDocumentRequests > 0
+                        ? ' and '
+                        : ''}
+                      {workspace!.summary.openDocumentRequests > 0
+                        ? `upload ${workspace!.summary.openDocumentRequests === 1 ? 'the requested document' : `${workspace!.summary.openDocumentRequests} requested documents`}`
+                        : ''}
+                    </LinkButton>
+                  ) : null}
                   {openQuotes > 0 ? (
                     <LinkButton href={`${basePath}?tab=quotes`} variant="primary" size="sm">
                       Review {openQuotes === 1 ? 'the issued quote' : `${openQuotes} issued quotes`}
@@ -329,6 +376,19 @@ export default async function RequestDetailPage({
         </div>
       ) : null}
 
+      {tab === 'workspace' ? (
+        <section aria-label={workspaceTab} className="space-y-4">
+          {workspace ? (
+            <PortalWorkspace workspace={workspace} zone={zone} />
+          ) : (
+            <EmptyState
+              title="Engagement records are not available to your role"
+              description="Viewing the checklist, findings and reports needs a member, adviser, approver or owner of this organisation."
+            />
+          )}
+        </section>
+      ) : null}
+
       {tab === 'quotes' ? (
         <section aria-label="Quotes" className="space-y-4">
           {quotes.length === 0 ? (
@@ -414,13 +474,20 @@ export default async function RequestDetailPage({
       ) : null}
 
       {tab === 'documents' ? (
-        <DocumentsTab
-          identity={identity}
-          requestId={id}
-          zone={zone}
-          canUpload={caps.uploadDocuments}
-          closed={closed}
-        />
+        <>
+          <DocumentsWeNeed
+            requirements={await requirementsForCustomer(identity, detail.serviceId)}
+            serviceId={detail.serviceId}
+            stage={documentStage(detail.status, detail.transitions)}
+          />
+          <DocumentsTab
+            identity={identity}
+            requestId={id}
+            zone={zone}
+            canUpload={caps.uploadDocuments}
+            closed={closed}
+          />
+        </>
       ) : null}
 
       {tab === 'appointments' ? (

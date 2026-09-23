@@ -12,6 +12,7 @@ import { build } from 'esbuild';
  *   dist/cli/import-markets.js re-run the market import (--dry-run)
  *   dist/cli/bootstrap-admin.js first administrator setup link
  *   dist/cli/check-rls.js      verify the runtime role cannot bypass RLS
+ *   dist/cli/reconcile-storage.js read-only file_objects vs bucket reconciliation
  */
 await build({
   entryPoints: [
@@ -22,6 +23,7 @@ await build({
     { in: '../../packages/db/src/cli/import-markets.ts', out: 'cli/import-markets' },
     { in: '../../packages/db/src/cli/bootstrap-admin.ts', out: 'cli/bootstrap-admin' },
     { in: '../../packages/db/src/cli/check-rls.ts', out: 'cli/check-rls' },
+    { in: 'src/cli/reconcile-storage.ts', out: 'cli/reconcile-storage' },
   ],
   outdir: 'dist',
   bundle: true,

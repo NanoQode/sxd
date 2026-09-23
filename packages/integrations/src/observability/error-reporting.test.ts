@@ -7,6 +7,7 @@ import {
   scrubRoute,
   scrubStack,
   scrubText,
+  type SentryEvent,
 } from './error-reporting';
 import { LOG_REDACT_PATHS, SENSITIVE_LOG_KEYS } from './redaction';
 
@@ -21,7 +22,7 @@ function fakeFetch(status = 200, headers: Record<string, string> = {}) {
   return { fetch: fetch as unknown as typeof globalThis.fetch, calls };
 }
 
-function envelopeOf(init: RequestInit): { header: unknown; item: unknown; event: any } {
+function envelopeOf(init: RequestInit): { header: unknown; item: unknown; event: SentryEvent } {
   const [header, item, body] = String(init.body).split('\n');
   return { header: JSON.parse(header!), item: JSON.parse(item!), event: JSON.parse(body!) };
 }

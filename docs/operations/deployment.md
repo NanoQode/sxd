@@ -75,6 +75,16 @@ is additive (new tables/columns) unless its header states otherwise, so the prev
 release keeps working against a migrated database. Before an upgrade run a backup
 (section 6).
 
+Release checks in CI (`.github/workflows/ci.yml`, job `verify`): `pnpm audit --prod
+--audit-level high` fails the build on high or critical advisories in production
+dependencies, and `gitleaks/gitleaks-action` scans the full commit history of the push or
+pull request for committed secrets (set the `GITLEAKS_LICENSE` repository secret when the
+repository belongs to a GitHub organisation). The database suite also migrates a fresh
+database from the previous schema snapshot (all migrations but the latest), inserts
+representative rows, applies the latest migration and checks the rows survive, the new
+tables have row-level security and the runtime role cannot bypass it, and that migrating
+a clean database twice is a no-op (`packages/db/src/migrations.test.ts`).
+
 ## 5. Health, logs and monitoring
 
 - `GET /api/v1/health` returns database status; with `Authorization: Bearer $HEALTH_TOKEN`
@@ -82,8 +92,12 @@ release keeps working against a migrated database. Before an upgrade run a backu
   oldest pending job age). Alert when `dead > 0`, `oldestPendingSeconds > 300` or
   `outboxUnpublished` keeps growing.
 - Worker health: `http://worker:3100/healthz` inside the network.
-- Logs are structured JSON on stdout (`docker compose logs -f web worker`); secrets are
-  redacted at the logger. Set `SENTRY_DSN` to ship errors to Sentry.
+- Logs are structured JSON on stdout (`docker compose logs -f web worker`); authorization
+  and cookie headers, passwords, secrets, tokens, API keys, OTPs and card numbers are
+  redacted at the logger (shared paths in
+  `packages/integrations/src/observability/redaction.ts`, covered by unit tests).
+- Error tracking: see "Error tracking" below for what `SENTRY_DSN` enables and exactly
+  what is sent.
 - Admin → Integrations shows provider status (disconnected / configured, not verified /
   connected / degraded / expired / disabled), last successful check and sanitized logs.
 - Suggested external monitors: uptime on `/api/v1/health`, certificate expiry (Caddy
@@ -113,6 +127,69 @@ release keeps working against a migrated database. Before an upgrade run a backu
 - Fix the cause before retrying (provider credentials under Admin → Integrations, a
   deployment with the missing handler, bad data). Otherwise the job runs out of attempts
   again and returns to `dead`.
+
+### Operational alerts
+
+The worker's `monitoring.snapshot` job (every 5 minutes) reads the operational tables,
+evaluates the thresholds below and, when one is crossed, appends an `ops.alert` outbox
+event that the notification pipeline delivers by e-mail and in-app to the staff roles
+listed, using the generic `activity_update` template. Each alert key is raised at most
+once per clock hour (the append-only audit log records `ops.alert_raised` for entity
+`ops_alert <key>@<hour>` and is the dedupe ledger; concurrent workers are serialised with
+an advisory lock). Messages carry counts and thresholds only, never personal data. Code:
+`apps/worker/src/monitoring/`.
+
+| Alert key           | Condition (default threshold)                                                                                                          | Recipients                      |
+| ------------------- | -------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------- |
+| `queue.lag`         | Oldest due, unclaimed job waited ≥ `queueLagSeconds` (600 s); critical at 3× (1800 s)                                                  | super_admin                     |
+| `jobs.dead`         | Dead-letter jobs ≥ `deadJobs` (1)                                                                                                      | super_admin                     |
+| `outbox.stuck`      | Unpublished outbox events at `OUTBOX_MAX_ATTEMPTS` ≥ `stuckOutboxEvents` (1)                                                           | super_admin                     |
+| `outbox.lag`        | Oldest relayable unpublished event ≥ `outboxLagSeconds` (600 s) old: the relay is not running (critical)                               | super_admin                     |
+| `webhooks.payments` | Payment webhooks with an invalid signature or failed processing in the last hour ≥ `paymentWebhookFailuresPerHour` (5)                 | finance, super_admin            |
+| `webhooks.sms`      | Termii webhooks rejected in the last hour ≥ `smsWebhookRejectionsPerHour` (5)                                                          | super_admin                     |
+| `calendar.sync`     | Failed/conflicting event syncs for upcoming appointments + degraded or expired organiser connections ≥ `calendarSyncFailures` (1)      | operations_manager, super_admin |
+| `storage.errors`    | Scan failures in the last hour + uploads waiting > `scanStuckMinutes` (30) for a scan + degraded storage/scanner ≥ `storageErrors` (1) | super_admin                     |
+| `sms.balance_low`   | Last Termii balance recorded by the hourly health check < `smsBalanceMinimum` (5000); only live (non-dev) configurations count         | super_admin, finance            |
+| `reviews.overdue`   | Reports in review longer than `reportReviewOverdueHours` (48 h) ≥ `overdueReportReviews` (1)                                           | operations_manager              |
+| `sla.overdue`       | Open service requests and work orders past `sla_due_at` ≥ `overdueSlaItems` (1)                                                        | operations_manager              |
+
+Defaults live in `apps/worker/src/monitoring/thresholds.ts` (`DEFAULT_THRESHOLDS`). To change
+them without a deploy, store a partial JSON object in the `settings` table under the key
+`monitoring.thresholds`, for example
+`{"queueLagSeconds": 900, "smsBalanceMinimum": 10000, "deadJobs": null}`; `null` switches a
+check off and invalid values are ignored. The health endpoint numbers above remain
+available for external monitors; the alerts are the in-product counterpart.
+
+The same scheduler also runs `market_data.expire_stale` (every 6 hours): it applies the
+freshness policies (Admin → Market data → Freshness) to published observations and opens
+one research task (category `evidence_refresh`) per observation per staleness period for
+the data editors, without changing any published value. `market_data.invalidate_caches`
+(on every `market_data.published` event) deletes the `cache:markets*` Redis keys as a
+durable backstop to the web app's own invalidation.
+
+### Error tracking
+
+`SENTRY_DSN` (web and worker) enables a small, dependency-free reporter
+(`packages/integrations/src/observability/error-reporting.ts`) that POSTs events to the
+DSN's envelope endpoint (`https://<host>/api/<projectId>/envelope/` with the
+`X-Sentry-Auth` header derived from the DSN's public key). No Sentry SDK is installed.
+
+Reported: unhandled API route errors (HTTP 500 from the `route()` wrapper), errors Next.js
+surfaces through `instrumentation.ts` (`onRequestError`: server components, server actions,
+proxy), every failed worker job attempt (level `warning` while it will retry, `error` once
+dead) and a worker start-up failure.
+
+Each event contains: error type and message, a stack made of file paths, function names,
+line and column numbers only (no source, no local variables; user home directories are
+stripped), `release` = `APP_VERSION`, `environment` = `APP_ENV`, the source process
+(`web`/`worker`), the correlation id, the route pattern with identifiers replaced by `:id`,
+the HTTP method or job queue, and small tags (job type, attempt, outcome, router/route
+type, React digest). Messages and tag values are scrubbed of API keys, bearer tokens, JWTs,
+e-mail addresses, phone numbers, `password=`/`token=` pairs, query strings and long opaque
+identifiers. Never sent: request bodies, headers, cookies, session or user identifiers,
+payloads. Sending is rate limited (30 events per minute per process, plus the endpoint's
+`Retry-After`), and failures never affect a response or a job: one warning is logged per
+outage and the rest is silent. Without `SENTRY_DSN` nothing is sent.
 
 ## 6. Backups and restore
 

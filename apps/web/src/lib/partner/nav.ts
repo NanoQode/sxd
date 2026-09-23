@@ -18,6 +18,7 @@ import type { PartnerIdentity } from './context';
 export type PartnerModule =
   | 'home'
   | 'assignments'
+  | 'items'
   | 'tenders'
   | 'rfqs'
   | 'visits'
@@ -46,7 +47,8 @@ type NavIdentity = Pick<
 
 export function partnerModules(p: NavIdentity): Set<PartnerModule> {
   const type = p.isPartner ? (p.partnerType ?? 'other') : null;
-  const out = new Set<PartnerModule>(['home', 'assignments', 'messages', 'notifications']);
+  // Engagement items (checklist, survey references, findings) are assigned to any partner type.
+  const out = new Set<PartnerModule>(['home', 'assignments', 'items', 'messages', 'notifications']);
   if (type && TENDER_TYPES.has(type) && p.flags.tendering) out.add('tenders');
   if (type && SUPPLY_TYPES.has(type) && p.flags.procurement) out.add('rfqs');
   const field = p.isStaffInspector || (type !== null && FIELD_TYPES.has(type));

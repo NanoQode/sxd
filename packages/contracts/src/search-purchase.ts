@@ -20,7 +20,7 @@ const optionalText = (max: number) =>
     .transform((v) => (v && v.length > 0 ? v : undefined));
 
 /** Opaque optimistic-concurrency token: the record's `updatedAt` as the caller loaded it. */
-export const expectedUpdatedAtSchema = isoDateTimeSchema;
+const expectedUpdatedAtSchema = isoDateTimeSchema;
 
 /* ---------------------------------------------------------------------- */
 /* Saved searches                                                          */
@@ -602,6 +602,9 @@ export const closingStepSchema = z.object({
 export type ClosingStep = z.infer<typeof closingStepSchema>;
 
 export const closingRecordDtoSchema = z.object({
+  /** The `closing_pack` report holding the record (reviewed and released like every report). */
+  reportId: uuidSchema,
+  reportStatus: z.string(),
   stage: z.enum(['submitted', 'approved']),
   at: isoDateTimeSchema,
   byName: z.string().nullable(),

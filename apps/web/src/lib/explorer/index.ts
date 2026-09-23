@@ -1,5 +1,6 @@
 export * from './types';
 export * from './url-state';
+export * from './account-gate';
 export * from './filters';
 export * from './compare';
 export * from './ranking-view';

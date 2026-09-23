@@ -2,6 +2,9 @@ import { Writable } from 'node:stream';
 import { describe, expect, it } from 'vitest';
 import { createLogger } from './logger';
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- parsed JSON log line under test
+type LogLine = Record<string, any>;
+
 /**
  * Worker log redaction (brief §19: logs never contain tokens or secrets).
  * Lines are captured through an in-memory destination, so no transport or
@@ -36,7 +39,7 @@ describe('worker logger redaction', () => {
     const [line] = lines();
     expect(line).toBeDefined();
     expect(line).not.toMatch(/hunter2|123456|tok_abc|key_abc|eyJ\.abc|s3cr3t|renewed|top|rt_1|wh_1/);
-    const parsed = JSON.parse(line!) as Record<string, any>;
+    const parsed = JSON.parse(line!) as LogLine;
     expect(parsed.payload).toEqual({
       password: '[redacted]',
       otp: '[redacted]',
@@ -53,7 +56,7 @@ describe('worker logger redaction', () => {
   it('keeps diagnostics such as error codes, job ids and correlation ids', () => {
     const { log, lines } = capture();
     log.warn({ err: { code: '42883', message: 'boom' }, jobId: 'j-1', correlationId: 'c-1' }, 'x');
-    const parsed = JSON.parse(lines()[0]!) as Record<string, any>;
+    const parsed = JSON.parse(lines()[0]!) as LogLine;
     expect(parsed.err).toMatchObject({ code: '42883', message: 'boom' });
     expect(parsed.jobId).toBe('j-1');
     expect(parsed.correlationId).toBe('c-1');

@@ -1,13 +1,17 @@
 import Link from 'next/link';
 import { HeaderNav } from './header-nav';
-import type { NavServiceItem } from './nav-data';
+import type { NavLink, NavServiceItem } from './nav-data';
 
 export function SiteHeader({
   services,
   signedIn,
+  primaryLinks,
+  secondaryLinks,
 }: {
   services: NavServiceItem[];
   signedIn: boolean;
+  primaryLinks?: NavLink[];
+  secondaryLinks?: NavLink[];
 }) {
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-bg/95 backdrop-blur supports-[backdrop-filter]:bg-bg/85">
@@ -19,7 +23,12 @@ export function SiteHeader({
         >
           Simplex<span className="text-primary">D</span>
         </Link>
-        <HeaderNav services={services} signedIn={signedIn} />
+        <HeaderNav
+          services={services}
+          signedIn={signedIn}
+          primaryLinks={primaryLinks}
+          secondaryLinks={secondaryLinks}
+        />
       </div>
     </header>
   );

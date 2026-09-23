@@ -12,7 +12,7 @@ Code: `apps/web/src/app/(partner)`, `apps/web/src/components/partner`, `apps/web
 | Vendor                                                             | RFQs & orders (when `expansion.materials_procurement` is on) |
 | Inspector, surveyor, valuer, architect, QS; staff `inspector` role | Visits (field capture), Evidence, Reports                    |
 | Legal partner                                                      | Evidence, Reports                                            |
-| Everyone                                                           | Home, Assignments, Messages, Notifications, Availability     |
+| Everyone                                                           | Home, Assignments, Assigned items, Messages, Notifications, Availability |
 
 `other`-type partners see every module. The rules live in `lib/partner/nav.ts`. A contractor's awarded work arrives as an assignment, and each accepted assignment card links to that project's visits, evidence and reports.
 
@@ -40,6 +40,18 @@ The header badge shows what was verified, as recorded on the partner profile: st
   - You only ever see your own response.
 - **Purchase orders.** Acknowledge an issued order with your reference and expected delivery date.
 - **Deliveries & disputes.** See what the site recorded, line by line, and any discrepancies raised against the order.
+
+## Legal and survey partners: assigned items
+
+_Assigned items_ (`/partner/items`) lists the checklist items, survey references and findings
+staff assigned to you on requests where your assignment is accepted or active (an accepted
+request assignment card links straight to them). For each item you can _Record findings_ (your
+reference, findings and severity), _Upload evidence_ (only files you upload yourself; staff and
+the customer see them according to the item's visibility), _Start_, _Mark satisfied_ or _Mark
+failed_ with a reason, and reply. A survey reference cannot be satisfied without its reference
+number; a document check needs its evidence. Waiving or cancelling is a staff decision. You never
+see other items on the request, internal staff records, evidence that was not shared with you,
+or the decision memorandum.
 
 ## Inspectors and assigned partners: field capture offline
 

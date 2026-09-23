@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@simplexd/ui';
 import { getSession } from '@/lib/auth/session';
+import { resumeIntentFromNext, resumeMessage } from '@/lib/explorer/account-gate';
 import { SignInForm } from './sign-in-form';
 
 export const metadata: Metadata = { title: 'Sign in' };
@@ -21,11 +22,16 @@ export default async function SignInPage({
   const next = safeNext(params.next);
   const session = await getSession();
   if (session) redirect(next);
+  const resume = resumeIntentFromNext(next);
   return (
     <Card>
       <CardHeader>
         <CardTitle className="text-xl">Sign in</CardTitle>
-        <CardDescription>Access your portal, projects, documents and appointments.</CardDescription>
+        <CardDescription>
+          {resume
+            ? resumeMessage(resume)
+            : 'Access your portal, projects, documents and appointments.'}
+        </CardDescription>
       </CardHeader>
       <CardContent>
         <SignInForm next={next} verified={params.verified === '1'} />

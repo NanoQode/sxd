@@ -50,6 +50,21 @@ first. Filter by status, priority, project manager, text or _Overdue only_.
 7. **Appointments and visits** shows linked bookings; _Book appointment_ opens the staff booking
    page pre-linked to the request. _Create project from this request_ appears once the quote is
    accepted.
+8. **Engagement records** (due diligence, virtual inspections, closing checklists): _Add record_
+   creates a document check, survey reference, site finding, query, red flag, condition, closing
+   task, handover document or lease milestone. Red flags and site findings need a severity; choose
+   who sees the item (staff only, customer, assigned partners, both) and assign it to staff or a
+   partner whose assignment is accepted. Customer-visible queries and red flags notify the
+   customer. Status buttons appear only when valid; failing, waiving, cancelling and reopening ask
+   for a reason. Attach evidence from the request's files or a new upload; reply to answer the
+   customer. Assigned partners see only their own items and evidence.
+9. **Reports** under the request: _Draft report_ starts a decision memorandum or virtual
+   inspection report from the active template (sections, guidance and standard scope wording are
+   shown), with a snapshot of the customer-visible records. Submit for review naming a reviewer who
+   is not you; review and release are done by someone else (`/admin/reports/{id}`). Submission and
+   release refuse a missing scope-and-limitations statement, an empty required section and, for
+   memoranda, guarantee wording. _Export_ on a released report opens the print-ready version; the
+   export is audited.
 
 ## Customers and properties
 

@@ -1,15 +1,31 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { Alert, Badge, PageHeader, StatusBadge, formatDateTimeLabel, humanize } from '@simplexd/ui';
+import {
+  Alert,
+  Badge,
+  PageHeader,
+  StatusBadge,
+  buttonVariants,
+  formatDateTimeLabel,
+  humanize,
+} from '@simplexd/ui';
+import {
+  isServiceRequestReportKind,
+  missingRequiredSections,
+  sectionsFromFindings,
+} from '@simplexd/domain/engagements';
 import { requireSignedIn } from '@/lib/auth/session';
 import { can, requireAnyStaff } from '@/lib/admin/server/context';
 import { reportPeople } from '@/lib/admin/server/reports';
+import { getReportTemplateOutline } from '@/server/engagements/reports';
+import { asEngagementFindings } from '@/server/engagements/snapshot';
 import { listStaffAssignees } from '@/server/leads/admin';
 import { getReport, listReportEvidence } from '@/server/projects/reports';
 import { ApiAction } from '@/components/admin/api-action';
 import { FormDialog } from '@/components/admin/form-dialog';
 import { Section } from '@/components/admin/section';
+import { ItemStatusBadge, SeverityBadge } from '@/components/engagements/item-view';
 import { DefinitionList } from '../../_components/bits';
 
 export const metadata: Metadata = { title: 'Report review' };
@@ -54,6 +70,18 @@ export default async function ReportReviewPage({ params }: { params: Promise<{ i
         ['project_manager', 'operations_manager', 'super_admin', 'inspector'].includes(r),
       ),
   );
+  // Request reports carry their template outline and a frozen snapshot of the
+  // engagement records with every revision; show both to the author and reviewer.
+  const findings = asEngagementFindings(current?.findings);
+  const sections = sectionsFromFindings(current?.findings);
+  const missing = current ? missingRequiredSections(current.bodyMarkdown, sections) : [];
+  const outline =
+    findings.template && isServiceRequestReportKind(report.kind)
+      ? await getReportTemplateOutline(identity, report.kind, findings.template.id ?? undefined).catch(
+          () => null,
+        )
+      : null;
+  const snapshot = findings.engagementItems ?? null;
   return (
     <div className="space-y-6">
       <PageHeader
@@ -66,6 +94,16 @@ export default async function ReportReviewPage({ params }: { params: Promise<{ i
         description={`${humanize(report.kind)} · v${report.currentVersion}${report.releasedVersion ? ` · released v${report.releasedVersion}` : ''}`}
         actions={
           <>
+            {report.releasedVersion ? (
+              <a
+                href={`/api/v1/reports/${report.id}/export`}
+                target="_blank"
+                rel="noopener"
+                className={buttonVariants({ variant: 'secondary', size: 'sm' })}
+              >
+                Export released v{report.releasedVersion}
+              </a>
+            ) : null}
             <StatusBadge
               status={
                 report.status === 'released'
@@ -127,6 +165,72 @@ export default async function ReportReviewPage({ params }: { params: Promise<{ i
               <p className="text-fg-muted">No revision content yet.</p>
             )}
           </Section>
+          {sections.length > 0 ? (
+            <Section
+              title="Template sections"
+              description={
+                outline
+                  ? `${outline.name}${outline.version ? ` v${outline.version}` : ''}. Guidance is for authors and never enters the report. Required sections must have content before review or release.`
+                  : 'Section outline captured with this revision. Required sections must have content before review or release.'
+              }
+            >
+              <ol className="space-y-1">
+                {sections.map((s) => {
+                  const isMissing = missing.some((m) => m.key === s.key);
+                  const guidance = outline?.sections.find((o) => o.key === s.key)?.guidance;
+                  return (
+                    <li key={s.key} className="flex flex-wrap items-start gap-2">
+                      <span className="font-medium">{s.heading}</span>
+                      {s.required ? (
+                        <Badge tone={isMissing ? 'danger' : 'success'}>
+                          {isMissing ? 'required · empty' : 'required · filled'}
+                        </Badge>
+                      ) : (
+                        <Badge tone="neutral">optional</Badge>
+                      )}
+                      {guidance ? (
+                        <span className="basis-full text-xs text-fg-muted">{guidance}</span>
+                      ) : null}
+                    </li>
+                  );
+                })}
+              </ol>
+              {isServiceRequestReportKind(report.kind) ? (
+                <p className="text-xs text-fg-muted">
+                  A scope and limitations statement is required for this kind
+                  {report.kind === 'diligence_memo'
+                    ? ', and wording that guarantees title or outcome is refused: the memorandum records findings within its stated scope.'
+                    : '.'}
+                </p>
+              ) : null}
+            </Section>
+          ) : null}
+          {snapshot ? (
+            <Section
+              title={`Engagement records in this revision (${snapshot.items.length})`}
+              description={`Customer-visible records captured ${formatDateTimeLabel(snapshot.capturedAt)}; a new revision re-captures them. Internal records are never included automatically.`}
+            >
+              {snapshot.items.length === 0 ? (
+                <p className="text-fg-muted">No customer-visible records existed when this revision was created.</p>
+              ) : (
+                <ul className="space-y-1 text-sm">
+                  {snapshot.items.map((i) => (
+                    <li key={i.id} className="flex flex-wrap items-center gap-2">
+                      <span className="text-xs text-fg-muted">{i.kindLabel}</span>
+                      <span className="font-medium">{i.title}</span>
+                      <SeverityBadge severity={i.severity} />
+                      <ItemStatusBadge status={i.status} />
+                      {i.evidence.length > 0 ? (
+                        <span className="text-xs text-fg-muted">
+                          {i.evidence.length} evidence file(s)
+                        </span>
+                      ) : null}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </Section>
+          ) : null}
           <Section title={`Revision history (${report.revisions.length})`}>
             <ol className="space-y-2">
               {[...report.revisions].reverse().map((r) => (
@@ -209,6 +313,17 @@ export default async function ReportReviewPage({ params }: { params: Promise<{ i
                       className="underline"
                     >
                       Open project
+                    </Link>
+                  ) : null,
+                },
+                {
+                  term: 'Service request',
+                  value: report.serviceRequestId ? (
+                    <Link
+                      href={`/admin/service-requests/${report.serviceRequestId}#request-reports`}
+                      className="underline"
+                    >
+                      Open request
                     </Link>
                   ) : null,
                 },

@@ -2,6 +2,9 @@ import { Writable } from 'node:stream';
 import { describe, expect, it } from 'vitest';
 import { createWebLogger } from './logger';
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- parsed JSON log line under test
+type LogLine = Record<string, any>;
+
 /**
  * Web log redaction (brief §19: logs never contain tokens, cookies, secrets
  * or passwords). Lines are captured through an in-memory destination.
@@ -52,7 +55,7 @@ describe('web logger redaction', () => {
     expect(line).not.toMatch(
       /eyJhbGciOi|s3cr3t|k-1|abc==|hunter2|hunter3|4111111111111111|"123"|sk_live_1|tok_1|at_1|ak_1|000111/,
     );
-    const parsed = JSON.parse(line!) as Record<string, any>;
+    const parsed = JSON.parse(line!) as LogLine;
     expect(parsed.req.headers).toEqual({
       authorization: '[redacted]',
       cookie: '[redacted]',

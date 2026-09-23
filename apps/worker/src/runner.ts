@@ -41,7 +41,7 @@ export interface JobRunnerOptions {
    * Called after a failed attempt has been recorded (error tracking). Must not
    * throw; its failures are logged and ignored so they never affect the queue.
    */
-  onJobFailed?: (failure: JobFailure) => void | Promise<void>;
+  onJobFailed?: (failure: JobFailure) => unknown;
 }
 
 export interface JobFailure {

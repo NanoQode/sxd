@@ -1,0 +1,23 @@
+import { z } from 'zod';
+import { ApiError, uuidSchema,  } from '@simplexd/contracts';
+import { getIdentity } from '@/lib/auth/session';
+import { json, params, parseJson, parseQuery, route } from '@/lib/api/respond';
+import '@/lib/api/registry/search-purchase';
+import { getPurchaseWorkspace } from '@/server/purchase/closing';
+
+export const dynamic = 'force-dynamic';
+
+const idParams = z.object({ id: uuidSchema });
+
+async function identityOrThrow() {
+  const identity = await getIdentity();
+  if (!identity.session) throw new ApiError('unauthenticated', 'sign in required');
+  return identity;
+}
+
+/** GET /api/v1/service-requests/:id/purchase — offers, conditions, diligence dependency, closing checklist, handover. */
+export const GET = route<{ params: Promise<{ id: string }> }>(async (_req, ctx) => {
+  const identity = await identityOrThrow();
+  const { id } = await params(ctx, idParams);
+  return json(await getPurchaseWorkspace(identity, id), { correlationId: ctx.correlationId });
+});

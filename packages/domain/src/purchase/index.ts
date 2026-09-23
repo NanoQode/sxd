@@ -178,7 +178,14 @@ export function checkOfferAction(input: {
     actor: input.actor,
     reason: input.note ?? null,
   });
-  if (!decision.ok) return { ok: false, to, code: decision.code, message: decision.message };
+  if (!decision.ok) {
+    return {
+      ok: false,
+      to,
+      code: decision.code === 'terminal_state' ? 'invalid_transition' : decision.code,
+      message: decision.message,
+    };
+  }
   if ((input.action === 'counter' || input.action === 'revise') && !input.amountKobo) {
     return {
       ok: false,

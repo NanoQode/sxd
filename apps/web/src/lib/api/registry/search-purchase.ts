@@ -1,0 +1,149 @@
+import { z } from 'zod';
+import {
+  closingStepSchema,
+  diligenceDependencyDtoSchema,
+  diligenceLinkSchema,
+  diligenceWaiveSchema,
+  handoverAcknowledgeSchema,
+  listRoutes,
+  purchaseItemCreateSchema,
+  purchaseItemDtoSchema,
+  purchaseItemUpdateSchema,
+  purchaseOfferActionSchema,
+  purchaseOfferCreateSchema,
+  purchaseOfferDtoSchema,
+  purchaseOfferUpdateSchema,
+  purchaseWorkspaceDtoSchema,
+  registerRoute,
+  reportDetailDtoSchema,
+  savedSearchCreateSchema,
+  savedSearchDtoSchema,
+  savedSearchMatchesDtoSchema,
+  savedSearchUpdateSchema,
+  searchListingDtoSchema,
+  searchListingQuerySchema,
+  searchWorkspaceDtoSchema,
+  shortlistAcceptSchema,
+  shortlistCreateSchema,
+  shortlistDtoSchema,
+  shortlistItemAddSchema,
+  shortlistItemDtoSchema,
+  shortlistItemFeedbackSchema,
+  shortlistItemUpdateSchema,
+  shortlistOutcomeSchema,
+  shortlistUpdateSchema,
+  uuidSchema,
+  viewingDtoSchema,
+  viewingFeedbackSchema,
+  viewingRequestSchema,
+  viewingUpdateSchema,
+  type RouteSpec,
+} from '@simplexd/contracts';
+
+/**
+ * OpenAPI registration for property search (saved searches and alerts,
+ * shortlists and comparison, viewings, search outcome) and purchase
+ * representation (offers with negotiation log, conditions, diligence
+ * dependency, closing checklist, document handover, closing pack).
+ * Registration is idempotent (hot reloads, test re-imports).
+ */
+function ensure(spec: RouteSpec): RouteSpec {
+  const existing = listRoutes().find((r) => r.operationId === spec.operationId);
+  return existing ?? registerRoute(spec);
+}
+
+const idParams = z.object({ id: uuidSchema });
+const items = <T extends z.ZodTypeAny>(item: T) => z.object({ items: z.array(item) });
+
+const op = (
+  method: RouteSpec['method'],
+  path: string,
+  operationId: string,
+  summary: string,
+  description: string,
+  body: z.ZodTypeAny | undefined,
+  response: z.ZodTypeAny | undefined,
+  extra: Partial<RouteSpec> = {},
+): RouteSpec =>
+  ensure({
+    method,
+    path,
+    summary,
+    description,
+    tags: extra.tags ?? ['search-purchase'],
+    operationId,
+    auth: 'session',
+    request: {
+      ...(path.includes('{id}') ? { params: idParams } : {}),
+      ...(body ? { body } : {}),
+      ...(extra.request?.query ? { query: extra.request.query } : {}),
+    },
+    responses: {
+      [method === 'post' && response ? 201 : method === 'delete' ? 204 : 200]: {
+        description: 'OK',
+        ...(response ? { body: response } : {}),
+      },
+      403: { description: 'Forbidden (organisation or staff permission)' },
+      404: { description: 'Not found (also for other organisations)' },
+      409: { description: 'Invalid transition, conflict or concurrency token mismatch' },
+    },
+  });
+
+export const searchPurchaseRoutes: RouteSpec[] = [
+  // Saved searches and alerts
+  op('get', '/api/v1/saved-searches', 'savedSearches.list', 'List my saved searches',
+    'Saved searches of the signed-in user in the active organisation.', undefined, items(savedSearchDtoSchema)),
+  op('post', '/api/v1/saved-searches', 'savedSearches.create', 'Save a search',
+    '`org.scenarios.manage` in the active organisation. Enabling alerts announces listings published from now on (in-app + email), each at most once per search and listing.',
+    savedSearchCreateSchema, savedSearchDtoSchema),
+  op('get', '/api/v1/saved-searches/{id}', 'savedSearches.get', 'Get a saved search', 'Owner only.', undefined, savedSearchDtoSchema),
+  op('patch', '/api/v1/saved-searches/{id}', 'savedSearches.update', 'Update a saved search',
+    'Owner only; `expectedUpdatedAt` is the concurrency token. Changing criteria restarts the alert watermark.', savedSearchUpdateSchema, savedSearchDtoSchema),
+  op('delete', '/api/v1/saved-searches/{id}', 'savedSearches.delete', 'Delete a saved search', 'Owner only.', undefined, undefined),
+  op('get', '/api/v1/saved-searches/{id}/matches', 'savedSearches.matches', 'Current matches',
+    'Published listings matching the criteria today (public-safe fields only; undisclosed prices or areas never match a bound).', undefined, savedSearchMatchesDtoSchema),
+  op('get', '/api/v1/search/listings', 'search.listings', 'Published listings for shortlisting',
+    'Title search over publicly visible listings (staff shortlist picker).', undefined, items(searchListingDtoSchema),
+    { request: { query: searchListingQuerySchema } }),
+  // Shortlists, comparison, viewings
+  op('get', '/api/v1/service-requests/{id}/search', 'search.workspace', 'Search workspace of a request',
+    'Shortlists with the side-by-side comparison (values only from the published listing or the staff entry, each labelled with its source), viewings and unlinked viewing appointments. Customer organisation members and staff reading the request (project managers when attached).',
+    undefined, searchWorkspaceDtoSchema),
+  op('post', '/api/v1/service-requests/{id}/shortlists', 'shortlists.create', 'Start a shortlist', 'Staff managing the request.', shortlistCreateSchema, shortlistDtoSchema),
+  op('get', '/api/v1/shortlists/{id}', 'shortlists.get', 'Get a shortlist', 'Drafts are staff-only.', undefined, shortlistDtoSchema),
+  op('patch', '/api/v1/shortlists/{id}', 'shortlists.update', 'Rename or share a shortlist',
+    'Staff. Sharing notifies the customer; accepted and outcome-recorded shortlists are frozen.', shortlistUpdateSchema, shortlistDtoSchema),
+  op('post', '/api/v1/shortlists/{id}/items', 'shortlists.addItem', 'Add a shortlist entry',
+    'Staff: a published listing (facts read from its published revision, never copied) or an external reference with an optional asking price as stated by the source.', shortlistItemAddSchema, shortlistItemDtoSchema),
+  op('patch', '/api/v1/shortlist-items/{id}', 'shortlists.updateItem', 'Edit a shortlist entry', 'Staff. Listing-backed entries keep the listing\'s title and price.', shortlistItemUpdateSchema, shortlistItemDtoSchema),
+  op('post', '/api/v1/shortlist-items/{id}/feedback', 'shortlists.feedback', 'Rate or mark a preference',
+    'Customer (`org.comment`) on a shared shortlist.', shortlistItemFeedbackSchema, shortlistItemDtoSchema),
+  op('post', '/api/v1/shortlists/{id}/accept', 'shortlists.accept', 'Accept the shortlist',
+    'Customer with `org.quotes.accept`; completion evidence for property search.', shortlistAcceptSchema, shortlistDtoSchema),
+  op('post', '/api/v1/shortlists/{id}/outcome', 'shortlists.outcome', 'Record the search outcome',
+    'Staff. Drafts a `search_outcome` report under the request (released after review by someone else) and freezes the shortlist.', shortlistOutcomeSchema, shortlistDtoSchema),
+  op('post', '/api/v1/service-requests/{id}/viewings', 'viewings.request', 'Request a viewing',
+    'Customer (`org.appointments.manage`) or staff: a listing-backed shortlist entry, or a booked `viewing` appointment of the request (external properties).', viewingRequestSchema, viewingDtoSchema),
+  op('patch', '/api/v1/viewings/{id}', 'viewings.update', 'Confirm, schedule, complete or cancel a viewing', 'Staff managing the request.', viewingUpdateSchema, viewingDtoSchema),
+  op('post', '/api/v1/viewings/{id}/feedback', 'viewings.feedback', 'Post-viewing feedback', 'Customer (`org.comment`) once the viewing took place.', viewingFeedbackSchema, viewingDtoSchema),
+  // Purchase representation
+  op('get', '/api/v1/service-requests/{id}/purchase', 'purchase.workspace', 'Purchase workspace of a request',
+    'Offers with negotiation log, conditions, diligence dependency status, closing checklist, handover documents, readiness blockers, agreed fee basis and closing pack records.', undefined, purchaseWorkspaceDtoSchema),
+  op('get', '/api/v1/service-requests/{id}/purchase/offers', 'purchaseOffers.list', 'List offers', 'Customer organisation and staff reading the request.', undefined, items(purchaseOfferDtoSchema)),
+  op('post', '/api/v1/service-requests/{id}/purchase/offers', 'purchaseOffers.create', 'Draft an offer',
+    'Customer (`org.requests.create`) or staff; one live offer per request.', purchaseOfferCreateSchema, purchaseOfferDtoSchema),
+  op('get', '/api/v1/purchase-offers/{id}', 'purchaseOffers.get', 'Get an offer', 'Customer organisation and staff reading the request.', undefined, purchaseOfferDtoSchema),
+  op('patch', '/api/v1/purchase-offers/{id}', 'purchaseOffers.update', 'Edit a draft offer', 'Every edit appends an `amended` log entry; `expectedEntries` is the log length seen.', purchaseOfferUpdateSchema, purchaseOfferDtoSchema),
+  op('post', '/api/v1/purchase-offers/{id}/actions', 'purchaseOffers.action', 'Negotiation step',
+    'draft → submitted → countered → accepted | rejected | withdrawn | expired. Committing the buyer (submit, revise, accept a counter, withdraw) needs `org.quotes.accept` or staff citing the customer\'s instruction; the seller\'s response is recorded by staff. The log is append-only.',
+    purchaseOfferActionSchema, purchaseOfferDtoSchema),
+  op('post', '/api/v1/service-requests/{id}/purchase/items', 'purchaseItems.create', 'Add a condition, closing task or handover document', 'Staff managing the request.', purchaseItemCreateSchema, purchaseItemDtoSchema),
+  op('patch', '/api/v1/purchase-items/{id}', 'purchaseItems.update', 'Update a purchase item',
+    'Staff: fields, attached files, status (waive/fail/cancel need a reason). Handover documents are satisfied only by the customer\'s acknowledgement.', purchaseItemUpdateSchema, purchaseItemDtoSchema),
+  op('post', '/api/v1/purchase-items/{id}/acknowledge', 'purchaseItems.acknowledge', 'Acknowledge a handover document', 'Customer (`org.documents.view`) once files are attached.', handoverAcknowledgeSchema, purchaseItemDtoSchema),
+  op('put', '/api/v1/service-requests/{id}/purchase/diligence', 'purchase.linkDiligence', 'Link the due-diligence request',
+    'Staff. Closing stays blocked while the linked request has unresolved red flags or no released diligence memorandum.', diligenceLinkSchema, diligenceDependencyDtoSchema),
+  op('post', '/api/v1/service-requests/{id}/purchase/diligence/waive', 'purchase.waiveDiligence', 'Waive the diligence dependency', 'Staff `service_requests.override`, reason recorded and shown to the customer.', diligenceWaiveSchema, diligenceDependencyDtoSchema),
+  op('post', '/api/v1/service-requests/{id}/purchase/closing-pack', 'purchase.closingPack', 'Prepare the closing pack',
+    'Staff. Refused (`insufficient_evidence`) while any blocker remains; drafts a `closing_pack` report that a different reviewer approves and releases. `expectedVersion` is the request version.', closingStepSchema, reportDetailDtoSchema),
+];

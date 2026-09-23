@@ -14,6 +14,7 @@ import {
 import { renderMarkdown } from '@/lib/markdown';
 import { formatBytes } from '@/lib/portal/format';
 import { EvidenceGallery } from './evidence-gallery';
+import { LinkButton } from './link-button';
 import { SignedDownloadButton } from './signed-download';
 
 /**
@@ -41,7 +42,8 @@ export function ReportView({
   return (
     <div className="space-y-6">
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+          <div>
           <CardTitle className="flex flex-wrap items-center gap-2">
             {report.title}
             <Badge tone="info">{humanize(report.kind)}</Badge>
@@ -59,11 +61,24 @@ export function ReportView({
               <>
                 {' · '}
                 <Link href={projectHref} className="underline">
-                  Open project
+                  {report.projectId ? 'Open project' : 'Open request'}
                 </Link>
               </>
             ) : null}
           </CardDescription>
+          </div>
+          {report.releasedVersion ? (
+            <LinkButton
+              href={`/api/v1/reports/${report.id}/export`}
+              target="_blank"
+              rel="noopener"
+              variant="secondary"
+              size="sm"
+              className="shrink-0"
+            >
+              Export (print / save as PDF)
+            </LinkButton>
+          ) : null}
         </CardHeader>
         <CardContent className="space-y-4">
           {!released ? (

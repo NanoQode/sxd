@@ -11,12 +11,20 @@ import { plainTextExcerpt } from '@/lib/markdown';
 import { getPublishedContent, listPublishedContent } from '@/server/content/public';
 import { getMarketBySlug, listMarkets } from '@/server/markets/queries';
 import { listServiceCatalog, type ServiceCatalog } from '@/server/services/catalog';
-import { SITE, type FaqItem } from '@/components/public/defaults';
+import { SITE, type FaqItem, type GoalPath } from '@/components/public/defaults';
 import {
   defaultEvidenceStandards,
   type EvidenceStandardItem,
 } from '@/components/public/evidence-standards';
 import { CORE_SERVICE_NAV, type NavServiceItem } from '@/components/public/nav-data';
+import {
+  activeBanners,
+  goalPathsFromContent,
+  locationIntroFrom,
+  navigationFromContent,
+  type SiteBanner,
+  type SiteNavigation,
+} from '@/components/public/site-content';
 
 /**
  * Shared loaders for the public site. Every loader degrades honestly: a
@@ -107,6 +115,30 @@ export const contentByKind = cache(
       logger().warn({ err: (err as Error).message, kind }, 'content list unavailable');
       return [];
     }
+  },
+);
+
+/** Published, in-window announcement banners for the public shell (empty when none or on failure). */
+export const loadBanners = cache(async (): Promise<SiteBanner[]> => {
+  return activeBanners(await contentByKind('banner'));
+});
+
+/** Header/footer links: published `navigation` pages per slot, defaults otherwise. */
+export const loadNavigation = cache(async (): Promise<SiteNavigation> => {
+  return navigationFromContent(await contentByKind('navigation'));
+});
+
+/** Homepage goal cards: published `goal_path` pages override the defaults per key. */
+export const loadGoalPaths = cache(async (): Promise<GoalPath[]> => {
+  return goalPathsFromContent(await contentByKind('goal_path'));
+});
+
+/** Published editorial introduction for a market, or null. */
+export const loadLocationIntro = cache(
+  async (marketSlug: string): Promise<PublishedContent | null> => {
+    const direct = await contentBySlug(`location-intro-${marketSlug}`, 'location_intro');
+    if (direct) return direct;
+    return locationIntroFrom(await contentByKind('location_intro'), marketSlug);
   },
 );
 

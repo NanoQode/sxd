@@ -48,7 +48,16 @@ finance staff and are marked settled only when the provider confirms them.
   approval it needs; accepting a milestone is separate from the inspector's progress estimate and
   from finance's payment authorisation.
 - **Reports** (`/portal/reports`): you see a report only after a named reviewer (not the author)
-  approved it and staff released it. Each released version stays frozen.
+  approved it and staff released it. Each released version stays frozen. _Export (print / save as
+  PDF)_ opens a print-ready copy with the version, release date, reviewer, scope and limitations
+  and the evidence it references (file names and checksums); use your browser's Print → Save as
+  PDF to keep a PDF.
+- **Due diligence / Inspection tab** on a request (`/portal/requests/{id}?tab=workspace`): the
+  title and document checklist, survey references, findings, red flags with their severity and the
+  team's queries. Answer a query or upload a requested document from the _Waiting on you_ list;
+  your answer is recorded with your name and the team is notified. Internal staff notes never
+  appear here. Released decision memoranda and inspection reports are listed with an export
+  button; for a virtual inspection the live meeting link appears while the conference is ready.
 - **Documents** (`/portal/documents`): files you uploaded and files released to you. Downloads use
   short-lived links, and files that failed the malware scan are never offered.
 
