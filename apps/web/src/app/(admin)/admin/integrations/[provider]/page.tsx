@@ -44,14 +44,18 @@ export default async function IntegrationProviderPage({ params }: Params) {
         description={detail.descriptor.summary}
         actions={
           <>
-            <Link href="/admin/integrations"><Button variant="ghost">All integrations</Button></Link>
+            <Link href="/admin/integrations">
+              <Button variant="ghost">All integrations</Button>
+            </Link>
             {detail.descriptor.links.map((l) =>
               l.external ? (
                 <a key={l.href} href={l.href} target="_blank" rel="noopener noreferrer">
                   <Button variant="secondary">{l.label} ↗</Button>
                 </a>
               ) : (
-                <Link key={l.href} href={l.href}><Button variant="secondary">{l.label}</Button></Link>
+                <Link key={l.href} href={l.href}>
+                  <Button variant="secondary">{l.label}</Button>
+                </Link>
               ),
             )}
           </>
@@ -59,8 +63,12 @@ export default async function IntegrationProviderPage({ params }: Params) {
       />
       {needsMfa ? (
         <Alert tone="warning" title="Verified authenticator required">
-          Saving, activating, disabling or rotating credentials for this provider needs a verified authenticator.{' '}
-          <Link href="/admin/security/mfa" className="underline">Set up MFA</Link>. Reading status and running the connection test still work.
+          Saving, activating, disabling or rotating credentials for this provider needs a verified
+          authenticator.{' '}
+          <Link href="/admin/security/mfa" className="underline">
+            Set up MFA
+          </Link>
+          . Reading status and running the connection test still work.
         </Alert>
       ) : null}
       <ProviderPanel detail={detail} logs={logs} permissions={permissions} />

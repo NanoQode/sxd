@@ -43,7 +43,8 @@ const DEV_ADAPTERS: Record<string, string> = {
   maps: 'dev',
 };
 
-const AUTH_FAILURE = /invalid key|unauthori[sz]ed|401|403|invalid api key|invalid_grant|forbidden|auth/i;
+const AUTH_FAILURE =
+  /invalid key|unauthori[sz]ed|401|403|invalid api key|invalid_grant|forbidden|auth/i;
 
 interface Outcome {
   ok: boolean;
@@ -171,9 +172,15 @@ async function checkRow(
               security: str(settings, 'security') === 'implicit-tls' ? 'implicit-tls' : 'starttls',
               username,
               password: username ? (secrets.password ?? null) : null,
-              from: { email: str(settings, 'fromEmail', 'no-reply@localhost'), name: str(settings, 'fromName', 'SimplexD') },
+              from: {
+                email: str(settings, 'fromEmail', 'no-reply@localhost'),
+                name: str(settings, 'fromName', 'SimplexD'),
+              },
               replyTo: str(settings, 'replyTo') ? { email: str(settings, 'replyTo') } : null,
-              allowedHosts: (process.env.SMTP_ALLOWED_HOSTS ?? '').split(',').map((h) => h.trim()).filter(Boolean),
+              allowedHosts: (process.env.SMTP_ALLOWED_HOSTS ?? '')
+                .split(',')
+                .map((h) => h.trim())
+                .filter(Boolean),
               allowPrivate: env.nodeEnv !== 'production' && env.appEnv !== 'production',
               approvedSenderDomains: list(settings, 'approvedSenderDomains'),
             },
@@ -189,9 +196,16 @@ async function checkRow(
     case 'google_workspace': {
       if (dev) {
         createCalendarProvider({ appEnv: env.appEnv, adapter: 'dev', redirectUri: env.appUrl });
-        return { ok: true, message: 'Development calendar adapter (simulated; not Google)', credentialInvalid: false, details: {} };
+        return {
+          ok: true,
+          message: 'Development calendar adapter (simulated; not Google)',
+          credentialInvalid: false,
+          details: {},
+        };
       }
-      const ok = str(settings, 'clientId').endsWith('.apps.googleusercontent.com') && Boolean(secrets.clientSecret);
+      const ok =
+        str(settings, 'clientId').endsWith('.apps.googleusercontent.com') &&
+        Boolean(secrets.clientSecret);
       return {
         ok,
         message: ok
@@ -210,7 +224,8 @@ async function checkRow(
               localDev: {
                 root: str(settings, 'devRoot', './uploads-dev'),
                 appUrl: env.appUrl,
-                signingSecret: process.env.DEV_STORAGE_SIGNING_SECRET || process.env.AUTH_SECRET || '',
+                signingSecret:
+                  process.env.DEV_STORAGE_SIGNING_SECRET || process.env.AUTH_SECRET || '',
               },
             }
           : {
@@ -233,7 +248,12 @@ async function checkRow(
             },
       );
       await provider.headObject({ bucket: 'private', key: 'healthchecks/integration-probe.txt' });
-      return { ok: true, message: 'Private bucket reachable', credentialInvalid: false, details: {} };
+      return {
+        ok: true,
+        message: 'Private bucket reachable',
+        credentialInvalid: false,
+        details: {},
+      };
     }
     case 'scanner': {
       const scanner = createMalwareScanner({
@@ -241,12 +261,18 @@ async function checkRow(
         scanner: dev ? 'dev' : 'clamav',
         clamav: dev
           ? undefined
-          : { host: str(settings, 'host', '127.0.0.1'), port: num(settings, 'port', 3310), timeoutMs: num(settings, 'timeoutMs', 60000) },
+          : {
+              host: str(settings, 'host', '127.0.0.1'),
+              port: num(settings, 'port', 3310),
+              timeoutMs: num(settings, 'timeoutMs', 60000),
+            },
       });
       const ping = await scanner.ping();
       return {
         ok: ping.ok,
-        message: ping.ok ? `Scanner responded (${ping.version ?? 'version unknown'})` : 'Scanner did not respond to PING',
+        message: ping.ok
+          ? `Scanner responded (${ping.version ?? 'version unknown'})`
+          : 'Scanner did not respond to PING',
         credentialInvalid: false,
         details: { version: ping.version },
       };
@@ -270,7 +296,12 @@ async function checkRow(
       };
     }
     default:
-      return { ok: true, message: `no health check defined for ${row.provider}`, credentialInvalid: false, details: {} };
+      return {
+        ok: true,
+        message: `no health check defined for ${row.provider}`,
+        credentialInvalid: false,
+        details: {},
+      };
   }
 }
 
@@ -283,7 +314,13 @@ export interface HealthCheckSummary {
 /** Exported for tests and for ad-hoc runs; the job handler wraps it. */
 export async function runIntegrationHealthCheck(
   db: Parameters<typeof withActor>[0],
-  options: { keyring?: Keyring; appEnv?: string; nodeEnv?: string; appUrl?: string; timeoutMs?: number } = {},
+  options: {
+    keyring?: Keyring;
+    appEnv?: string;
+    nodeEnv?: string;
+    appUrl?: string;
+    timeoutMs?: number;
+  } = {},
 ): Promise<HealthCheckSummary> {
   const keyring = options.keyring ?? keyringFromEnv();
   const env = {
@@ -300,19 +337,33 @@ export async function runIntegrationHealthCheck(
       const { secrets, problems } = await decryptRow(tx, row, keyring);
       let outcome: Outcome;
       if (problems.length > 0) {
-        outcome = { ok: false, message: `Secrets unavailable: ${problems.join('; ')}`, credentialInvalid: true, details: { problems } };
+        outcome = {
+          ok: false,
+          message: `Secrets unavailable: ${problems.join('; ')}`,
+          credentialInvalid: true,
+          details: { problems },
+        };
       } else {
         try {
           outcome = await withTimeout(checkRow(row, secrets, env), options.timeoutMs ?? 20_000);
         } catch (err) {
           const message = err instanceof Error ? err.message : 'unknown error';
-          outcome = { ok: false, message, credentialInvalid: AUTH_FAILURE.test(message), details: {} };
+          outcome = {
+            ok: false,
+            message,
+            credentialInvalid: AUTH_FAILURE.test(message),
+            details: {},
+          };
         }
       }
       const values = Object.values(secrets);
       const message = scrub(outcome.message, values);
       const now = new Date();
-      const nextStatus = outcome.ok ? 'connected' : outcome.credentialInvalid ? 'expired' : 'degraded';
+      const nextStatus = outcome.ok
+        ? 'connected'
+        : outcome.credentialInvalid
+          ? 'expired'
+          : 'degraded';
       const transitioned = row.status !== nextStatus;
       await tx
         .update(schema.integrationConfigs)
@@ -403,7 +454,9 @@ export function registerIntegrationHandlers(runner: JobRunner): void {
         level: failed.length > 0 ? 'warn' : 'info',
         event: 'secrets.rewrapped',
         messageSanitized: `Re-wrapped ${rewrapped}/${rows.length} secrets under master key ${keyring.current.id}${
-          failed.length > 0 ? `; ${failed.length} could not be opened (rotation window expired?)` : ''
+          failed.length > 0
+            ? `; ${failed.length} could not be opened (rotation window expired?)`
+            : ''
         }`,
         metadataSanitized: { masterKeyId: keyring.current.id, rewrapped, failed },
       });

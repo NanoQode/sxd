@@ -81,7 +81,8 @@ function errorText(err: unknown): string {
   return err instanceof Error ? err.message : 'unknown error';
 }
 
-const AUTH_FAILURE = /invalid key|unauthori[sz]ed|401|403|invalid api key|invalid_grant|forbidden|auth/i;
+const AUTH_FAILURE =
+  /invalid key|unauthori[sz]ed|401|403|invalid api key|invalid_grant|forbidden|auth/i;
 
 async function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
   let timer: NodeJS.Timeout | undefined;
@@ -204,7 +205,10 @@ async function check(input: CheckInput, dev: boolean): Promise<Omit<CheckOutcome
           : {
               host: str(settings, 'host'),
               port: num(settings, 'port', 587),
-              security: str(settings, 'security', 'starttls') === 'implicit-tls' ? 'implicit-tls' : 'starttls',
+              security:
+                str(settings, 'security', 'starttls') === 'implicit-tls'
+                  ? 'implicit-tls'
+                  : 'starttls',
               username,
               password: username ? (secrets.password ?? null) : null,
               from: { email: fromEmail, name: str(settings, 'fromName', 'SimplexD') },
@@ -310,7 +314,8 @@ async function check(input: CheckInput, dev: boolean): Promise<Omit<CheckOutcome
               localDev: {
                 root: str(settings, 'devRoot', './uploads-dev'),
                 appUrl: input.appUrl,
-                signingSecret: process.env.DEV_STORAGE_SIGNING_SECRET || process.env.AUTH_SECRET || '',
+                signingSecret:
+                  process.env.DEV_STORAGE_SIGNING_SECRET || process.env.AUTH_SECRET || '',
               },
             }
           : {
@@ -360,7 +365,9 @@ async function check(input: CheckInput, dev: boolean): Promise<Omit<CheckOutcome
       const ping = await scanner.ping();
       return {
         ok: ping.ok,
-        message: ping.ok ? `Scanner responded (${ping.version ?? 'version unknown'})` : 'Scanner did not respond to PING',
+        message: ping.ok
+          ? `Scanner responded (${ping.version ?? 'version unknown'})`
+          : 'Scanner did not respond to PING',
         environmentDetected: input.environment,
         details: { version: ping.version },
         credentialInvalid: false,
@@ -387,7 +394,11 @@ async function check(input: CheckInput, dev: boolean): Promise<Omit<CheckOutcome
           ? `Style URLs accepted (${config.provider ?? 'unknown provider'}); tile delivery is verified in the browser`
           : 'Style URL is missing',
         environmentDetected: input.environment,
-        details: { provider: config.provider, tileHosts: config.tileHosts, warnings: config.warnings },
+        details: {
+          provider: config.provider,
+          tileHosts: config.tileHosts,
+          warnings: config.warnings,
+        },
         credentialInvalid: false,
       };
     }

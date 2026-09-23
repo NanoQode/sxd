@@ -9,7 +9,11 @@ import type {
 import { SMTP_ADMIN_FIELDS, smtpSettingsSchema } from '@simplexd/integrations/mail';
 import { GOOGLE_OAUTH_CALLBACK_PATH, googleRedirectUri } from '@simplexd/integrations/google';
 import { PROVIDER_CURRENCIES } from '@simplexd/integrations/payments';
-import { SMS_PURPOSES, TERMII_ADMIN_FIELDS, termiiSettingsSchema } from '@simplexd/integrations/sms';
+import {
+  SMS_PURPOSES,
+  TERMII_ADMIN_FIELDS,
+  termiiSettingsSchema,
+} from '@simplexd/integrations/sms';
 
 /**
  * Provider catalogue for Admin → Integrations. Each entry declares the
@@ -78,8 +82,14 @@ const googleSettingsSchema = z.object({
   /** Calendar the organiser books into after the OAuth grant; `primary` unless a shared calendar is chosen. */
   calendarId: z.string().trim().min(1).max(200).default('primary'),
   sharedCalendar: z.boolean().default(false),
-  workingHoursStart: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).default('09:00'),
-  workingHoursEnd: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).default('17:00'),
+  workingHoursStart: z
+    .string()
+    .regex(/^([01]\d|2[0-3]):[0-5]\d$/)
+    .default('09:00'),
+  workingHoursEnd: z
+    .string()
+    .regex(/^([01]\d|2[0-3]):[0-5]\d$/)
+    .default('17:00'),
   consultationMinutes: z.number().int().min(15).max(240).default(45),
   bufferMinutes: z.number().int().min(0).max(120).default(15),
 });
@@ -117,35 +127,67 @@ const termiiAdminSettingsSchema = termiiSettingsSchema
 
 const smtpAdminSettingsSchema = smtpSettingsSchema;
 
-
 export const PROVIDER_CATALOG: Record<IntegrationProvider, ProviderCatalogEntry> = {
   paystack: {
     settingsSchema: paystackSettingsSchema,
-    secretFields: { secretKey: { required: true }, publicKey: { required: true }, webhookSecret: { required: false } },
+    secretFields: {
+      secretKey: { required: true },
+      publicKey: { required: true },
+      webhookSecret: { required: false },
+    },
     descriptor: {
       provider: 'paystack',
       name: 'Paystack payments',
-      summary: 'Hosted checkout, server-side verification and signed webhooks. Test and live keys are kept apart.',
+      summary:
+        'Hosted checkout, server-side verification and signed webhooks. Test and live keys are kept apart.',
       adapters: [
         { id: 'paystack', label: 'Paystack', development: false },
         { id: 'dev', label: 'Development adapter (simulated gateway)', development: true },
       ],
       devAdapter: 'dev',
       fields: [
-        field('currency', 'Settlement currency', 'enum', { options: [...PROVIDER_CURRENCIES], required: true, help: 'NGN is the platform default; amounts are stored as integer kobo.' }),
-        field('enabledPurposes', 'Enabled payment purposes', 'string_list', { options: [...PAYMENT_PURPOSES], help: 'Only enabled purposes may create payment attempts.' }),
-        field('channels', 'Checkout channels', 'string_list', { options: ['card', 'bank', 'bank_transfer', 'ussd', 'qr', 'mobile_money'], help: 'Channels must also be enabled on the Paystack account.' }),
+        field('currency', 'Settlement currency', 'enum', {
+          options: [...PROVIDER_CURRENCIES],
+          required: true,
+          help: 'NGN is the platform default; amounts are stored as integer kobo.',
+        }),
+        field('enabledPurposes', 'Enabled payment purposes', 'string_list', {
+          options: [...PAYMENT_PURPOSES],
+          help: 'Only enabled purposes may create payment attempts.',
+        }),
+        field('channels', 'Checkout channels', 'string_list', {
+          options: ['card', 'bank', 'bank_transfer', 'ussd', 'qr', 'mobile_money'],
+          help: 'Channels must also be enabled on the Paystack account.',
+        }),
         field('displayName', 'Display name', 'string', { help: 'Shown in checkout metadata.' }),
       ],
       secrets: [
-        secret('secretKey', 'Secret key', 'sk_test_… or sk_live_…; the prefix must match the environment. Write-only, envelope-encrypted.', true),
-        secret('publicKey', 'Public key', 'pk_test_… or pk_live_…; used by the inline checkout.', true),
-        secret('webhookSecret', 'Webhook secret (optional)', 'Paystack signs webhooks with the secret key; set this only if your account uses a separate signing secret.'),
+        secret(
+          'secretKey',
+          'Secret key',
+          'sk_test_… or sk_live_…; the prefix must match the environment. Write-only, envelope-encrypted.',
+          true,
+        ),
+        secret(
+          'publicKey',
+          'Public key',
+          'pk_test_… or pk_live_…; used by the inline checkout.',
+          true,
+        ),
+        secret(
+          'webhookSecret',
+          'Webhook secret (optional)',
+          'Paystack signs webhooks with the secret key; set this only if your account uses a separate signing secret.',
+        ),
       ],
       secretsPermission: 'integrations.payment_credentials.manage',
       docsPath: 'docs/providers/paystack.md',
       links: [
-        { label: 'Paystack dashboard', href: 'https://dashboard.paystack.com/#/settings/developers', external: true },
+        {
+          label: 'Paystack dashboard',
+          href: 'https://dashboard.paystack.com/#/settings/developers',
+          external: true,
+        },
       ],
       facts: [{ label: 'Webhook URL', value: `${appUrl()}/api/v1/webhooks/paystack` }],
     },
@@ -156,31 +198,57 @@ export const PROVIDER_CATALOG: Record<IntegrationProvider, ProviderCatalogEntry>
     descriptor: {
       provider: 'termii',
       name: 'Termii SMS',
-      summary: 'Transactional and marketing SMS with delivery receipts, spend caps and an approved sender ID.',
+      summary:
+        'Transactional and marketing SMS with delivery receipts, spend caps and an approved sender ID.',
       adapters: [
         { id: 'termii', label: 'Termii', development: false },
         { id: 'dev', label: 'Development adapter (messages logged, not sent)', development: true },
       ],
       devAdapter: 'dev',
       fields: [
-        field('baseUrl', 'Base URL', 'url', { required: true, help: help(TERMII_ADMIN_FIELDS, 'baseUrl') }),
-        field('senderId', 'Approved sender ID', 'string', { required: true, help: help(TERMII_ADMIN_FIELDS, 'senderId') }),
-        field('enabledPurposes', 'Enabled message purposes', 'string_list', { options: [...SMS_PURPOSES], help: help(TERMII_ADMIN_FIELDS, 'enabledPurposes') }),
-        field('dailySendLimit', 'Daily sending limit', 'integer', { min: 0, help: help(TERMII_ADMIN_FIELDS, 'dailySendLimit') }),
-        field('dailySpendCapKobo', 'Daily spend cap (kobo)', 'integer', { min: 0, help: help(TERMII_ADMIN_FIELDS, 'dailySpendCapKobo') }),
-        field('unitCostKobo', 'Estimated cost per segment (kobo)', 'integer', { min: 0, help: 'Used for previews and spend accounting.' }),
-        field('testRecipient', 'Test recipient', 'string', { placeholder: '+2348012345678', help: help(TERMII_ADMIN_FIELDS, 'testRecipient') }),
+        field('baseUrl', 'Base URL', 'url', {
+          required: true,
+          help: help(TERMII_ADMIN_FIELDS, 'baseUrl'),
+        }),
+        field('senderId', 'Approved sender ID', 'string', {
+          required: true,
+          help: help(TERMII_ADMIN_FIELDS, 'senderId'),
+        }),
+        field('enabledPurposes', 'Enabled message purposes', 'string_list', {
+          options: [...SMS_PURPOSES],
+          help: help(TERMII_ADMIN_FIELDS, 'enabledPurposes'),
+        }),
+        field('dailySendLimit', 'Daily sending limit', 'integer', {
+          min: 0,
+          help: help(TERMII_ADMIN_FIELDS, 'dailySendLimit'),
+        }),
+        field('dailySpendCapKobo', 'Daily spend cap (kobo)', 'integer', {
+          min: 0,
+          help: help(TERMII_ADMIN_FIELDS, 'dailySpendCapKobo'),
+        }),
+        field('unitCostKobo', 'Estimated cost per segment (kobo)', 'integer', {
+          min: 0,
+          help: 'Used for previews and spend accounting.',
+        }),
+        field('testRecipient', 'Test recipient', 'string', {
+          placeholder: '+2348012345678',
+          help: help(TERMII_ADMIN_FIELDS, 'testRecipient'),
+        }),
       ],
       secrets: [
         secret('apiKey', 'API key', help(TERMII_ADMIN_FIELDS, 'apiKey'), true),
-        secret('webhookSecret', 'Webhook signing secret', help(TERMII_ADMIN_FIELDS, 'webhookSecret')),
+        secret(
+          'webhookSecret',
+          'Webhook signing secret',
+          help(TERMII_ADMIN_FIELDS, 'webhookSecret'),
+        ),
       ],
       secretsPermission: null,
       docsPath: 'docs/providers/termii.md',
-      links: [
-        { label: 'Termii dashboard', href: 'https://accounts.termii.com/', external: true },
+      links: [{ label: 'Termii dashboard', href: 'https://accounts.termii.com/', external: true }],
+      facts: [
+        { label: 'Delivery report webhook URL', value: `${appUrl()}/api/v1/webhooks/termii` },
       ],
-      facts: [{ label: 'Delivery report webhook URL', value: `${appUrl()}/api/v1/webhooks/termii` }],
     },
   },
   smtp: {
@@ -189,28 +257,56 @@ export const PROVIDER_CATALOG: Record<IntegrationProvider, ProviderCatalogEntry>
     descriptor: {
       provider: 'smtp',
       name: 'SMTP email',
-      summary: 'Outbound transactional email over implicit TLS or STARTTLS with an approved-sender-domain policy.',
+      summary:
+        'Outbound transactional email over implicit TLS or STARTTLS with an approved-sender-domain policy.',
       adapters: [
         { id: 'smtp', label: 'SMTP server', development: false },
         { id: 'dev', label: 'Development adapter (Mailpit / log only)', development: true },
       ],
       devAdapter: 'dev',
       fields: [
-        field('host', 'SMTP host', 'string', { required: true, help: help(SMTP_ADMIN_FIELDS, 'host') }),
-        field('port', 'Port', 'integer', { required: true, min: 1, max: 65535, help: help(SMTP_ADMIN_FIELDS, 'port') }),
-        field('security', 'Transport security', 'enum', { required: true, options: ['starttls', 'implicit-tls'], help: help(SMTP_ADMIN_FIELDS, 'security') }),
+        field('host', 'SMTP host', 'string', {
+          required: true,
+          help: help(SMTP_ADMIN_FIELDS, 'host'),
+        }),
+        field('port', 'Port', 'integer', {
+          required: true,
+          min: 1,
+          max: 65535,
+          help: help(SMTP_ADMIN_FIELDS, 'port'),
+        }),
+        field('security', 'Transport security', 'enum', {
+          required: true,
+          options: ['starttls', 'implicit-tls'],
+          help: help(SMTP_ADMIN_FIELDS, 'security'),
+        }),
         field('username', 'Username', 'string', { help: help(SMTP_ADMIN_FIELDS, 'username') }),
-        field('fromName', 'Sender name', 'string', { required: true, help: help(SMTP_ADMIN_FIELDS, 'fromName') }),
-        field('fromEmail', 'Sender address', 'email', { required: true, help: help(SMTP_ADMIN_FIELDS, 'fromEmail') }),
+        field('fromName', 'Sender name', 'string', {
+          required: true,
+          help: help(SMTP_ADMIN_FIELDS, 'fromName'),
+        }),
+        field('fromEmail', 'Sender address', 'email', {
+          required: true,
+          help: help(SMTP_ADMIN_FIELDS, 'fromEmail'),
+        }),
         field('replyTo', 'Reply-to', 'email', { help: help(SMTP_ADMIN_FIELDS, 'replyTo') }),
-        field('approvedSenderDomains', 'Approved sender domains', 'string_list', { help: help(SMTP_ADMIN_FIELDS, 'approvedSenderDomains') }),
-        field('testRecipient', 'Test recipient', 'email', { help: help(SMTP_ADMIN_FIELDS, 'testRecipient') }),
+        field('approvedSenderDomains', 'Approved sender domains', 'string_list', {
+          help: help(SMTP_ADMIN_FIELDS, 'approvedSenderDomains'),
+        }),
+        field('testRecipient', 'Test recipient', 'email', {
+          help: help(SMTP_ADMIN_FIELDS, 'testRecipient'),
+        }),
       ],
       secrets: [secret('password', 'Password', help(SMTP_ADMIN_FIELDS, 'password'))],
       secretsPermission: null,
       docsPath: 'docs/providers/smtp.md',
       links: [],
-      facts: [{ label: 'Host allow-list', value: 'Operator-controlled through SMTP_ALLOWED_HOSTS; hosts outside it are refused.' }],
+      facts: [
+        {
+          label: 'Host allow-list',
+          value: 'Operator-controlled through SMTP_ALLOWED_HOSTS; hosts outside it are refused.',
+        },
+      ],
     },
   },
   google_workspace: {
@@ -219,30 +315,62 @@ export const PROVIDER_CATALOG: Record<IntegrationProvider, ProviderCatalogEntry>
     descriptor: {
       provider: 'google_workspace',
       name: 'Google Workspace (Calendar + Meet)',
-      summary: 'OAuth client for the organiser grant. A client ID and secret alone is not a connected calendar: connect an organiser separately.',
+      summary:
+        'OAuth client for the organiser grant. A client ID and secret alone is not a connected calendar: connect an organiser separately.',
       adapters: [
         { id: 'google', label: 'Google Calendar API', development: false },
         { id: 'dev', label: 'Development adapter (simulated calendar)', development: true },
       ],
       devAdapter: 'dev',
       fields: [
-        field('clientId', 'OAuth client ID', 'string', { required: true, help: 'From Google Cloud → APIs & Services → Credentials (Web application).' }),
-        field('calendarId', 'Calendar', 'string', { help: '`primary` unless the organiser books into a shared calendar.' }),
-        field('sharedCalendar', 'Shared calendar (wider scope)', 'boolean', { help: 'Requests calendar.events instead of calendar.events.owned.' }),
+        field('clientId', 'OAuth client ID', 'string', {
+          required: true,
+          help: 'From Google Cloud → APIs & Services → Credentials (Web application).',
+        }),
+        field('calendarId', 'Calendar', 'string', {
+          help: '`primary` unless the organiser books into a shared calendar.',
+        }),
+        field('sharedCalendar', 'Shared calendar (wider scope)', 'boolean', {
+          help: 'Requests calendar.events instead of calendar.events.owned.',
+        }),
         field('workingHoursStart', 'Working hours start', 'string', { placeholder: '09:00' }),
         field('workingHoursEnd', 'Working hours end', 'string', { placeholder: '17:00' }),
-        field('consultationMinutes', 'Consultation length (minutes)', 'integer', { min: 15, max: 240 }),
-        field('bufferMinutes', 'Buffer between bookings (minutes)', 'integer', { min: 0, max: 120 }),
+        field('consultationMinutes', 'Consultation length (minutes)', 'integer', {
+          min: 15,
+          max: 240,
+        }),
+        field('bufferMinutes', 'Buffer between bookings (minutes)', 'integer', {
+          min: 0,
+          max: 120,
+        }),
       ],
-      secrets: [secret('clientSecret', 'OAuth client secret', 'Write-only. Rotate it in Google Cloud and here together.', true)],
+      secrets: [
+        secret(
+          'clientSecret',
+          'OAuth client secret',
+          'Write-only. Rotate it in Google Cloud and here together.',
+          true,
+        ),
+      ],
       secretsPermission: null,
       docsPath: 'docs/providers/google-workspace.md',
       links: [
-        { label: 'Connect an organiser (OAuth grant)', href: '/api/v1/calendar/connect', external: false },
-        { label: 'Google Cloud credentials', href: 'https://console.cloud.google.com/apis/credentials', external: true },
+        {
+          label: 'Connect an organiser (OAuth grant)',
+          href: '/api/v1/calendar/connect',
+          external: false,
+        },
+        {
+          label: 'Google Cloud credentials',
+          href: 'https://console.cloud.google.com/apis/credentials',
+          external: true,
+        },
       ],
       facts: [
-        { label: 'Authorised redirect URI', value: googleRedirectUri(appUrl(), GOOGLE_OAUTH_CALLBACK_PATH) },
+        {
+          label: 'Authorised redirect URI',
+          value: googleRedirectUri(appUrl(), GOOGLE_OAUTH_CALLBACK_PATH),
+        },
       ],
     },
   },
@@ -252,7 +380,8 @@ export const PROVIDER_CATALOG: Record<IntegrationProvider, ProviderCatalogEntry>
     descriptor: {
       provider: 'storage',
       name: 'Object storage',
-      summary: 'S3-compatible buckets for private uploads, quarantine and derivatives, with time-limited signed URLs.',
+      summary:
+        'S3-compatible buckets for private uploads, quarantine and derivatives, with time-limited signed URLs.',
       adapters: [
         { id: 's3', label: 'S3-compatible (AWS, MinIO, R2)', development: false },
         { id: 'local-dev', label: 'Local development storage', development: true },
@@ -260,12 +389,19 @@ export const PROVIDER_CATALOG: Record<IntegrationProvider, ProviderCatalogEntry>
       devAdapter: 'local-dev',
       fields: [
         field('region', 'Region', 'string', { required: true }),
-        field('endpoint', 'Custom endpoint', 'url', { help: 'MinIO/R2 only; leave empty for AWS.' }),
-        field('forcePathStyle', 'Path-style addressing', 'boolean', { help: 'Required by MinIO and most self-hosted stores.' }),
+        field('endpoint', 'Custom endpoint', 'url', {
+          help: 'MinIO/R2 only; leave empty for AWS.',
+        }),
+        field('forcePathStyle', 'Path-style addressing', 'boolean', {
+          help: 'Required by MinIO and most self-hosted stores.',
+        }),
         field('bucketPrivate', 'Private bucket', 'string', { required: true }),
         field('bucketQuarantine', 'Quarantine bucket', 'string', { required: true }),
         field('bucketDerivatives', 'Derivatives bucket', 'string'),
-        field('signedUrlTtlSeconds', 'Signed URL lifetime (seconds)', 'integer', { min: 60, max: 3600 }),
+        field('signedUrlTtlSeconds', 'Signed URL lifetime (seconds)', 'integer', {
+          min: 60,
+          max: 3600,
+        }),
         field('devRoot', 'Development storage folder', 'string', { help: 'Local adapter only.' }),
       ],
       secrets: [
@@ -308,19 +444,37 @@ export const PROVIDER_CATALOG: Record<IntegrationProvider, ProviderCatalogEntry>
     descriptor: {
       provider: 'maps',
       name: 'Map tiles and geocoding',
-      summary: 'Licensed vector tile provider for the Nigeria market map; community tile servers are refused in production.',
+      summary:
+        'Licensed vector tile provider for the Nigeria market map; community tile servers are refused in production.',
       adapters: [
-        { id: 'licensed', label: 'Licensed provider (MapTiler, Stadia, Mapbox, …)', development: false },
+        {
+          id: 'licensed',
+          label: 'Licensed provider (MapTiler, Stadia, Mapbox, …)',
+          development: false,
+        },
         { id: 'dev', label: 'Development tiles (community/demo servers)', development: true },
       ],
       devAdapter: 'dev',
       fields: [
-        field('styleUrlLight', 'Style URL (light)', 'url', { required: true, help: 'Restrict the key to the site origin in the provider dashboard; style URLs are public.' }),
+        field('styleUrlLight', 'Style URL (light)', 'url', {
+          required: true,
+          help: 'Restrict the key to the site origin in the provider dashboard; style URLs are public.',
+        }),
         field('styleUrlDark', 'Style URL (dark)', 'url'),
-        field('attribution', 'Attribution HTML', 'string', { help: 'Leave empty to use the provider default.' }),
-        field('geocodingProvider', 'Geocoding provider', 'enum', { options: ['none', 'maptiler', 'geoapify', 'mapbox'] }),
+        field('attribution', 'Attribution HTML', 'string', {
+          help: 'Leave empty to use the provider default.',
+        }),
+        field('geocodingProvider', 'Geocoding provider', 'enum', {
+          options: ['none', 'maptiler', 'geoapify', 'mapbox'],
+        }),
       ],
-      secrets: [secret('apiKey', 'Server-side API key (optional)', 'Used for geocoding requests made from the server.')],
+      secrets: [
+        secret(
+          'apiKey',
+          'Server-side API key (optional)',
+          'Used for geocoding requests made from the server.',
+        ),
+      ],
       secretsPermission: null,
       docsPath: 'docs/providers/maps.md',
       links: [],

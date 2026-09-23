@@ -40,18 +40,18 @@ const KEY_B = randomBytes(32).toString('base64');
 const keyringA: Keyring = keyringFromEnv({
   SECRETS_MASTER_KEY: KEY_A,
   SECRETS_MASTER_KEY_ID: 'key-a',
-});
+} as unknown as NodeJS.ProcessEnv);
 const keyringB: Keyring = keyringFromEnv({
   SECRETS_MASTER_KEY: KEY_B,
   SECRETS_MASTER_KEY_ID: 'key-b',
   SECRETS_PREVIOUS_MASTER_KEY: KEY_A,
   SECRETS_PREVIOUS_MASTER_KEY_ID: 'key-a',
-});
+} as unknown as NodeJS.ProcessEnv);
 
 const SECRET_KEY = 'sk_test_fixture_a1';
 const PUBLIC_KEY = 'pk_test_fixture_b2';
 const ROTATED_KEY = 'sk_test_fixture_c3';
-const TERMII_KEY = 'TLxyzTermiiApiKeySample1234567890';
+const TERMII_KEY = 'termii_fixture_k1';
 const ALL_SECRETS = [SECRET_KEY, PUBLIC_KEY, ROTATED_KEY, TERMII_KEY];
 
 const users = {
@@ -65,7 +65,12 @@ let admin: AdminContext;
 let adminNoMfa: AdminContext;
 let ops: AdminContext;
 const responses: unknown[] = [];
-const opts = { keyring: keyringA, appEnv: 'test', nodeEnv: 'test', appUrl: 'http://localhost:3000' };
+const opts = {
+  keyring: keyringA,
+  appEnv: 'test',
+  nodeEnv: 'test',
+  appUrl: 'http://localhost:3000',
+};
 
 function record<T>(value: T): T {
   responses.push(value);
@@ -79,7 +84,10 @@ beforeAll(async () => {
   await insertStaffUser(dbs.owner, users.noMfa, ['super_admin']);
   await insertStaffUser(dbs.owner, users.ops, ['operations_manager']);
   admin = contextFor(dbs.app, identityFor(users.admin, ['super_admin']));
-  adminNoMfa = contextFor(dbs.app, identityFor(users.noMfa, ['super_admin'], { mfaVerified: false }));
+  adminNoMfa = contextFor(
+    dbs.app,
+    identityFor(users.noMfa, ['super_admin'], { mfaVerified: false }),
+  );
   ops = contextFor(dbs.app, identityFor(users.ops, ['operations_manager']));
 });
 
@@ -108,7 +116,10 @@ describe('save (new version, never active)', () => {
     expect(dto.status).toBe('configured_unverified');
     expect(dto.isActive).toBe(false);
     expect(dto.developmentAdapter).toBe(true);
-    expect(dto.secrets.secretKey).toMatchObject({ set: true, fingerprint: fingerprintSecret(SECRET_KEY).slice(0, 8) });
+    expect(dto.secrets.secretKey).toMatchObject({
+      set: true,
+      fingerprint: fingerprintSecret(SECRET_KEY).slice(0, 8),
+    });
     expect(dto.secrets.webhookSecret).toMatchObject({ set: false, fingerprint: null });
 
     const rows = await dbs.owner
@@ -185,7 +196,13 @@ describe('save (new version, never active)', () => {
       await saveIntegration(
         adminNoMfa,
         'termii',
-        { environment: 'test', adapter: 'dev', settings: { senderId: 'SimplexD' }, secrets: {}, clearSecrets: [] },
+        {
+          environment: 'test',
+          adapter: 'dev',
+          settings: { senderId: 'SimplexD' },
+          secrets: {},
+          clearSecrets: [],
+        },
         opts,
       );
     } catch (err) {
@@ -200,7 +217,13 @@ describe('save (new version, never active)', () => {
       saveIntegration(
         ops,
         'paystack',
-        { environment: 'test', adapter: 'dev', settings: {}, secrets: { publicKey: PUBLIC_KEY }, clearSecrets: [] },
+        {
+          environment: 'test',
+          adapter: 'dev',
+          settings: {},
+          secrets: { publicKey: PUBLIC_KEY },
+          clearSecrets: [],
+        },
         opts,
       ),
     ).rejects.toBeInstanceOf(AuthorizationError);
@@ -209,7 +232,9 @@ describe('save (new version, never active)', () => {
 
 describe('test connection (real adapter result recorded on the version)', () => {
   it('records a labelled development result and an integration log entry', async () => {
-    const result = record(await testIntegration(admin, 'paystack', { environment: 'test', version: 1 }, opts));
+    const result = record(
+      await testIntegration(admin, 'paystack', { environment: 'test', version: 1 }, opts),
+    );
     expect(result.ok).toBe(true);
     expect(result.mode).toBe('development');
     expect(result.message).toMatch(/development adapter/i);
@@ -221,17 +246,44 @@ describe('test connection (real adapter result recorded on the version)', () => 
   });
 
   it('runs the Termii, scanner, storage, mail, calendar and maps development checks', async () => {
-    const saves: Array<[Parameters<typeof saveIntegration>[1], Record<string, unknown>, Record<string, string>]> = [
-      ['termii', { senderId: 'SimplexD', baseUrl: 'https://v3.api.termii.com' }, { apiKey: TERMII_KEY }],
+    const saves: Array<
+      [Parameters<typeof saveIntegration>[1], Record<string, unknown>, Record<string, string>]
+    > = [
+      [
+        'termii',
+        { senderId: 'SimplexD', baseUrl: 'https://v3.api.termii.com' },
+        { apiKey: TERMII_KEY },
+      ],
       ['scanner', { host: '127.0.0.1', port: 3310 }, {}],
       ['storage', { devRoot: './uploads-dev-test' }, {}],
-      ['smtp', { host: 'localhost', port: 1025, security: 'starttls', fromName: 'SimplexD', fromEmail: 'no-reply@example.test' }, {}],
-      ['google_workspace', { clientId: 'abc.apps.googleusercontent.com' }, { clientSecret: 'GOCSPX-sample-secret-value-1' }],
+      [
+        'smtp',
+        {
+          host: 'localhost',
+          port: 1025,
+          security: 'starttls',
+          fromName: 'SimplexD',
+          fromEmail: 'no-reply@example.test',
+        },
+        {},
+      ],
+      [
+        'google_workspace',
+        { clientId: 'abc.apps.googleusercontent.com' },
+        { clientSecret: 'fixture-client-secret-1' },
+      ],
       ['maps', { styleUrlLight: 'https://demotiles.maplibre.org/style.json' }, {}],
     ];
     for (const [provider, settings, secrets] of saves) {
       const adapter = provider === 'storage' ? 'local-dev' : 'dev';
-      record(await saveIntegration(admin, provider, { environment: 'test', adapter, settings, secrets, clearSecrets: [] }, opts));
+      record(
+        await saveIntegration(
+          admin,
+          provider,
+          { environment: 'test', adapter, settings, secrets, clearSecrets: [] },
+          opts,
+        ),
+      );
       const result = record(await testIntegration(admin, provider, { environment: 'test' }, opts));
       expect(result.mode, provider).toBe('development');
       expect(result.ok, `${provider}: ${result.message}`).toBe(true);
@@ -247,25 +299,42 @@ describe('test connection (real adapter result recorded on the version)', () => 
 
 describe('activate (requires a passed test on that version)', () => {
   it('refuses an untested version and accepts the tested one atomically', async () => {
-    await expect(activateIntegration(admin, 'paystack', { environment: 'test', version: 2 }, opts)).rejects.toMatchObject({
+    await expect(
+      activateIntegration(admin, 'paystack', { environment: 'test', version: 2 }, opts),
+    ).rejects.toMatchObject({
       code: 'invalid_transition',
     });
-    const active = record(await activateIntegration(admin, 'paystack', { environment: 'test', version: 1 }, opts));
+    const active = record(
+      await activateIntegration(admin, 'paystack', { environment: 'test', version: 1 }, opts),
+    );
     expect(active.isActive).toBe(true);
     expect(active.status).toBe('connected');
     expect(active.activatedBy).toBe(users.admin.id);
 
-    const loaded = await loadIntegrationConfig(dbs.app, 'paystack', { environment: 'test', keyring: keyringA });
+    const loaded = await loadIntegrationConfig(dbs.app, 'paystack', {
+      environment: 'test',
+      keyring: keyringA,
+    });
     expect(loaded?.version).toBe(1);
     expect(loaded?.secrets.secretKey).toBe(SECRET_KEY);
   });
 
   it('force-activates with a reason as "active, not verified" and deactivates the previous version', async () => {
     await expect(
-      activateIntegration(admin, 'paystack', { environment: 'test', version: 2, force: true }, opts),
+      activateIntegration(
+        admin,
+        'paystack',
+        { environment: 'test', version: 2, force: true },
+        opts,
+      ),
     ).rejects.toMatchObject({ code: 'validation_failed' });
     const forced = record(
-      await activateIntegration(admin, 'paystack', { environment: 'test', version: 2, force: true, reason: 'hotfix' }, opts),
+      await activateIntegration(
+        admin,
+        'paystack',
+        { environment: 'test', version: 2, force: true, reason: 'hotfix' },
+        opts,
+      ),
     );
     expect(forced.isActive).toBe(true);
     expect(forced.status).toBe('configured_unverified');
@@ -276,13 +345,20 @@ describe('activate (requires a passed test on that version)', () => {
     expect(rows.filter((r) => r.isActive)).toHaveLength(1);
     expect(rows.find((r) => r.version === 1)?.status).toBe('disconnected');
     // A passing test on the active version restores "connected".
-    const rerun = record(await testIntegration(admin, 'paystack', { environment: 'test', version: 2 }, opts));
+    const rerun = record(
+      await testIntegration(admin, 'paystack', { environment: 'test', version: 2 }, opts),
+    );
     expect(rerun.config.status).toBe('connected');
   });
 
   it('production refuses development adapters', async () => {
     await expect(
-      activateIntegration(admin, 'termii', { environment: 'test' }, { ...opts, appEnv: 'production' }),
+      activateIntegration(
+        admin,
+        'termii',
+        { environment: 'test' },
+        { ...opts, appEnv: 'production' },
+      ),
     ).rejects.toMatchObject({ code: 'invalid_transition' });
     const detail = record(await getIntegration(admin, 'termii', opts));
     expect(detail.environments.find((e) => e.environment === 'test')?.active).toBeNull();
@@ -292,7 +368,14 @@ describe('activate (requires a passed test on that version)', () => {
     const tested = await testIntegration(admin, 'scanner', { environment: 'test' }, opts);
     expect(tested.ok).toBe(true);
     record(await activateIntegration(admin, 'scanner', { environment: 'test' }, opts));
-    const disabled = record(await disableIntegration(admin, 'scanner', { environment: 'test', reason: 'maintenance window' }, opts));
+    const disabled = record(
+      await disableIntegration(
+        admin,
+        'scanner',
+        { environment: 'test', reason: 'maintenance window' },
+        opts,
+      ),
+    );
     expect(disabled.status).toBe('disabled');
     expect(disabled.isActive).toBe(false);
     const audits = await dbs.owner
@@ -316,7 +399,12 @@ describe('secret rotation', () => {
       await rotateIntegrationSecret(
         admin,
         'paystack',
-        { environment: 'test', field: 'secretKey', value: ROTATED_KEY, reason: 'quarterly rotation' },
+        {
+          environment: 'test',
+          field: 'secretKey',
+          value: ROTATED_KEY,
+          reason: 'quarterly rotation',
+        },
         opts,
       ),
     );
@@ -325,8 +413,12 @@ describe('secret rotation', () => {
     expect(result.activated).toBe(true);
     expect(result.config.isActive).toBe(true);
     expect(result.config.version).toBe(activePaystack.version + 1);
-    expect(result.config.secrets.secretKey.fingerprint).toBe(fingerprintSecret(ROTATED_KEY).slice(0, 8));
-    expect(result.config.secrets.publicKey.fingerprint).toBe(fingerprintSecret(PUBLIC_KEY).slice(0, 8));
+    expect(result.config.secrets.secretKey?.fingerprint).toBe(
+      fingerprintSecret(ROTATED_KEY).slice(0, 8),
+    );
+    expect(result.config.secrets.publicKey?.fingerprint).toBe(
+      fingerprintSecret(PUBLIC_KEY).slice(0, 8),
+    );
     expect(result.config.credentialRotatedAt).not.toBeNull();
 
     const [old] = await dbs.owner
@@ -334,11 +426,16 @@ describe('secret rotation', () => {
       .from(schema.secretReferences)
       .where(eq(schema.secretReferences.id, oldSecretId));
     expect(old!.retiredAt).not.toBeNull();
-    const loaded = await loadIntegrationConfig(dbs.app, 'paystack', { environment: 'test', keyring: keyringA });
+    const loaded = await loadIntegrationConfig(dbs.app, 'paystack', {
+      environment: 'test',
+      keyring: keyringA,
+    });
     expect(loaded?.secrets.secretKey).toBe(ROTATED_KEY);
     expect(loaded?.secrets.publicKey).toBe(PUBLIC_KEY);
 
-    const logs = record(await listIntegrationLogs(admin, 'paystack', { environment: 'test', limit: 100 }));
+    const logs = record(
+      await listIntegrationLogs(admin, 'paystack', { environment: 'test', limit: 100 }),
+    );
     expect(logs.some((l) => l.event === 'secret.rotated')).toBe(true);
   });
 
@@ -355,7 +452,12 @@ describe('secret rotation', () => {
 
   it('requires integrations.secrets.rotate', async () => {
     await expect(
-      rotateIntegrationSecret(ops, 'termii', { environment: 'test', field: 'apiKey', value: 'anotherTermiiKey123456', reason: 'x' }, opts),
+      rotateIntegrationSecret(
+        ops,
+        'termii',
+        { environment: 'test', field: 'apiKey', value: 'anotherTermiiKey123456', reason: 'x' },
+        opts,
+      ),
     ).rejects.toBeInstanceOf(AuthorizationError);
   });
 });
@@ -366,7 +468,10 @@ describe('master-key re-wrap', () => {
     expect(request.masterKeyId).toBe('key-b');
     expect(request.pending).toBeGreaterThan(0);
     expect(request.total).toBeGreaterThanOrEqual(request.pending);
-    const [job] = await dbs.owner.select().from(schema.jobs).where(eq(schema.jobs.id, request.jobId));
+    const [job] = await dbs.owner
+      .select()
+      .from(schema.jobs)
+      .where(eq(schema.jobs.id, request.jobId));
     expect(job?.type).toBe('integrations.rewrap_secrets');
 
     const report = await rewrapPendingSecrets(dbs.app, keyringB);
@@ -380,10 +485,19 @@ describe('master-key re-wrap', () => {
     }
     // Retired rows are left alone (still wrapped by key-a).
     expect(rows.filter((r) => r.retiredAt).every((r) => r.masterKeyId === 'key-a')).toBe(true);
-    const loaded = await loadIntegrationConfig(dbs.app, 'paystack', { environment: 'test', keyring: keyringB });
+    const loaded = await loadIntegrationConfig(dbs.app, 'paystack', {
+      environment: 'test',
+      keyring: keyringB,
+    });
     expect(loaded?.secrets.secretKey).toBe(ROTATED_KEY);
 
-    const again = record(await requestRewrap(admin, { ...opts, keyring: keyringB, now: () => new Date(Date.now() + 120_000) }));
+    const again = record(
+      await requestRewrap(admin, {
+        ...opts,
+        keyring: keyringB,
+        now: () => new Date(Date.now() + 120_000),
+      }),
+    );
     expect(again.pending).toBe(0);
   });
 });
@@ -395,7 +509,7 @@ describe('responses never contain secret material', () => {
     const paystack = overview.items.find((i) => i.provider === 'paystack')!;
     const test = paystack.environments.find((e) => e.environment === 'test')!;
     expect(test.status).toBe('connected');
-    expect(test.active?.secrets.secretKey.masked).toMatch(/fingerprint/);
+    expect(test.active?.secrets.secretKey?.masked).toMatch(/fingerprint/);
     expect(overview.secretsNeedingRewrap).toBe(0);
     record(await getIntegration(admin, 'paystack', opts));
     record(await getIntegration(ops, 'smtp', opts));
@@ -407,7 +521,7 @@ describe('responses never contain secret material', () => {
     return secretRowsPromise.then((rows) => {
       const forbidden = [
         ...ALL_SECRETS,
-        'GOCSPX-sample-secret-value-1',
+        'fixture-client-secret-1',
         ...rows.map((r) => r.ciphertext.toString('base64')),
         ...rows.map((r) => r.wrappedDek.toString('base64')),
         ...rows.map((r) => r.ciphertext.toString('hex')),

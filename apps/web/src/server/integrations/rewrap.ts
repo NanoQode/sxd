@@ -72,7 +72,11 @@ export async function rewrapPendingSecrets(db: Database, keyring: Keyring): Prom
       metadataSanitized: {
         masterKeyId: keyring.current.id,
         rewrapped: report.rewrapped,
-        failed: report.failed.map((f) => ({ id: f.id, provider: f.provider, fieldName: f.fieldName })),
+        failed: report.failed.map((f) => ({
+          id: f.id,
+          provider: f.provider,
+          fieldName: f.fieldName,
+        })),
       },
     });
     return report;

@@ -94,7 +94,8 @@ function remedialAction(row: ConfigRow): string | null {
         ? 'This version was superseded; activate a tested version.'
         : 'Save settings and secrets, then run the connection test.';
     case 'configured_unverified':
-      if (row.lastCheckOk === true) return 'Test passed on this version; activate it to start using it.';
+      if (row.lastCheckOk === true)
+        return 'Test passed on this version; activate it to start using it.';
       if (row.lastCheckOk === false)
         return `Last test failed: ${row.lastCheckMessage ?? 'no details'}. Fix the settings or credentials, save and test again.`;
       return 'Run the connection test before activating.';
@@ -458,9 +459,13 @@ export async function saveIntegration(
   const touchesSecrets = Object.keys(input.secrets).length > 0 || input.clearSecrets.length > 0;
   authorizeWrite(ctx, provider, 'integrations.manage', touchesSecrets);
   if (!adapterAllowed(provider, input.adapter))
-    throw new ApiError('validation_failed', `adapter ${input.adapter} is not available for ${provider}`, {
-      details: [{ path: 'adapter', message: 'unknown adapter' }],
-    });
+    throw new ApiError(
+      'validation_failed',
+      `adapter ${input.adapter} is not available for ${provider}`,
+      {
+        details: [{ path: 'adapter', message: 'unknown adapter' }],
+      },
+    );
   const settings = entry.settingsSchema.parse(input.settings) as Record<string, unknown>;
   for (const key of [...Object.keys(input.secrets), ...input.clearSecrets]) {
     if (!(key in entry.secretFields))
@@ -713,15 +718,25 @@ async function activateRow(
           : `version ${row.version} has not passed a connection test; run "Test connection" first`,
       );
     if (!input.reason || input.reason.trim().length < 3)
-      throw new ApiError('validation_failed', 'forcing activation without a passed test requires a reason', {
-        details: [{ path: 'reason', message: 'required with force' }],
-      });
+      throw new ApiError(
+        'validation_failed',
+        'forcing activation without a passed test requires a reason',
+        {
+          details: [{ path: 'reason', message: 'required with force' }],
+        },
+      );
   }
   const at = now();
   const userId = actorId(ctx);
   const previous = await tx
     .update(schema.integrationConfigs)
-    .set({ isActive: false, enabled: false, status: 'disconnected', updatedBy: userId, updatedAt: at })
+    .set({
+      isActive: false,
+      enabled: false,
+      status: 'disconnected',
+      updatedBy: userId,
+      updatedAt: at,
+    })
     .where(
       and(
         eq(schema.integrationConfigs.provider, provider),
@@ -731,7 +746,8 @@ async function activateRow(
       ),
     )
     .returning({ id: schema.integrationConfigs.id, version: schema.integrationConfigs.version });
-  const status: IntegrationStatus = row.lastCheckOk === true ? 'connected' : 'configured_unverified';
+  const status: IntegrationStatus =
+    row.lastCheckOk === true ? 'connected' : 'configured_unverified';
   const [updated] = await tx
     .update(schema.integrationConfigs)
     .set({
@@ -750,7 +766,12 @@ async function activateRow(
     entityType: 'integration_config',
     entityId: row.id,
     before: { activeVersion: previous[0]?.version ?? null },
-    after: { activeVersion: row.version, status, forced: row.lastCheckOk !== true, adapter: row.adapter },
+    after: {
+      activeVersion: row.version,
+      status,
+      forced: row.lastCheckOk !== true,
+      adapter: row.adapter,
+    },
     reason: input.reason ?? null,
     correlationId: ctx.correlationId,
   });
@@ -772,7 +793,12 @@ async function activateRow(
 export async function activateIntegration(
   ctx: AdminContext,
   providerName: string,
-  input: { environment: IntegrationEnvironment; version?: number; force?: boolean; reason?: string },
+  input: {
+    environment: IntegrationEnvironment;
+    version?: number;
+    force?: boolean;
+    reason?: string;
+  },
   opts: IntegrationServiceOptions = {},
 ): Promise<IntegrationConfigDto> {
   const provider = providerOrThrow(providerName);
@@ -781,7 +807,13 @@ export async function activateIntegration(
     const row = await loadVersion(tx, provider, input.environment, input.version);
     const updated = row.isActive
       ? row
-      : await activateRow(ctx, tx, row, { force: input.force ?? false, reason: input.reason }, opts);
+      : await activateRow(
+          ctx,
+          tx,
+          row,
+          { force: input.force ?? false, reason: input.reason },
+          opts,
+        );
     const metas = await secretMeta(tx, [updated]);
     return toDto(updated, metas);
   });
@@ -804,7 +836,13 @@ export async function disableIntegration(
     const userId = actorId(ctx);
     const [updated] = await tx
       .update(schema.integrationConfigs)
-      .set({ isActive: false, enabled: false, status: 'disabled', updatedBy: userId, updatedAt: at })
+      .set({
+        isActive: false,
+        enabled: false,
+        status: 'disabled',
+        updatedBy: userId,
+        updatedAt: at,
+      })
       .where(eq(schema.integrationConfigs.id, target.id))
       .returning();
     await recordAudit(tx, ctx.identity, {
@@ -869,7 +907,8 @@ export async function rotateIntegrationSecret(
   return transact(ctx, async (tx) => {
     const rows = await loadRows(tx, provider, input.environment);
     const source = rows.find((r) => r.isActive) ?? rows[0];
-    if (!source) throw new ApiError('not_found', `${provider} has no saved configuration to rotate`);
+    if (!source)
+      throw new ApiError('not_found', `${provider} has no saved configuration to rotate`);
     paystackKeyGuard(provider, source.adapter, input.environment, { [input.field]: input.value });
     const at = now();
     const oldId = source.secretIds?.[input.field] ?? null;
@@ -1019,7 +1058,10 @@ export async function requestRewrap(
     const job = await enqueueJob(tx, {
       type: 'integrations.rewrap_secrets',
       queue: 'default',
-      payload: { masterKeyId: keyring.current.id, requestedBy: ctx.identity.session?.user.id ?? null },
+      payload: {
+        masterKeyId: keyring.current.id,
+        requestedBy: ctx.identity.session?.user.id ?? null,
+      },
       dedupeKey: `integrations.rewrap:${keyring.current.id}:${bucket}`,
       actorUserId: ctx.identity.session?.user.id ?? null,
       correlationId: ctx.correlationId,

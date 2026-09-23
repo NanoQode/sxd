@@ -15,13 +15,24 @@ interface RewrapResponse {
 }
 
 /** Enqueues the master-key re-wrap job; never touches secret values in the browser. */
-export function RewrapButton({ pending, masterKeyId, disabled }: { pending: number; masterKeyId: string; disabled: boolean }) {
+export function RewrapButton({
+  pending,
+  masterKeyId,
+  disabled,
+}: {
+  pending: number;
+  masterKeyId: string;
+  disabled: boolean;
+}) {
   const router = useRouter();
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
 
   async function confirm() {
-    const res = await apiFetch<RewrapResponse>('/api/v1/admin/integrations/rewrap', { method: 'POST', body: {} });
+    const res = await apiFetch<RewrapResponse>('/api/v1/admin/integrations/rewrap', {
+      method: 'POST',
+      body: {},
+    });
     toast({
       title: res.deduplicated ? 'Re-wrap already queued' : 'Re-wrap queued',
       description: `${res.pending} of ${res.total} secrets will be re-wrapped under ${res.masterKeyId}.`,
@@ -32,7 +43,12 @@ export function RewrapButton({ pending, masterKeyId, disabled }: { pending: numb
 
   return (
     <>
-      <Button variant="secondary" onClick={() => setOpen(true)} disabled={disabled} title={disabled ? 'Requires a verified authenticator' : undefined}>
+      <Button
+        variant="secondary"
+        onClick={() => setOpen(true)}
+        disabled={disabled}
+        title={disabled ? 'Requires a verified authenticator' : undefined}
+      >
         Re-wrap secrets{pending > 0 ? ` (${pending})` : ''}
       </Button>
       <ActionDialog
