@@ -87,7 +87,7 @@ The header badge shows what was verified, as recorded on the partner profile: st
 
 ## Known gaps (API side)
 
-- **Bid attachments.** `org_document` upload intents need an active customer organisation, which a partner does not have. The bid workspace tries the upload and, on refusal, explains the gap and suggests sending documents through Messages.
+- **Bid attachments.** Uploaded with the `partner_submission` purpose: the file belongs to you, is scanned before use, and SimplexD evaluators can read it only after the sealed bid is opened.
 - **Discrepancies.** Suppliers can read them but not respond; only staff move them between states. The page points to Messages.
 - **No partner-wide visit list.** Visits are gathered per project from `/api/v1/projects/{id}/site-visits` and filtered to the named inspector.
 - **Large photos.** Multipart uploads (over 64 MB) are not handled in field sync. Such a photo is refused, with the reason shown.

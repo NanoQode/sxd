@@ -429,7 +429,7 @@ function BidEditor({
     setUploading(true);
     setUploadProblem(null);
     try {
-      const res = await uploadFile(file, { purpose: 'org_document' });
+      const res = await uploadFile(file, { purpose: 'partner_submission' });
       if (res.outcome === 'rejected') {
         setUploadProblem(res.file.statusReason ?? 'the file was rejected');
         return;
@@ -442,9 +442,8 @@ function BidEditor({
       });
     } catch (err) {
       setUploadProblem(
-        err instanceof ApiClientError &&
-          (err.code === 'forbidden' || err.code === 'validation_failed')
-          ? `The upload API has no purpose for partner bid attachments outside a customer organisation (server said: ${err.message}). This is a known API gap; send documents to staff through Messages until it is added.`
+        err instanceof ApiClientError && err.code === 'forbidden'
+          ? 'Only verified partner accounts can attach documents to a bid. Ask SimplexD to complete your partner verification.'
           : errorMessage(err),
       );
     } finally {
