@@ -1,0 +1,40 @@
+{
+  "event": "charge.dispute.create",
+  "data": {
+    "id": 3867,
+    "refund_amount": 10000,
+    "currency": "NGN",
+    "status": "awaiting-merchant-feedback",
+    "resolution": null,
+    "domain": "live",
+    "transaction": {
+      "id": 302961,
+      "domain": "live",
+      "status": "success",
+      "reference": "qTPrJoy9Bx",
+      "amount": 10000,
+      "currency": "NGN",
+      "channel": "card",
+      "paid_at": "2016-09-30T21:10:19.000Z"
+    },
+    "category": "chargeback",
+    "customer": {
+      "id": 68324,
+      "first_name": "BoJack",
+      "last_name": "Horseman",
+      "email": "bojack@horseman.com",
+      "customer_code": "CUS_qo38as2hpsgk2r0"
+    },
+    "bin": "539999",
+    "last4": "8877",
+    "dueAt": "2016-10-02T21:10:19.000Z",
+    "resolvedAt": null,
+    "evidence": null,
+    "attachments": null,
+    "note": null,
+    "history": [],
+    "messages": [],
+    "created_at": "2016-09-30T22:00:00.000Z",
+    "updated_at": "2016-09-30T22:00:00.000Z"
+  }
+}

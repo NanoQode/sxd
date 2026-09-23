@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 480" width="640" height="480" role="img" aria-labelledby="t">
+  <title id="t">Abstract map with location pins carrying evidence badges</title>
+  <defs>
+    <pattern id="dots" width="24" height="24" patternUnits="userSpaceOnUse">
+      <circle cx="12" cy="12" r="1.5" fill="#1f5f4b" fill-opacity="0.25"/>
+    </pattern>
+  </defs>
+  <rect x="24" y="24" width="592" height="432" rx="16" fill="#1f5f4b" fill-opacity="0.06"/>
+  <rect x="24" y="24" width="592" height="432" rx="16" fill="url(#dots)"/>
+  <path d="M60 300 C 160 220, 240 340, 330 260 S 520 180, 600 240" fill="none" stroke="#1f7a8c" stroke-width="3" stroke-opacity="0.6" stroke-linecap="round"/>
+  <path d="M120 420 C 220 380, 260 300, 380 340 S 540 400, 590 360" fill="none" stroke="#1f7a8c" stroke-width="3" stroke-opacity="0.4" stroke-linecap="round"/>
+  <g transform="translate(200 210)">
+    <path d="M0 40 C -22 12 -28 4 -28 -12 a28 28 0 1 1 56 0 c0 16 -6 24 -28 52z" fill="#1f5f4b"/>
+    <circle cy="-12" r="10" fill="#ffffff"/>
+    <rect x="-52" y="52" width="104" height="22" rx="11" fill="#2f5f9e"/>
+    <text y="67" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#ffffff" text-anchor="middle">sourced · dated</text>
+  </g>
+  <g transform="translate(400 160)">
+    <path d="M0 40 C -22 12 -28 4 -28 -12 a28 28 0 1 1 56 0 c0 16 -6 24 -28 52z" fill="#c8a04b"/>
+    <circle cy="-12" r="10" fill="#ffffff"/>
+    <rect x="-52" y="52" width="104" height="22" rx="11" fill="#7a5c2e"/>
+    <text y="67" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#ffffff" text-anchor="middle">statewide context</text>
+  </g>
+  <g transform="translate(480 330)">
+    <path d="M0 40 C -22 12 -28 4 -28 -12 a28 28 0 1 1 56 0 c0 16 -6 24 -28 52z" fill="#6b716d"/>
+    <circle cy="-12" r="10" fill="#ffffff"/>
+    <rect x="-40" y="52" width="80" height="22" rx="11" fill="#6b716d"/>
+    <text y="67" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#ffffff" text-anchor="middle">unknown</text>
+  </g>
+</svg>

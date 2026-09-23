@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 480" width="640" height="480" role="img" aria-labelledby="t">
+  <title id="t">Illustration of a site plan with a measured plot, a building footprint and a north arrow</title>
+  <defs>
+    <pattern id="grid" width="32" height="32" patternUnits="userSpaceOnUse">
+      <path d="M32 0H0V32" fill="none" stroke="#1f5f4b" stroke-opacity="0.12" stroke-width="1"/>
+    </pattern>
+  </defs>
+  <rect x="24" y="24" width="592" height="432" rx="16" fill="#1f5f4b" fill-opacity="0.06"/>
+  <rect x="24" y="24" width="592" height="432" rx="16" fill="url(#grid)"/>
+  <path d="M120 120 L440 96 L472 372 L136 388 Z" fill="#ffffff" fill-opacity="0.55" stroke="#1f5f4b" stroke-width="3" stroke-linejoin="round"/>
+  <rect x="200" y="176" width="176" height="128" rx="6" fill="#1f5f4b" fill-opacity="0.85"/>
+  <rect x="384" y="216" width="56" height="88" rx="4" fill="#c8a04b" fill-opacity="0.9"/>
+  <path d="M120 120 L120 92 M440 96 L440 68 M120 80 L440 80" stroke="#1f7a8c" stroke-width="2" stroke-linecap="round"/>
+  <text x="280" y="72" font-family="Inter, system-ui, sans-serif" font-size="14" fill="#1f7a8c" text-anchor="middle">measured in m²</text>
+  <path d="M136 388 L108 388 M472 372 L500 372 M100 388 L100 120 M100 120 L120 120" stroke="#1f7a8c" stroke-width="2" stroke-linecap="round"/>
+  <g transform="translate(548 96)">
+    <circle r="28" fill="#ffffff" fill-opacity="0.7" stroke="#1f5f4b" stroke-width="2"/>
+    <path d="M0 -18 L8 8 L0 2 L-8 8 Z" fill="#1f5f4b"/>
+    <text y="46" font-family="Inter, system-ui, sans-serif" font-size="12" fill="#1f5f4b" text-anchor="middle">N</text>
+  </g>
+  <g transform="translate(160 420)">
+    <rect width="120" height="6" fill="#1f5f4b"/>
+    <rect x="60" width="60" height="6" fill="#c8a04b"/>
+    <text y="-6" font-family="Inter, system-ui, sans-serif" font-size="12" fill="#1f5f4b">0 m — declared unit retained</text>
+  </g>
+</svg>

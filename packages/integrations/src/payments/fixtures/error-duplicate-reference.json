@@ -1,0 +1,8 @@
+{
+  "status": false,
+  "message": "Duplicate Transaction Reference",
+  "meta": { "nextStep": "Try and create the Transaction or Charge with a new reference" },
+  "type": "validation_error",
+  "code": "duplicate_reference",
+  "errorCodeMappingNotFound": false
+}

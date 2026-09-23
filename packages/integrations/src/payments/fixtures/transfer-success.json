@@ -1,0 +1,34 @@
+{
+  "event": "transfer.success",
+  "data": {
+    "amount": 100000,
+    "createdAt": "2025-08-04T10:32:40.000Z",
+    "currency": "NGN",
+    "domain": "test",
+    "failures": null,
+    "id": 860703114,
+    "integration": {
+      "id": 463433,
+      "is_live": true,
+      "business_name": "Paystack Demo",
+      "logo_path": "…"
+    },
+    "reason": "Bonus for the week",
+    "reference": "acv_9ee55786-2323-4760-98e2-6380c9cb3f68",
+    "source": "balance",
+    "source_details": null,
+    "status": "success",
+    "titan_code": null,
+    "transfer_code": "TRF_v5tip3zx8nna9o78",
+    "transferred_at": null,
+    "updatedAt": "2025-08-04T10:32:40.000Z",
+    "recipient": {
+      "type": "nuban",
+      "recipient_code": "RCP_gd9vgag7n5lr5ix",
+      "details": { "account_number": "9876543210", "bank_code": "044", "bank_name": "Access Bank" }
+    },
+    "session": { "provider": null, "id": null },
+    "fee_charged": 0,
+    "gateway_response": null
+  }
+}

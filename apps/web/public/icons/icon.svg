@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <!-- Placeholder monogram until approved brand assets arrive (settings brand.assets_approved). -->
+  <rect width="256" height="256" rx="56" fill="#1f5f4b"/>
+  <text x="128" y="164" font-family="Inter, system-ui, sans-serif" font-size="120" font-weight="700" fill="#f8f6f1" text-anchor="middle">S</text>
+  <circle cx="196" cy="68" r="18" fill="#c8a04b"/>
+</svg>
