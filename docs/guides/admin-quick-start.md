@@ -204,6 +204,25 @@ awards). _Verification queue_ opens `/admin/access/partners`.
   _Mark submitted to bank_ → _Record settlement_ with the bank reference, or _Mark failed_.
 - **Rent invoicing run** runs the hourly rent job on demand and shows its result.
 
+## Listings (`/admin/listings`)
+
+- **Queue:** listings awaiting a decision, oldest first, plus views for published, expired,
+  rejected, drafts, withdrawn and closed. Open a listing to see the revision under review (changed
+  fields are marked against the published one), the owner authority state, media with its
+  public-use approval, the verification scope, offers, inquiries and the transaction.
+- **Decisions** (need `content.publish`): _Approve and publish_ publishes the current revision for
+  90 days (refused while the owner authority is not verified; a revision asking for exact
+  coordinates needs the explicit approval tick), _Request changes_ and _Reject_ (reason required,
+  sent to the owner; a live listing keeps its approved revision), _Mark as duplicate_ (the listing
+  leaves the public site and its URL points to the original).
+- **Verification checks** (need `rentals.manage`): _Record a check_ appends what was checked, the
+  outcome, your name, the date and an expiry; it appears publicly with exactly those words and is
+  never rewritten. Publication records the owner-authority check automatically.
+- **Inquiries** raised from a listing are leads (`/admin/leads`; the lead page links back to the
+  listing). The owner sees only the count.
+- **Run expiry job now** expires lapsed listings and offers immediately (the worker runs it
+  hourly).
+
 ## Communications (`/admin/communications`)
 
 Notification templates, explicit test sends, the delivery log and suppressions. Provider

@@ -9,200 +9,217 @@ Every workflow state lives in the database; transitions are explicit, permission
 States: `pending_confirmation`, `confirmed`, `rescheduled`, `cancelled`, `completed`, `no_show`.
 Initial: `pending_confirmation`. Terminal: `cancelled`, `completed`, `no_show`.
 
-| From                                               | To            | Who                     | Permission | Reason required | Effect                                                           |
-| -------------------------------------------------- | ------------- | ----------------------- | ---------- | :-------------: | ---------------------------------------------------------------- |
-| `pending_confirmation`                             | `confirmed`   | system, staff           |            |                 | Slot reservation converted; calendar sync queued.                |
-| `confirmed`, `rescheduled`                         | `rescheduled` | customer, staff, system |            |                 | Linked calendar event updated; reminders reset.                  |
-| `pending_confirmation`, `confirmed`, `rescheduled` | `cancelled`   | customer, staff, system |            |        ✓        | Capacity released; attendees notified; calendar event cancelled. |
-| `confirmed`, `rescheduled`                         | `completed`   | staff, system           |            |                 |                                                                  |
-| `confirmed`, `rescheduled`                         | `no_show`     | staff                   |            |                 |                                                                  |
+| From | To | Who | Permission | Reason required | Effect |
+|---|---|---|---|:-:|---|
+| `pending_confirmation` | `confirmed` | system, staff |  |  | Slot reservation converted; calendar sync queued. |
+| `confirmed`, `rescheduled` | `rescheduled` | customer, staff, system |  |  | Linked calendar event updated; reminders reset. |
+| `pending_confirmation`, `confirmed`, `rescheduled` | `cancelled` | customer, staff, system |  | ✓ | Capacity released; attendees notified; calendar event cancelled. |
+| `confirmed`, `rescheduled` | `completed` | staff, system |  |  |  |
+| `confirmed`, `rescheduled` | `no_show` | staff |  |  |  |
 
 ## bid
 
 States: `draft`, `submitted`, `withdrawn`, `disqualified`, `evaluated`, `awarded`, `unsuccessful`.
 Initial: `draft`. Terminal: `withdrawn`, `disqualified`, `awarded`, `unsuccessful`.
 
-| From                 | To             | Who           | Permission            | Reason required | Effect                                                   |
-| -------------------- | -------------- | ------------- | --------------------- | :-------------: | -------------------------------------------------------- |
-| `draft`              | `submitted`    | partner       | `partner.bids.submit` |                 | Only before the effective deadline; atomic server check. |
-| `submitted`          | `submitted`    | partner       | `partner.bids.submit` |                 | New revision before the deadline.                        |
-| `draft`, `submitted` | `withdrawn`    | partner       |                       |        ✓        |                                                          |
-| `submitted`          | `disqualified` | staff         | `bids.evaluate`       |        ✓        |                                                          |
-| `submitted`          | `evaluated`    | staff         | `bids.evaluate`       |                 |                                                          |
-| `evaluated`          | `awarded`      | staff         | `tenders.manage`      |                 |                                                          |
-| `evaluated`          | `unsuccessful` | staff, system |                       |                 |                                                          |
+| From | To | Who | Permission | Reason required | Effect |
+|---|---|---|---|:-:|---|
+| `draft` | `submitted` | partner | `partner.bids.submit` |  | Only before the effective deadline; atomic server check. |
+| `submitted` | `submitted` | partner | `partner.bids.submit` |  | New revision before the deadline. |
+| `draft`, `submitted` | `withdrawn` | partner |  | ✓ |  |
+| `submitted` | `disqualified` | staff | `bids.evaluate` | ✓ |  |
+| `submitted` | `evaluated` | staff | `bids.evaluate` |  |  |
+| `evaluated` | `awarded` | staff | `tenders.manage` |  |  |
+| `evaluated` | `unsuccessful` | staff, system |  |  |  |
 
 ## change_order
 
 States: `draft`, `submitted`, `customer_review`, `staff_review`, `approved`, `rejected`, `withdrawn`.
 Initial: `draft`. Terminal: `approved`, `rejected`, `withdrawn`.
 
-| From                                                    | To                | Who             | Permission                    | Reason required | Effect                                                               |
-| ------------------------------------------------------- | ----------------- | --------------- | ----------------------------- | :-------------: | -------------------------------------------------------------------- |
-| `draft`                                                 | `submitted`       | staff, partner  |                               |                 |                                                                      |
-| `submitted`                                             | `staff_review`    | system          |                               |                 |                                                                      |
-| `staff_review`                                          | `customer_review` | staff           | `change_orders.staff_approve` |                 | Staff approval recorded; customer approval still required by policy. |
-| `staff_review`, `customer_review`                       | `rejected`        | staff, customer |                               |        ✓        |                                                                      |
-| `customer_review`                                       | `approved`        | customer        | `org.change_orders.approve`   |                 | Only now does the approved budget version change.                    |
-| `draft`, `submitted`, `staff_review`, `customer_review` | `withdrawn`       | staff, partner  |                               |        ✓        |                                                                      |
+| From | To | Who | Permission | Reason required | Effect |
+|---|---|---|---|:-:|---|
+| `draft` | `submitted` | staff, partner |  |  |  |
+| `submitted` | `staff_review` | system |  |  |  |
+| `staff_review` | `customer_review` | staff | `change_orders.staff_approve` |  | Staff approval recorded; customer approval still required by policy. |
+| `staff_review`, `customer_review` | `rejected` | staff, customer |  | ✓ |  |
+| `customer_review` | `approved` | customer | `org.change_orders.approve` |  | Only now does the approved budget version change. |
+| `draft`, `submitted`, `staff_review`, `customer_review` | `withdrawn` | staff, partner |  | ✓ |  |
 
 ## engagement
 
 States: `inquiry`, `triage`, `quoted`, `accepted`, `awaiting_payment`, `in_progress`, `in_review`, `delivered`, `completed`, `rejected`, `paused`, `cancelled`.
 Initial: `inquiry`. Terminal: `completed`, `rejected`, `cancelled`.
 
-| From                                                                              | To                 | Who              | Permission                  | Reason required | Effect                                                                                              |
-| --------------------------------------------------------------------------------- | ------------------ | ---------------- | --------------------------- | :-------------: | --------------------------------------------------------------------------------------------------- |
-| `inquiry`                                                                         | `triage`           | staff, system    | `service_requests.triage`   |                 |                                                                                                     |
-| `triage`                                                                          | `quoted`           | staff            | `quotes.issue`              |                 | A quote version is issued to the customer.                                                          |
-| `triage`                                                                          | `rejected`         | staff            | `service_requests.triage`   |        ✓        | No billing.                                                                                         |
-| `quoted`                                                                          | `quoted`           | staff            | `quotes.issue`              |                 | A new quote version supersedes the previous one.                                                    |
-| `quoted`                                                                          | `accepted`         | customer         | `org.quotes.accept`         |                 | Acceptance recorded with signature name, terms version and IP hash.                                 |
-| `quoted`                                                                          | `rejected`         | customer, staff  |                             |        ✓        | No billing.                                                                                         |
-| `accepted`                                                                        | `awaiting_payment` | system, staff    | `finance.invoices.manage`   |                 | Deposit or full invoice issued.                                                                     |
-| `accepted`                                                                        | `in_progress`      | staff, system    | `service_requests.assign`   |                 | Work starts without upfront payment (policy decision).                                              |
-| `awaiting_payment`                                                                | `in_progress`      | system, staff    | `service_requests.override` |                 | Verified payment or staff override with reason.                                                     |
-| `in_progress`                                                                     | `in_review`        | staff, partner   |                             |                 | Deliverable submitted for review.                                                                   |
-| `in_review`                                                                       | `in_progress`      | staff            | `reports.review`            |        ✓        | Changes requested.                                                                                  |
-| `in_review`                                                                       | `delivered`        | staff            | `reports.release`           |                 | Reviewed deliverable released to the customer.                                                      |
-| `delivered`                                                                       | `completed`        | customer, system |                             |                 | Customer confirms or auto-completes after the review window; feedback requested.                    |
-| `delivered`                                                                       | `in_progress`      | customer, staff  |                             |        ✓        | Customer disputes the deliverable; rework.                                                          |
-| `accepted`, `awaiting_payment`, `in_progress`, `in_review`                        | `paused`           | staff, customer  |                             |        ✓        | SLA clock stops; no new invoices.                                                                   |
-| `paused`                                                                          | `in_progress`      | staff, customer  |                             |                 | SLA clock resumes.                                                                                  |
-| `inquiry`, `triage`, `quoted`                                                     | `cancelled`        | customer, staff  |                             |        ✓        | No billing.                                                                                         |
-| `accepted`, `awaiting_payment`, `in_progress`, `in_review`, `delivered`, `paused` | `cancelled`        | staff, customer  |                             |        ✓        | Unpaid invoices are voided; paid work is invoiced pro rata or refunded per policy; finance reviews. |
+| From | To | Who | Permission | Reason required | Effect |
+|---|---|---|---|:-:|---|
+| `inquiry` | `triage` | staff, system | `service_requests.triage` |  |  |
+| `triage` | `quoted` | staff | `quotes.issue` |  | A quote version is issued to the customer. |
+| `triage` | `rejected` | staff | `service_requests.triage` | ✓ | No billing. |
+| `quoted` | `quoted` | staff | `quotes.issue` |  | A new quote version supersedes the previous one. |
+| `quoted` | `accepted` | customer | `org.quotes.accept` |  | Acceptance recorded with signature name, terms version and IP hash. |
+| `quoted` | `rejected` | customer, staff |  | ✓ | No billing. |
+| `accepted` | `awaiting_payment` | system, staff | `finance.invoices.manage` |  | Deposit or full invoice issued. |
+| `accepted` | `in_progress` | staff, system | `service_requests.assign` |  | Work starts without upfront payment (policy decision). |
+| `awaiting_payment` | `in_progress` | system, staff | `service_requests.override` |  | Verified payment or staff override with reason. |
+| `in_progress` | `in_review` | staff, partner |  |  | Deliverable submitted for review. |
+| `in_review` | `in_progress` | staff | `reports.review` | ✓ | Changes requested. |
+| `in_review` | `delivered` | staff | `reports.release` |  | Reviewed deliverable released to the customer. |
+| `delivered` | `completed` | customer, system |  |  | Customer confirms or auto-completes after the review window; feedback requested. |
+| `delivered` | `in_progress` | customer, staff |  | ✓ | Customer disputes the deliverable; rework. |
+| `accepted`, `awaiting_payment`, `in_progress`, `in_review` | `paused` | staff, customer |  | ✓ | SLA clock stops; no new invoices. |
+| `paused` | `in_progress` | staff, customer |  |  | SLA clock resumes. |
+| `inquiry`, `triage`, `quoted` | `cancelled` | customer, staff |  | ✓ | No billing. |
+| `accepted`, `awaiting_payment`, `in_progress`, `in_review`, `delivered`, `paused` | `cancelled` | staff, customer |  | ✓ | Unpaid invoices are voided; paid work is invoiced pro rata or refunded per policy; finance reviews. |
 
 ## invoice
 
 States: `draft`, `issued`, `partially_paid`, `paid`, `overdue`, `void`.
 Initial: `draft`. Terminal: `void`.
 
-| From                                  | To               | Who           | Permission                | Reason required | Effect                                                               |
-| ------------------------------------- | ---------------- | ------------- | ------------------------- | :-------------: | -------------------------------------------------------------------- |
-| `draft`                               | `issued`         | staff, system | `finance.invoices.manage` |                 |                                                                      |
-| `issued`, `overdue`                   | `partially_paid` | system        |                           |                 | An allocation smaller than the balance was posted.                   |
-| `issued`, `overdue`, `partially_paid` | `paid`           | system        |                           |                 | Allocations cover the total.                                         |
-| `issued`, `partially_paid`            | `overdue`        | system        |                           |                 | Due date passed with a balance outstanding.                          |
-| `overdue`                             | `issued`         | system        |                           |                 | Due date extended by finance.                                        |
-| `draft`, `issued`, `overdue`          | `void`           | staff         | `finance.invoices.manage` |        ✓        | Only when nothing has been allocated; otherwise issue a credit note. |
+| From | To | Who | Permission | Reason required | Effect |
+|---|---|---|---|:-:|---|
+| `draft` | `issued` | staff, system | `finance.invoices.manage` |  |  |
+| `issued`, `overdue` | `partially_paid` | system |  |  | An allocation smaller than the balance was posted. |
+| `issued`, `overdue`, `partially_paid` | `paid` | system |  |  | Allocations cover the total. |
+| `issued`, `partially_paid` | `overdue` | system |  |  | Due date passed with a balance outstanding. |
+| `overdue` | `issued` | system |  |  | Due date extended by finance. |
+| `draft`, `issued`, `overdue` | `void` | staff | `finance.invoices.manage` | ✓ | Only when nothing has been allocated; otherwise issue a credit note. |
 
 ## lease
 
 States: `draft`, `pending_signature`, `active`, `expiring`, `ended`, `terminated`.
 Initial: `draft`. Terminal: `ended`, `terminated`.
 
-| From                         | To                  | Who             | Permission | Reason required | Effect                                     |
-| ---------------------------- | ------------------- | --------------- | ---------- | :-------------: | ------------------------------------------ |
-| `draft`                      | `pending_signature` | staff, customer |            |                 |                                            |
-| `draft`, `pending_signature` | `active`            | staff, customer |            |                 | Rent schedule generated.                   |
-| `active`                     | `expiring`          | system          |            |                 | Within the notice period of the end date.  |
-| `active`, `expiring`         | `ended`             | system, staff   |            |                 |                                            |
-| `active`, `expiring`         | `terminated`        | staff, customer |            |        ✓        | Deposit and arrears settled per statement. |
+| From | To | Who | Permission | Reason required | Effect |
+|---|---|---|---|:-:|---|
+| `draft` | `pending_signature` | staff, customer |  |  |  |
+| `draft`, `pending_signature` | `active` | staff, customer |  |  | Rent schedule generated. |
+| `active` | `expiring` | system |  |  | Within the notice period of the end date. |
+| `active`, `expiring` | `ended` | system, staff |  |  |  |
+| `active`, `expiring` | `terminated` | staff, customer |  | ✓ | Deposit and arrears settled per statement. |
 
 ## listing
 
 States: `draft`, `in_moderation`, `published`, `paused`, `expired`, `withdrawn`, `archived`, `rejected`.
 Initial: `draft`. Terminal: `archived`.
 
-| From                                        | To              | Who                     | Permission            | Reason required | Effect                                                      |
-| ------------------------------------------- | --------------- | ----------------------- | --------------------- | :-------------: | ----------------------------------------------------------- |
-| `draft`, `rejected`                         | `in_moderation` | customer, staff         | `org.listings.manage` |                 | Owner authority and content are checked before publication. |
-| `in_moderation`                             | `published`     | staff                   | `content.publish`     |                 |                                                             |
-| `in_moderation`                             | `rejected`      | staff                   | `content.publish`     |        ✓        |                                                             |
-| `published`                                 | `paused`        | customer, staff         |                       |                 |                                                             |
-| `paused`                                    | `published`     | customer, staff         |                       |                 | Availability must be re-confirmed.                          |
-| `published`                                 | `expired`       | system                  |                       |                 | Availability confirmation lapsed.                           |
-| `expired`                                   | `in_moderation` | customer                |                       |                 | Re-confirmed availability triggers moderation.              |
-| `published`, `paused`, `expired`            | `withdrawn`     | customer, staff         |                       |        ✓        |                                                             |
-| `draft`, `withdrawn`, `expired`, `rejected` | `archived`      | customer, staff, system |                       |                 |                                                             |
+| From | To | Who | Permission | Reason required | Effect |
+|---|---|---|---|:-:|---|
+| `draft`, `rejected`, `published` | `in_moderation` | customer, staff | `org.listings.manage` |  | Owner authority and content are checked before publication; a published listing stays live on its approved revision while changes are reviewed. |
+| `in_moderation` | `published` | staff | `content.publish` |  |  |
+| `in_moderation` | `rejected` | staff | `content.publish` | ✓ |  |
+| `in_moderation` | `draft` | staff | `content.publish` | ✓ | Changes requested; the owner edits and resubmits. |
+| `published` | `paused` | customer, staff |  |  |  |
+| `paused` | `published` | customer, staff |  |  | Availability must be re-confirmed. |
+| `published` | `expired` | system |  |  | Availability confirmation lapsed. |
+| `expired` | `in_moderation` | customer |  |  | Re-confirmed availability triggers moderation. |
+| `published`, `paused`, `expired`, `in_moderation` | `withdrawn` | customer, staff |  | ✓ |  |
+| `draft`, `withdrawn`, `expired`, `rejected` | `archived` | customer, staff, system |  |  |  |
+| `published`, `paused`, `in_moderation` | `archived` | customer, staff |  |  | A documented sale or lease outcome closes the listing. |
+
+## listing_offer
+
+States: `draft`, `submitted`, `countered`, `accepted`, `rejected`, `withdrawn`, `expired`.
+Initial: `submitted`. Terminal: `accepted`, `rejected`, `withdrawn`, `expired`.
+
+| From | To | Who | Permission | Reason required | Effect |
+|---|---|---|---|:-:|---|
+| `submitted` | `countered` | customer | `org.listings.manage` |  | The owner proposes a different amount. |
+| `countered` | `submitted` | customer | `org.requests.create` |  | The buyer answers the counter-offer with a new amount. |
+| `submitted`, `countered` | `accepted` | customer |  |  | The party whose turn it is accepts the latest amount. |
+| `submitted`, `countered` | `rejected` | customer | `org.listings.manage` | ✓ |  |
+| `submitted`, `countered` | `withdrawn` | customer | `org.requests.create` |  |  |
+| `submitted`, `countered` | `expired` | system |  |  | The validity date passed without a decision. |
 
 ## payment_attempt
 
 States: `initialized`, `pending`, `successful`, `failed`, `reversed`, `uncertain`, `abandoned`.
 Initial: `initialized`. Terminal: `failed`, `reversed`, `abandoned`.
 
-| From                                  | To           | Who    | Permission | Reason required | Effect                                                                   |
-| ------------------------------------- | ------------ | ------ | ---------- | :-------------: | ------------------------------------------------------------------------ |
-| `initialized`                         | `pending`    | system |            |                 | Customer redirected or checkout opened.                                  |
-| `initialized`, `pending`, `uncertain` | `successful` | system |            |                 | Server-side verification matched status, reference, amount and currency. |
-| `initialized`, `pending`, `uncertain` | `failed`     | system |            |                 |                                                                          |
-| `initialized`, `pending`              | `uncertain`  | system |            |                 | Provider status unknown; reconciliation job will resolve.                |
-| `initialized`, `pending`              | `abandoned`  | system |            |                 | No provider activity within the attempt window.                          |
-| `successful`                          | `reversed`   | system |            |                 | Chargeback or provider reversal; reversing journal posted.               |
+| From | To | Who | Permission | Reason required | Effect |
+|---|---|---|---|:-:|---|
+| `initialized` | `pending` | system |  |  | Customer redirected or checkout opened. |
+| `initialized`, `pending`, `uncertain` | `successful` | system |  |  | Server-side verification matched status, reference, amount and currency. |
+| `initialized`, `pending`, `uncertain` | `failed` | system |  |  |  |
+| `initialized`, `pending` | `uncertain` | system |  |  | Provider status unknown; reconciliation job will resolve. |
+| `initialized`, `pending` | `abandoned` | system |  |  | No provider activity within the attempt window. |
+| `successful` | `reversed` | system |  |  | Chargeback or provider reversal; reversing journal posted. |
 
 ## payout
 
 States: `proposed`, `first_approved`, `approved`, `submitted`, `settled`, `failed`, `rejected`.
 Initial: `proposed`. Terminal: `settled`, `rejected`.
 
-| From                         | To               | Who    | Permission                       | Reason required | Effect                                      |
-| ---------------------------- | ---------------- | ------ | -------------------------------- | :-------------: | ------------------------------------------- |
-| `proposed`                   | `first_approved` | staff  | `finance.payouts.first_approve`  |                 | Requires reconciliation to be balanced.     |
-| `first_approved`             | `approved`       | staff  | `finance.payouts.second_approve` |                 | Second approver must differ from the first. |
-| `proposed`, `first_approved` | `rejected`       | staff  | `finance.payouts.first_approve`  |        ✓        |                                             |
-| `approved`                   | `submitted`      | system |                                  |                 |                                             |
-| `submitted`                  | `settled`        | system |                                  |                 |                                             |
-| `submitted`                  | `failed`         | system |                                  |        ✓        |                                             |
-| `failed`                     | `approved`       | staff  | `finance.payouts.second_approve` |        ✓        |                                             |
+| From | To | Who | Permission | Reason required | Effect |
+|---|---|---|---|:-:|---|
+| `proposed` | `first_approved` | staff | `finance.payouts.first_approve` |  | Requires reconciliation to be balanced. |
+| `first_approved` | `approved` | staff | `finance.payouts.second_approve` |  | Second approver must differ from the first. |
+| `proposed`, `first_approved` | `rejected` | staff | `finance.payouts.first_approve` | ✓ |  |
+| `approved` | `submitted` | system |  |  |  |
+| `submitted` | `settled` | system |  |  |  |
+| `submitted` | `failed` | system |  | ✓ |  |
+| `failed` | `approved` | staff | `finance.payouts.second_approve` | ✓ |  |
 
 ## refund
 
 States: `requested`, `approved`, `submitted`, `pending`, `settled`, `failed`, `rejected`.
 Initial: `requested`. Terminal: `settled`, `rejected`.
 
-| From                   | To          | Who    | Permission                | Reason required | Effect                                                                       |
-| ---------------------- | ----------- | ------ | ------------------------- | :-------------: | ---------------------------------------------------------------------------- |
-| `requested`            | `approved`  | staff  | `finance.refunds.approve` |                 | Requires step-up authentication and a different approver than the requester. |
-| `requested`            | `rejected`  | staff  | `finance.refunds.approve` |        ✓        |                                                                              |
-| `approved`             | `submitted` | system |                           |                 | Sent to the provider; submission alone is not settlement.                    |
-| `submitted`            | `pending`   | system |                           |                 | Provider acknowledged and is processing.                                     |
-| `submitted`, `pending` | `settled`   | system |                           |                 | Provider confirmed processed; settlement journal posted.                     |
-| `submitted`, `pending` | `failed`    | system |                           |        ✓        |                                                                              |
-| `failed`               | `approved`  | staff  | `finance.refunds.approve` |        ✓        | Retry with corrected details.                                                |
+| From | To | Who | Permission | Reason required | Effect |
+|---|---|---|---|:-:|---|
+| `requested` | `approved` | staff | `finance.refunds.approve` |  | Requires step-up authentication and a different approver than the requester. |
+| `requested` | `rejected` | staff | `finance.refunds.approve` | ✓ |  |
+| `approved` | `submitted` | system |  |  | Sent to the provider; submission alone is not settlement. |
+| `submitted` | `pending` | system |  |  | Provider acknowledged and is processing. |
+| `submitted`, `pending` | `settled` | system |  |  | Provider confirmed processed; settlement journal posted. |
+| `submitted`, `pending` | `failed` | system |  | ✓ |  |
+| `failed` | `approved` | staff | `finance.refunds.approve` | ✓ | Retry with corrected details. |
 
 ## report
 
 States: `draft`, `in_review`, `changes_requested`, `approved`, `released`, `superseded`.
 Initial: `draft`. Terminal: `superseded`.
 
-| From                         | To                  | Who            | Permission        | Reason required | Effect                                                                   |
-| ---------------------------- | ------------------- | -------------- | ----------------- | :-------------: | ------------------------------------------------------------------------ |
-| `draft`, `changes_requested` | `in_review`         | staff, partner |                   |                 | A revision is submitted; the named reviewer must differ from the author. |
-| `in_review`                  | `changes_requested` | staff          | `reports.review`  |        ✓        |                                                                          |
-| `in_review`                  | `approved`          | staff          | `reports.review`  |                 |                                                                          |
-| `approved`                   | `released`          | staff          | `reports.release` |                 | Customer notified; report visible in the portal.                         |
-| `released`                   | `superseded`        | staff, system  |                   |                 | A newer released version replaces it; history retained.                  |
-| `approved`                   | `draft`             | staff          | `reports.review`  |        ✓        |                                                                          |
+| From | To | Who | Permission | Reason required | Effect |
+|---|---|---|---|:-:|---|
+| `draft`, `changes_requested` | `in_review` | staff, partner |  |  | A revision is submitted; the named reviewer must differ from the author. |
+| `in_review` | `changes_requested` | staff | `reports.review` | ✓ |  |
+| `in_review` | `approved` | staff | `reports.review` |  |  |
+| `approved` | `released` | staff | `reports.release` |  | Customer notified; report visible in the portal. |
+| `released` | `superseded` | staff, system |  |  | A newer released version replaces it; history retained. |
+| `approved` | `draft` | staff | `reports.review` | ✓ |  |
 
 ## tender
 
 States: `draft`, `published`, `clarifications`, `closed`, `evaluating`, `awarded`, `cancelled`.
 Initial: `draft`. Terminal: `awarded`, `cancelled`.
 
-| From                                                           | To               | Who           | Permission       | Reason required | Effect                                                   |
-| -------------------------------------------------------------- | ---------------- | ------------- | ---------------- | :-------------: | -------------------------------------------------------- |
-| `draft`                                                        | `published`      | staff         | `tenders.manage` |                 | Invitations sent; timeline validated.                    |
-| `published`                                                    | `clarifications` | system, staff |                  |                 | Question window open.                                    |
-| `published`, `clarifications`                                  | `closed`         | system        |                  |                 | Submission deadline reached (server time).               |
-| `closed`                                                       | `evaluating`     | staff         | `bids.evaluate`  |                 | Sealed bids opened and access logged.                    |
-| `evaluating`                                                   | `awarded`        | staff         | `tenders.manage` |                 | Award decided; contractors notified only when published. |
-| `draft`, `published`, `clarifications`, `closed`, `evaluating` | `cancelled`      | staff         | `tenders.manage` |        ✓        |                                                          |
+| From | To | Who | Permission | Reason required | Effect |
+|---|---|---|---|:-:|---|
+| `draft` | `published` | staff | `tenders.manage` |  | Invitations sent; timeline validated. |
+| `published` | `clarifications` | system, staff |  |  | Question window open. |
+| `published`, `clarifications` | `closed` | system |  |  | Submission deadline reached (server time). |
+| `closed` | `evaluating` | staff | `bids.evaluate` |  | Sealed bids opened and access logged. |
+| `evaluating` | `awarded` | staff | `tenders.manage` |  | Award decided; contractors notified only when published. |
+| `draft`, `published`, `clarifications`, `closed`, `evaluating` | `cancelled` | staff | `tenders.manage` | ✓ |  |
 
 ## work_order
 
 States: `requested`, `triaged`, `assigned`, `in_progress`, `awaiting_approval`, `approved`, `completed`, `verified`, `closed`, `rejected`, `cancelled`.
 Initial: `requested`. Terminal: `closed`, `rejected`, `cancelled`.
 
-| From                                                    | To                  | Who                     | Permission                  | Reason required | Effect                                                           |
-| ------------------------------------------------------- | ------------------- | ----------------------- | --------------------------- | :-------------: | ---------------------------------------------------------------- |
-| `requested`                                             | `triaged`           | staff                   | `maintenance.manage`        |                 |                                                                  |
-| `requested`                                             | `rejected`          | staff                   | `maintenance.manage`        |        ✓        |                                                                  |
-| `triaged`                                               | `assigned`          | staff                   | `maintenance.manage`        |                 | Contractor dispatched.                                           |
-| `assigned`                                              | `in_progress`       | partner, staff          |                             |                 |                                                                  |
-| `triaged`, `assigned`, `in_progress`                    | `awaiting_approval` | staff, partner          |                             |                 | Estimate above threshold requires owner approval.                |
-| `awaiting_approval`                                     | `approved`          | customer                | `org.change_orders.approve` |                 |                                                                  |
-| `awaiting_approval`                                     | `rejected`          | customer                |                             |        ✓        |                                                                  |
-| `approved`, `in_progress`                               | `completed`         | partner, staff          |                             |                 | Evidence attached.                                               |
-| `completed`                                             | `verified`          | staff, customer         |                             |                 | Work verified; expense recorded.                                 |
-| `verified`                                              | `closed`            | staff, system           |                             |                 | Expense journal posted; recoverable charge raised if applicable. |
-| `requested`, `triaged`, `assigned`, `awaiting_approval` | `cancelled`         | staff, customer, tenant |                             |        ✓        |                                                                  |
+| From | To | Who | Permission | Reason required | Effect |
+|---|---|---|---|:-:|---|
+| `requested` | `triaged` | staff | `maintenance.manage` |  |  |
+| `requested` | `rejected` | staff | `maintenance.manage` | ✓ |  |
+| `triaged` | `assigned` | staff | `maintenance.manage` |  | Contractor dispatched. |
+| `assigned` | `in_progress` | partner, staff |  |  |  |
+| `triaged`, `assigned`, `in_progress` | `awaiting_approval` | staff, partner |  |  | Estimate above threshold requires owner approval. |
+| `awaiting_approval` | `approved` | customer | `org.change_orders.approve` |  |  |
+| `awaiting_approval` | `rejected` | customer |  | ✓ |  |
+| `approved`, `in_progress` | `completed` | partner, staff |  |  | Evidence attached. |
+| `completed` | `verified` | staff, customer |  |  | Work verified; expense recorded. |
+| `verified` | `closed` | staff, system |  |  | Expense journal posted; recoverable charge raised if applicable. |
+| `requested`, `triaged`, `assigned`, `awaiting_approval` | `cancelled` | staff, customer, tenant |  | ✓ |  |
+

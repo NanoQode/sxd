@@ -425,8 +425,8 @@ export const listingInquirySchema = z.object({
   interest: z.enum(['buy', 'lease', 'agent', 'other']).default('other'),
   marketingConsent: z.boolean().default(false),
   consentPolicyVersion: z.string().max(32).default('2026-09'),
-  /** Honeypot: must stay empty. */
-  website: z.string().max(0).optional(),
+  /** Honeypot: people leave it empty; a filled value is accepted and flagged for review. */
+  website: z.string().max(200).optional(),
   /** Milliseconds between form render and submit; too fast is treated as spam. */
   elapsedMs: z.number().int().nonnegative().optional(),
 });

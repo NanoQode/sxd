@@ -1,6 +1,6 @@
 import 'server-only';
 import { randomUUID } from 'node:crypto';
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { ApiError, type ListingInquiry } from '@simplexd/contracts';
 import { appendOutbox, getDb, schema, withActor, type ActorContext } from '@simplexd/db';
 import { recordAudit } from '@/lib/audit';
@@ -31,10 +31,12 @@ export async function createListingInquiry(
     Boolean(input.website) || (input.elapsedMs !== undefined && input.elapsedMs < 1500);
   const ctx: ActorContext = identity?.ctx ?? { userId: null, organizationId: null, staff: false };
   return withActor(getDb(), { ...ctx, correlationId: options.correlationId }, async (tx) => {
+    // The seeded land sales/leasing service, or any service on that workflow.
     const [service] = await tx
       .select({ id: schema.services.id })
       .from(schema.services)
       .where(eq(schema.services.workflowTemplateKey, 'land_sales_leasing'))
+      .orderBy(sql`case when ${schema.services.slug} = 'land-sales-leasing' then 0 else 1 end`)
       .limit(1);
     // Anonymous rows cannot be read back (RETURNING applies the read policy),
     // so the id is decided here and the row inserted without RETURNING.

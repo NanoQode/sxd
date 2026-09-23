@@ -80,6 +80,28 @@ finance staff and are marked settled only when the provider confirms them.
 - Maintenance you raise (or your tenants raise) is triaged by staff; you approve or reject quoted
   costs and can verify completed work.
 
+### Listings and offers (_Listings_)
+
+- _Create a listing_ from one of your properties: type (sale, lease, short stay), title,
+  description, an optional price with its basis (nothing is estimated for you), area, tenure, a
+  title disclosure in your own words, availability, photos (clean image files of your
+  organisation) and how precisely the public may locate it (market level by default; exact
+  coordinates only if you ask and staff approve). Every save creates a new revision.
+- _Submit for moderation_ needs a verified, unexpired owner authority for the property (submit the
+  document from the property page). Staff publish a specific revision for 90 days; a rejection or
+  request for changes comes back with the reason.
+- While a listing is live: _Confirm still available_ restarts the 90-day window (a lapsed window
+  takes the listing off the public site until you re-confirm and resubmit), _Edit_ creates a new
+  revision that goes through moderation while the approved one stays public, and _Withdraw_
+  records a reason.
+- You see the number of inquiries, not the inquirers: SimplexD staff qualify them first.
+- _Offers_: on another organisation's published listing, _Make an offer_ with conditions and a
+  validity date; on your own listing, counter, accept or decline. Every step is added to a
+  negotiation log both sides see. Acceptance is not a contract.
+- _Transaction_ tab: link the land sales/leasing request that represents the deal, track lease
+  milestones or closing tasks with due dates and evidence, and record the outcome (sold or leased
+  with the executed agreement, or withdrawn). Sold and leased close the listing.
+
 ## 7. Settings and notifications
 
 Profile and time zone, organisation members and invitations, notification preferences (channels,

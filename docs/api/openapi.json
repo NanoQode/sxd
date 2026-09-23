@@ -97921,7 +97921,7 @@
                   },
                   "website": {
                     "type": "string",
-                    "maxLength": 0
+                    "maxLength": 200
                   },
                   "elapsedMs": {
                     "type": "integer",

@@ -6,91 +6,91 @@ Authorization is evaluated per request by `@simplexd/domain/authz`: a role grant
 
 ## Staff roles
 
-| Role                 | Scope                                                                | Explicit exclusions                                           |
-| -------------------- | -------------------------------------------------------------------- | ------------------------------------------------------------- |
-| `super_admin`        | Organisation settings, roles, provider setup, break-glass operations | No routine sharing of secrets or bypass without audit         |
-| `operations_manager` | Staff assignments, workflow overrides, service delivery              | Cannot change payment credentials without separate permission |
-| `project_manager`    | Assigned projects, budgets, requests and report review               | No unrelated client access                                    |
-| `inspector`          | Assigned visits, draft findings, uploads                             | Cannot release funds or approve own final report by default   |
-| `finance`            | Invoices, reconciliation, authorized refunds, owner statements       | No unrestricted legal/identity-document access                |
-| `data_editor`        | Draft locations, sources and observations                            | Cannot publish own material price/ranking changes             |
-| `data_approver`      | Review/publish data and score policies                               | No silent deletion of history                                 |
-| `content_editor`     | Pages, media and SEO drafts                                          | No private project documents or payment access                |
-| `support`            | Assigned customer tickets and limited profile                        | Masked finance/identity fields, no unrestricted impersonation |
+| Role | Scope | Explicit exclusions |
+|---|---|---|
+| `super_admin` | Organisation settings, roles, provider setup, break-glass operations | No routine sharing of secrets or bypass without audit |
+| `operations_manager` | Staff assignments, workflow overrides, service delivery | Cannot change payment credentials without separate permission |
+| `project_manager` | Assigned projects, budgets, requests and report review | No unrelated client access |
+| `inspector` | Assigned visits, draft findings, uploads | Cannot release funds or approve own final report by default |
+| `finance` | Invoices, reconciliation, authorized refunds, owner statements | No unrestricted legal/identity-document access |
+| `data_editor` | Draft locations, sources and observations | Cannot publish own material price/ranking changes |
+| `data_approver` | Review/publish data and score policies | No silent deletion of history |
+| `content_editor` | Pages, media and SEO drafts | No private project documents or payment access |
+| `support` | Assigned customer tickets and limited profile | Masked finance/identity fields, no unrestricted impersonation |
 
 ### Staff permissions by role
 
-| Permission                                | super admin | operations manager | project manager | inspector | finance | data editor | data approver | content editor | support | MFA | Blocked during impersonation |
-| ----------------------------------------- | :---------: | :----------------: | :-------------: | :-------: | :-----: | :---------: | :-----------: | :------------: | :-----: | :-: | :--------------------------: |
-| `platform.settings.manage`                |      ✓      |                    |                 |           |         |             |               |                |         |  ✓  |                              |
-| `platform.feature_flags.manage`           |      ✓      |                    |                 |           |         |             |               |                |         |  ✓  |                              |
-| `platform.break_glass`                    |      ✓      |                    |                 |           |         |             |               |                |         |  ✓  |              ✓               |
-| `access.staff_roles.manage`               |      ✓      |                    |                 |           |         |             |               |                |         |  ✓  |              ✓               |
-| `access.partners.verify`                  |      ✓      |         ✓          |                 |           |         |             |               |                |         |     |                              |
-| `audit.read`                              |      ✓      |         ✓          |                 |           |    ✓    |             |               |                |         |     |                              |
-| `integrations.read`                       |      ✓      |         ✓          |                 |           |         |             |               |                |         |     |                              |
-| `integrations.manage`                     |      ✓      |                    |                 |           |         |             |               |                |         |  ✓  |              ✓               |
-| `integrations.test`                       |      ✓      |         ✓          |                 |           |         |             |               |                |         |     |                              |
-| `integrations.secrets.rotate`             |      ✓      |                    |                 |           |         |             |               |                |         |  ✓  |              ✓               |
-| `integrations.payment_credentials.manage` |      ✓      |                    |                 |           |         |             |               |                |         |  ✓  |              ✓               |
-| `customers.read`                          |      ✓      |         ✓          |        ✓        |           |    ✓    |             |               |                |    ✓    |     |                              |
-| `customers.manage`                        |      ✓      |         ✓          |                 |           |         |             |               |                |         |     |                              |
-| `customers.read_sensitive`                |      ✓      |                    |                 |           |         |             |               |                |         |     |                              |
-| `support.tickets.read`                    |      ✓      |         ✓          |                 |           |         |             |               |                |    ✓    |     |                              |
-| `support.tickets.manage`                  |      ✓      |         ✓          |                 |           |         |             |               |                |    ✓    |     |                              |
-| `support.impersonate`                     |      ✓      |                    |                 |           |         |             |               |                |         |  ✓  |                              |
-| `market_data.read_drafts`                 |      ✓      |         ✓          |                 |           |         |      ✓      |       ✓       |                |         |     |                              |
-| `market_data.edit`                        |      ✓      |                    |                 |           |         |      ✓      |       ✓       |                |         |     |                              |
-| `market_data.import`                      |      ✓      |                    |                 |           |         |      ✓      |       ✓       |                |         |     |                              |
-| `market_data.publish`                     |      ✓      |                    |                 |           |         |             |       ✓       |                |         |  ✓  |                              |
-| `market_data.policy.manage`               |      ✓      |                    |                 |           |         |             |       ✓       |                |         |  ✓  |                              |
-| `market_data.history.read`                |      ✓      |                    |                 |           |         |      ✓      |       ✓       |                |         |     |                              |
-| `content.edit`                            |      ✓      |                    |                 |           |         |             |               |       ✓        |         |     |                              |
-| `content.publish`                         |      ✓      |                    |                 |           |         |             |               |       ✓        |         |     |                              |
-| `content.media.manage`                    |      ✓      |                    |                 |           |         |             |               |       ✓        |         |     |                              |
-| `leads.read`                              |      ✓      |         ✓          |                 |           |         |             |               |                |    ✓    |     |                              |
-| `leads.manage`                            |      ✓      |         ✓          |                 |           |         |             |               |                |         |     |                              |
-| `service_requests.read_all`               |      ✓      |         ✓          |        ✓        |           |         |             |               |                |         |     |                              |
-| `service_requests.triage`                 |      ✓      |         ✓          |        ✓        |           |         |             |               |                |         |     |                              |
-| `service_requests.assign`                 |      ✓      |         ✓          |        ✓        |           |         |             |               |                |         |     |                              |
-| `service_requests.override`               |      ✓      |         ✓          |                 |           |         |             |               |                |         |     |                              |
-| `quotes.issue`                            |      ✓      |         ✓          |        ✓        |           |         |             |               |                |         |     |                              |
-| `pricing.manage`                          |      ✓      |         ✓          |                 |           |         |             |               |                |         |     |                              |
-| `sla.manage`                              |      ✓      |         ✓          |                 |           |         |             |               |                |         |     |                              |
-| `projects.read_all`                       |      ✓      |         ✓          |        ✓        |           |         |             |               |                |         |     |                              |
-| `projects.manage`                         |      ✓      |         ✓          |        ✓        |           |         |             |               |                |         |     |                              |
-| `site_visits.perform`                     |      ✓      |                    |        ✓        |     ✓     |         |             |               |                |         |     |                              |
-| `reports.draft`                           |      ✓      |                    |        ✓        |     ✓     |         |             |               |                |         |     |                              |
-| `reports.review`                          |      ✓      |         ✓          |        ✓        |           |         |             |               |                |         |     |                              |
-| `reports.release`                         |      ✓      |         ✓          |        ✓        |           |         |             |               |                |         |     |                              |
-| `change_orders.staff_approve`             |      ✓      |         ✓          |        ✓        |           |         |             |               |                |         |     |                              |
-| `milestones.record_progress`              |      ✓      |         ✓          |        ✓        |     ✓     |         |             |               |                |         |     |                              |
-| `milestones.finance_authorize`            |      ✓      |                    |                 |           |    ✓    |             |               |                |         |     |                              |
-| `evidence.approve`                        |      ✓      |         ✓          |        ✓        |           |         |             |               |                |         |     |                              |
-| `files.read_all`                          |      ✓      |         ✓          |        ✓        |     ✓     |         |             |               |                |         |     |                              |
-| `files.sensitive.read`                    |      ✓      |                    |                 |           |         |             |               |                |         |     |                              |
-| `finance.read`                            |      ✓      |         ✓          |                 |           |    ✓    |             |               |                |         |     |                              |
-| `finance.invoices.manage`                 |      ✓      |                    |                 |           |    ✓    |             |               |                |         |  ✓  |                              |
-| `finance.allocations.manage`              |      ✓      |                    |                 |           |    ✓    |             |               |                |         |  ✓  |              ✓               |
-| `finance.reconcile`                       |      ✓      |                    |                 |           |    ✓    |             |               |                |         |  ✓  |                              |
-| `finance.refunds.request`                 |      ✓      |                    |                 |           |    ✓    |             |               |                |         |     |                              |
-| `finance.refunds.approve`                 |      ✓      |                    |                 |           |    ✓    |             |               |                |         |  ✓  |              ✓               |
-| `finance.payouts.first_approve`           |      ✓      |                    |                 |           |    ✓    |             |               |                |         |  ✓  |              ✓               |
-| `finance.payouts.second_approve`          |      ✓      |                    |                 |           |    ✓    |             |               |                |         |  ✓  |              ✓               |
-| `finance.export`                          |      ✓      |                    |                 |           |    ✓    |             |               |                |         |  ✓  |                              |
-| `finance.tax.manage`                      |      ✓      |                    |                 |           |    ✓    |             |               |                |         |     |                              |
-| `tenders.manage`                          |      ✓      |         ✓          |        ✓        |           |         |             |               |                |         |     |                              |
-| `bids.evaluate`                           |      ✓      |         ✓          |        ✓        |           |         |             |               |                |         |     |                              |
-| `bids.open_sealed`                        |      ✓      |                    |                 |           |         |             |               |                |         |  ✓  |                              |
-| `procurement.manage`                      |      ✓      |         ✓          |        ✓        |           |         |             |               |                |         |     |                              |
-| `rentals.manage`                          |      ✓      |         ✓          |                 |           |    ✓    |             |               |                |         |     |                              |
-| `maintenance.manage`                      |      ✓      |         ✓          |                 |           |         |             |               |                |         |     |                              |
-| `estates.manage`                          |      ✓      |         ✓          |                 |           |         |             |               |                |         |     |                              |
-| `appointments.manage_all`                 |      ✓      |         ✓          |        ✓        |           |         |             |               |                |    ✓    |     |                              |
-| `appointments.test_booking`               |      ✓      |         ✓          |                 |           |         |             |               |                |         |     |                              |
-| `messages.read_all`                       |      ✓      |         ✓          |        ✓        |           |         |             |               |                |         |     |                              |
-| `notifications.templates.manage`          |      ✓      |         ✓          |                 |           |         |             |               |                |         |     |                              |
-| `notifications.test_send`                 |      ✓      |         ✓          |                 |           |         |             |               |                |         |     |                              |
+| Permission | super admin | operations manager | project manager | inspector | finance | data editor | data approver | content editor | support | MFA | Blocked during impersonation |
+|---|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
+| `platform.settings.manage` | ✓ |  |  |  |  |  |  |  |  | ✓ |  |
+| `platform.feature_flags.manage` | ✓ |  |  |  |  |  |  |  |  | ✓ |  |
+| `platform.break_glass` | ✓ |  |  |  |  |  |  |  |  | ✓ | ✓ |
+| `access.staff_roles.manage` | ✓ |  |  |  |  |  |  |  |  | ✓ | ✓ |
+| `access.partners.verify` | ✓ | ✓ |  |  |  |  |  |  |  |  |  |
+| `audit.read` | ✓ | ✓ |  |  | ✓ |  |  |  |  |  |  |
+| `integrations.read` | ✓ | ✓ |  |  |  |  |  |  |  |  |  |
+| `integrations.manage` | ✓ |  |  |  |  |  |  |  |  | ✓ | ✓ |
+| `integrations.test` | ✓ | ✓ |  |  |  |  |  |  |  |  |  |
+| `integrations.secrets.rotate` | ✓ |  |  |  |  |  |  |  |  | ✓ | ✓ |
+| `integrations.payment_credentials.manage` | ✓ |  |  |  |  |  |  |  |  | ✓ | ✓ |
+| `customers.read` | ✓ | ✓ | ✓ |  | ✓ |  |  |  | ✓ |  |  |
+| `customers.manage` | ✓ | ✓ |  |  |  |  |  |  |  |  |  |
+| `customers.read_sensitive` | ✓ |  |  |  |  |  |  |  |  |  |  |
+| `support.tickets.read` | ✓ | ✓ |  |  |  |  |  |  | ✓ |  |  |
+| `support.tickets.manage` | ✓ | ✓ |  |  |  |  |  |  | ✓ |  |  |
+| `support.impersonate` | ✓ |  |  |  |  |  |  |  |  | ✓ |  |
+| `market_data.read_drafts` | ✓ | ✓ |  |  |  | ✓ | ✓ |  |  |  |  |
+| `market_data.edit` | ✓ |  |  |  |  | ✓ | ✓ |  |  |  |  |
+| `market_data.import` | ✓ |  |  |  |  | ✓ | ✓ |  |  |  |  |
+| `market_data.publish` | ✓ |  |  |  |  |  | ✓ |  |  | ✓ |  |
+| `market_data.policy.manage` | ✓ |  |  |  |  |  | ✓ |  |  | ✓ |  |
+| `market_data.history.read` | ✓ |  |  |  |  | ✓ | ✓ |  |  |  |  |
+| `content.edit` | ✓ |  |  |  |  |  |  | ✓ |  |  |  |
+| `content.publish` | ✓ |  |  |  |  |  |  | ✓ |  |  |  |
+| `content.media.manage` | ✓ |  |  |  |  |  |  | ✓ |  |  |  |
+| `leads.read` | ✓ | ✓ |  |  |  |  |  |  | ✓ |  |  |
+| `leads.manage` | ✓ | ✓ |  |  |  |  |  |  |  |  |  |
+| `service_requests.read_all` | ✓ | ✓ | ✓ |  |  |  |  |  |  |  |  |
+| `service_requests.triage` | ✓ | ✓ | ✓ |  |  |  |  |  |  |  |  |
+| `service_requests.assign` | ✓ | ✓ | ✓ |  |  |  |  |  |  |  |  |
+| `service_requests.override` | ✓ | ✓ |  |  |  |  |  |  |  |  |  |
+| `quotes.issue` | ✓ | ✓ | ✓ |  |  |  |  |  |  |  |  |
+| `pricing.manage` | ✓ | ✓ |  |  |  |  |  |  |  |  |  |
+| `sla.manage` | ✓ | ✓ |  |  |  |  |  |  |  |  |  |
+| `projects.read_all` | ✓ | ✓ | ✓ |  |  |  |  |  |  |  |  |
+| `projects.manage` | ✓ | ✓ | ✓ |  |  |  |  |  |  |  |  |
+| `site_visits.perform` | ✓ |  | ✓ | ✓ |  |  |  |  |  |  |  |
+| `reports.draft` | ✓ |  | ✓ | ✓ |  |  |  |  |  |  |  |
+| `reports.review` | ✓ | ✓ | ✓ |  |  |  |  |  |  |  |  |
+| `reports.release` | ✓ | ✓ | ✓ |  |  |  |  |  |  |  |  |
+| `change_orders.staff_approve` | ✓ | ✓ | ✓ |  |  |  |  |  |  |  |  |
+| `milestones.record_progress` | ✓ | ✓ | ✓ | ✓ |  |  |  |  |  |  |  |
+| `milestones.finance_authorize` | ✓ |  |  |  | ✓ |  |  |  |  |  |  |
+| `evidence.approve` | ✓ | ✓ | ✓ |  |  |  |  |  |  |  |  |
+| `files.read_all` | ✓ | ✓ | ✓ | ✓ |  |  |  |  |  |  |  |
+| `files.sensitive.read` | ✓ |  |  |  |  |  |  |  |  |  |  |
+| `finance.read` | ✓ | ✓ |  |  | ✓ |  |  |  |  |  |  |
+| `finance.invoices.manage` | ✓ |  |  |  | ✓ |  |  |  |  | ✓ |  |
+| `finance.allocations.manage` | ✓ |  |  |  | ✓ |  |  |  |  | ✓ | ✓ |
+| `finance.reconcile` | ✓ |  |  |  | ✓ |  |  |  |  | ✓ |  |
+| `finance.refunds.request` | ✓ |  |  |  | ✓ |  |  |  |  |  |  |
+| `finance.refunds.approve` | ✓ |  |  |  | ✓ |  |  |  |  | ✓ | ✓ |
+| `finance.payouts.first_approve` | ✓ |  |  |  | ✓ |  |  |  |  | ✓ | ✓ |
+| `finance.payouts.second_approve` | ✓ |  |  |  | ✓ |  |  |  |  | ✓ | ✓ |
+| `finance.export` | ✓ |  |  |  | ✓ |  |  |  |  | ✓ |  |
+| `finance.tax.manage` | ✓ |  |  |  | ✓ |  |  |  |  |  |  |
+| `tenders.manage` | ✓ | ✓ | ✓ |  |  |  |  |  |  |  |  |
+| `bids.evaluate` | ✓ | ✓ | ✓ |  |  |  |  |  |  |  |  |
+| `bids.open_sealed` | ✓ |  |  |  |  |  |  |  |  | ✓ |  |
+| `procurement.manage` | ✓ | ✓ | ✓ |  |  |  |  |  |  |  |  |
+| `rentals.manage` | ✓ | ✓ |  |  | ✓ |  |  |  |  |  |  |
+| `maintenance.manage` | ✓ | ✓ |  |  |  |  |  |  |  |  |  |
+| `estates.manage` | ✓ | ✓ |  |  |  |  |  |  |  |  |  |
+| `appointments.manage_all` | ✓ | ✓ | ✓ |  |  |  |  |  | ✓ |  |  |
+| `appointments.test_booking` | ✓ | ✓ |  |  |  |  |  |  |  |  |  |
+| `messages.read_all` | ✓ | ✓ | ✓ |  |  |  |  |  |  |  |  |
+| `notifications.templates.manage` | ✓ | ✓ |  |  |  |  |  |  |  |  |  |
+| `notifications.test_send` | ✓ | ✓ |  |  |  |  |  |  |  |  |  |
 
 ### Relationship rules enforced in addition to the role bundle
 
@@ -104,31 +104,31 @@ Authorization is evaluated per request by `@simplexd/domain/authz`: a role grant
 
 ## Customer organisation roles
 
-| Permission                  | owner | member | adviser | approver | tenant | Blocked during impersonation |
-| --------------------------- | :---: | :----: | :-----: | :------: | :----: | :--------------------------: |
-| `org.read`                  |   ✓   |   ✓    |    ✓    |    ✓     |        |                              |
-| `org.settings.manage`       |   ✓   |        |         |          |        |              ✓               |
-| `org.members.invite`        |   ✓   |   ✓    |         |          |        |                              |
-| `org.members.manage`        |   ✓   |        |         |          |        |              ✓               |
-| `org.properties.manage`     |   ✓   |   ✓    |         |          |        |                              |
-| `org.requests.create`       |   ✓   |   ✓    |         |          |        |                              |
-| `org.requests.cancel`       |   ✓   |        |         |          |        |                              |
-| `org.quotes.accept`         |   ✓   |        |         |    ✓     |        |              ✓               |
-| `org.invoices.view`         |   ✓   |   ✓    |    ✓    |    ✓     |        |                              |
-| `org.invoices.pay`          |   ✓   |   ✓    |         |          |        |              ✓               |
-| `org.documents.upload`      |   ✓   |   ✓    |         |          |        |                              |
-| `org.documents.view`        |   ✓   |   ✓    |    ✓    |    ✓     |        |                              |
-| `org.change_orders.approve` |   ✓   |        |         |    ✓     |        |              ✓               |
-| `org.milestones.accept`     |   ✓   |        |         |    ✓     |        |                              |
-| `org.reports.view`          |   ✓   |   ✓    |    ✓    |    ✓     |        |                              |
-| `org.messages.send`         |   ✓   |   ✓    |    ✓    |    ✓     |        |                              |
-| `org.appointments.manage`   |   ✓   |   ✓    |         |          |        |                              |
-| `org.scenarios.manage`      |   ✓   |   ✓    |         |          |        |                              |
-| `org.listings.manage`       |   ✓   |   ✓    |         |          |        |                              |
-| `org.leases.manage`         |   ✓   |   ✓    |         |          |        |                              |
-| `org.maintenance.request`   |   ✓   |   ✓    |         |          |        |                              |
-| `org.comment`               |   ✓   |   ✓    |    ✓    |    ✓     |        |                              |
-| `org.export`                |   ✓   |   ✓    |         |          |        |                              |
+| Permission | owner | member | adviser | approver | tenant | Blocked during impersonation |
+|---|:-:|:-:|:-:|:-:|:-:|:-:|
+| `org.read` | ✓ | ✓ | ✓ | ✓ |  |  |
+| `org.settings.manage` | ✓ |  |  |  |  | ✓ |
+| `org.members.invite` | ✓ | ✓ |  |  |  |  |
+| `org.members.manage` | ✓ |  |  |  |  | ✓ |
+| `org.properties.manage` | ✓ | ✓ |  |  |  |  |
+| `org.requests.create` | ✓ | ✓ |  |  |  |  |
+| `org.requests.cancel` | ✓ |  |  |  |  |  |
+| `org.quotes.accept` | ✓ |  |  | ✓ |  | ✓ |
+| `org.invoices.view` | ✓ | ✓ | ✓ | ✓ |  |  |
+| `org.invoices.pay` | ✓ | ✓ |  |  |  | ✓ |
+| `org.documents.upload` | ✓ | ✓ |  |  |  |  |
+| `org.documents.view` | ✓ | ✓ | ✓ | ✓ |  |  |
+| `org.change_orders.approve` | ✓ |  |  | ✓ |  | ✓ |
+| `org.milestones.accept` | ✓ |  |  | ✓ |  |  |
+| `org.reports.view` | ✓ | ✓ | ✓ | ✓ |  |  |
+| `org.messages.send` | ✓ | ✓ | ✓ | ✓ |  |  |
+| `org.appointments.manage` | ✓ | ✓ |  |  |  |  |
+| `org.scenarios.manage` | ✓ | ✓ |  |  |  |  |
+| `org.listings.manage` | ✓ | ✓ |  |  |  |  |
+| `org.leases.manage` | ✓ | ✓ |  |  |  |  |
+| `org.maintenance.request` | ✓ | ✓ |  |  |  |  |
+| `org.comment` | ✓ | ✓ | ✓ | ✓ |  |  |
+| `org.export` | ✓ | ✓ |  |  |  |  |
 
 Organisation permissions only apply inside the organisation the user is a member of; a user who belongs to several organisations switches the active organisation, which resets cached private data.
 
@@ -161,3 +161,4 @@ A verified partner profile grants only:
 - `partner.availability.manage`
 
 Every partner permission is additionally scoped to invitations and assignments naming that partner: no competitor submissions, no unassigned work.
+

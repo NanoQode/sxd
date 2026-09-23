@@ -328,18 +328,19 @@ describe('listings', () => {
     await insertVerifiedAuthority(f.dbs.owner, f, propertyId);
     const draft = await createListing(owner, content(propertyId));
     const submitted = await submitListing(owner, draft.id, { expectedVersion: draft.version });
+    // Operations (rentals.manage) verify authorities and record checks but do not decide.
+    await expect(
+      rejectListing(opsIdentity(f), draft.id, {
+        expectedVersion: submitted.version,
+        reason: 'Not my call',
+      }),
+    ).rejects.toSatisfy((e) => errorCode(e) === 'forbidden');
     await expect(
       rejectListing(contentIdentity(f), draft.id, {
-        expectedVersion: submitted.version,
-        reason: 'no',
+        expectedVersion: submitted.version - 1,
+        reason: 'Stale version',
       }),
-    ).rejects.toSatisfy(
-      (e) =>
-        errorCode(e) === 'version_conflict' ||
-        errorCode(e) === 'validation_failed' ||
-        errorCode(e) === 'invalid_transition' ||
-        true,
-    );
+    ).rejects.toSatisfy((e) => errorCode(e) === 'version_conflict');
     const rejected = await rejectListing(contentIdentity(f), draft.id, {
       expectedVersion: submitted.version,
       reason: 'Title disclosure contradicts the survey plan reference',

@@ -109,7 +109,11 @@ describe('POST /api/v1/public/listings/:slug/inquiries', () => {
     expect(lead).toBeDefined();
     expect(lead!.status).toBe('new');
     expect(lead!.source).toBe('website_form');
-    expect(lead!.interestServiceId).toBe(f.landServiceId);
+    const [service] = await f.dbs.owner
+      .select({ template: schema.services.workflowTemplateKey })
+      .from(schema.services)
+      .where(eq(schema.services.id, lead!.interestServiceId!));
+    expect(service?.template).toBe('land_sales_leasing');
     expect(lead!.context).toMatchObject({
       kind: 'listing_inquiry',
       listingId,
