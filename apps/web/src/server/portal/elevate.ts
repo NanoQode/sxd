@@ -26,3 +26,7 @@ export async function elevate(tx: Transaction, ctx: ActorContext): Promise<void>
 export async function demote(tx: Transaction, ctx: ActorContext): Promise<void> {
   await applyActorContext(tx, { ...ctx, bypass: false });
 }
+
+// Keyset pagination helpers moved to ./pagination; re-exported for modules that
+// imported them from here before the move.
+export { decodeCursor, encodeCursor, keysetAfter } from './pagination';

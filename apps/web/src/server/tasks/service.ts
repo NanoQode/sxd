@@ -25,9 +25,11 @@ import {
 import {
   actorContext,
   decodeCursor,
+  demote,
   elevate,
   encodeCursor,
   iso,
+  isPartnerIdentity,
   isStaffIdentity,
   requireUserId,
   uniqueIds,
@@ -101,13 +103,28 @@ async function requireVisibleTask(
   id: string,
 ): Promise<TaskContext> {
   const userId = requireUserId(identity);
-  const task = await loadTask(tx, id);
+  let task = await loadTask(tx, id);
+  if (!task && isPartnerIdentity(identity) && !isStaffIdentity(identity)) {
+    // The tasks policy only shows a partner the rows assigned to them personally. To find out
+    // whether this task sits on an entity the partner is assigned to, its parent ids are read
+    // under a briefly elevated context; access is then proven under the partner's own context
+    // (resolveTaskParent + classifyViewer + canViewTask) before anything is returned.
+    await elevate(tx, identity.ctx);
+    task = await loadTask(tx, id);
+    await demote(tx, identity.ctx);
+  }
   if (!task) throw new ApiError('not_found', 'task not found');
   const parent = await resolveTaskParent(tx, task);
   if (!parent) throw new ApiError('not_found', 'task not found');
   const ref = await entityResourceRef(tx, identity, parent.entity);
-  const viewer = classifyViewer(identity, parent.entity, ref, ENTITY_STAFF_READ[parent.entity.type]);
-  if (!viewer || !canViewTask(viewer, task, userId)) throw new ApiError('not_found', 'task not found');
+  const viewer = classifyViewer(
+    identity,
+    parent.entity,
+    ref,
+    ENTITY_STAFF_READ[parent.entity.type],
+  );
+  if (!viewer || !canViewTask(viewer, task, userId))
+    throw new ApiError('not_found', 'task not found');
   return { task, parent, viewer };
 }
 
@@ -119,7 +136,11 @@ async function requireStaffManage(
   if (!isStaffIdentity(identity)) throw new ApiError('forbidden', 'only staff manage tasks');
   const ref = await entityResourceRef(tx, identity, entity);
   assertAllowed(
-    authorizeAny(identity.actor, ENTITY_STAFF_MANAGE[entity.type].map((staff) => ({ staff })), ref),
+    authorizeAny(
+      identity.actor,
+      ENTITY_STAFF_MANAGE[entity.type].map((staff) => ({ staff })),
+      ref,
+    ),
   );
 }
 
@@ -130,7 +151,10 @@ async function assertAssigneeAllowed(
   assigneeUserId: string,
   visibility: TaskRow['visibility'],
 ): Promise<void> {
-  const [u] = await tx.select({ id: schema.user.id }).from(schema.user).where(eq(schema.user.id, assigneeUserId));
+  const [u] = await tx
+    .select({ id: schema.user.id })
+    .from(schema.user)
+    .where(eq(schema.user.id, assigneeUserId));
   if (!u) {
     throw new ApiError('validation_failed', 'assignee does not exist', {
       details: [{ path: 'assigneeUserId', message: 'unknown user' }],
@@ -201,9 +225,11 @@ export async function createTask(
   const ctx = actorContext(identity, options);
   return withActor(getDb(), ctx, async (tx) => {
     const parent = await resolveTaskParent(tx, input);
-    if (!parent) throw new ApiError('not_found', 'service request, project or assignment not found');
+    if (!parent)
+      throw new ApiError('not_found', 'service request, project or assignment not found');
     await requireStaffManage(tx, identity, parent.entity);
-    if (input.assigneeUserId) await assertAssigneeAllowed(tx, parent, input.assigneeUserId, input.visibility);
+    if (input.assigneeUserId)
+      await assertAssigneeAllowed(tx, parent, input.assigneeUserId, input.visibility);
     const [row] = await tx
       .insert(schema.tasks)
       .values({
@@ -261,13 +287,22 @@ function cursorClause(cursor: { createdAt: Date; id: string } | null) {
 }
 
 /** Tasks on one service request, project or assignment, filtered by what the caller may see. */
-export async function listTasks(identity: RequestIdentity, query: TaskListQuery): Promise<Page<TaskDto>> {
+export async function listTasks(
+  identity: RequestIdentity,
+  query: TaskListQuery,
+): Promise<Page<TaskDto>> {
   const userId = requireUserId(identity);
   return withActor(getDb(), identity.ctx, async (tx) => {
     const parent = await resolveTaskParent(tx, query);
-    if (!parent) throw new ApiError('not_found', 'service request, project or assignment not found');
+    if (!parent)
+      throw new ApiError('not_found', 'service request, project or assignment not found');
     const ref = await entityResourceRef(tx, identity, parent.entity);
-    const viewer = classifyViewer(identity, parent.entity, ref, ENTITY_STAFF_READ[parent.entity.type]);
+    const viewer = classifyViewer(
+      identity,
+      parent.entity,
+      ref,
+      ENTITY_STAFF_READ[parent.entity.type],
+    );
     if (!viewer) throw new ApiError('forbidden', 'you do not have access to this resource');
     if (viewer === 'assignee' && !isStaffIdentity(identity)) {
       // The tasks policy only exposes rows assigned to the partner personally; partner-visible
@@ -296,7 +331,10 @@ export async function listTasks(identity: RequestIdentity, query: TaskListQuery)
       .limit(query.limit + 1);
     const page = rows.slice(0, query.limit);
     const last = rows.length > query.limit ? page[page.length - 1] : null;
-    return { items: await toDtos(tx, page), nextCursor: last ? encodeCursor(last.createdAt, last.id) : null };
+    return {
+      items: await toDtos(tx, page),
+      nextCursor: last ? encodeCursor(last.createdAt, last.id) : null,
+    };
   });
 }
 
@@ -305,14 +343,20 @@ export async function listTasks(identity: RequestIdentity, query: TaskListQuery)
  * the tasks awaiting their organisation's action plus anything assigned to
  * them personally. This feeds the portal home "awaiting your approval" list.
  */
-export async function listMyTasks(identity: RequestIdentity, query: MyTasksQuery): Promise<Page<TaskDto>> {
+export async function listMyTasks(
+  identity: RequestIdentity,
+  query: MyTasksQuery,
+): Promise<Page<TaskDto>> {
   const userId = requireUserId(identity);
   const orgId = identity.ctx.organizationId;
   const customerScope =
     !isStaffIdentity(identity) &&
     orgId !== null &&
     membershipFor(identity.actor, orgId) !== undefined &&
-    authorizeAny(identity.actor, [{ org: 'org.read' }], { type: 'organization', organizationId: orgId }).allowed;
+    authorizeAny(identity.actor, [{ org: 'org.read' }], {
+      type: 'organization',
+      organizationId: orgId,
+    }).allowed;
   const cursor = decodeCursor(query.cursor);
   return withActor(getDb(), identity.ctx, async (tx) => {
     const rows = await tx
@@ -330,8 +374,12 @@ export async function listMyTasks(identity: RequestIdentity, query: MyTasksQuery
                 ),
               )
             : eq(schema.tasks.assigneeUserId, userId),
-          isStaffIdentity(identity) ? undefined : inArray(schema.tasks.visibility, ['customer', 'partner', 'all']),
-          query.status ? eq(schema.tasks.status, query.status) : inArray(schema.tasks.status, OPEN_STATUSES),
+          isStaffIdentity(identity)
+            ? undefined
+            : inArray(schema.tasks.visibility, ['customer', 'partner', 'all']),
+          query.status
+            ? eq(schema.tasks.status, query.status)
+            : inArray(schema.tasks.status, OPEN_STATUSES),
           cursorClause(cursor),
         ),
       )
@@ -339,7 +387,10 @@ export async function listMyTasks(identity: RequestIdentity, query: MyTasksQuery
       .limit(query.limit + 1);
     const page = rows.slice(0, query.limit);
     const last = rows.length > query.limit ? page[page.length - 1] : null;
-    return { items: await toDtos(tx, page), nextCursor: last ? encodeCursor(last.createdAt, last.id) : null };
+    return {
+      items: await toDtos(tx, page),
+      nextCursor: last ? encodeCursor(last.createdAt, last.id) : null,
+    };
   });
 }
 
@@ -356,7 +407,8 @@ export async function assignTask(
     if (task.status === 'done' || task.status === 'cancelled') {
       throw new ApiError('invalid_transition', `a ${task.status} task cannot be reassigned`);
     }
-    if (input.assigneeUserId) await assertAssigneeAllowed(tx, parent, input.assigneeUserId, task.visibility);
+    if (input.assigneeUserId)
+      await assertAssigneeAllowed(tx, parent, input.assigneeUserId, task.visibility);
     const [row] = await tx
       .update(schema.tasks)
       .set({ assigneeUserId: input.assigneeUserId })
@@ -472,7 +524,9 @@ export async function completeTask(
         serviceRequestId: row.serviceRequestId,
         projectId: row.projectId,
         completedBy: userId,
-        recipientUserIds: uniqueIds([row.createdBy, row.assigneeUserId]).filter((u) => u !== userId),
+        recipientUserIds: uniqueIds([row.createdBy, row.assigneeUserId]).filter(
+          (u) => u !== userId,
+        ),
       },
       correlationId: options.correlationId ?? null,
     });
@@ -491,7 +545,16 @@ export async function blockTask(
   return withActor(getDb(), ctx, async (tx) => {
     const taskCtx = await requireVisibleTask(tx, identity, id);
     await assertCanWork(tx, identity, taskCtx, 'block');
-    const row = await transition(tx, identity, taskCtx.task, ['todo', 'in_progress'], 'blocked', {}, input.reason, options);
+    const row = await transition(
+      tx,
+      identity,
+      taskCtx.task,
+      ['todo', 'in_progress'],
+      'blocked',
+      {},
+      input.reason,
+      options,
+    );
     const [dto] = await toDtos(tx, [row]);
     return dto!;
   });
@@ -507,7 +570,16 @@ export async function unblockTask(
   return withActor(getDb(), ctx, async (tx) => {
     const taskCtx = await requireVisibleTask(tx, identity, id);
     await assertCanWork(tx, identity, taskCtx, 'unblock');
-    const row = await transition(tx, identity, taskCtx.task, ['blocked'], 'todo', {}, input.reason ?? null, options);
+    const row = await transition(
+      tx,
+      identity,
+      taskCtx.task,
+      ['blocked'],
+      'todo',
+      {},
+      input.reason ?? null,
+      options,
+    );
     const [dto] = await toDtos(tx, [row]);
     return dto!;
   });
@@ -523,7 +595,16 @@ export async function cancelTask(
   return withActor(getDb(), ctx, async (tx) => {
     const { task, parent } = await requireVisibleTask(tx, identity, id);
     await requireStaffManage(tx, identity, parent.entity);
-    const row = await transition(tx, identity, task, ['todo', 'in_progress', 'blocked'], 'cancelled', {}, input.reason, options);
+    const row = await transition(
+      tx,
+      identity,
+      task,
+      ['todo', 'in_progress', 'blocked'],
+      'cancelled',
+      {},
+      input.reason,
+      options,
+    );
     const [dto] = await toDtos(tx, [row]);
     return dto!;
   });

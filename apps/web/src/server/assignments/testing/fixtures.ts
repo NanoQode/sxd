@@ -1,5 +1,11 @@
-import { schema, type Database } from '@simplexd/db';
-import { connectTestDatabases, resetDatabase, uniqueSuffix, type TestDatabases } from '@simplexd/db/testing';
+import { eq } from 'drizzle-orm';
+import { schema, withActor, type Database } from '@simplexd/db';
+import {
+  connectTestDatabases,
+  resetDatabase,
+  uniqueSuffix,
+  type TestDatabases,
+} from '@simplexd/db/testing';
 import type { OrgRole, StaffRole } from '@simplexd/domain/authz';
 import type { RequestIdentity } from '@/lib/auth/session';
 
@@ -46,7 +52,14 @@ export function identityFor(userId: string, opts: IdentityOptions = {}): Request
   const staffRoles = opts.staffRoles ?? [];
   const now = new Date();
   const session = {
-    user: { id: userId, name: userId, email: `${userId}@example.test`, emailVerified: true, createdAt: now, updatedAt: now },
+    user: {
+      id: userId,
+      name: userId,
+      email: `${userId}@example.test`,
+      emailVerified: true,
+      createdAt: now,
+      updatedAt: now,
+    },
     session: {
       id: `sess_${userId}`,
       userId,
@@ -128,10 +141,25 @@ export async function createFixture(): Promise<Fixture> {
   const srs = await owner
     .insert(schema.serviceRequests)
     .values([
-      { reference: `SR-A-${s}`, organizationId: ids.orgA, requestedByUserId: ids.ownerA, serviceId: svc!.id, title: 'Request A' },
-      { reference: `SR-B-${s}`, organizationId: ids.orgB, requestedByUserId: ids.ownerB, serviceId: svc!.id, title: 'Request B' },
+      {
+        reference: `SR-A-${s}`,
+        organizationId: ids.orgA,
+        requestedByUserId: ids.ownerA,
+        serviceId: svc!.id,
+        title: 'Request A',
+      },
+      {
+        reference: `SR-B-${s}`,
+        organizationId: ids.orgB,
+        requestedByUserId: ids.ownerB,
+        serviceId: svc!.id,
+        title: 'Request B',
+      },
     ])
-    .returning({ id: schema.serviceRequests.id, organizationId: schema.serviceRequests.organizationId });
+    .returning({
+      id: schema.serviceRequests.id,
+      organizationId: schema.serviceRequests.organizationId,
+    });
   const projects = await owner
     .insert(schema.projects)
     .values([
@@ -150,7 +178,11 @@ export async function createFixture(): Promise<Fixture> {
   };
 }
 
-export function customerIdentity(f: Fixture, which: 'A' | 'B', role: OrgRole = 'owner'): RequestIdentity {
+export function customerIdentity(
+  f: Fixture,
+  which: 'A' | 'B',
+  role: OrgRole = 'owner',
+): RequestIdentity {
   const userId = which === 'A' ? (role === 'adviser' ? f.adviserA : f.ownerA) : f.ownerB;
   const organizationId = which === 'A' ? f.orgA : f.orgB;
   return identityFor(userId, { memberships: [{ organizationId, role }] });
@@ -193,6 +225,44 @@ export async function insertFile(
     })
     .returning({ id: schema.fileObjects.id });
   return row!.id;
+}
+
+/** A property inserted with the owner role (the runtime role cannot insert properties yet, see properties/service.ts). */
+export async function insertProperty(
+  owner: Database,
+  organizationId: string,
+  values: Partial<typeof schema.properties.$inferInsert> = {},
+): Promise<string> {
+  const [row] = await owner
+    .insert(schema.properties)
+    .values({
+      organizationId,
+      name: values.name ?? `Property ${uniqueSuffix()}`,
+      kind: values.kind ?? 'land',
+      ...values,
+    })
+    .returning({ id: schema.properties.id });
+  return row!.id;
+}
+
+/** True when the runtime role can insert a property (the 0001 policy currently forbids it). */
+export async function runtimeCanInsertProperties(
+  dbs: TestDatabases,
+  organizationId: string,
+  userId: string,
+): Promise<boolean> {
+  try {
+    const rows = await withActor(dbs.app, { userId, organizationId, staff: false }, (tx) =>
+      tx
+        .insert(schema.properties)
+        .values({ organizationId, name: 'probe', kind: 'land' })
+        .returning({ id: schema.properties.id }),
+    );
+    await dbs.owner.delete(schema.properties).where(eq(schema.properties.id, rows[0]!.id));
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 /** Matches an ApiError or AuthorizationError by code. */

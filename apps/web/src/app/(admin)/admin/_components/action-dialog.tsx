@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, type ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Alert, Button, Dialog, DialogContent, DialogFooter, Field, Input, Textarea } from '@simplexd/ui';
 import { errorMessage } from '@/lib/api/client-fetch';
 
@@ -40,14 +40,15 @@ export function ActionDialog({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!open) {
+  function close(next: boolean) {
+    if (!next) {
       setReason('');
       setTyped('');
       setBusy(false);
       setError(null);
     }
-  }, [open]);
+    onOpenChange(next);
+  }
 
   const reasonOk = !requireReason || reason.trim().length >= 3;
   const typedOk = !confirmText || typed === confirmText;
@@ -57,7 +58,7 @@ export function ActionDialog({
     setError(null);
     try {
       await onConfirm(reason.trim());
-      onOpenChange(false);
+      close(false);
     } catch (err) {
       setError(errorMessage(err));
     } finally {
@@ -66,7 +67,7 @@ export function ActionDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={(v) => !busy && onOpenChange(v)}>
+    <Dialog open={open} onOpenChange={(v) => !busy && close(v)}>
       <DialogContent title={title} description={description}>
         <div className="space-y-4">
           {error ? (
@@ -96,7 +97,7 @@ export function ActionDialog({
             </Field>
           ) : null}
           <DialogFooter>
-            <Button variant="secondary" onClick={() => onOpenChange(false)} disabled={busy}>
+            <Button variant="secondary" onClick={() => close(false)} disabled={busy}>
               Cancel
             </Button>
             <Button

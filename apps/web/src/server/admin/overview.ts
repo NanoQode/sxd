@@ -48,7 +48,10 @@ export async function overviewCounts(ctx: AdminContext): Promise<OverviewCounts>
         .where(
           and(
             eq(schema.observationInterpretations.isCurrent, true),
-            eq(schema.observationInterpretations.reviewStatus, 'source_read_pending_business_review'),
+            eq(
+              schema.observationInterpretations.reviewStatus,
+              'source_read_pending_business_review',
+            ),
           ),
         );
       out.pendingInterpretations = pending[0]?.n ?? 0;
@@ -82,9 +85,15 @@ export async function overviewCounts(ctx: AdminContext): Promise<OverviewCounts>
       out.leads = Object.fromEntries(byStatus.map((r) => [r.status, r.n]));
     }
     if (ops) {
-      const dead = await tx.select({ n: sql<number>`count(*)::int` }).from(schema.jobs).where(eq(schema.jobs.status, 'dead'));
+      const dead = await tx
+        .select({ n: sql<number>`count(*)::int` })
+        .from(schema.jobs)
+        .where(eq(schema.jobs.status, 'dead'));
       out.deadJobs = dead[0]?.n ?? 0;
-      const outbox = await tx.select({ n: sql<number>`count(*)::int` }).from(schema.outboxEvents).where(isNull(schema.outboxEvents.publishedAt));
+      const outbox = await tx
+        .select({ n: sql<number>`count(*)::int` })
+        .from(schema.outboxEvents)
+        .where(isNull(schema.outboxEvents.publishedAt));
       out.unpublishedOutbox = outbox[0]?.n ?? 0;
     }
     if (access) {

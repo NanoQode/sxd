@@ -13,5 +13,7 @@ export const POST = route<{ params: Promise<{ version: string }> }>(async (req, 
   const admin = await requireAdminContext(ctx.correlationId);
   const { version } = await params(ctx, versionParams);
   const body = await parseJson(req, rankingPolicyActivateSchema);
-  return json(await activateRankingPolicy(admin, version, body), { correlationId: ctx.correlationId });
+  return json(await activateRankingPolicy(admin, version, body), {
+    correlationId: ctx.correlationId,
+  });
 });

@@ -17,8 +17,10 @@ export const GET = route<{ params: Promise<{ file: string }> }>(async (req, ctx)
   const { file } = await params(ctx, fileParams);
   const query = parseQuery(req, exportQuerySchema);
   const [kind, format] = file.split('.') as ['markets' | 'observations', 'json' | 'csv'];
-  const rows = kind === 'markets' ? await exportMarkets(admin, query) : await exportObservations(admin, query);
-  if (rows.length > 50_000) throw new ApiError('validation_failed', 'export too large; narrow the filters');
+  const rows =
+    kind === 'markets' ? await exportMarkets(admin, query) : await exportObservations(admin, query);
+  if (rows.length > 50_000)
+    throw new ApiError('validation_failed', 'export too large; narrow the filters');
   const stamp = new Date().toISOString().slice(0, 10);
   if (format === 'json') {
     return json(

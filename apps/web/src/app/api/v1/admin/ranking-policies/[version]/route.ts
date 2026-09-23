@@ -21,5 +21,7 @@ export const PATCH = route<Ctx>(async (req, ctx) => {
   const admin = await requireAdminContext(ctx.correlationId);
   const { version } = await params(ctx, versionParams);
   const body = await parseJson(req, rankingPolicyPatchSchema);
-  return json(await patchRankingPolicyDraft(admin, version, body), { correlationId: ctx.correlationId });
+  return json(await patchRankingPolicyDraft(admin, version, body), {
+    correlationId: ctx.correlationId,
+  });
 });

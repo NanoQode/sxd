@@ -36,7 +36,10 @@ export function isPartnerIdentity(identity: RequestIdentity): boolean {
 }
 
 /** Row-level security context for this request, carrying the correlation id into audit rows. */
-export function actorContext(identity: RequestIdentity, options: ServiceOptions = {}): ActorContext {
+export function actorContext(
+  identity: RequestIdentity,
+  options: ServiceOptions = {},
+): ActorContext {
   return options.correlationId
     ? { ...identity.ctx, correlationId: options.correlationId }
     : identity.ctx;
@@ -58,6 +61,11 @@ export function actorContext(identity: RequestIdentity, options: ServiceOptions 
  */
 export async function elevate(tx: Transaction, ctx: ActorContext): Promise<void> {
   await applyActorContext(tx, { ...ctx, bypass: true });
+}
+
+/** Restores the caller's own context after a narrowly scoped elevated read. */
+export async function demote(tx: Transaction, ctx: ActorContext): Promise<void> {
+  await applyActorContext(tx, { ...ctx, bypass: false });
 }
 
 /** Encodes a keyset cursor (timestamp + id) for stable pagination. */

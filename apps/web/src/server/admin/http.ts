@@ -8,7 +8,8 @@ import { adminContext, type AdminContext } from './context';
 export async function requireAdminContext(correlationId: string): Promise<AdminContext> {
   const identity = await getIdentity();
   if (!identity.session) throw new ApiError('unauthenticated', 'sign in required');
-  if (identity.actor.staffRoles.length === 0) throw new ApiError('forbidden', 'staff access required');
+  if (identity.actor.staffRoles.length === 0)
+    throw new ApiError('forbidden', 'staff access required');
   return adminContext(identity, correlationId);
 }
 

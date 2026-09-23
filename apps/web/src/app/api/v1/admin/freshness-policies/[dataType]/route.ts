@@ -13,5 +13,7 @@ export const PUT = route<{ params: Promise<{ dataType: string }> }>(async (req, 
   const admin = await requireAdminContext(ctx.correlationId);
   const { dataType } = await params(ctx, typeParams);
   const body = await parseJson(req, freshnessPolicyUpsertSchema);
-  return json(await upsertFreshnessPolicy(admin, dataType, body), { correlationId: ctx.correlationId });
+  return json(await upsertFreshnessPolicy(admin, dataType, body), {
+    correlationId: ctx.correlationId,
+  });
 });

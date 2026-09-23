@@ -11,11 +11,7 @@ import { getDb, schema, withActor, type DbExecutor } from '@simplexd/db';
 import { assertAllowed, authorizeStaff } from '@simplexd/domain/authz';
 import { recordAudit } from '@/lib/audit';
 import type { RequestIdentity } from '@/lib/auth/session';
-import {
-  actorContext,
-  requireUserId,
-  type ServiceOptions,
-} from '@/server/assignments/shared';
+import { actorContext, requireUserId, type ServiceOptions } from '@/server/assignments/shared';
 import { requireProperty } from './access';
 import { toOwnerAuthorityDto } from './dto';
 
@@ -106,7 +102,12 @@ export async function submitOwnerAuthority(
   return withActor(getDb(), ctx, async (tx) => {
     const property = await requireProperty(tx, identity, propertyId, 'manage');
     // Read under the caller's own context: the file must be visible to them and belong to the same organisation.
-    await assertUsableFile(tx, input.authorityDocumentFileId, property.organizationId, 'authorityDocumentFileId');
+    await assertUsableFile(
+      tx,
+      input.authorityDocumentFileId,
+      property.organizationId,
+      'authorityDocumentFileId',
+    );
     const [row] = await tx
       .insert(schema.ownerAuthorities)
       .values({
@@ -132,7 +133,11 @@ export async function submitOwnerAuthority(
 
 function assertCanVerify(identity: RequestIdentity, organizationId: string, id: string): void {
   assertAllowed(
-    authorizeStaff(identity.actor, 'rentals.manage', { type: 'owner_authority', id, organizationId }),
+    authorizeStaff(identity.actor, 'rentals.manage', {
+      type: 'owner_authority',
+      id,
+      organizationId,
+    }),
   );
 }
 
@@ -168,7 +173,12 @@ export async function verifyOwnerAuthority(
         expiresAt,
         note: input.note ?? current.note,
       })
-      .where(and(eq(schema.ownerAuthorities.id, authorityId), eq(schema.ownerAuthorities.status, 'pending')))
+      .where(
+        and(
+          eq(schema.ownerAuthorities.id, authorityId),
+          eq(schema.ownerAuthorities.status, 'pending'),
+        ),
+      )
       .returning();
     if (!row) throw new ApiError('invalid_transition', 'owner authority changed while verifying');
     await recordAudit(tx, identity, {
@@ -204,7 +214,12 @@ export async function rejectOwnerAuthority(
     const [row] = await tx
       .update(schema.ownerAuthorities)
       .set({ status: 'rejected', verifiedBy: userId, verifiedAt: new Date(), note: input.reason })
-      .where(and(eq(schema.ownerAuthorities.id, authorityId), eq(schema.ownerAuthorities.status, 'pending')))
+      .where(
+        and(
+          eq(schema.ownerAuthorities.id, authorityId),
+          eq(schema.ownerAuthorities.status, 'pending'),
+        ),
+      )
       .returning();
     if (!row) throw new ApiError('invalid_transition', 'owner authority changed while rejecting');
     await recordAudit(tx, identity, {

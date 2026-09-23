@@ -11,7 +11,8 @@ function encodeCursor(createdAt: Date, id: string): string {
 function decodeCursor(cursor: string): { createdAt: Date; id: string } {
   const [ts, id] = Buffer.from(cursor, 'base64url').toString('utf8').split('|');
   const createdAt = new Date(ts ?? '');
-  if (!id || Number.isNaN(createdAt.getTime())) throw new ApiError('validation_failed', 'invalid cursor');
+  if (!id || Number.isNaN(createdAt.getTime()))
+    throw new ApiError('validation_failed', 'invalid cursor');
   return { createdAt, id };
 }
 
@@ -26,7 +27,10 @@ export async function listAuditEvents(
     if (query.actorUserId) clauses.push(eq(schema.auditEvents.actorUserId, query.actorUserId));
     if (query.entityType) clauses.push(eq(schema.auditEvents.entityType, query.entityType));
     if (query.entityId) clauses.push(eq(schema.auditEvents.entityId, query.entityId));
-    if (query.action) clauses.push(sql`${schema.auditEvents.action} ilike ${`${query.action.replace(/[%_]/g, '')}%`}`);
+    if (query.action)
+      clauses.push(
+        sql`${schema.auditEvents.action} ilike ${`${query.action.replace(/[%_]/g, '')}%`}`,
+      );
     if (query.from) clauses.push(gte(schema.auditEvents.createdAt, new Date(query.from)));
     if (query.to) clauses.push(lte(schema.auditEvents.createdAt, new Date(query.to)));
     if (query.cursor) {
@@ -34,7 +38,10 @@ export async function listAuditEvents(
       clauses.push(
         or(
           sql`${schema.auditEvents.createdAt} < ${c.createdAt}`,
-          and(eq(schema.auditEvents.createdAt, c.createdAt), sql`${schema.auditEvents.id} < ${c.id}::uuid`),
+          and(
+            eq(schema.auditEvents.createdAt, c.createdAt),
+            sql`${schema.auditEvents.id} < ${c.id}::uuid`,
+          ),
         )!,
       );
     }
@@ -63,7 +70,8 @@ export async function listAuditEvents(
         correlationId: e.correlationId,
         createdAt: e.createdAt.toISOString(),
       })),
-      nextCursor: rows.length > query.limit && last ? encodeCursor(last.e.createdAt, last.e.id) : null,
+      nextCursor:
+        rows.length > query.limit && last ? encodeCursor(last.e.createdAt, last.e.id) : null,
     };
   });
 }
@@ -89,13 +97,17 @@ export async function listAuditForEntity(
   limit = 100,
 ): Promise<AuditEventDto[]> {
   const allowed =
-    can(ctx, 'audit.read') || (MARKET_DATA_ENTITIES.has(entityType) && can(ctx, 'market_data.history.read'));
+    can(ctx, 'audit.read') ||
+    (MARKET_DATA_ENTITIES.has(entityType) && can(ctx, 'market_data.history.read'));
   if (!allowed) throw new ApiError('forbidden', 'audit history requires audit.read');
   const scoped: AdminContext = {
     ...ctx,
     identity: {
       ...ctx.identity,
-      actor: { ...ctx.identity.actor, staffRoles: [...ctx.identity.actor.staffRoles, 'super_admin'] },
+      actor: {
+        ...ctx.identity.actor,
+        staffRoles: [...ctx.identity.actor.staffRoles, 'super_admin'],
+      },
     },
   };
   // The widened actor only satisfies the audit.read check inside listAuditEvents; the query is fixed to this entity.
@@ -104,12 +116,20 @@ export async function listAuditForEntity(
 }
 
 /** Distinct entity types and actions seen, for filter controls. */
-export async function auditFilterOptions(ctx: AdminContext): Promise<{ entityTypes: string[]; actions: string[] }> {
+export async function auditFilterOptions(
+  ctx: AdminContext,
+): Promise<{ entityTypes: string[]; actions: string[] }> {
   authorize(ctx, 'audit.read');
   return transact(ctx, async (tx) => {
     const [types, actions] = await Promise.all([
-      tx.selectDistinct({ v: schema.auditEvents.entityType }).from(schema.auditEvents).orderBy(schema.auditEvents.entityType),
-      tx.selectDistinct({ v: schema.auditEvents.action }).from(schema.auditEvents).orderBy(schema.auditEvents.action),
+      tx
+        .selectDistinct({ v: schema.auditEvents.entityType })
+        .from(schema.auditEvents)
+        .orderBy(schema.auditEvents.entityType),
+      tx
+        .selectDistinct({ v: schema.auditEvents.action })
+        .from(schema.auditEvents)
+        .orderBy(schema.auditEvents.action),
     ]);
     return { entityTypes: types.map((t) => t.v), actions: actions.map((a) => a.v) };
   });

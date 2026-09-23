@@ -19,5 +19,8 @@ export const POST = route<Ctx>(async (req, ctx) => {
   const admin = await requireAdminContext(ctx.correlationId);
   const { id } = await params(ctx, idParams);
   const body = await parseJson(req, neighborhoodCreateSchema);
-  return json(await createNeighborhood(admin, id, body), { status: 201, correlationId: ctx.correlationId });
+  return json(await createNeighborhood(admin, id, body), {
+    status: 201,
+    correlationId: ctx.correlationId,
+  });
 });

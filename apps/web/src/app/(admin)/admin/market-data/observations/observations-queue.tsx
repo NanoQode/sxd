@@ -39,8 +39,9 @@ export function ObservationsQueue({
   canEdit: boolean;
 }) {
   const [filters, setFilters] = useQueryStates(parsers, { shallow: false });
-  const [search, setSearch] = useState(filters.q);
-  useEffect(() => setSearch(filters.q), [filters.q]);
+  const [searchState, setSearchState] = useState({ q: filters.q, text: filters.q });
+  const search = searchState.q === filters.q ? searchState.text : filters.q;
+  const setSearch = (text: string) => setSearchState({ q: filters.q, text });
   useEffect(() => {
     const t = setTimeout(() => {
       if (search !== filters.q) void setFilters({ q: search || null, page: 1 });

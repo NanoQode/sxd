@@ -45,7 +45,10 @@ export async function requireConversation(
     .select()
     .from(schema.conversationParticipants)
     .where(eq(schema.conversationParticipants.conversationId, id))
-    .orderBy(asc(schema.conversationParticipants.joinedAt), asc(schema.conversationParticipants.id));
+    .orderBy(
+      asc(schema.conversationParticipants.joinedAt),
+      asc(schema.conversationParticipants.id),
+    );
   const self = participants.find((p) => p.userId === userId && p.leftAt === null) ?? null;
   if (self) return { conversation, participants, self, observer: false };
   const observer =

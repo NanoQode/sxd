@@ -1,4 +1,9 @@
-import { ApiError, type AreaUnit, type DeclaredAreaDto, type DeclaredAreaInput } from '@simplexd/contracts';
+import {
+  ApiError,
+  type AreaUnit,
+  type DeclaredAreaDto,
+  type DeclaredAreaInput,
+} from '@simplexd/contracts';
 
 /**
  * Area normalisation. The declared value and unit are always stored verbatim;

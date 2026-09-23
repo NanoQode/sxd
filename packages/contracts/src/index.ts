@@ -13,3 +13,5 @@ export * from './collaboration';
 export * from './commercial';
 export * from './engagements';
 export * from './finance';
+export * from './files';
+export * from './appointments';

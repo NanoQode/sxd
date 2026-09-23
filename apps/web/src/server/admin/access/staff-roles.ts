@@ -13,11 +13,20 @@ export interface StaffUserDto {
   emailVerified: boolean;
   twoFactorEnabled: boolean;
   banned: boolean;
-  roles: Array<{ id: string; role: StaffRole; grantedAt: string; grantedBy: string | null; reason: string | null }>;
+  roles: Array<{
+    id: string;
+    role: StaffRole;
+    grantedAt: string;
+    grantedBy: string | null;
+    reason: string | null;
+  }>;
 }
 
 /** Users holding at least one active staff role, or matching `q` (for granting). */
-export async function listStaffUsers(ctx: AdminContext, query: { q?: string; limit: number }): Promise<StaffUserDto[]> {
+export async function listStaffUsers(
+  ctx: AdminContext,
+  query: { q?: string; limit: number },
+): Promise<StaffUserDto[]> {
   authorize(ctx, 'access.staff_roles.manage');
   return transact(ctx, async (tx) => {
     const pattern = query.q ? `%${query.q.replace(/[%_]/g, '')}%` : null;
@@ -51,7 +60,13 @@ export async function listStaffUsers(ctx: AdminContext, query: { q?: string; lim
     const byUser = new Map<string, StaffUserDto['roles']>();
     for (const r of roles) {
       const list = byUser.get(r.userId) ?? [];
-      list.push({ id: r.id, role: r.role, grantedAt: r.grantedAt.toISOString(), grantedBy: r.grantedBy, reason: r.reason });
+      list.push({
+        id: r.id,
+        role: r.role,
+        grantedAt: r.grantedAt.toISOString(),
+        grantedBy: r.grantedBy,
+        reason: r.reason,
+      });
       byUser.set(r.userId, list);
     }
     return users.map((u) => ({
@@ -65,13 +80,22 @@ export async function listStaffUsers(ctx: AdminContext, query: { q?: string; lim
 
 export async function changeStaffRole(
   ctx: AdminContext,
-  input: { action: 'grant' | 'revoke'; userId?: string; email?: string; role: StaffRole; reason: string },
+  input: {
+    action: 'grant' | 'revoke';
+    userId?: string;
+    email?: string;
+    role: StaffRole;
+    reason: string;
+  },
 ): Promise<StaffUserDto> {
   authorize(ctx, 'access.staff_roles.manage');
   const actor = actorId(ctx);
   const userId = await transact(ctx, async (tx) => {
     const target = input.userId
-      ? await tx.select({ id: schema.user.id }).from(schema.user).where(eq(schema.user.id, input.userId))
+      ? await tx
+          .select({ id: schema.user.id })
+          .from(schema.user)
+          .where(eq(schema.user.id, input.userId))
       : await tx
           .select({ id: schema.user.id })
           .from(schema.user)
@@ -81,7 +105,13 @@ export async function changeStaffRole(
     const active = await tx
       .select()
       .from(schema.staffRoles)
-      .where(and(eq(schema.staffRoles.userId, user.id), eq(schema.staffRoles.role, input.role), isNull(schema.staffRoles.revokedAt)));
+      .where(
+        and(
+          eq(schema.staffRoles.userId, user.id),
+          eq(schema.staffRoles.role, input.role),
+          isNull(schema.staffRoles.revokedAt),
+        ),
+      );
     if (input.action === 'grant') {
       if (active.length > 0) throw new ApiError('conflict', `user already holds ${input.role}`);
       const [row] = await tx
@@ -100,12 +130,16 @@ export async function changeStaffRole(
       const current = active[0];
       if (!current) throw new ApiError('not_found', `user does not hold ${input.role}`);
       if (input.role === 'super_admin') {
-        if (user.id === actor) throw new ApiError('forbidden', 'you cannot revoke your own super administrator role');
+        if (user.id === actor)
+          throw new ApiError('forbidden', 'you cannot revoke your own super administrator role');
         const admins = await tx
           .select({ n: sql<number>`count(*)::int` })
           .from(schema.staffRoles)
-          .where(and(eq(schema.staffRoles.role, 'super_admin'), isNull(schema.staffRoles.revokedAt)));
-        if ((admins[0]?.n ?? 0) <= 1) throw new ApiError('conflict', 'the last super administrator cannot be revoked');
+          .where(
+            and(eq(schema.staffRoles.role, 'super_admin'), isNull(schema.staffRoles.revokedAt)),
+          );
+        if ((admins[0]?.n ?? 0) <= 1)
+          throw new ApiError('conflict', 'the last super administrator cannot be revoked');
       }
       await tx
         .update(schema.staffRoles)
@@ -141,5 +175,10 @@ export async function changeStaffRole(
       .where(eq(schema.user.id, userId)),
   );
   const u = byId[0]!;
-  return { ...u, twoFactorEnabled: Boolean(u.twoFactorEnabled), banned: Boolean(u.banned), roles: [] };
+  return {
+    ...u,
+    twoFactorEnabled: Boolean(u.twoFactorEnabled),
+    banned: Boolean(u.banned),
+    roles: [],
+  };
 }

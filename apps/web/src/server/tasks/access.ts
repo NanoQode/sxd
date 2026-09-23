@@ -2,11 +2,7 @@ import 'server-only';
 import { and, eq, inArray, isNull, ne, or, type SQL } from 'drizzle-orm';
 import { ApiError, type Visibility } from '@simplexd/contracts';
 import { schema, type DbExecutor } from '@simplexd/db';
-import {
-  resolveEntity,
-  type EntityAccess,
-  type ViewerClass,
-} from '@/server/assignments/access';
+import { resolveEntity, type EntityAccess, type ViewerClass } from '@/server/assignments/access';
 
 export type TaskRow = typeof schema.tasks.$inferSelect;
 type AssignmentRow = typeof schema.assignments.$inferSelect;

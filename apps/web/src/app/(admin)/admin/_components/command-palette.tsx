@@ -38,42 +38,44 @@ export function CommandPalette({
   const listId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
   const [query, setQuery] = useState('');
-  const [markets, setMarkets] = useState<Result[]>([]);
+  const [marketResults, setMarketResults] = useState<{ q: string; items: Result[] }>({ q: '', items: [] });
   const [loading, setLoading] = useState(false);
-  const [active, setActive] = useState(0);
+  const [activeRaw, setActive] = useState(0);
+  const trimmed = query.trim();
+  const marketSearchActive = open && canSearchMarkets && trimmed.length >= 2;
+  const markets = marketSearchActive && marketResults.q === trimmed ? marketResults.items : [];
 
-  useEffect(() => {
-    if (!open) {
+  function handleOpenChange(next: boolean) {
+    if (!next) {
       setQuery('');
-      setMarkets([]);
+      setMarketResults({ q: '', items: [] });
       setActive(0);
     }
-  }, [open]);
+    onOpenChange(next);
+  }
 
   useEffect(() => {
-    if (!open || !canSearchMarkets || query.trim().length < 2) {
-      setMarkets([]);
-      return;
-    }
+    if (!marketSearchActive) return;
     const controller = new AbortController();
     const timer = setTimeout(async () => {
       setLoading(true);
       try {
         const res = await apiFetch<{ items: AdminMarketRow[] }>(
-          `/api/v1/admin/markets?q=${encodeURIComponent(query.trim())}&pageSize=8`,
+          `/api/v1/admin/markets?q=${encodeURIComponent(trimmed)}&pageSize=8`,
           { signal: controller.signal },
         );
-        setMarkets(
-          res.items.map((m) => ({
+        setMarketResults({
+          q: trimmed,
+          items: res.items.map((m) => ({
             id: `market-${m.id}`,
             label: m.name,
             hint: `${m.stateName} · ${m.publicationState.replace(/_/g, ' ')}`,
             href: `/admin/market-data/markets/${m.id}`,
             kind: 'market',
           })),
-        );
+        });
       } catch {
-        if (!controller.signal.aborted) setMarkets([]);
+        if (!controller.signal.aborted) setMarketResults({ q: trimmed, items: [] });
       } finally {
         if (!controller.signal.aborted) setLoading(false);
       }
@@ -82,7 +84,7 @@ export function CommandPalette({
       clearTimeout(timer);
       controller.abort();
     };
-  }, [open, query, canSearchMarkets]);
+  }, [marketSearchActive, trimmed]);
 
   const results = useMemo<Result[]>(() => {
     const q = query.trim().toLowerCase();
@@ -93,13 +95,11 @@ export function CommandPalette({
     return [...sectionResults.slice(0, q ? 12 : 30), ...markets];
   }, [query, sections, subNav, markets]);
 
-  useEffect(() => {
-    setActive((a) => Math.min(a, Math.max(0, results.length - 1)));
-  }, [results.length]);
+  const active = Math.min(activeRaw, Math.max(0, results.length - 1));
 
   function go(result: Result | undefined) {
     if (!result) return;
-    onOpenChange(false);
+    handleOpenChange(false);
     router.push(result.href);
   }
 
@@ -117,7 +117,7 @@ export function CommandPalette({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent title="Search" description="Jump to a section or a market by name or alias." size="md">
         <div className="space-y-3">
           <input

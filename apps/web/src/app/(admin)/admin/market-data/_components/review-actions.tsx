@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import type { ComparableSummary } from '@simplexd/contracts';
 import { Alert, Button, Field, Input, Textarea, useToast } from '@simplexd/ui';
 import { apiFetch, errorMessage } from '@/lib/api/client-fetch';
@@ -98,7 +98,7 @@ export function ReviewActions({
   const [comp, setComp] = useState<ComparableSummary | null | undefined>(comparables);
   const [loadingComp, setLoadingComp] = useState(false);
 
-  const ownWork = (target.interpretation.createdBy ?? target.createdBy) === actorId;
+  const ownWork = (target.createdBy ?? target.interpretation.createdBy) === actorId;
   const decisions = available(target).filter((d) => {
     const meta = META[d];
     if (meta.permission === 'publish' && !canPublish) return false;
@@ -106,23 +106,19 @@ export function ReviewActions({
     return true;
   });
 
-  useEffect(() => {
-    if (!decision) {
-      setNote('');
-      setReasonNotRankEligible('');
-      setContextual(false);
-    }
-  }, [decision]);
-
-  useEffect(() => {
-    if ((decision === 'publish' || decision === 'mark_rank_eligible') && comp === undefined) {
+  function openDecision(d: Decision) {
+    setNote('');
+    setReasonNotRankEligible('');
+    setContextual(false);
+    setDecision(d);
+    if ((d === 'publish' || d === 'mark_rank_eligible') && comp === undefined) {
       setLoadingComp(true);
       apiFetch<{ comparables: ComparableSummary }>(`/api/v1/admin/observations/${target.id}`)
-        .then((d) => setComp(d.comparables))
+        .then((res) => setComp(res.comparables))
         .catch(() => setComp(null))
         .finally(() => setLoadingComp(false));
     }
-  }, [decision, comp, target.id]);
+  }
 
   async function submit(decisionToApply: Decision) {
     try {
@@ -159,7 +155,7 @@ export function ReviewActions({
             key={d}
             size="sm"
             variant={META[d].tone === 'danger' ? 'secondary' : d === 'publish' || d === 'approve' ? 'primary' : 'secondary'}
-            onClick={() => setDecision(d)}
+            onClick={() => openDecision(d)}
           >
             {META[d].label}
           </Button>

@@ -3,7 +3,14 @@ import { asc, eq } from 'drizzle-orm';
 import { ApiError } from '@simplexd/contracts';
 import { schema } from '@simplexd/db';
 import { recordAudit } from '@/lib/audit';
-import { actorId, assertUpdatedAt, authorize, notFound, transact, type AdminContext } from '../context';
+import {
+  actorId,
+  assertUpdatedAt,
+  authorize,
+  notFound,
+  transact,
+  type AdminContext,
+} from '../context';
 
 type FlagRow = typeof schema.featureFlags.$inferSelect;
 
@@ -59,15 +66,22 @@ export async function patchFeatureFlag(
   authorize(ctx, 'platform.feature_flags.manage');
   const userId = actorId(ctx);
   return transact(ctx, async (tx) => {
-    const rows = await tx.select().from(schema.featureFlags).where(eq(schema.featureFlags.key, key));
+    const rows = await tx
+      .select()
+      .from(schema.featureFlags)
+      .where(eq(schema.featureFlags.key, key));
     const current = rows[0];
     if (!current) throw notFound('feature flag');
     assertUpdatedAt(current.updatedAt, input.expectedUpdatedAt);
     if (current.enabled === input.enabled) return toDto(current);
     if (current.requiresReview && !input.reason?.trim())
-      throw new ApiError('validation_failed', 'this flag requires a review note explaining the change', {
-        details: [{ path: 'reason', message: 'required' }],
-      });
+      throw new ApiError(
+        'validation_failed',
+        'this flag requires a review note explaining the change',
+        {
+          details: [{ path: 'reason', message: 'required' }],
+        },
+      );
     if (current.category === 'regulated_gated' && input.enabled && input.confirmKey !== key)
       throw new ApiError(
         'validation_failed',

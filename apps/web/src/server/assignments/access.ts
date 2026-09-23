@@ -100,13 +100,7 @@ export async function loadAssignmentContext(
 /* ---------------------------------------------------------------------- */
 
 export type CollaborationEntityType =
-  | 'service_request'
-  | 'project'
-  | 'property'
-  | 'lead'
-  | 'site_visit'
-  | 'report'
-  | 'defect';
+  'service_request' | 'project' | 'property' | 'lead' | 'site_visit' | 'report' | 'defect';
 
 export interface EntityAccess {
   type: CollaborationEntityType;

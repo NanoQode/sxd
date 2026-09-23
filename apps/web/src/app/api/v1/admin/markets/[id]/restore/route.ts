@@ -10,5 +10,7 @@ export const POST = route<{ params: Promise<{ id: string }> }>(async (req, ctx) 
   const admin = await requireAdminContext(ctx.correlationId);
   const { id } = await params(ctx, idParams);
   const body = await parseJson(req, marketTransitionSchema);
-  return json(await transitionMarket(admin, id, 'restore', body), { correlationId: ctx.correlationId });
+  return json(await transitionMarket(admin, id, 'restore', body), {
+    correlationId: ctx.correlationId,
+  });
 });

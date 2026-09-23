@@ -53,7 +53,11 @@ import { insertMessage } from './messages';
  * so a conversation can never widen what someone may see.
  */
 
-async function unreadCount(tx: DbExecutor, ctx: ConversationContext, userId: string): Promise<number> {
+async function unreadCount(
+  tx: DbExecutor,
+  ctx: ConversationContext,
+  userId: string,
+): Promise<number> {
   if (!ctx.self) return 0;
   const [row] = await tx
     .select({ n: count() })
@@ -85,7 +89,10 @@ function toDto(row: ConversationRow, unread: number): ConversationDto {
   };
 }
 
-function toParticipantDto(p: ParticipantRow, names: Map<string, string>): ConversationParticipantDto {
+function toParticipantDto(
+  p: ParticipantRow,
+  names: Map<string, string>,
+): ConversationParticipantDto {
   return {
     userId: p.userId,
     name: names.get(p.userId) ?? null,
@@ -96,7 +103,11 @@ function toParticipantDto(p: ParticipantRow, names: Map<string, string>): Conver
   };
 }
 
-async function toDetail(tx: DbExecutor, ctx: ConversationContext, userId: string): Promise<ConversationDetail> {
+async function toDetail(
+  tx: DbExecutor,
+  ctx: ConversationContext,
+  userId: string,
+): Promise<ConversationDetail> {
   const names = await userNameMap(
     tx,
     ctx.participants.map((p) => p.userId),
@@ -120,7 +131,11 @@ async function resolveScope(
 ): Promise<Scope> {
   const staff = isStaffIdentity(identity);
   if (input.entityType && input.entityId) {
-    const entity = await resolveEntity(tx, input.entityType as CollaborationEntityType, input.entityId);
+    const entity = await resolveEntity(
+      tx,
+      input.entityType as CollaborationEntityType,
+      input.entityId,
+    );
     if (!entity) throw new ApiError('not_found', `${input.entityType.replace('_', ' ')} not found`);
     const ref = await entityResourceRef(tx, identity, entity);
     const viewer = classifyViewer(identity, entity, ref, ENTITY_STAFF_READ[entity.type]);
@@ -136,21 +151,30 @@ async function resolveScope(
     return { organizationId: entity.organizationId, entity };
   }
   if (staff) {
-    if (input.kind === 'internal') return { organizationId: input.organizationId ?? null, entity: null };
+    if (input.kind === 'internal')
+      return { organizationId: input.organizationId ?? null, entity: null };
     if (!input.organizationId) {
-      throw new ApiError('validation_failed', 'organizationId is required without a linked entity', {
-        details: [{ path: 'organizationId', message: 'required' }],
-      });
+      throw new ApiError(
+        'validation_failed',
+        'organizationId is required without a linked entity',
+        {
+          details: [{ path: 'organizationId', message: 'required' }],
+        },
+      );
     }
     return { organizationId: input.organizationId, entity: null };
   }
   const active = identity.ctx.organizationId;
-  if (!active) throw new ApiError('forbidden', 'join an organisation before starting a conversation');
+  if (!active)
+    throw new ApiError('forbidden', 'join an organisation before starting a conversation');
   if (input.organizationId && input.organizationId !== active) {
     throw new ApiError('forbidden', 'conversations can only be started in the active organisation');
   }
   assertAllowed(
-    authorizeOrg(identity.actor, 'org.messages.send', { type: 'organization', organizationId: active }),
+    authorizeOrg(identity.actor, 'org.messages.send', {
+      type: 'organization',
+      organizationId: active,
+    }),
   );
   return { organizationId: active, entity: null };
 }
@@ -169,7 +193,9 @@ async function validateParticipants(
 ): Promise<void> {
   const users = await existingUsers(tx, userIds);
   const staff = await activeStaffAmong(tx, userIds);
-  const members = scope.organizationId ? await orgMembers(tx, scope.organizationId) : new Map<string, string>();
+  const members = scope.organizationId
+    ? await orgMembers(tx, scope.organizationId)
+    : new Map<string, string>();
   const assignees = new Set(scope.entity?.assigneeUserIds ?? []);
   const issues: Array<{ path: string; message: string }> = [];
   for (const id of userIds) {
@@ -178,11 +204,15 @@ async function validateParticipants(
       continue;
     }
     if (kind === 'internal') {
-      if (!staff.has(id)) issues.push({ path: 'participantUserIds', message: `${id} is not staff` });
+      if (!staff.has(id))
+        issues.push({ path: 'participantUserIds', message: `${id} is not staff` });
       continue;
     }
     if (staff.has(id) || members.has(id) || assignees.has(id)) continue;
-    issues.push({ path: 'participantUserIds', message: `${id} has no access to this conversation's scope` });
+    issues.push({
+      path: 'participantUserIds',
+      message: `${id} has no access to this conversation's scope`,
+    });
   }
   if (issues.length > 0) {
     throw new ApiError('validation_failed', 'some participants may not join this conversation', {
@@ -198,7 +228,8 @@ export async function createConversation(
 ): Promise<ConversationDetail> {
   const userId = requireUserId(identity);
   const staff = isStaffIdentity(identity);
-  if (input.kind === 'internal' && !staff) throw new ApiError('forbidden', 'internal conversations are staff only');
+  if (input.kind === 'internal' && !staff)
+    throw new ApiError('forbidden', 'internal conversations are staff only');
   const ctx = actorContext(identity, options);
   return withActor(getDb(), ctx, async (tx) => {
     const scope = await resolveScope(tx, identity, input);
@@ -244,14 +275,23 @@ export async function createConversation(
     });
     const loaded = await requireConversation(tx, identity, conversation!.id);
     if (input.initialMessage) {
-      await insertMessage(tx, identity, loaded, { body: input.initialMessage, attachmentFileIds: [], internalOnly: false }, options);
+      await insertMessage(
+        tx,
+        identity,
+        loaded,
+        { body: input.initialMessage, attachmentFileIds: [], internalOnly: false },
+        options,
+      );
       loaded.conversation.lastMessageAt = new Date();
     }
     return toDetail(tx, loaded, userId);
   });
 }
 
-export async function getConversation(identity: RequestIdentity, id: string): Promise<ConversationDetail> {
+export async function getConversation(
+  identity: RequestIdentity,
+  id: string,
+): Promise<ConversationDetail> {
   const userId = requireUserId(identity);
   return withActor(getDb(), identity.ctx, async (tx) => {
     const ctx = await requireConversation(tx, identity, id);
@@ -290,7 +330,10 @@ export async function listConversations(
           cursor
             ? or(
                 lt(schema.conversations.createdAt, cursor.createdAt),
-                and(eq(schema.conversations.createdAt, cursor.createdAt), lt(schema.conversations.id, cursor.id)),
+                and(
+                  eq(schema.conversations.createdAt, cursor.createdAt),
+                  lt(schema.conversations.id, cursor.id),
+                ),
               )
             : undefined,
         ),
@@ -329,7 +372,11 @@ export async function listConversations(
   });
 }
 
-function assertCanManage(identity: RequestIdentity, ctx: ConversationContext, userId: string): void {
+function assertCanManage(
+  identity: RequestIdentity,
+  ctx: ConversationContext,
+  userId: string,
+): void {
   if (isStaffIdentity(identity)) return;
   if (ctx.conversation.createdBy === userId && ctx.self) return;
   throw new ApiError('forbidden', 'only staff or the conversation creator may do this');
@@ -346,13 +393,18 @@ export async function addParticipant(
   return withActor(getDb(), ctx, async (tx) => {
     const conv = await requireConversation(tx, identity, id);
     assertCanManage(identity, conv, userId);
-    if (conv.conversation.closedAt) throw new ApiError('invalid_transition', 'conversation is closed');
+    if (conv.conversation.closedAt)
+      throw new ApiError('invalid_transition', 'conversation is closed');
     if (activeParticipantIds(conv.participants).includes(input.userId)) {
       throw new ApiError('conflict', 'user is already a participant');
     }
     const entity =
       conv.conversation.entityType && conv.conversation.entityId
-        ? await resolveEntity(tx, conv.conversation.entityType as CollaborationEntityType, conv.conversation.entityId)
+        ? await resolveEntity(
+            tx,
+            conv.conversation.entityType as CollaborationEntityType,
+            conv.conversation.entityId,
+          )
         : null;
     // Elevation: validating another user's staff role needs a privileged read; the
     // caller's participation/creator rights were established above.
@@ -413,7 +465,10 @@ export async function removeParticipant(
     });
     if (targetUserId === userId && !isStaffIdentity(identity)) {
       // The caller just left and can no longer read the conversation.
-      const names = await userNameMap(tx, conv.participants.map((p) => p.userId));
+      const names = await userNameMap(
+        tx,
+        conv.participants.map((p) => p.userId),
+      );
       return {
         ...toDto(conv.conversation, 0),
         participants: conv.participants.map((p) =>
@@ -435,7 +490,8 @@ export async function closeConversation(
   return withActor(getDb(), ctx, async (tx) => {
     const conv = await requireConversation(tx, identity, id);
     assertCanManage(identity, conv, userId);
-    if (conv.conversation.closedAt) throw new ApiError('invalid_transition', 'conversation is already closed');
+    if (conv.conversation.closedAt)
+      throw new ApiError('invalid_transition', 'conversation is already closed');
     await tx
       .update(schema.conversations)
       .set({ closedAt: new Date() })

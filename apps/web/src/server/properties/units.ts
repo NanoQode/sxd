@@ -4,11 +4,7 @@ import { ApiError, type UnitCreate, type UnitDto, type UnitUpdate } from '@simpl
 import { getDb, schema, withActor, type DbExecutor } from '@simplexd/db';
 import { recordAudit } from '@/lib/audit';
 import type { RequestIdentity } from '@/lib/auth/session';
-import {
-  actorContext,
-  requireUserId,
-  type ServiceOptions,
-} from '@/server/assignments/shared';
+import { actorContext, requireUserId, type ServiceOptions } from '@/server/assignments/shared';
 import { requireProperty } from './access';
 import { toUnitDto } from './dto';
 
@@ -17,7 +13,11 @@ type UnitRow = typeof schema.units.$inferSelect;
 
 /** Units within a property; labels are unique per property. */
 
-async function loadUnit(tx: DbExecutor, propertyId: string, unitId: string): Promise<UnitRow | null> {
+async function loadUnit(
+  tx: DbExecutor,
+  propertyId: string,
+  unitId: string,
+): Promise<UnitRow | null> {
   const rows = await tx
     .select()
     .from(schema.units)
@@ -120,7 +120,11 @@ export async function updateUnit(
     if (input.notes !== undefined) patch.notes = input.notes;
     let row: UnitRow | undefined;
     try {
-      [row] = await tx.update(schema.units).set(patch).where(eq(schema.units.id, unitId)).returning();
+      [row] = await tx
+        .update(schema.units)
+        .set(patch)
+        .where(eq(schema.units.id, unitId))
+        .returning();
     } catch (err) {
       if (isUniqueViolation(err))
         throw new ApiError('conflict', `a unit labelled "${input.label}" already exists`);
@@ -167,7 +171,12 @@ export async function deleteUnit(
       entityType: 'unit',
       entityId: unitId,
       organizationId: property.organizationId,
-      before: { propertyId, label: current.label, unitType: current.unitType, status: current.status },
+      before: {
+        propertyId,
+        label: current.label,
+        unitType: current.unitType,
+        status: current.status,
+      },
       correlationId: options.correlationId,
     });
   });

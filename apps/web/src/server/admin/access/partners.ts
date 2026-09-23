@@ -31,7 +31,10 @@ export async function listPartnerQueue(ctx: AdminContext): Promise<PartnerQueueI
       .select({ p: schema.partnerProfiles, userName: schema.user.name, email: schema.user.email })
       .from(schema.partnerProfiles)
       .innerJoin(schema.user, eq(schema.user.id, schema.partnerProfiles.userId))
-      .orderBy(asc(schema.partnerProfiles.verificationStatus), asc(schema.partnerProfiles.createdAt));
+      .orderBy(
+        asc(schema.partnerProfiles.verificationStatus),
+        asc(schema.partnerProfiles.createdAt),
+      );
     return rows.map(({ p, userName, email }) => ({
       id: p.id,
       userId: p.userId,
@@ -61,7 +64,10 @@ export async function verifyPartner(
   authorize(ctx, 'access.partners.verify');
   const userId = actorId(ctx);
   await transact(ctx, async (tx) => {
-    const rows = await tx.select().from(schema.partnerProfiles).where(eq(schema.partnerProfiles.id, id));
+    const rows = await tx
+      .select()
+      .from(schema.partnerProfiles)
+      .where(eq(schema.partnerProfiles.id, id));
     const current = rows[0];
     if (!current) throw notFound('partner profile');
     const now = new Date();
@@ -89,8 +95,15 @@ export async function verifyPartner(
       action: input.decision === 'verify' ? 'partner.verified' : 'partner.rejected',
       entityType: 'partner_profile',
       entityId: id,
-      before: { verificationStatus: current.verificationStatus, verificationScope: current.verificationScope },
-      after: { verificationStatus: input.decision === 'verify' ? 'verified' : 'rejected', verificationScope: input.scopeNote, expiresAt: input.expiresAt ?? null },
+      before: {
+        verificationStatus: current.verificationStatus,
+        verificationScope: current.verificationScope,
+      },
+      after: {
+        verificationStatus: input.decision === 'verify' ? 'verified' : 'rejected',
+        verificationScope: input.scopeNote,
+        expiresAt: input.expiresAt ?? null,
+      },
       reason: input.scopeNote,
       correlationId: ctx.correlationId,
     });

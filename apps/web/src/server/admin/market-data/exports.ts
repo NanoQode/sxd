@@ -10,11 +10,15 @@ export interface ExportQuery {
 }
 
 /** Markets with provenance: coordinate source, import fingerprint dates and review metadata. */
-export async function exportMarkets(ctx: AdminContext, query: ExportQuery): Promise<Array<Record<string, unknown>>> {
+export async function exportMarkets(
+  ctx: AdminContext,
+  query: ExportQuery,
+): Promise<Array<Record<string, unknown>>> {
   authorize(ctx, 'market_data.read_drafts');
   return transact(ctx, async (tx) => {
     const clauses: SQL[] = [];
-    if (query.publicationState) clauses.push(eq(schema.markets.publicationState, query.publicationState));
+    if (query.publicationState)
+      clauses.push(eq(schema.markets.publicationState, query.publicationState));
     if (query.marketId) clauses.push(eq(schema.markets.id, query.marketId));
     const rows = await tx
       .select({
@@ -75,12 +79,18 @@ export async function exportMarkets(ctx: AdminContext, query: ExportQuery): Prom
 }
 
 /** Observations with their current interpretation and full source provenance. */
-export async function exportObservations(ctx: AdminContext, query: ExportQuery): Promise<Array<Record<string, unknown>>> {
+export async function exportObservations(
+  ctx: AdminContext,
+  query: ExportQuery,
+): Promise<Array<Record<string, unknown>>> {
   authorize(ctx, 'market_data.read_drafts');
   return transact(ctx, async (tx) => {
-    const effective = sql<string | null>`coalesce(${schema.observationInterpretations.appliesToMarketId}, ${schema.observations.marketId})`;
+    const effective = sql<
+      string | null
+    >`coalesce(${schema.observationInterpretations.appliesToMarketId}, ${schema.observations.marketId})`;
     const clauses: SQL[] = [eq(schema.observationInterpretations.isCurrent, true)];
-    if (query.publicationState) clauses.push(eq(schema.observationInterpretations.publicationState, query.publicationState));
+    if (query.publicationState)
+      clauses.push(eq(schema.observationInterpretations.publicationState, query.publicationState));
     if (query.marketId) clauses.push(sql`${effective} = ${query.marketId}`);
     const rows = await tx
       .select({
@@ -97,7 +107,10 @@ export async function exportObservations(ctx: AdminContext, query: ExportQuery):
         stateName: schema.states.name,
       })
       .from(schema.observations)
-      .innerJoin(schema.observationInterpretations, eq(schema.observationInterpretations.observationId, schema.observations.id))
+      .innerJoin(
+        schema.observationInterpretations,
+        eq(schema.observationInterpretations.observationId, schema.observations.id),
+      )
       .innerJoin(schema.sources, eq(schema.sources.id, schema.observations.sourceId))
       .leftJoin(schema.markets, eq(schema.markets.id, effective))
       .leftJoin(schema.states, eq(schema.states.id, schema.observations.stateId))

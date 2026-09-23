@@ -65,7 +65,10 @@ export async function listSupplierLeads(
         sourceTitle: schema.sources.title,
       })
       .from(schema.supplierCoverage)
-      .innerJoin(schema.supplyFacilities, eq(schema.supplyFacilities.id, schema.supplierCoverage.facilityId))
+      .innerJoin(
+        schema.supplyFacilities,
+        eq(schema.supplyFacilities.id, schema.supplierCoverage.facilityId),
+      )
       .leftJoin(schema.states, eq(schema.states.id, schema.supplyFacilities.stateId))
       .leftJoin(schema.sources, eq(schema.sources.id, schema.supplyFacilities.sourceId))
       .where(eq(schema.supplierCoverage.marketId, marketId))
@@ -73,7 +76,10 @@ export async function listSupplierLeads(
     const quotes = await tx
       .select({ q: schema.supplierQuotes, facilityName: schema.supplyFacilities.name })
       .from(schema.supplierQuotes)
-      .leftJoin(schema.supplyFacilities, eq(schema.supplyFacilities.id, schema.supplierQuotes.facilityId))
+      .leftJoin(
+        schema.supplyFacilities,
+        eq(schema.supplyFacilities.id, schema.supplierQuotes.facilityId),
+      )
       .where(eq(schema.supplierQuotes.marketId, marketId))
       .orderBy(desc(schema.supplierQuotes.quotedAt));
     return {

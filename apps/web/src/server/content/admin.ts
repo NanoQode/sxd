@@ -116,7 +116,9 @@ export async function listContentPages(
                 ilike(schema.contentPages.slug, `%${query.q}%`),
               )
             : undefined,
-          cursor ? keysetAfter(schema.contentPages.updatedAt, schema.contentPages.id, cursor) : undefined,
+          cursor
+            ? keysetAfter(schema.contentPages.updatedAt, schema.contentPages.id, cursor)
+            : undefined,
         ),
       )
       .orderBy(desc(schema.contentPages.updatedAt), desc(schema.contentPages.id))

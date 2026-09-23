@@ -12,5 +12,7 @@ export const PATCH = route<{ params: Promise<{ id: string; tid: string }> }>(asy
   const admin = await requireAdminContext(ctx.correlationId);
   const p = (await params(ctx, paramSchema)) as { id: string; tid: string };
   const body = await parseJson(req, researchTaskPatchSchema);
-  return json(await patchResearchTask(admin, p.id, p.tid, body), { correlationId: ctx.correlationId });
+  return json(await patchResearchTask(admin, p.id, p.tid, body), {
+    correlationId: ctx.correlationId,
+  });
 });

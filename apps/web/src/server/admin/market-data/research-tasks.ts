@@ -85,15 +85,25 @@ async function assertUsers(tx: Transaction, ids: Array<string | null | undefined
     throw new ApiError('validation_failed', `unknown user id(s): ${missing.join(', ')}`);
 }
 
-export async function listResearchTasks(ctx: AdminContext, marketId: string): Promise<ResearchTaskDto[]> {
+export async function listResearchTasks(
+  ctx: AdminContext,
+  marketId: string,
+): Promise<ResearchTaskDto[]> {
   authorize(ctx, 'market_data.read_drafts');
   return transact(ctx, async (tx) => {
     const rows = await tx
       .select()
       .from(schema.researchTasks)
       .where(eq(schema.researchTasks.marketId, marketId))
-      .orderBy(asc(schema.researchTasks.status), asc(schema.researchTasks.priority), desc(schema.researchTasks.createdAt));
-    const names = await namesFor(tx, rows.flatMap((r) => [r.assigneeUserId, r.reviewerUserId]));
+      .orderBy(
+        asc(schema.researchTasks.status),
+        asc(schema.researchTasks.priority),
+        desc(schema.researchTasks.createdAt),
+      );
+    const names = await namesFor(
+      tx,
+      rows.flatMap((r) => [r.assigneeUserId, r.reviewerUserId]),
+    );
     return rows.map((r) => toDto(r, names));
   });
 }
@@ -113,11 +123,18 @@ export interface ResearchTaskInput {
   completedCount?: number;
 }
 
-function assertSeparateReviewer(assignee: string | null | undefined, reviewer: string | null | undefined): void {
+function assertSeparateReviewer(
+  assignee: string | null | undefined,
+  reviewer: string | null | undefined,
+): void {
   if (assignee && reviewer && assignee === reviewer)
-    throw new ApiError('validation_failed', 'the reviewer must be a different person from the researcher', {
-      details: [{ path: 'reviewerUserId', message: 'same as assignee' }],
-    });
+    throw new ApiError(
+      'validation_failed',
+      'the reviewer must be a different person from the researcher',
+      {
+        details: [{ path: 'reviewerUserId', message: 'same as assignee' }],
+      },
+    );
 }
 
 export async function createResearchTask(
@@ -184,13 +201,23 @@ export async function patchResearchTask(
     const current = rows[0];
     if (!current) throw notFound('research task');
     assertUpdatedAt(current.updatedAt, input.expectedUpdatedAt);
-    const assignee = input.assigneeUserId === undefined ? current.assigneeUserId : input.assigneeUserId;
-    const reviewer = input.reviewerUserId === undefined ? current.reviewerUserId : input.reviewerUserId;
+    const assignee =
+      input.assigneeUserId === undefined ? current.assigneeUserId : input.assigneeUserId;
+    const reviewer =
+      input.reviewerUserId === undefined ? current.reviewerUserId : input.reviewerUserId;
     assertSeparateReviewer(assignee, reviewer);
     await assertUsers(tx, [input.assigneeUserId, input.reviewerUserId]);
     const nextStatus = input.status ?? current.status;
-    if (nextStatus === 'done' && current.status !== 'done' && reviewer === userId && assignee === userId) {
-      throw new ApiError('validation_failed', 'a task cannot be completed by its researcher without a separate reviewer');
+    if (
+      nextStatus === 'done' &&
+      current.status !== 'done' &&
+      reviewer === userId &&
+      assignee === userId
+    ) {
+      throw new ApiError(
+        'validation_failed',
+        'a task cannot be completed by its researcher without a separate reviewer',
+      );
     }
     const [updated] = await tx
       .update(schema.researchTasks)
@@ -201,10 +228,15 @@ export async function patchResearchTask(
         ...(input.assigneeUserId !== undefined ? { assigneeUserId: input.assigneeUserId } : {}),
         ...(input.reviewerUserId !== undefined ? { reviewerUserId: input.reviewerUserId } : {}),
         ...(input.budgetNaira !== undefined
-          ? { budgetKobo: input.budgetNaira === null ? null : BigInt(Math.round(input.budgetNaira)) * 100n }
+          ? {
+              budgetKobo:
+                input.budgetNaira === null ? null : BigInt(Math.round(input.budgetNaira)) * 100n,
+            }
           : {}),
         ...(input.dueDate !== undefined ? { dueDate: input.dueDate } : {}),
-        ...(input.evidenceRightsNote !== undefined ? { evidenceRightsNote: input.evidenceRightsNote } : {}),
+        ...(input.evidenceRightsNote !== undefined
+          ? { evidenceRightsNote: input.evidenceRightsNote }
+          : {}),
         ...(input.targetCount !== undefined ? { targetCount: input.targetCount } : {}),
         ...(input.notes !== undefined ? { notes: input.notes } : {}),
         ...(input.completedCount !== undefined ? { completedCount: input.completedCount } : {}),
@@ -213,7 +245,12 @@ export async function patchResearchTask(
       })
       .where(eq(schema.researchTasks.id, taskId))
       .returning();
-    const names = await namesFor(tx, [updated!.assigneeUserId, updated!.reviewerUserId, current.assigneeUserId, current.reviewerUserId]);
+    const names = await namesFor(tx, [
+      updated!.assigneeUserId,
+      updated!.reviewerUserId,
+      current.assigneeUserId,
+      current.reviewerUserId,
+    ]);
     const before = toDto(current, names) as unknown as Record<string, unknown>;
     const after = toDto(updated!, names) as unknown as Record<string, unknown>;
     const diff = changedFields(before, after);

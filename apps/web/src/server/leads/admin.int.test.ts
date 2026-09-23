@@ -24,7 +24,12 @@ let leadWithAccount: string;
 let leadWithoutAccount: string;
 
 const ops = () =>
-  staffIdentity({ userId: opsId, email: `${opsId}@example.test`, roles: ['operations_manager'] });
+  staffIdentity({
+    userId: opsId,
+    email: `${opsId}@example.test`,
+    name: 'Ops Manager',
+    roles: ['operations_manager'],
+  });
 const supportOnly = () =>
   staffIdentity({ userId: pmId, email: `${pmId}@example.test`, roles: ['support'] });
 

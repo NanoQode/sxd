@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { parseAsBoolean, parseAsInteger, parseAsString, useQueryStates } from 'nuqs';
 import { useEffect, useMemo, useState } from 'react';
-import type { AdminMarketListQuery, AdminMarketRow } from '@simplexd/contracts';
+import type { AdminMarketRow } from '@simplexd/contracts';
 import {
   Alert,
   Badge,
@@ -73,13 +73,11 @@ const filterParsers = {
 
 export function MarketsTable({
   result,
-  query,
   states,
   canPublish,
   invalidQuery,
 }: {
   result: { items: AdminMarketRow[]; total: number; page: number; pageSize: number };
-  query: AdminMarketListQuery;
   states: Array<{ id: string; name: string; geopoliticalZone: string }>;
   canPublish: boolean;
   invalidQuery: boolean;
@@ -87,15 +85,17 @@ export function MarketsTable({
   const router = useRouter();
   const { toast } = useToast();
   const [filters, setFilters] = useQueryStates(filterParsers, { shallow: false });
-  const [search, setSearch] = useState(filters.q);
+  // The search text is keyed to the URL value so navigation (saved views) resets it without an effect.
+  const [searchState, setSearchState] = useState({ q: filters.q, text: filters.q });
+  const search = searchState.q === filters.q ? searchState.text : filters.q;
+  const setSearch = (text: string) => setSearchState({ q: filters.q, text });
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulk, setBulk] = useState<{ action: 'publish' | 'unpublish'; outcomes: BulkOutcome[] | null; error: string | null } | null>(null);
   const [views, setViews] = useState<SavedView[]>([]);
   const [saveOpen, setSaveOpen] = useState(false);
   const [viewName, setViewName] = useState('');
 
-  useEffect(() => setViews(readViews()), []);
-  useEffect(() => setSearch(filters.q), [filters.q]);
+  const refreshViews = () => setViews(readViews());
   useEffect(() => {
     const t = setTimeout(() => {
       if (search !== filters.q) void setFilters({ q: search || null, page: 1 });
@@ -328,7 +328,7 @@ export function MarketsTable({
         <div className="flex flex-wrap items-end gap-2 lg:col-span-3">
           <Field label="Saved views" className="min-w-40 flex-1">
             {({ id }) => (
-              <NativeSelect id={id} value="" onChange={(e) => e.target.value && applyView(e.target.value)}>
+              <NativeSelect id={id} value="" onFocus={refreshViews} onChange={(e) => e.target.value && applyView(e.target.value)}>
                 <option value="">Apply a saved view…</option>
                 {views.map((v) => (
                   <option key={v.name} value={v.name}>
@@ -338,7 +338,7 @@ export function MarketsTable({
               </NativeSelect>
             )}
           </Field>
-          <Button variant="secondary" onClick={() => setSaveOpen(true)}>
+          <Button variant="secondary" onClick={() => { refreshViews(); setSaveOpen(true); }}>
             Save current view
           </Button>
           <Button variant="ghost" onClick={() => setFilters({ q: null, stateId: null, zone: null, publicationState: null, serviceAvailability: null, pendingReview: null, sort: null, order: null, page: null })}>

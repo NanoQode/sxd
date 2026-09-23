@@ -103,9 +103,15 @@ export async function createNote(
   const userId = requireUserId(identity);
   const ctx = actorContext(identity, options);
   return withActor(getDb(), ctx, async (tx) => {
-    const { entity, viewer } = await requireEntityViewer(tx, identity, input.entityType, input.entityId);
+    const { entity, viewer } = await requireEntityViewer(
+      tx,
+      identity,
+      input.entityType,
+      input.entityId,
+    );
     // Staff attached only through an assignment (e.g. an inspector) may still write internal notes.
-    const effective: ViewerClass = viewer === 'assignee' && isStaffIdentity(identity) ? 'staff' : viewer;
+    const effective: ViewerClass =
+      viewer === 'assignee' && isStaffIdentity(identity) ? 'staff' : viewer;
     if (effective === 'customer') {
       assertAllowed(
         authorizeOrg(identity.actor, 'org.comment', {
@@ -124,9 +130,13 @@ export async function createNote(
       );
     }
     if (!CREATABLE_BY[effective].includes(input.visibility)) {
-      throw new ApiError('forbidden', `you may not create ${input.visibility} notes on this ${entity.type.replace('_', ' ')}`, {
-        details: { allowedVisibility: CREATABLE_BY[effective] },
-      });
+      throw new ApiError(
+        'forbidden',
+        `you may not create ${input.visibility} notes on this ${entity.type.replace('_', ' ')}`,
+        {
+          details: { allowedVisibility: CREATABLE_BY[effective] },
+        },
+      );
     }
     const [row] = await tx
       .insert(schema.notes)
@@ -191,6 +201,9 @@ export async function listNotes(
       .limit(query.limit + 1);
     const page = rows.slice(0, query.limit);
     const last = rows.length > query.limit ? page[page.length - 1] : null;
-    return { items: await toDtos(tx, page), nextCursor: last ? encodeCursor(last.createdAt, last.id) : null };
+    return {
+      items: await toDtos(tx, page),
+      nextCursor: last ? encodeCursor(last.createdAt, last.id) : null,
+    };
   });
 }

@@ -72,13 +72,12 @@ export default async function ObservationDetailPage({ params }: { params: Promis
                 { term: 'Sample size', value: o.sampleSize },
                 { term: 'Collection method', value: humanize(o.collectionMethod) },
                 { term: 'Source', value: <>{o.source.title} <span className="text-fg-muted">({o.source.slug})</span>{o.source.url ? <> · <a className="text-primary underline" href={o.source.url} target="_blank" rel="noopener noreferrer">link</a></> : null}</> },
-                { term: 'Source URL', value: o.sourceId ? null : null },
                 { term: 'License', value: `${humanize(o.source.licenseRights)}${o.source.licenseNote ? ` · ${o.source.licenseNote}` : ''}${o.licenseNote ? ` · ${o.licenseNote}` : ''}` },
                 { term: 'Source geography label', value: o.geographyLabel },
                 { term: 'Market', value: o.marketName ? <Link className="text-primary underline" href={`/admin/market-data/markets/${o.effectiveMarketId}`}>{o.marketName}</Link> : null },
                 { term: 'Recorded by', value: `${o.createdByName ?? o.createdBy ?? 'import'} · ${fmtDate(o.createdAt)}` },
                 { term: 'Slug', value: o.slug },
-              ].filter((x) => x.term !== 'Source URL')}
+              ]}
             />
           </CardContent>
         </Card>

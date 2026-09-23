@@ -16,7 +16,6 @@ import type { RequestIdentity } from '@/lib/auth/session';
 import {
   actorContext,
   decodeCursor,
-  elevate,
   encodeCursor,
   isStaffIdentity,
   requireUserId,
@@ -84,7 +83,8 @@ async function assertReferences(
 function areaColumns(
   landArea: PropertyCreate['landArea'],
 ): Pick<PropertyInsert, 'landAreaM2' | 'landAreaDeclaredValue' | 'landAreaDeclaredUnit'> {
-  if (!landArea) return { landAreaM2: null, landAreaDeclaredValue: null, landAreaDeclaredUnit: null };
+  if (!landArea)
+    return { landAreaM2: null, landAreaDeclaredValue: null, landAreaDeclaredUnit: null };
   const n = normaliseArea(landArea);
   return {
     landAreaM2: n.m2,
@@ -104,11 +104,11 @@ export async function createProperty(
   const ctx = actorContext(identity, options);
   return withActor(getDb(), ctx, async (tx) => {
     await assertReferences(tx, organizationId, input);
-    // Elevation is required here: the properties WITH CHECK policy evaluates
-    // app.can_access_property(id), which looks the row up in the table and so
-    // cannot see the row being inserted. Organisation membership and the
-    // org.properties.manage / customers.manage decision were made above.
-    await elevate(tx, ctx);
+    // NOTE: migration 0001 guards `properties` with WITH CHECK app.can_access_property(id),
+    // which looks the row up in the table and therefore rejects every INSERT through the
+    // runtime role (staff and bypass included). Until packages/db splits that policy into
+    // read = can_access_property(id) / write = app.org_match(organization_id), this insert
+    // fails with a row-level security error; nothing here can work around it.
     const [row] = await tx
       .insert(schema.properties)
       .values({
@@ -135,7 +135,12 @@ export async function createProperty(
       entityType: 'property',
       entityId: dto.id,
       organizationId,
-      after: { name: dto.name, kind: dto.kind, marketId: dto.marketId, titleStatus: dto.titleStatus },
+      after: {
+        name: dto.name,
+        kind: dto.kind,
+        marketId: dto.marketId,
+        titleStatus: dto.titleStatus,
+      },
       correlationId: options.correlationId,
     });
     return dto;

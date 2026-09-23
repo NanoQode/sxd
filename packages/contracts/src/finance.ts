@@ -5,7 +5,7 @@ import {
   isoDateTimeSchema,
   uuidSchema,
 } from './common';
-import { koboStringSchema } from './engagements';
+import { koboStringSchema } from './projects';
 
 /**
  * Invoices, payment attempts, receipts, refunds, bank transfers, credit notes

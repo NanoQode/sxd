@@ -12,5 +12,7 @@ export const PATCH = route<{ params: Promise<{ id: string; nid: string }> }>(asy
   const admin = await requireAdminContext(ctx.correlationId);
   const p = (await params(ctx, paramSchema)) as { id: string; nid: string };
   const body = await parseJson(req, neighborhoodPatchSchema);
-  return json(await patchNeighborhood(admin, p.id, p.nid, body), { correlationId: ctx.correlationId });
+  return json(await patchNeighborhood(admin, p.id, p.nid, body), {
+    correlationId: ctx.correlationId,
+  });
 });

@@ -7,7 +7,8 @@ import { isValidTimeZone } from '@simplexd/domain/time';
 import { recordAudit } from '@/lib/audit';
 import { actorId, assertUpdatedAt, authorize, transact, type AdminContext } from '../context';
 
-export type SettingType = 'string' | 'boolean' | 'integer' | 'number' | 'string_list' | 'time_range' | 'enum';
+export type SettingType =
+  'string' | 'boolean' | 'integer' | 'number' | 'string_list' | 'time_range' | 'enum';
 
 export interface SettingDefinition {
   key: string;
@@ -69,7 +70,10 @@ export function validateSettingValue(key: string, value: unknown): string | null
       if (!Array.isArray(value) || value.some((v) => typeof v !== 'string' || v.trim() === ''))
         return 'must be a list of non-empty strings';
       if (def.max && value.length > def.max) return `at most ${def.max} entries`;
-      if (key === 'uploads.allowed_mime' && value.some((v: string) => /svg|html|javascript|x-sh/i.test(v)))
+      if (
+        key === 'uploads.allowed_mime' &&
+        value.some((v: string) => /svg|html|javascript|x-sh/i.test(v))
+      )
         return 'SVG, HTML and script MIME types are never allowed';
       return null;
     case 'time_range': {
@@ -80,7 +84,9 @@ export function validateSettingValue(key: string, value: unknown): string | null
       return null;
     }
     case 'enum':
-      return typeof value === 'string' && def.options?.includes(value) ? null : `must be one of ${def.options?.join(', ')}`;
+      return typeof value === 'string' && def.options?.includes(value)
+        ? null
+        : `must be one of ${def.options?.join(', ')}`;
   }
 }
 
@@ -97,7 +103,12 @@ export async function listSettings(ctx: AdminContext): Promise<SettingDto[]> {
     const rows = await tx
       .select()
       .from(schema.settings)
-      .where(inArray(schema.settings.key, defs.map((d) => d.key)))
+      .where(
+        inArray(
+          schema.settings.key,
+          defs.map((d) => d.key),
+        ),
+      )
       .orderBy(asc(schema.settings.key));
     const byKey = new Map(rows.map((r) => [r.key, r]));
     return defs.map((d) => {
@@ -122,7 +133,10 @@ export async function patchSetting(
   const def = settingDefinitions().find((d) => d.key === key);
   if (!def) throw new ApiError('not_found', `setting ${key} is not editable here`);
   const problem = validateSettingValue(key, input.value);
-  if (problem) throw new ApiError('validation_failed', `${key} ${problem}`, { details: [{ path: 'value', message: problem }] });
+  if (problem)
+    throw new ApiError('validation_failed', `${key} ${problem}`, {
+      details: [{ path: 'value', message: problem }],
+    });
   const userId = actorId(ctx);
   return transact(ctx, async (tx) => {
     const existing = await tx.select().from(schema.settings).where(eq(schema.settings.key, key));
@@ -130,7 +144,12 @@ export async function patchSetting(
     if (current) assertUpdatedAt(current.updatedAt, input.expectedUpdatedAt);
     const [row] = await tx
       .insert(schema.settings)
-      .values({ key, value: input.value as object, description: def.description, updatedBy: userId })
+      .values({
+        key,
+        value: input.value as object,
+        description: def.description,
+        updatedBy: userId,
+      })
       .onConflictDoUpdate({
         target: schema.settings.key,
         set: { value: input.value as object, updatedBy: userId, updatedAt: new Date() },
@@ -145,6 +164,11 @@ export async function patchSetting(
       reason: input.reason ?? null,
       correlationId: ctx.correlationId,
     });
-    return { ...def, value: row!.value, updatedBy: row!.updatedBy, updatedAt: row!.updatedAt.toISOString() };
+    return {
+      ...def,
+      value: row!.value,
+      updatedBy: row!.updatedBy,
+      updatedAt: row!.updatedAt.toISOString(),
+    };
   });
 }

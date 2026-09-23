@@ -2,7 +2,12 @@
 
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { CONTENT_FIELD_TEMPLATES, type ContentPageDetail, type ContentPageDto, type MediaAssetDto } from '@simplexd/contracts';
+import {
+  CONTENT_FIELD_TEMPLATES,
+  type ContentPageDetail,
+  type ContentPageDto,
+  type MediaAssetDto,
+} from '@simplexd/contracts';
 import {
   Alert,
   Badge,
@@ -24,7 +29,8 @@ import {
 } from '@simplexd/ui';
 import { apiFetch, errorMessage } from '@/lib/api/client-fetch';
 
-type Action = 'submit_for_review' | 'approve' | 'publish' | 'schedule' | 'unpublish' | 'archive' | 'rollback';
+type Action =
+  'submit_for_review' | 'approve' | 'publish' | 'schedule' | 'unpublish' | 'archive' | 'rollback';
 
 /** Minimal line diff (LCS) for revision comparison; capped to keep it cheap. */
 function lineDiff(a: string, b: string): Array<{ type: 'same' | 'add' | 'del'; text: string }> {
@@ -35,7 +41,8 @@ function lineDiff(a: string, b: string): Array<{ type: 'same' | 'add' | 'del'; t
   const table: number[][] = Array.from({ length: n + 1 }, () => new Array<number>(m + 1).fill(0));
   for (let i = n - 1; i >= 0; i -= 1) {
     for (let j = m - 1; j >= 0; j -= 1) {
-      table[i]![j] = x[i] === y[j] ? table[i + 1]![j + 1]! + 1 : Math.max(table[i + 1]![j]!, table[i]![j + 1]!);
+      table[i]![j] =
+        x[i] === y[j] ? table[i + 1]![j + 1]! + 1 : Math.max(table[i + 1]![j]!, table[i]![j + 1]!);
     }
   }
   const out: Array<{ type: 'same' | 'add' | 'del'; text: string }> = [];
@@ -59,14 +66,25 @@ function lineDiff(a: string, b: string): Array<{ type: 'same' | 'add' | 'del'; t
   return out;
 }
 
-export function ContentEditor({ detail, canPublish, currentUserId }: { detail: ContentPageDetail; canPublish: boolean; currentUserId: string }) {
+export function ContentEditor({
+  detail,
+  canPublish,
+  currentUserId,
+}: {
+  detail: ContentPageDetail;
+  canPublish: boolean;
+  currentUserId: string;
+}) {
   const router = useRouter();
   const { toast } = useToast();
-  const current = detail.revisions.find((r) => r.revision === detail.currentRevision) ?? detail.revisions[0]!;
+  const current =
+    detail.revisions.find((r) => r.revision === detail.currentRevision) ?? detail.revisions[0]!;
   const [title, setTitle] = useState(current.title);
   const [summary, setSummary] = useState(current.summary ?? '');
   const [body, setBody] = useState(current.bodyMarkdown);
-  const [fieldsJson, setFieldsJson] = useState(current.fields ? JSON.stringify(current.fields, null, 2) : '');
+  const [fieldsJson, setFieldsJson] = useState(
+    current.fields ? JSON.stringify(current.fields, null, 2) : '',
+  );
   const [fieldsError, setFieldsError] = useState<string | null>(null);
   const [previewHtml, setPreviewHtml] = useState(current.bodyHtmlSanitized ?? '');
   const [previewState, setPreviewState] = useState<'idle' | 'rendering' | 'error'>('idle');
@@ -77,14 +95,20 @@ export function ContentEditor({ detail, canPublish, currentUserId }: { detail: C
   const [sortOrder, setSortOrder] = useState(String(detail.sortOrder));
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [actionDialog, setActionDialog] = useState<{ action: Action; revision?: number } | null>(null);
+  const [actionDialog, setActionDialog] = useState<{ action: Action; revision?: number } | null>(
+    null,
+  );
   const [actionNote, setActionNote] = useState('');
   const [publishAt, setPublishAt] = useState('');
   const [mediaOpen, setMediaOpen] = useState(false);
   const [media, setMedia] = useState<MediaAssetDto[] | null>(null);
   const [diffPair, setDiffPair] = useState<[number | null, number | null]>([null, null]);
   const bodyRef = useRef<HTMLTextAreaElement>(null);
-  const dirty = title !== current.title || summary !== (current.summary ?? '') || body !== current.bodyMarkdown || fieldsJson !== (current.fields ? JSON.stringify(current.fields, null, 2) : '');
+  const dirty =
+    title !== current.title ||
+    summary !== (current.summary ?? '') ||
+    body !== current.bodyMarkdown ||
+    fieldsJson !== (current.fields ? JSON.stringify(current.fields, null, 2) : '');
 
   // Live sanitised preview rendered by the server (same sanitiser as save time).
   const unchangedBody = body === current.bodyMarkdown && Boolean(current.bodyHtmlSanitized);
@@ -95,7 +119,11 @@ export function ContentEditor({ detail, canPublish, currentUserId }: { detail: C
     const handle = setTimeout(async () => {
       setPreviewState('rendering');
       try {
-        const res = await apiFetch<{ html: string }>('/api/v1/admin/content/preview-render', { method: 'POST', body: { markdown: body }, signal: controller.signal });
+        const res = await apiFetch<{ html: string }>('/api/v1/admin/content/preview-render', {
+          method: 'POST',
+          body: { markdown: body },
+          signal: controller.signal,
+        });
         setPreviewHtml(res.html);
         setPreviewState('idle');
       } catch (err) {
@@ -112,7 +140,8 @@ export function ContentEditor({ detail, canPublish, currentUserId }: { detail: C
     if (!fieldsJson.trim()) return undefined;
     try {
       const parsed = JSON.parse(fieldsJson) as unknown;
-      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error('Fields must be a JSON object');
+      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed))
+        throw new Error('Fields must be a JSON object');
       setFieldsError(null);
       return parsed as Record<string, unknown>;
     } catch (err) {
@@ -129,7 +158,13 @@ export function ContentEditor({ detail, canPublish, currentUserId }: { detail: C
     try {
       await apiFetch(`/api/v1/admin/content/pages/${detail.id}/revisions`, {
         method: 'POST',
-        body: { title, bodyMarkdown: body, summary: summary || undefined, fields, expectedVersion: detail.version },
+        body: {
+          title,
+          bodyMarkdown: body,
+          summary: summary || undefined,
+          fields,
+          expectedVersion: detail.version,
+        },
       });
       toast({ title: `Revision ${detail.currentRevision + 1} saved`, tone: 'success' });
       router.refresh();
@@ -147,7 +182,12 @@ export function ContentEditor({ detail, canPublish, currentUserId }: { detail: C
       await apiFetch<ContentPageDto>(`/api/v1/admin/content/pages/${detail.id}`, {
         method: 'PATCH',
         body: {
-          seo: { title: seoTitle || undefined, description: seoDescription || undefined, canonical: seoCanonical || undefined, noindex: seoNoindex || undefined },
+          seo: {
+            title: seoTitle || undefined,
+            description: seoDescription || undefined,
+            canonical: seoCanonical || undefined,
+            noindex: seoNoindex || undefined,
+          },
           sortOrder: Number(sortOrder) || 0,
           expectedVersion: detail.version,
         },
@@ -171,7 +211,10 @@ export function ContentEditor({ detail, canPublish, currentUserId }: { detail: C
         body: {
           action: actionDialog.action,
           revision: actionDialog.revision,
-          publishAt: actionDialog.action === 'schedule' && publishAt ? new Date(publishAt).toISOString() : undefined,
+          publishAt:
+            actionDialog.action === 'schedule' && publishAt
+              ? new Date(publishAt).toISOString()
+              : undefined,
           note: actionNote || undefined,
           expectedVersion: detail.version,
         },
@@ -212,13 +255,47 @@ export function ContentEditor({ detail, canPublish, currentUserId }: { detail: C
   }
 
   const currentAuthoredByMe = current.createdBy === currentUserId;
-  const actions: Array<{ action: Action; label: string; show: boolean; variant?: 'primary' | 'secondary' | 'danger' }> = [
-    { action: 'submit_for_review', label: 'Submit for review', show: detail.status !== 'archived' && current.reviewStatus === 'draft' },
-    { action: 'approve', label: 'Approve', show: canPublish && current.reviewStatus === 'in_review', variant: 'secondary' },
-    { action: 'publish', label: detail.publishedRevision === current.revision ? 'Republish' : 'Publish now', show: canPublish && detail.status !== 'archived', variant: 'primary' },
-    { action: 'schedule', label: 'Schedule', show: canPublish && detail.status !== 'archived', variant: 'secondary' },
-    { action: 'unpublish', label: 'Unpublish', show: canPublish && (detail.status === 'published' || detail.status === 'scheduled'), variant: 'secondary' },
-    { action: 'archive', label: 'Archive', show: canPublish && detail.status !== 'archived', variant: 'danger' },
+  const actions: Array<{
+    action: Action;
+    label: string;
+    show: boolean;
+    variant?: 'primary' | 'secondary' | 'danger';
+  }> = [
+    {
+      action: 'submit_for_review',
+      label: 'Submit for review',
+      show: detail.status !== 'archived' && current.reviewStatus === 'draft',
+    },
+    {
+      action: 'approve',
+      label: 'Approve',
+      show: canPublish && current.reviewStatus === 'in_review',
+      variant: 'secondary',
+    },
+    {
+      action: 'publish',
+      label: detail.publishedRevision === current.revision ? 'Republish' : 'Publish now',
+      show: canPublish && detail.status !== 'archived',
+      variant: 'primary',
+    },
+    {
+      action: 'schedule',
+      label: 'Schedule',
+      show: canPublish && detail.status !== 'archived',
+      variant: 'secondary',
+    },
+    {
+      action: 'unpublish',
+      label: 'Unpublish',
+      show: canPublish && (detail.status === 'published' || detail.status === 'scheduled'),
+      variant: 'secondary',
+    },
+    {
+      action: 'archive',
+      label: 'Archive',
+      show: canPublish && detail.status !== 'archived',
+      variant: 'danger',
+    },
   ];
   const diff = useMemo(() => {
     const [a, b] = diffPair;
@@ -238,7 +315,9 @@ export function ContentEditor({ detail, canPublish, currentUserId }: { detail: C
       ) : null}
       {detail.publishedRevision !== null && detail.currentRevision > detail.publishedRevision ? (
         <Alert tone="info" title="Unpublished changes">
-          Revision {detail.currentRevision} is newer than the live revision {detail.publishedRevision}. The public site keeps serving the live revision until someone else publishes.
+          Revision {detail.currentRevision} is newer than the live revision{' '}
+          {detail.publishedRevision}. The public site keeps serving the live revision until someone
+          else publishes.
         </Alert>
       ) : null}
 
@@ -247,35 +326,85 @@ export function ContentEditor({ detail, canPublish, currentUserId }: { detail: C
           <CardHeader>
             <CardTitle>Revision {detail.currentRevision}</CardTitle>
             <CardDescription>
-              Saving creates revision {detail.currentRevision + 1}. {dirty ? 'You have unsaved changes.' : 'No unsaved changes.'}
+              Saving creates revision {detail.currentRevision + 1}.{' '}
+              {dirty ? 'You have unsaved changes.' : 'No unsaved changes.'}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <Field label="Title" required>
-              {({ id }) => <Input id={id} value={title} onChange={(e) => setTitle(e.target.value)} maxLength={160} />}
+              {({ id }) => (
+                <Input
+                  id={id}
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  maxLength={160}
+                />
+              )}
             </Field>
             <Field label="Summary">
-              {({ id }) => <Input id={id} value={summary} onChange={(e) => setSummary(e.target.value)} maxLength={500} />}
+              {({ id }) => (
+                <Input
+                  id={id}
+                  value={summary}
+                  onChange={(e) => setSummary(e.target.value)}
+                  maxLength={500}
+                />
+              )}
             </Field>
-            <Field label="Body (Markdown)" hint="Rendered through the sanitiser: scripts, event handlers, iframes and unknown protocols are removed.">
-              {({ id }) => <Textarea id={id} ref={bodyRef} rows={18} className="font-mono" value={body} onChange={(e) => setBody(e.target.value)} />}
+            <Field
+              label="Body (Markdown)"
+              hint="Rendered through the sanitiser: scripts, event handlers, iframes and unknown protocols are removed."
+            >
+              {({ id }) => (
+                <Textarea
+                  id={id}
+                  ref={bodyRef}
+                  rows={18}
+                  className="font-mono"
+                  value={body}
+                  onChange={(e) => setBody(e.target.value)}
+                />
+              )}
             </Field>
             <div className="flex flex-wrap gap-2">
               <Button variant="secondary" size="sm" onClick={() => void openMedia()}>
                 Insert approved media
               </Button>
               {CONTENT_FIELD_TEMPLATES[detail.kind] ? (
-                <Button variant="secondary" size="sm" onClick={() => setFieldsJson(JSON.stringify(CONTENT_FIELD_TEMPLATES[detail.kind], null, 2))}>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() =>
+                    setFieldsJson(JSON.stringify(CONTENT_FIELD_TEMPLATES[detail.kind], null, 2))
+                  }
+                >
                   Insert {humanize(detail.kind)} fields template
                 </Button>
               ) : null}
             </div>
-            <Field label="Fields (JSON)" hint="Structured data for this kind (FAQ question/answer, contact details, navigation items…)." error={fieldsError}>
+            <Field
+              label="Fields (JSON)"
+              hint="Structured data for this kind (FAQ question/answer, contact details, navigation items…)."
+              error={fieldsError}
+            >
               {({ id, describedBy, invalid }) => (
-                <Textarea id={id} rows={8} className="font-mono" aria-describedby={describedBy} aria-invalid={invalid} value={fieldsJson} onChange={(e) => setFieldsJson(e.target.value)} />
+                <Textarea
+                  id={id}
+                  rows={8}
+                  className="font-mono"
+                  aria-describedby={describedBy}
+                  aria-invalid={invalid}
+                  value={fieldsJson}
+                  onChange={(e) => setFieldsJson(e.target.value)}
+                />
               )}
             </Field>
-            <Button onClick={() => void saveRevision()} loading={busy === 'save'} loadingLabel="Saving" disabled={detail.status === 'archived'}>
+            <Button
+              onClick={() => void saveRevision()}
+              loading={busy === 'save'}
+              loadingLabel="Saving"
+              disabled={detail.status === 'archived'}
+            >
               Save as revision {detail.currentRevision + 1}
             </Button>
           </CardContent>
@@ -285,9 +414,18 @@ export function ContentEditor({ detail, canPublish, currentUserId }: { detail: C
           <CardHeader>
             <CardTitle>Live preview</CardTitle>
             <CardDescription>
-              {previewState === 'rendering' ? 'Rendering…' : previewState === 'error' ? 'Preview failed; the saved revision still renders.' : 'Sanitised output exactly as the public site renders it.'}
+              {previewState === 'rendering'
+                ? 'Rendering…'
+                : previewState === 'error'
+                  ? 'Preview failed; the saved revision still renders.'
+                  : 'Sanitised output exactly as the public site renders it.'}
               {' · '}
-              <a href={`/preview/content/${detail.id}?rev=${detail.currentRevision}`} target="_blank" rel="noreferrer" className="text-primary underline">
+              <a
+                href={`/preview/content/${detail.id}?rev=${detail.currentRevision}`}
+                target="_blank"
+                rel="noreferrer"
+                className="text-primary underline"
+              >
                 Open preview link (staff only)
               </a>
             </CardDescription>
@@ -303,10 +441,15 @@ export function ContentEditor({ detail, canPublish, currentUserId }: { detail: C
         <CardHeader>
           <CardTitle>Workflow</CardTitle>
           <CardDescription>
-            Status <Badge tone="neutral">{humanize(detail.status)}</Badge>; revision {current.revision} is {humanize(current.reviewStatus)}
-            {currentAuthoredByMe ? ' and authored by you, so someone else must approve or publish it.' : '.'}
+            Status <Badge tone="neutral">{humanize(detail.status)}</Badge>; revision{' '}
+            {current.revision} is {humanize(current.reviewStatus)}
+            {currentAuthoredByMe
+              ? ' and authored by you, so someone else must approve or publish it.'
+              : '.'}
             {detail.publishAt ? ` Scheduled for ${formatDateTimeLabel(detail.publishAt)}.` : ''}
-            {!canPublish ? ' You can edit and submit for review; publishing needs content.publish.' : ''}
+            {!canPublish
+              ? ' You can edit and submit for review; publishing needs content.publish.'
+              : ''}
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-wrap gap-2">
@@ -316,8 +459,17 @@ export function ContentEditor({ detail, canPublish, currentUserId }: { detail: C
               <Button
                 key={a.action}
                 variant={a.variant ?? 'secondary'}
-                disabled={dirty || (currentAuthoredByMe && ['approve', 'publish', 'schedule'].includes(a.action))}
-                title={dirty ? 'Save your changes first' : currentAuthoredByMe && ['approve', 'publish', 'schedule'].includes(a.action) ? 'The approver must differ from the author' : undefined}
+                disabled={
+                  dirty ||
+                  (currentAuthoredByMe && ['approve', 'publish', 'schedule'].includes(a.action))
+                }
+                title={
+                  dirty
+                    ? 'Save your changes first'
+                    : currentAuthoredByMe && ['approve', 'publish', 'schedule'].includes(a.action)
+                      ? 'The approver must differ from the author'
+                      : undefined
+                }
                 onClick={() => {
                   setActionNote('');
                   setPublishAt('');
@@ -333,27 +485,67 @@ export function ContentEditor({ detail, canPublish, currentUserId }: { detail: C
       <Card>
         <CardHeader>
           <CardTitle>SEO and ordering</CardTitle>
-          <CardDescription>Metadata for the public page. Private surfaces and previews are always noindex.</CardDescription>
+          <CardDescription>
+            Metadata for the public page. Private surfaces and previews are always noindex.
+          </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-2">
           <Field label="SEO title" hint="Up to 70 characters.">
-            {({ id }) => <Input id={id} maxLength={70} value={seoTitle} onChange={(e) => setSeoTitle(e.target.value)} />}
+            {({ id }) => (
+              <Input
+                id={id}
+                maxLength={70}
+                value={seoTitle}
+                onChange={(e) => setSeoTitle(e.target.value)}
+              />
+            )}
           </Field>
           <Field label="SEO description" hint="Up to 160 characters.">
-            {({ id }) => <Input id={id} maxLength={160} value={seoDescription} onChange={(e) => setSeoDescription(e.target.value)} />}
+            {({ id }) => (
+              <Input
+                id={id}
+                maxLength={160}
+                value={seoDescription}
+                onChange={(e) => setSeoDescription(e.target.value)}
+              />
+            )}
           </Field>
           <Field label="Canonical URL" hint="Only when this page duplicates another URL.">
-            {({ id }) => <Input id={id} type="url" value={seoCanonical} onChange={(e) => setSeoCanonical(e.target.value)} />}
+            {({ id }) => (
+              <Input
+                id={id}
+                type="url"
+                value={seoCanonical}
+                onChange={(e) => setSeoCanonical(e.target.value)}
+              />
+            )}
           </Field>
           <Field label="Sort order" hint="Lower numbers appear first in listings.">
-            {({ id }) => <Input id={id} type="number" value={sortOrder} onChange={(e) => setSortOrder(e.target.value)} />}
+            {({ id }) => (
+              <Input
+                id={id}
+                type="number"
+                value={sortOrder}
+                onChange={(e) => setSortOrder(e.target.value)}
+              />
+            )}
           </Field>
           <label className="flex items-center gap-2 text-sm sm:col-span-2">
-            <input type="checkbox" checked={seoNoindex} onChange={(e) => setSeoNoindex(e.target.checked)} className="h-4 w-4" />
+            <input
+              type="checkbox"
+              checked={seoNoindex}
+              onChange={(e) => setSeoNoindex(e.target.checked)}
+              className="h-4 w-4"
+            />
             Ask search engines not to index this page
           </label>
           <div className="sm:col-span-2">
-            <Button variant="secondary" onClick={() => void saveMeta()} loading={busy === 'meta'} loadingLabel="Saving">
+            <Button
+              variant="secondary"
+              onClick={() => void saveMeta()}
+              loading={busy === 'meta'}
+              loadingLabel="Saving"
+            >
               Save SEO and ordering
             </Button>
           </div>
@@ -363,21 +555,49 @@ export function ContentEditor({ detail, canPublish, currentUserId }: { detail: C
       <Card>
         <CardHeader>
           <CardTitle>Revisions</CardTitle>
-          <CardDescription>Select two revisions to compare; roll back re-publishes an earlier approved or published revision (someone other than its author).</CardDescription>
+          <CardDescription>
+            Select two revisions to compare; roll back re-publishes an earlier approved or published
+            revision (someone other than its author).
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <ol className="divide-y divide-border">
             {detail.revisions.map((r) => (
-              <li key={r.id} className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
+              <li
+                key={r.id}
+                className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm"
+              >
                 <span className="flex flex-wrap items-center gap-2">
                   <label className="flex items-center gap-1 text-xs">
-                    <input type="radio" name="diff-a" checked={diffPair[0] === r.revision} onChange={() => setDiffPair([r.revision, diffPair[1]])} />A
+                    <input
+                      type="radio"
+                      name="diff-a"
+                      checked={diffPair[0] === r.revision}
+                      onChange={() => setDiffPair([r.revision, diffPair[1]])}
+                    />
+                    A
                   </label>
                   <label className="flex items-center gap-1 text-xs">
-                    <input type="radio" name="diff-b" checked={diffPair[1] === r.revision} onChange={() => setDiffPair([diffPair[0], r.revision])} />B
+                    <input
+                      type="radio"
+                      name="diff-b"
+                      checked={diffPair[1] === r.revision}
+                      onChange={() => setDiffPair([diffPair[0], r.revision])}
+                    />
+                    B
                   </label>
                   <span className="font-medium">Revision {r.revision}</span>
-                  <Badge tone={r.reviewStatus === 'published' ? 'success' : r.reviewStatus === 'approved' ? 'primary' : r.reviewStatus === 'in_review' ? 'info' : 'neutral'}>
+                  <Badge
+                    tone={
+                      r.reviewStatus === 'published'
+                        ? 'success'
+                        : r.reviewStatus === 'approved'
+                          ? 'primary'
+                          : r.reviewStatus === 'in_review'
+                            ? 'info'
+                            : 'neutral'
+                    }
+                  >
                     {humanize(r.reviewStatus)}
                   </Badge>
                   {detail.publishedRevision === r.revision ? <Badge tone="gold">Live</Badge> : null}
@@ -386,15 +606,24 @@ export function ContentEditor({ detail, canPublish, currentUserId }: { detail: C
                   </span>
                 </span>
                 <span className="flex gap-2">
-                  <a href={`/preview/content/${detail.id}?rev=${r.revision}`} target="_blank" rel="noreferrer" className="text-primary underline">
+                  <a
+                    href={`/preview/content/${detail.id}?rev=${r.revision}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-primary underline"
+                  >
                     Preview
                   </a>
-                  {canPublish && detail.publishedRevision !== r.revision && (r.reviewStatus === 'published' || r.reviewStatus === 'approved') ? (
+                  {canPublish &&
+                  detail.publishedRevision !== r.revision &&
+                  (r.reviewStatus === 'published' || r.reviewStatus === 'approved') ? (
                     <Button
                       variant="secondary"
                       size="sm"
                       disabled={r.createdBy === currentUserId}
-                      title={r.createdBy === currentUserId ? 'You authored this revision' : undefined}
+                      title={
+                        r.createdBy === currentUserId ? 'You authored this revision' : undefined
+                      }
                       onClick={() => {
                         setActionNote('');
                         setActionDialog({ action: 'rollback', revision: r.revision });
@@ -415,9 +644,17 @@ export function ContentEditor({ detail, canPublish, currentUserId }: { detail: C
               {diff.map((line, i) => (
                 <div
                   key={i}
-                  className={line.type === 'add' ? 'bg-success-soft text-success' : line.type === 'del' ? 'bg-danger-soft text-danger line-through' : ''}
+                  className={
+                    line.type === 'add'
+                      ? 'bg-success-soft text-success'
+                      : line.type === 'del'
+                        ? 'bg-danger-soft text-danger line-through'
+                        : ''
+                  }
                 >
-                  <span className="mr-2 select-none text-fg-subtle">{line.type === 'add' ? '+' : line.type === 'del' ? '-' : ' '}</span>
+                  <span className="mr-2 select-none text-fg-subtle">
+                    {line.type === 'add' ? '+' : line.type === 'del' ? '-' : ' '}
+                  </span>
                   {line.text || ' '}
                 </div>
               ))}
@@ -448,14 +685,33 @@ export function ContentEditor({ detail, canPublish, currentUserId }: { detail: C
             <div className="space-y-3">
               {actionDialog.action === 'schedule' ? (
                 <Field label="Publish at (your local time)" required>
-                  {({ id }) => <Input id={id} type="datetime-local" value={publishAt} onChange={(e) => setPublishAt(e.target.value)} />}
+                  {({ id }) => (
+                    <Input
+                      id={id}
+                      type="datetime-local"
+                      value={publishAt}
+                      onChange={(e) => setPublishAt(e.target.value)}
+                    />
+                  )}
                 </Field>
               ) : null}
               <Field label="Note" hint="Recorded in the audit trail.">
-                {({ id }) => <Textarea id={id} rows={2} maxLength={1000} value={actionNote} onChange={(e) => setActionNote(e.target.value)} />}
+                {({ id }) => (
+                  <Textarea
+                    id={id}
+                    rows={2}
+                    maxLength={1000}
+                    value={actionNote}
+                    onChange={(e) => setActionNote(e.target.value)}
+                  />
+                )}
               </Field>
               <DialogFooter>
-                <Button variant="ghost" onClick={() => setActionDialog(null)} disabled={busy === 'action'}>
+                <Button
+                  variant="ghost"
+                  onClick={() => setActionDialog(null)}
+                  disabled={busy === 'action'}
+                >
                   Cancel
                 </Button>
                 <Button
@@ -473,11 +729,18 @@ export function ContentEditor({ detail, canPublish, currentUserId }: { detail: C
       </Dialog>
 
       <Dialog open={mediaOpen} onOpenChange={setMediaOpen}>
-        <DialogContent title="Approved media" description="Only assets approved for public use are listed. Uploads and public delivery arrive in Wave 2; private evidence is never reachable from here." size="lg">
+        <DialogContent
+          title="Approved media"
+          description="Only assets approved for public use are listed. Uploads and public delivery arrive in Wave 2; private evidence is never reachable from here."
+          size="lg"
+        >
           {media === null ? (
             <p className="text-sm text-fg-muted">Loading…</p>
           ) : media.length === 0 ? (
-            <p className="text-sm text-fg-muted">No approved media assets yet. Once uploads land in Wave 2, assets approved with confirmed rights appear here.</p>
+            <p className="text-sm text-fg-muted">
+              No approved media assets yet. Once uploads land in Wave 2, assets approved with
+              confirmed rights appear here.
+            </p>
           ) : (
             <ul className="grid gap-2 sm:grid-cols-2">
               {media.map((m) => (
@@ -487,7 +750,12 @@ export function ContentEditor({ detail, canPublish, currentUserId }: { detail: C
                     {m.originalName} · {m.declaredMime}
                     {m.rightsConfirmed ? ' · rights confirmed' : ' · rights unconfirmed'}
                   </p>
-                  <Button variant="secondary" size="sm" className="mt-2" onClick={() => insertMedia(m)}>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="mt-2"
+                    onClick={() => insertMedia(m)}
+                  >
                     Insert
                   </Button>
                 </li>

@@ -39,7 +39,6 @@ export default async function MarketsPage({
       />
       <MarketsTable
         result={result}
-        query={query}
         states={states}
         canPublish={canPublish}
         invalidQuery={!parsed.success}

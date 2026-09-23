@@ -167,13 +167,11 @@ export const neighborhoodCreateSchema = z.object({
   changeReason: reasonSchema.optional(),
 });
 
-export const neighborhoodPatchSchema = neighborhoodCreateSchema
-  .partial()
-  .extend({
-    publicationState: publicationStateSchema.optional(),
-    expectedVersion: expectedVersionSchema,
-    changeReason: reasonSchema,
-  });
+export const neighborhoodPatchSchema = neighborhoodCreateSchema.partial().extend({
+  publicationState: publicationStateSchema.optional(),
+  expectedVersion: expectedVersionSchema,
+  changeReason: reasonSchema,
+});
 
 export const serviceCoverageItemSchema = z.object({
   serviceId: uuidSchema,

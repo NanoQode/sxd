@@ -94,15 +94,20 @@ export async function validateBoundary(ctx: AdminContext, geojson: string): Prom
     );
     row = res.rows[0];
   } catch (err) {
-    const message = err instanceof Error ? (err.cause as Error | undefined)?.message ?? err.message : '';
+    const message =
+      err instanceof Error ? ((err.cause as Error | undefined)?.message ?? err.message) : '';
     throw new ApiError('validation_failed', `boundary could not be parsed: ${message}`, {
       details: [{ path: 'boundaryGeoJson', message }],
     });
   }
   if (!row || !row.valid) {
-    throw new ApiError('validation_failed', `boundary is not a valid geometry: ${row?.reason ?? ''}`, {
-      details: [{ path: 'boundaryGeoJson', message: row?.reason ?? 'ST_IsValid returned false' }],
-    });
+    throw new ApiError(
+      'validation_failed',
+      `boundary is not a valid geometry: ${row?.reason ?? ''}`,
+      {
+        details: [{ path: 'boundaryGeoJson', message: row?.reason ?? 'ST_IsValid returned false' }],
+      },
+    );
   }
   return row.normalised;
 }
@@ -116,7 +121,10 @@ async function loadMarketState(tx: Transaction, marketId: string) {
   return rows[0];
 }
 
-export async function listNeighborhoods(ctx: AdminContext, marketId: string): Promise<NeighborhoodDto[]> {
+export async function listNeighborhoods(
+  ctx: AdminContext,
+  marketId: string,
+): Promise<NeighborhoodDto[]> {
   authorize(ctx, 'market_data.read_drafts');
   return transact(ctx, async (tx) => {
     const rows = await tx
@@ -143,15 +151,22 @@ export async function createNeighborhood(
 ): Promise<NeighborhoodDto> {
   authorize(ctx, 'market_data.edit');
   const userId = actorId(ctx);
-  const boundary = input.boundaryGeoJson ? await validateBoundary(ctx, input.boundaryGeoJson) : null;
+  const boundary = input.boundaryGeoJson
+    ? await validateBoundary(ctx, input.boundaryGeoJson)
+    : null;
   return transact(ctx, async (tx) => {
     await loadMarketState(tx, marketId);
     const dup = await tx
       .select({ id: schema.neighborhoods.id })
       .from(schema.neighborhoods)
-      .where(and(eq(schema.neighborhoods.marketId, marketId), eq(schema.neighborhoods.slug, input.slug)));
+      .where(
+        and(eq(schema.neighborhoods.marketId, marketId), eq(schema.neighborhoods.slug, input.slug)),
+      );
     if (dup.length > 0)
-      throw new ApiError('conflict', `neighborhood slug "${input.slug}" already exists in this market`);
+      throw new ApiError(
+        'conflict',
+        `neighborhood slug "${input.slug}" already exists in this market`,
+      );
     const [row] = await tx
       .insert(schema.neighborhoods)
       .values({
@@ -171,7 +186,10 @@ export async function createNeighborhood(
         sql`update neighborhoods set centroid = ST_Centroid(boundary) where id = ${row!.id}`,
       );
     }
-    const [created] = await tx.select(selection).from(schema.neighborhoods).where(eq(schema.neighborhoods.id, row!.id));
+    const [created] = await tx
+      .select(selection)
+      .from(schema.neighborhoods)
+      .where(eq(schema.neighborhoods.id, row!.id));
     await recordAudit(tx, ctx.identity, {
       action: 'neighborhood.created',
       entityType: 'neighborhood',
@@ -208,9 +226,15 @@ export async function patchNeighborhood(
         ? await validateBoundary(ctx, input.boundaryGeoJson)
         : null;
   return transact(ctx, async (tx) => {
-    const rows = await tx.select(selection).from(schema.neighborhoods).where(
-      and(eq(schema.neighborhoods.id, neighborhoodId), eq(schema.neighborhoods.marketId, marketId)),
-    );
+    const rows = await tx
+      .select(selection)
+      .from(schema.neighborhoods)
+      .where(
+        and(
+          eq(schema.neighborhoods.id, neighborhoodId),
+          eq(schema.neighborhoods.marketId, marketId),
+        ),
+      );
     const current = rows[0];
     if (!current) throw notFound('neighborhood');
     const publishing =
@@ -224,8 +248,14 @@ export async function patchNeighborhood(
       const dup = await tx
         .select({ id: schema.neighborhoods.id })
         .from(schema.neighborhoods)
-        .where(and(eq(schema.neighborhoods.marketId, marketId), eq(schema.neighborhoods.slug, input.slug)));
-      if (dup.length > 0) throw new ApiError('conflict', `neighborhood slug "${input.slug}" already exists`);
+        .where(
+          and(
+            eq(schema.neighborhoods.marketId, marketId),
+            eq(schema.neighborhoods.slug, input.slug),
+          ),
+        );
+      if (dup.length > 0)
+        throw new ApiError('conflict', `neighborhood slug "${input.slug}" already exists`);
     }
     await tx
       .update(schema.neighborhoods)
@@ -233,7 +263,9 @@ export async function patchNeighborhood(
         ...(input.slug !== undefined ? { slug: input.slug } : {}),
         ...(input.name !== undefined ? { name: input.name } : {}),
         ...(boundary !== undefined ? { boundary } : {}),
-        ...(input.boundarySourceId !== undefined ? { boundarySourceId: input.boundarySourceId } : {}),
+        ...(input.boundarySourceId !== undefined
+          ? { boundarySourceId: input.boundarySourceId }
+          : {}),
         ...(input.boundaryNote !== undefined ? { boundaryNote: input.boundaryNote } : {}),
         ...(input.profileMarkdown !== undefined ? { profileMarkdown: input.profileMarkdown } : {}),
         ...(input.publicationState !== undefined
@@ -245,7 +277,12 @@ export async function patchNeighborhood(
         version: current.version + 1,
         updatedBy: userId,
       })
-      .where(and(eq(schema.neighborhoods.id, neighborhoodId), eq(schema.neighborhoods.version, current.version)));
+      .where(
+        and(
+          eq(schema.neighborhoods.id, neighborhoodId),
+          eq(schema.neighborhoods.version, current.version),
+        ),
+      );
     if (boundary !== undefined) {
       await tx.execute(
         boundary
@@ -253,7 +290,10 @@ export async function patchNeighborhood(
           : sql`update neighborhoods set centroid = null where id = ${neighborhoodId}`,
       );
     }
-    const [updated] = await tx.select(selection).from(schema.neighborhoods).where(eq(schema.neighborhoods.id, neighborhoodId));
+    const [updated] = await tx
+      .select(selection)
+      .from(schema.neighborhoods)
+      .where(eq(schema.neighborhoods.id, neighborhoodId));
     const before = toDto(current) as unknown as Record<string, unknown>;
     const after = toDto(updated!) as unknown as Record<string, unknown>;
     const diff = changedFields(

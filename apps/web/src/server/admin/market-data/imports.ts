@@ -112,7 +112,13 @@ export function parseObservationCsv(
   } catch (err) {
     return {
       rows: [],
-      errors: [{ row: null, path: 'file', message: err instanceof Error ? err.message : 'CSV could not be parsed' }],
+      errors: [
+        {
+          row: null,
+          path: 'file',
+          message: err instanceof Error ? err.message : 'CSV could not be parsed',
+        },
+      ],
       total: 0,
     };
   }
@@ -121,7 +127,11 @@ export function parseObservationCsv(
   const header = Object.keys(records[0] ?? {});
   const unknownColumns = header.filter((h) => !OBSERVATION_CSV_COLUMNS.includes(h));
   if (unknownColumns.length > 0)
-    errors.push({ row: null, path: 'header', message: `unknown column(s) ignored: ${unknownColumns.join(', ')}` });
+    errors.push({
+      row: null,
+      path: 'header',
+      message: `unknown column(s) ignored: ${unknownColumns.join(', ')}`,
+    });
   records.forEach((record, index) => {
     const rowNumber = index + 2; // 1-based, after the header line
     const candidate: Record<string, unknown> = {};
@@ -133,19 +143,30 @@ export function parseObservationCsv(
     const sourceSlug = record['sourceSlug']?.trim();
     if (sourceSlug && !candidate['sourceId']) {
       const id = lookups.sourceBySlug.get(sourceSlug);
-      if (!id) errors.push({ row: rowNumber, path: 'sourceSlug', message: `unknown source ${sourceSlug}` });
+      if (!id)
+        errors.push({
+          row: rowNumber,
+          path: 'sourceSlug',
+          message: `unknown source ${sourceSlug}`,
+        });
       else candidate['sourceId'] = id;
     }
     const marketSlug = record['marketSlug']?.trim();
     if (marketSlug && !candidate['marketId']) {
       const id = lookups.marketBySlug.get(marketSlug);
-      if (!id) errors.push({ row: rowNumber, path: 'marketSlug', message: `unknown market ${marketSlug}` });
+      if (!id)
+        errors.push({
+          row: rowNumber,
+          path: 'marketSlug',
+          message: `unknown market ${marketSlug}`,
+        });
       else candidate['marketId'] = id;
     }
     const stateName = record['stateName']?.trim();
     if (stateName && !candidate['stateId']) {
       const id = lookups.stateByName.get(stateName.toLowerCase());
-      if (!id) errors.push({ row: rowNumber, path: 'stateName', message: `unknown state ${stateName}` });
+      if (!id)
+        errors.push({ row: rowNumber, path: 'stateName', message: `unknown state ${stateName}` });
       else candidate['stateId'] = id;
     }
     const parsed = observationCreateInputSchema.safeParse(candidate);
@@ -169,7 +190,10 @@ function seedSummary(summary: ImportSummary): Record<string, unknown> {
   return { ...rest };
 }
 
-export async function previewImport(ctx: AdminContext, input: ImportPreviewRequest): Promise<ImportDto> {
+export async function previewImport(
+  ctx: AdminContext,
+  input: ImportPreviewRequest,
+): Promise<ImportDto> {
   authorize(ctx, 'market_data.import');
   const userId = actorId(ctx);
   let summary: Record<string, unknown>;
@@ -190,7 +214,9 @@ export async function previewImport(ctx: AdminContext, input: ImportPreviewReque
     conflicts = result.conflicts;
     payload = { seed: parsed };
   } else {
-    const parsed = await transact(ctx, async (tx) => parseObservationCsv(input.content, await loadLookups(tx)));
+    const parsed = await transact(ctx, async (tx) =>
+      parseObservationCsv(input.content, await loadLookups(tx)),
+    );
     summary = {
       format: input.format,
       rows: parsed.total,
@@ -218,7 +244,13 @@ export async function previewImport(ctx: AdminContext, input: ImportPreviewReque
       action: 'market_import.previewed',
       entityType: 'market_import',
       entityId: row!.id,
-      after: { fileName: input.fileName, format: input.format, summary, rowErrors: rowErrors.length, conflicts: conflicts.length },
+      after: {
+        fileName: input.fileName,
+        format: input.format,
+        summary,
+        rowErrors: rowErrors.length,
+        conflicts: conflicts.length,
+      },
       correlationId: ctx.correlationId,
     });
     return toDto(row!, ctx.identity.session?.user.name ?? null);
@@ -233,12 +265,18 @@ export async function applyImport(
   authorize(ctx, 'market_data.import');
   const userId = actorId(ctx);
   const row = await transact(ctx, async (tx) => {
-    const rows = await tx.select().from(schema.marketImports).where(eq(schema.marketImports.id, id));
+    const rows = await tx
+      .select()
+      .from(schema.marketImports)
+      .where(eq(schema.marketImports.id, id));
     if (!rows[0]) throw notFound('import');
     return rows[0];
   });
   if (row.status !== 'previewed')
-    throw new ApiError('invalid_transition', `import is ${row.status}; only previewed imports can be applied`);
+    throw new ApiError(
+      'invalid_transition',
+      `import is ${row.status}; only previewed imports can be applied`,
+    );
   const stored = (row.summary as { payload?: StoredPayload }).payload ?? {};
   const { payload: _p, ...previewSummary } = row.summary as Record<string, unknown>;
   let applied: Record<string, unknown>;
@@ -249,7 +287,11 @@ export async function applyImport(
   try {
     if (row.format === 'seed_json') {
       const blockingIssues = rowErrors.length > 0;
-      if (blockingIssues) throw new ApiError('validation_failed', 'the seed file has validation issues; fix them and preview again');
+      if (blockingIssues)
+        throw new ApiError(
+          'validation_failed',
+          'the seed file has validation issues; fix them and preview again',
+        );
       const result = await importMarketSeed(ctx.db, stored.seed, { actorUserId: userId });
       applied = seedSummary(result);
       conflicts = result.conflicts;
@@ -262,13 +304,19 @@ export async function applyImport(
       await transact(ctx, async (tx) => {
         for (const obs of inputs) {
           if (obs.slug) {
-            const dup = await tx.select({ id: schema.observations.id }).from(schema.observations).where(eq(schema.observations.slug, obs.slug));
+            const dup = await tx
+              .select({ id: schema.observations.id })
+              .from(schema.observations)
+              .where(eq(schema.observations.slug, obs.slug));
             if (dup.length > 0) {
               skipped += 1;
               continue;
             }
           }
-          const dto = await createObservation(ctx, obs, { tx, auditReason: `CSV import ${row.fileName}` });
+          const dto = await createObservation(ctx, obs, {
+            tx,
+            auditReason: `CSV import ${row.fileName}`,
+          });
           created.push(dto.id);
         }
       });
@@ -278,7 +326,10 @@ export async function applyImport(
     await transact(ctx, async (tx) => {
       await tx
         .update(schema.marketImports)
-        .set({ status: 'failed', summary: { ...previewSummary, error: err instanceof Error ? err.message : String(err) } })
+        .set({
+          status: 'failed',
+          summary: { ...previewSummary, error: err instanceof Error ? err.message : String(err) },
+        })
         .where(eq(schema.marketImports.id, id));
     });
     throw err;

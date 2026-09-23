@@ -111,7 +111,8 @@ export async function createSource(
       .select({ id: schema.sources.id })
       .from(schema.sources)
       .where(eq(schema.sources.slug, input.slug));
-    if (dup.length > 0) throw new ApiError('conflict', `a source with slug "${input.slug}" already exists`);
+    if (dup.length > 0)
+      throw new ApiError('conflict', `a source with slug "${input.slug}" already exists`);
     const [row] = await tx
       .insert(schema.sources)
       .values({

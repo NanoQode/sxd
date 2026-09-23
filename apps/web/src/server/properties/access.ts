@@ -34,7 +34,11 @@ export function assertPropertyManage(identity: RequestIdentity, ref: ResourceRef
   assertAllowed(
     authorizeAny(
       identity.actor,
-      [{ staff: 'customers.manage' }, { staff: 'projects.manage' }, { org: 'org.properties.manage' }],
+      [
+        { staff: 'customers.manage' },
+        { staff: 'projects.manage' },
+        { org: 'org.properties.manage' },
+      ],
       ref,
     ),
   );

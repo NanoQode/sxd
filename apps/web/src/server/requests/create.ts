@@ -1,4 +1,5 @@
 import 'server-only';
+import { randomUUID } from 'node:crypto';
 import { and, eq, inArray } from 'drizzle-orm';
 import { ApiError, type ServiceRequestCreate, type ServiceRequestDto } from '@simplexd/contracts';
 import { appendOutbox, getDb, schema, withActor, type Transaction } from '@simplexd/db';
@@ -40,23 +41,25 @@ export async function insertServiceRequestRow(
   input: ServiceRequestRecordInput,
 ): Promise<{ id: string; reference: string }> {
   return insertWithReferenceRetry(tx, 'SR', async (reference) => {
-    const [row] = await tx
-      .insert(schema.serviceRequests)
-      .values({
-        reference,
-        organizationId: input.organizationId,
-        requestedByUserId: input.requestedByUserId,
-        serviceId: input.serviceId,
-        title: input.title,
-        description: input.description,
-        status: 'inquiry',
-        marketId: input.marketId,
-        scenarioId: input.scenarioId,
-        leadId: input.leadId,
-        context: input.context,
-      })
-      .returning({ id: schema.serviceRequests.id, reference: schema.serviceRequests.reference });
-    return row!;
+    // No RETURNING: PostgreSQL applies the SELECT policy to returned rows and the
+    // self-referencing policy function cannot see a tuple inserted by the same
+    // command, so the id is generated here and the row is re-read afterwards.
+    const id = randomUUID();
+    await tx.insert(schema.serviceRequests).values({
+      id,
+      reference,
+      organizationId: input.organizationId,
+      requestedByUserId: input.requestedByUserId,
+      serviceId: input.serviceId,
+      title: input.title,
+      description: input.description,
+      status: 'inquiry',
+      marketId: input.marketId,
+      scenarioId: input.scenarioId,
+      leadId: input.leadId,
+      context: input.context,
+    });
+    return { id, reference };
   });
 }
 

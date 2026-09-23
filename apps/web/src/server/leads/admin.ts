@@ -410,16 +410,14 @@ export async function convertLead(
         })
         .where(eq(schema.leads.id, id));
       if (input.note) {
-        await tx
-          .insert(schema.notes)
-          .values({
-            organizationId: null,
-            entityType: 'lead',
-            entityId: id,
-            body: input.note,
-            visibility: 'internal',
-            authorUserId: staffUserId,
-          });
+        await tx.insert(schema.notes).values({
+          organizationId: null,
+          entityType: 'lead',
+          entityId: id,
+          body: input.note,
+          visibility: 'internal',
+          authorUserId: staffUserId,
+        });
       }
       await recordAudit(tx, identity, {
         action: 'lead.converted',
@@ -464,16 +462,14 @@ export async function convertLead(
     });
     await tx.update(schema.leads).set({ status: 'contacted' }).where(eq(schema.leads.id, id));
     if (input.note) {
-      await tx
-        .insert(schema.notes)
-        .values({
-          organizationId: null,
-          entityType: 'lead',
-          entityId: id,
-          body: input.note,
-          visibility: 'internal',
-          authorUserId: staffUserId,
-        });
+      await tx.insert(schema.notes).values({
+        organizationId: null,
+        entityType: 'lead',
+        entityId: id,
+        body: input.note,
+        visibility: 'internal',
+        authorUserId: staffUserId,
+      });
     }
     await recordAudit(tx, identity, {
       action: 'lead.invited',

@@ -84,7 +84,9 @@ export async function listServiceRequests(
         and(
           eq(schema.serviceRequests.organizationId, orgId),
           query.status ? eq(schema.serviceRequests.status, query.status) : undefined,
-          cursor ? keysetAfter(schema.serviceRequests.createdAt, schema.serviceRequests.id, cursor) : undefined,
+          cursor
+            ? keysetAfter(schema.serviceRequests.createdAt, schema.serviceRequests.id, cursor)
+            : undefined,
         ),
       )
       .orderBy(desc(schema.serviceRequests.createdAt), desc(schema.serviceRequests.id))

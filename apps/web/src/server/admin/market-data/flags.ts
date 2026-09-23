@@ -171,7 +171,9 @@ export async function patchFlag(
         ...(input.validFrom !== undefined ? { validFrom: input.validFrom } : {}),
         ...(input.validUntil !== undefined ? { validUntil: input.validUntil } : {}),
         ...(input.sourceId !== undefined ? { sourceId: input.sourceId } : {}),
-        ...(permissionFor(current.flagType) === 'market_data.publish' ? { approvedBy: userId } : {}),
+        ...(permissionFor(current.flagType) === 'market_data.publish'
+          ? { approvedBy: userId }
+          : {}),
       })
       .where(eq(schema.marketFlags.id, flagId))
       .returning();
@@ -188,7 +190,12 @@ export async function patchFlag(
       reason: input.reason,
       correlationId: ctx.correlationId,
     });
-    const published = await notifyIfPublished(ctx, tx, marketId, `flag ${current.flagType} updated`);
+    const published = await notifyIfPublished(
+      ctx,
+      tx,
+      marketId,
+      `flag ${current.flagType} updated`,
+    );
     return { row: updated!, published };
   });
   if (published) await cacheDelete('markets');

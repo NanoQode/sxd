@@ -143,7 +143,10 @@ async function ensureBaselineRevision(tx: Transaction, row: MarketRow): Promise<
     .select({ id: schema.marketRevisions.id })
     .from(schema.marketRevisions)
     .where(
-      and(eq(schema.marketRevisions.marketId, row.id), eq(schema.marketRevisions.version, row.version)),
+      and(
+        eq(schema.marketRevisions.marketId, row.id),
+        eq(schema.marketRevisions.version, row.version),
+      ),
     );
   if (existing.length > 0) return;
   await tx.insert(schema.marketRevisions).values({
@@ -338,19 +341,31 @@ export async function getMarket(ctx: AdminContext, id: string): Promise<AdminMar
       await Promise.all([
         full.coordinateSourceId
           ? tx
-              .select({ id: schema.sources.id, slug: schema.sources.slug, title: schema.sources.title })
+              .select({
+                id: schema.sources.id,
+                slug: schema.sources.slug,
+                title: schema.sources.title,
+              })
               .from(schema.sources)
               .where(eq(schema.sources.id, full.coordinateSourceId))
           : Promise.resolve([]),
         full.parentMarketId
           ? tx
-              .select({ id: schema.markets.id, slug: schema.markets.slug, name: schema.markets.name })
+              .select({
+                id: schema.markets.id,
+                slug: schema.markets.slug,
+                name: schema.markets.name,
+              })
               .from(schema.markets)
               .where(eq(schema.markets.id, full.parentMarketId))
           : Promise.resolve([]),
         full.mergedIntoMarketId
           ? tx
-              .select({ id: schema.markets.id, slug: schema.markets.slug, name: schema.markets.name })
+              .select({
+                id: schema.markets.id,
+                slug: schema.markets.slug,
+                name: schema.markets.name,
+              })
               .from(schema.markets)
               .where(eq(schema.markets.id, full.mergedIntoMarketId))
           : Promise.resolve([]),
@@ -538,7 +553,9 @@ export async function moveMarket(
 ): Promise<MarketRow> {
   return patchMarket(ctx, id, {
     location: input.location,
-    ...(input.coordinateSourceId !== undefined ? { coordinateSourceId: input.coordinateSourceId } : {}),
+    ...(input.coordinateSourceId !== undefined
+      ? { coordinateSourceId: input.coordinateSourceId }
+      : {}),
     ...(input.coordinateAccuracy !== undefined
       ? { coordinateAccuracy: input.coordinateAccuracy }
       : {}),
@@ -561,16 +578,25 @@ function transitionFor(row: MarketRow, action: MarketLifecycleAction) {
     case 'publish':
       if (s === 'published') return { ok: false as const, reason: 'already published' };
       if (s === 'archived') return { ok: false as const, reason: 'archived; restore first' };
-      return { ok: true as const, next: 'published' as const, permission: 'market_data.publish' as const };
+      return {
+        ok: true as const,
+        next: 'published' as const,
+        permission: 'market_data.publish' as const,
+      };
     case 'unpublish':
       if (s !== 'published') return { ok: false as const, reason: 'not published' };
-      return { ok: true as const, next: 'unpublished' as const, permission: 'market_data.publish' as const };
+      return {
+        ok: true as const,
+        next: 'unpublished' as const,
+        permission: 'market_data.publish' as const,
+      };
     case 'archive':
       if (s === 'archived') return { ok: false as const, reason: 'already archived' };
       return {
         ok: true as const,
         next: 'archived' as const,
-        permission: s === 'published' ? ('market_data.publish' as const) : ('market_data.edit' as const),
+        permission:
+          s === 'published' ? ('market_data.publish' as const) : ('market_data.edit' as const),
       };
     case 'restore':
       if (s !== 'archived') return { ok: false as const, reason: 'not archived' };
@@ -616,7 +642,8 @@ async function applyTransition(
     reason,
     correlationId: ctx.correlationId,
   });
-  const touchedPublic = row.publicationState === 'published' || updated.publicationState === 'published';
+  const touchedPublic =
+    row.publicationState === 'published' || updated.publicationState === 'published';
   if (touchedPublic) await publishedSideEffects(tx, ctx, row.id, `${action}: ${reason}`);
   return { row: updated, touchedPublic };
 }
@@ -661,7 +688,14 @@ export async function bulkMarkets(
     for (const id of input.marketIds) {
       const row = byId.get(id);
       if (!row) {
-        outcomes.push({ id, slug: '', name: '', currentState: 'draft', outcome: 'skipped', detail: 'not found' });
+        outcomes.push({
+          id,
+          slug: '',
+          name: '',
+          currentState: 'draft',
+          outcome: 'skipped',
+          detail: 'not found',
+        });
         continue;
       }
       const t = transitionFor(row, input.action);
@@ -708,7 +742,10 @@ export async function bulkMarkets(
 /* Revisions and rollback                                                  */
 /* ---------------------------------------------------------------------- */
 
-export async function listRevisions(ctx: AdminContext, marketId: string): Promise<MarketRevisionDto[]> {
+export async function listRevisions(
+  ctx: AdminContext,
+  marketId: string,
+): Promise<MarketRevisionDto[]> {
   authorize(ctx, 'market_data.history.read');
   return transact(ctx, async (tx) => {
     await loadMarket(tx, marketId);
@@ -788,7 +825,8 @@ export async function rollbackMarket(
     const revision = target[0];
     if (!revision) throw notFound('revision');
     const snapshot = revision.snapshot as Snapshot;
-    if (snapshot['location']) assertInsideNigeria(snapshot['location'] as { lon: number; lat: number });
+    if (snapshot['location'])
+      assertInsideNigeria(snapshot['location'] as { lon: number; lat: number });
     const slug = snapshot['slug'];
     if (typeof slug === 'string' && slug !== current.slug) await assertSlugFree(tx, slug, id);
     await ensureBaselineRevision(tx, current);
@@ -870,7 +908,10 @@ export async function mergeMarket(
 
     // Observation interpretations: new versions pointing at the target (history preserved).
     const interpretations = await tx
-      .select({ interpretation: schema.observationInterpretations, marketId: schema.observations.marketId })
+      .select({
+        interpretation: schema.observationInterpretations,
+        marketId: schema.observations.marketId,
+      })
       .from(schema.observationInterpretations)
       .innerJoin(
         schema.observations,
@@ -1034,9 +1075,15 @@ export async function mergeMarket(
         humanEditedAt: now,
         updatedBy: userId,
       })
-      .where(and(eq(schema.markets.id, input.targetMarketId), eq(schema.markets.version, target.version)))
+      .where(
+        and(
+          eq(schema.markets.id, input.targetMarketId),
+          eq(schema.markets.version, target.version),
+        ),
+      )
       .returning();
-    if (!targetAfter) throw new ApiError('version_conflict', 'the target market changed concurrently');
+    if (!targetAfter)
+      throw new ApiError('version_conflict', 'the target market changed concurrently');
     await insertRevision(tx, sourceAfter, `Merged into ${target.slug}: ${input.reason}`, userId);
     await insertRevision(tx, targetAfter, `Absorbed ${source.slug}: ${input.reason}`, userId);
     await recordAudit(tx, ctx.identity, {

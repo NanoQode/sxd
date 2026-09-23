@@ -8,7 +8,13 @@ import {
   type Page,
 } from '@simplexd/contracts';
 import { appendOutbox, getDb, schema, withActor, type DbExecutor } from '@simplexd/db';
-import { assertAllowed, authorizeOrg, authorizePartner, authorizeTenant, membershipFor } from '@simplexd/domain/authz';
+import {
+  assertAllowed,
+  authorizeOrg,
+  authorizePartner,
+  authorizeTenant,
+  membershipFor,
+} from '@simplexd/domain/authz';
 import { recordAudit } from '@/lib/audit';
 import type { RequestIdentity } from '@/lib/auth/session';
 import {
@@ -22,7 +28,12 @@ import {
   userNameMap,
   type ServiceOptions,
 } from '@/server/assignments/shared';
-import { activeParticipantIds, activeStaffAmong, requireConversation, type ConversationContext } from './access';
+import {
+  activeParticipantIds,
+  activeStaffAmong,
+  requireConversation,
+  type ConversationContext,
+} from './access';
 
 type MessageRow = typeof schema.messages.$inferSelect;
 
@@ -50,7 +61,7 @@ export function toMessageDto(row: MessageRow, names: Map<string, string>): Messa
   };
 }
 
-function assertCanPost(identity: RequestIdentity, ctx: ConversationContext, userId: string): void {
+function assertCanPost(identity: RequestIdentity, ctx: ConversationContext): void {
   if (!ctx.self) throw new ApiError('forbidden', 'only participants can post messages');
   if (isStaffIdentity(identity)) return;
   const orgId = ctx.conversation.organizationId;
@@ -91,7 +102,11 @@ function assertCanPost(identity: RequestIdentity, ctx: ConversationContext, user
 async function assertAttachments(tx: DbExecutor, fileIds: string[]): Promise<void> {
   if (fileIds.length === 0) return;
   const rows = await tx
-    .select({ id: schema.fileObjects.id, status: schema.fileObjects.status, deletedAt: schema.fileObjects.deletedAt })
+    .select({
+      id: schema.fileObjects.id,
+      status: schema.fileObjects.status,
+      deletedAt: schema.fileObjects.deletedAt,
+    })
     .from(schema.fileObjects)
     .where(inArray(schema.fileObjects.id, fileIds));
   const byId = new Map(rows.map((r) => [r.id, r]));
@@ -164,7 +179,11 @@ export async function insertMessage(
     entityType: 'conversation',
     entityId: ctx.conversation.id,
     organizationId: ctx.conversation.organizationId,
-    after: { messageId: row!.id, internalOnly: input.internalOnly, attachments: input.attachmentFileIds.length },
+    after: {
+      messageId: row!.id,
+      internalOnly: input.internalOnly,
+      attachments: input.attachmentFileIds.length,
+    },
     correlationId: options.correlationId,
   });
   return row!;
@@ -180,8 +199,9 @@ export async function postMessage(
   const ctx = actorContext(identity, options);
   return withActor(getDb(), ctx, async (tx) => {
     const conv = await requireConversation(tx, identity, conversationId);
-    assertCanPost(identity, conv, userId);
-    if (conv.conversation.closedAt) throw new ApiError('invalid_transition', 'conversation is closed');
+    assertCanPost(identity, conv);
+    if (conv.conversation.closedAt)
+      throw new ApiError('invalid_transition', 'conversation is closed');
     await assertAttachments(tx, input.attachmentFileIds);
     const row = await insertMessage(tx, identity, conv, input, options);
     const names = await userNameMap(tx, [userId]);
@@ -209,7 +229,10 @@ export async function listMessages(
           cursor
             ? or(
                 lt(schema.messages.createdAt, cursor.createdAt),
-                and(eq(schema.messages.createdAt, cursor.createdAt), lt(schema.messages.id, cursor.id)),
+                and(
+                  eq(schema.messages.createdAt, cursor.createdAt),
+                  lt(schema.messages.id, cursor.id),
+                ),
               )
             : undefined,
         ),

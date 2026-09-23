@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { expectedVersionSchema, isoDateTimeSchema, uuidSchema } from './common';
 import { engagementStatusSchema } from './portal';
+import { koboStringSchema } from './projects';
 
 /**
  * Engagement triage, quotations and customer acceptance (build brief §8).
@@ -19,7 +20,6 @@ export const quoteStatusSchema = z.enum([
 ]);
 export type QuoteStatus = z.infer<typeof quoteStatusSchema>;
 
-export const koboStringSchema = z.string().regex(/^\d+$/, 'integer kobo as a decimal string');
 /** Quantities travel as decimal strings with up to three places (hours, units, visits). */
 export const quantityStringSchema = z
   .string()

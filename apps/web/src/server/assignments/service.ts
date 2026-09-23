@@ -106,7 +106,10 @@ async function requireStaffManage(
 }
 
 async function assertAssignable(tx: DbExecutor, userId: string): Promise<void> {
-  const [u] = await tx.select({ id: schema.user.id }).from(schema.user).where(eq(schema.user.id, userId));
+  const [u] = await tx
+    .select({ id: schema.user.id })
+    .from(schema.user)
+    .where(eq(schema.user.id, userId));
   if (!u) {
     throw new ApiError('validation_failed', 'assignee does not exist', {
       details: [{ path: 'assigneeUserId', message: 'unknown user' }],
@@ -123,9 +126,13 @@ async function assertAssignable(tx: DbExecutor, userId: string): Promise<void> {
     .from(schema.partnerProfiles)
     .where(eq(schema.partnerProfiles.userId, userId));
   if (partner) return;
-  throw new ApiError('validation_failed', 'assignee must be a staff member or a registered partner', {
-    details: [{ path: 'assigneeUserId', message: 'not staff or partner' }],
-  });
+  throw new ApiError(
+    'validation_failed',
+    'assignee must be a staff member or a registered partner',
+    {
+      details: [{ path: 'assigneeUserId', message: 'not staff or partner' }],
+    },
+  );
 }
 
 /** Recipients for a response notification: whoever proposed it and the entity's staff contact. */
@@ -165,9 +172,13 @@ export async function proposeAssignment(
         ),
       );
     if (open) {
-      throw new ApiError('conflict', `this user already has a ${open.status} ${input.role} assignment here`, {
-        details: { assignmentId: open.id },
-      });
+      throw new ApiError(
+        'conflict',
+        `this user already has a ${open.status} ${input.role} assignment here`,
+        {
+          details: { assignmentId: open.id },
+        },
+      );
     }
     const [row] = await tx
       .insert(schema.assignments)
@@ -245,7 +256,10 @@ async function respond(
       throw new ApiError('forbidden', 'only staff or partners hold assignments');
     }
     if (row.status !== 'proposed') {
-      throw new ApiError('invalid_transition', `assignment is ${row.status}; only proposed assignments can be answered`);
+      throw new ApiError(
+        'invalid_transition',
+        `assignment is ${row.status}; only proposed assignments can be answered`,
+      );
     }
     const target = entityOf(row);
     const entity = await resolveEntity(tx, target.type, target.id);
@@ -322,13 +336,18 @@ async function staffTransition(
     const isAssignee = allowAssignee && row.assigneeUserId === userId;
     if (!isAssignee) {
       if (!entity) throw new ApiError('not_found', 'assignment not found');
-      if (!isStaffIdentity(identity)) throw new ApiError('forbidden', 'only staff manage assignments');
+      if (!isStaffIdentity(identity))
+        throw new ApiError('forbidden', 'only staff manage assignments');
       await requireStaffManage(tx, identity, entity);
     }
     if (!from.includes(row.status)) {
-      throw new ApiError('invalid_transition', `assignment is ${row.status}; cannot move to ${to}`, {
-        details: { from: row.status, to },
-      });
+      throw new ApiError(
+        'invalid_transition',
+        `assignment is ${row.status}; cannot move to ${to}`,
+        {
+          details: { from: row.status, to },
+        },
+      );
     }
     const [updated] = await tx
       .update(schema.assignments)
@@ -413,7 +432,10 @@ function cursorClause(cursor: { createdAt: Date; id: string } | null) {
   return cursor
     ? or(
         lt(schema.assignments.createdAt, cursor.createdAt),
-        and(eq(schema.assignments.createdAt, cursor.createdAt), lt(schema.assignments.id, cursor.id)),
+        and(
+          eq(schema.assignments.createdAt, cursor.createdAt),
+          lt(schema.assignments.id, cursor.id),
+        ),
       )
     : undefined;
 }

@@ -69,15 +69,24 @@ function toDto(row: PolicyRow): RankingPolicyDto {
 export async function listRankingPolicies(ctx: AdminContext): Promise<RankingPolicyDto[]> {
   authorize(ctx, 'market_data.read_drafts');
   return transact(ctx, async (tx) => {
-    const rows = await tx.select().from(schema.rankingPolicies).orderBy(desc(schema.rankingPolicies.version));
+    const rows = await tx
+      .select()
+      .from(schema.rankingPolicies)
+      .orderBy(desc(schema.rankingPolicies.version));
     return rows.map(toDto);
   });
 }
 
-export async function getRankingPolicy(ctx: AdminContext, version: number): Promise<RankingPolicyDto> {
+export async function getRankingPolicy(
+  ctx: AdminContext,
+  version: number,
+): Promise<RankingPolicyDto> {
   authorize(ctx, 'market_data.read_drafts');
   return transact(ctx, async (tx) => {
-    const rows = await tx.select().from(schema.rankingPolicies).where(eq(schema.rankingPolicies.version, version));
+    const rows = await tx
+      .select()
+      .from(schema.rankingPolicies)
+      .where(eq(schema.rankingPolicies.version, version));
     if (!rows[0]) throw notFound('ranking policy');
     return toDto(rows[0]);
   });
@@ -91,11 +100,19 @@ export async function createRankingPolicyDraft(
   const userId = actorId(ctx);
   return transact(ctx, async (tx) => {
     const base = input.fromVersion
-      ? await tx.select().from(schema.rankingPolicies).where(eq(schema.rankingPolicies.version, input.fromVersion))
-      : await tx.select().from(schema.rankingPolicies).where(eq(schema.rankingPolicies.status, 'active'));
+      ? await tx
+          .select()
+          .from(schema.rankingPolicies)
+          .where(eq(schema.rankingPolicies.version, input.fromVersion))
+      : await tx
+          .select()
+          .from(schema.rankingPolicies)
+          .where(eq(schema.rankingPolicies.status, 'active'));
     const from = base[0];
     if (!from) throw new ApiError('not_found', 'no policy to copy from (no active policy)');
-    const maxRows = await tx.select({ max: sql<number>`coalesce(max(version), 0)::int` }).from(schema.rankingPolicies);
+    const maxRows = await tx
+      .select({ max: sql<number>`coalesce(max(version), 0)::int` })
+      .from(schema.rankingPolicies);
     const version = (maxRows[0]?.max ?? 0) + 1;
     const [row] = await tx
       .insert(schema.rankingPolicies)
@@ -144,26 +161,41 @@ export async function patchRankingPolicyDraft(
 ): Promise<RankingPolicyDto> {
   authorize(ctx, 'market_data.policy.manage');
   return transact(ctx, async (tx) => {
-    const rows = await tx.select().from(schema.rankingPolicies).where(eq(schema.rankingPolicies.version, version));
+    const rows = await tx
+      .select()
+      .from(schema.rankingPolicies)
+      .where(eq(schema.rankingPolicies.version, version));
     const current = rows[0];
     if (!current) throw notFound('ranking policy');
     if (current.status !== 'draft')
-      throw new ApiError('invalid_transition', `policy version ${version} is ${current.status}; create a new draft to change it`);
+      throw new ApiError(
+        'invalid_transition',
+        `policy version ${version} is ${current.status}; create a new draft to change it`,
+      );
     const [updated] = await tx
       .update(schema.rankingPolicies)
       .set({
         ...(input.name !== undefined ? { name: input.name } : {}),
         ...(input.weights !== undefined ? { weights: input.weights } : {}),
-        ...(input.metricBounds !== undefined ? { metricBounds: input.metricBounds as unknown as PolicyRow['metricBounds'] } : {}),
-        ...(input.confidenceRubric !== undefined ? { confidenceRubric: input.confidenceRubric } : {}),
-        ...(input.coverageThreshold !== undefined ? { coverageThreshold: String(input.coverageThreshold) } : {}),
+        ...(input.metricBounds !== undefined
+          ? { metricBounds: input.metricBounds as unknown as PolicyRow['metricBounds'] }
+          : {}),
+        ...(input.confidenceRubric !== undefined
+          ? { confidenceRubric: input.confidenceRubric }
+          : {}),
+        ...(input.coverageThreshold !== undefined
+          ? { coverageThreshold: String(input.coverageThreshold) }
+          : {}),
         ...(input.minComparables !== undefined ? { minComparables: input.minComparables } : {}),
         ...(input.hardConstraints !== undefined ? { hardConstraints: input.hardConstraints } : {}),
         ...(input.notes !== undefined ? { notes: input.notes } : {}),
       })
       .where(eq(schema.rankingPolicies.id, current.id))
       .returning();
-    const diff = changedFields(toDto(current) as unknown as Record<string, unknown>, toDto(updated!) as unknown as Record<string, unknown>);
+    const diff = changedFields(
+      toDto(current) as unknown as Record<string, unknown>,
+      toDto(updated!) as unknown as Record<string, unknown>,
+    );
     await recordAudit(tx, ctx.identity, {
       action: 'ranking_policy.draft_updated',
       entityType: 'ranking_policy',
@@ -186,15 +218,23 @@ export async function activateRankingPolicy(
   authorize(ctx, 'market_data.policy.manage');
   const userId = actorId(ctx);
   const dto = await transact(ctx, async (tx) => {
-    const rows = await tx.select().from(schema.rankingPolicies).where(eq(schema.rankingPolicies.version, version));
+    const rows = await tx
+      .select()
+      .from(schema.rankingPolicies)
+      .where(eq(schema.rankingPolicies.version, version));
     const draft = rows[0];
     if (!draft) throw notFound('ranking policy');
-    if (draft.status !== 'draft') throw new ApiError('invalid_transition', `policy version ${version} is ${draft.status}`);
+    if (draft.status !== 'draft')
+      throw new ApiError('invalid_transition', `policy version ${version} is ${draft.status}`);
     const errors = policyErrors(draft);
     if (errors.length > 0)
-      throw new ApiError('validation_failed', 'the policy has configuration errors and cannot be activated', {
-        details: errors,
-      });
+      throw new ApiError(
+        'validation_failed',
+        'the policy has configuration errors and cannot be activated',
+        {
+          details: errors,
+        },
+      );
     const now = new Date();
     const retired = await tx
       .update(schema.rankingPolicies)
@@ -204,7 +244,9 @@ export async function activateRankingPolicy(
     const [activated] = await tx
       .update(schema.rankingPolicies)
       .set({ status: 'active', activatedAt: now, approvedBy: userId })
-      .where(and(eq(schema.rankingPolicies.id, draft.id), eq(schema.rankingPolicies.status, 'draft')))
+      .where(
+        and(eq(schema.rankingPolicies.id, draft.id), eq(schema.rankingPolicies.status, 'draft')),
+      )
       .returning();
     if (!activated) throw new ApiError('version_conflict', 'the policy changed concurrently');
     await recordAudit(tx, ctx.identity, {
@@ -212,7 +254,12 @@ export async function activateRankingPolicy(
       entityType: 'ranking_policy',
       entityId: activated.id,
       before: { activeVersions: retired.map((r) => r.version) },
-      after: { activeVersion: version, weights: activated.weights, coverageThreshold: Number(activated.coverageThreshold), minComparables: activated.minComparables },
+      after: {
+        activeVersion: version,
+        weights: activated.weights,
+        coverageThreshold: Number(activated.coverageThreshold),
+        minComparables: activated.minComparables,
+      },
       reason: input.reason,
       correlationId: ctx.correlationId,
     });
@@ -268,7 +315,10 @@ const freshnessDto = (r: typeof schema.freshnessPolicies.$inferSelect): Freshnes
 export async function listFreshnessPolicies(ctx: AdminContext): Promise<FreshnessPolicyDto[]> {
   authorize(ctx, 'market_data.read_drafts');
   return transact(ctx, async (tx) => {
-    const rows = await tx.select().from(schema.freshnessPolicies).orderBy(asc(schema.freshnessPolicies.dataType));
+    const rows = await tx
+      .select()
+      .from(schema.freshnessPolicies)
+      .orderBy(asc(schema.freshnessPolicies.dataType));
     return rows.map(freshnessDto);
   });
 }
@@ -276,14 +326,23 @@ export async function listFreshnessPolicies(ctx: AdminContext): Promise<Freshnes
 export async function upsertFreshnessPolicy(
   ctx: AdminContext,
   dataType: string,
-  input: { maxAgeDays: number | null; respectSourceValidity: boolean; note?: string | null; reason: string; expectedUpdatedAt?: string },
+  input: {
+    maxAgeDays: number | null;
+    respectSourceValidity: boolean;
+    note?: string | null;
+    reason: string;
+    expectedUpdatedAt?: string;
+  },
 ): Promise<FreshnessPolicyDto> {
   authorize(ctx, 'market_data.policy.manage');
   if (!/^[a-z][a-z0-9_]{1,60}$/.test(dataType))
     throw new ApiError('validation_failed', 'dataType must be a snake_case identifier');
   const userId = actorId(ctx);
   const dto = await transact(ctx, async (tx) => {
-    const existing = await tx.select().from(schema.freshnessPolicies).where(eq(schema.freshnessPolicies.dataType, dataType));
+    const existing = await tx
+      .select()
+      .from(schema.freshnessPolicies)
+      .where(eq(schema.freshnessPolicies.dataType, dataType));
     const current = existing[0];
     if (current) assertUpdatedAt(current.updatedAt, input.expectedUpdatedAt);
     const [row] = await tx
@@ -310,8 +369,18 @@ export async function upsertFreshnessPolicy(
       action: current ? 'freshness_policy.updated' : 'freshness_policy.created',
       entityType: 'freshness_policy',
       entityId: row!.id,
-      before: current ? { maxAgeDays: current.maxAgeDays, respectSourceValidity: current.respectSourceValidity, note: current.note } : null,
-      after: { maxAgeDays: row!.maxAgeDays, respectSourceValidity: row!.respectSourceValidity, note: row!.note },
+      before: current
+        ? {
+            maxAgeDays: current.maxAgeDays,
+            respectSourceValidity: current.respectSourceValidity,
+            note: current.note,
+          }
+        : null,
+      after: {
+        maxAgeDays: row!.maxAgeDays,
+        respectSourceValidity: row!.respectSourceValidity,
+        note: row!.note,
+      },
       reason: input.reason,
       correlationId: ctx.correlationId,
     });
@@ -343,24 +412,36 @@ export interface DataPolicyDto {
 
 const DATA_POLICY_VALIDATORS: Record<string, (v: unknown) => string | null> = {
   'publication.min_comparables': (v) =>
-    typeof v === 'number' && Number.isInteger(v) && v >= 1 && v <= 1000 ? null : 'must be an integer between 1 and 1000',
+    typeof v === 'number' && Number.isInteger(v) && v >= 1 && v <= 1000
+      ? null
+      : 'must be an integer between 1 and 1000',
   'ranking.coverage_threshold': (v) =>
-    typeof v === 'number' && Number.isFinite(v) && v >= 0 && v <= 1 ? null : 'must be a number between 0 and 1',
-  'ranking.require_local_cost_and_rent': (v) => (typeof v === 'boolean' ? null : 'must be true or false'),
-  default_financial_ranking_enabled: (v) => (typeof v === 'boolean' ? null : 'must be true or false'),
+    typeof v === 'number' && Number.isFinite(v) && v >= 0 && v <= 1
+      ? null
+      : 'must be a number between 0 and 1',
+  'ranking.require_local_cost_and_rent': (v) =>
+    typeof v === 'boolean' ? null : 'must be true or false',
+  default_financial_ranking_enabled: (v) =>
+    typeof v === 'boolean' ? null : 'must be true or false',
 };
 
 export const DATA_POLICY_DESCRIPTIONS: Record<string, string> = {
-  'publication.min_comparables': 'Deduplicated comparables required before a local median is published (publication policy, not a statistical guarantee).',
+  'publication.min_comparables':
+    'Deduplicated comparables required before a local median is published (publication policy, not a statistical guarantee).',
   'ranking.coverage_threshold': 'Minimum weighted coverage for an investment ranking.',
-  'ranking.require_local_cost_and_rent': 'Investment ranking requires locally applicable cost AND rental inputs.',
-  default_financial_ranking_enabled: 'Whether financial ranking may run in default (evidence) mode.',
+  'ranking.require_local_cost_and_rent':
+    'Investment ranking requires locally applicable cost AND rental inputs.',
+  default_financial_ranking_enabled:
+    'Whether financial ranking may run in default (evidence) mode.',
 };
 
 export async function listDataPolicies(ctx: AdminContext): Promise<DataPolicyDto[]> {
   authorize(ctx, 'market_data.read_drafts');
   return transact(ctx, async (tx) => {
-    const rows = await tx.select().from(schema.dataPolicySettings).orderBy(asc(schema.dataPolicySettings.key));
+    const rows = await tx
+      .select()
+      .from(schema.dataPolicySettings)
+      .orderBy(asc(schema.dataPolicySettings.key));
     const known = Object.keys(DATA_POLICY_VALIDATORS);
     const byKey = new Map(rows.map((r) => [r.key, r]));
     return known.map((key) => {
@@ -403,15 +484,26 @@ export async function patchDataPolicy(
   const validator = DATA_POLICY_VALIDATORS[key];
   if (!validator) throw new ApiError('not_found', `unknown data policy ${key}`);
   const problem = validator(input.value);
-  if (problem) throw new ApiError('validation_failed', `${key} ${problem}`, { details: [{ path: 'value', message: problem }] });
+  if (problem)
+    throw new ApiError('validation_failed', `${key} ${problem}`, {
+      details: [{ path: 'value', message: problem }],
+    });
   const userId = actorId(ctx);
   const dto = await transact(ctx, async (tx) => {
-    const existing = await tx.select().from(schema.dataPolicySettings).where(eq(schema.dataPolicySettings.key, key));
+    const existing = await tx
+      .select()
+      .from(schema.dataPolicySettings)
+      .where(eq(schema.dataPolicySettings.key, key));
     const current = existing[0];
     if (current) assertUpdatedAt(current.updatedAt, input.expectedUpdatedAt);
     const [row] = await tx
       .insert(schema.dataPolicySettings)
-      .values({ key, value: input.value as object, description: DATA_POLICY_DESCRIPTIONS[key] ?? null, updatedBy: userId })
+      .values({
+        key,
+        value: input.value as object,
+        description: DATA_POLICY_DESCRIPTIONS[key] ?? null,
+        updatedBy: userId,
+      })
       .onConflictDoUpdate({
         target: schema.dataPolicySettings.key,
         set: { value: input.value as object, updatedBy: userId, updatedAt: new Date() },

@@ -1,14 +1,15 @@
 import 'server-only';
 import { and, asc, eq, sql } from 'drizzle-orm';
-import { ApiError, type ParcelCreate, type ParcelDto, type ParcelUpdate } from '@simplexd/contracts';
+import {
+  ApiError,
+  type ParcelCreate,
+  type ParcelDto,
+  type ParcelUpdate,
+} from '@simplexd/contracts';
 import { getDb, schema, withActor, type DbExecutor } from '@simplexd/db';
 import { recordAudit } from '@/lib/audit';
 import type { RequestIdentity } from '@/lib/auth/session';
-import {
-  actorContext,
-  requireUserId,
-  type ServiceOptions,
-} from '@/server/assignments/shared';
+import { actorContext, requireUserId, type ServiceOptions } from '@/server/assignments/shared';
 import { requireProperty } from './access';
 import { normaliseArea } from './areas';
 import { toParcelDto, type ParcelRow } from './dto';
@@ -35,7 +36,11 @@ const parcelColumns = {
   boundaryGeoJson: sql<string | null>`ST_AsGeoJSON(${schema.parcels.boundary})`,
 };
 
-async function loadParcel(tx: DbExecutor, propertyId: string, parcelId: string): Promise<ParcelRow | null> {
+async function loadParcel(
+  tx: DbExecutor,
+  propertyId: string,
+  parcelId: string,
+): Promise<ParcelRow | null> {
   const rows = await tx
     .select(parcelColumns)
     .from(schema.parcels)
@@ -49,7 +54,9 @@ function boundaryValue(coordinates: ParcelCreate['boundary']): string | null | u
   return JSON.stringify({ type: 'Polygon', coordinates });
 }
 
-function areaPatch(area: ParcelCreate['area']): Pick<ParcelInsert, 'areaM2' | 'declaredValue' | 'declaredUnit'> {
+function areaPatch(
+  area: ParcelCreate['area'],
+): Pick<ParcelInsert, 'areaM2' | 'declaredValue' | 'declaredUnit'> {
   if (!area) return { areaM2: null, declaredValue: null, declaredUnit: null };
   const n = normaliseArea(area);
   return { areaM2: n.m2, declaredValue: n.declaredValue, declaredUnit: n.declaredUnit };
@@ -68,7 +75,10 @@ async function assertValidBoundary(tx: DbExecutor, geoJson: string): Promise<voi
   }
 }
 
-export async function listParcels(identity: RequestIdentity, propertyId: string): Promise<ParcelDto[]> {
+export async function listParcels(
+  identity: RequestIdentity,
+  propertyId: string,
+): Promise<ParcelDto[]> {
   requireUserId(identity);
   return withActor(getDb(), identity.ctx, async (tx) => {
     await requireProperty(tx, identity, propertyId, 'read');
@@ -110,7 +120,11 @@ export async function createParcel(
       entityType: 'parcel',
       entityId: inserted!.id,
       organizationId: property.organizationId,
-      after: { propertyId, reference: input.reference ?? null, surveyPlanRef: input.surveyPlanRef ?? null },
+      after: {
+        propertyId,
+        reference: input.reference ?? null,
+        surveyPlanRef: input.surveyPlanRef ?? null,
+      },
       correlationId: options.correlationId,
     });
     return toParcelDto(row!);
@@ -153,7 +167,10 @@ export async function updateParcel(
         declaredValue: current.declaredValue,
         declaredUnit: current.declaredUnit,
       },
-      after: { ...patch, boundary: patch.boundary === undefined ? undefined : Boolean(patch.boundary) },
+      after: {
+        ...patch,
+        boundary: patch.boundary === undefined ? undefined : Boolean(patch.boundary),
+      },
       correlationId: options.correlationId,
     });
     return toParcelDto(row!);

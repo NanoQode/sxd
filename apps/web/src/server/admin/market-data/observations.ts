@@ -102,10 +102,7 @@ export interface ReviewDto {
 
 const num = (v: string | null): number | null => (v === null ? null : Number(v));
 
-function interpretationDto(
-  i: InterpRow,
-  names: Map<string, string>,
-): InterpretationDto {
+function interpretationDto(i: InterpRow, names: Map<string, string>): InterpretationDto {
   return {
     id: i.id,
     version: i.version,
@@ -128,7 +125,9 @@ function interpretationDto(
   };
 }
 
-const effectiveMarketSql = sql<string | null>`coalesce(${schema.observationInterpretations.appliesToMarketId}, ${schema.observations.marketId})`;
+const effectiveMarketSql = sql<
+  string | null
+>`coalesce(${schema.observationInterpretations.appliesToMarketId}, ${schema.observations.marketId})`;
 
 function baseSelect(tx: Transaction) {
   return tx
@@ -163,7 +162,10 @@ function baseSelect(tx: Transaction) {
 
 type BaseRow = Awaited<ReturnType<ReturnType<typeof baseSelect>['execute']>>[number];
 
-async function userNames(tx: Transaction, ids: Array<string | null | undefined>): Promise<Map<string, string>> {
+async function userNames(
+  tx: Transaction,
+  ids: Array<string | null | undefined>,
+): Promise<Map<string, string>> {
   const unique = [...new Set(ids.filter((x): x is string => Boolean(x)))];
   if (unique.length === 0) return new Map();
   const rows = await tx
@@ -245,7 +247,8 @@ export async function listObservations(
     if (query.marketId) clauses.push(sql`${effectiveMarketSql} = ${query.marketId}`);
     if (query.stateId) clauses.push(eq(schema.observations.stateId, query.stateId));
     if (query.metric) clauses.push(eq(schema.observations.metric, query.metric));
-    if (query.geographyLevel) clauses.push(eq(schema.observations.geographyLevel, query.geographyLevel));
+    if (query.geographyLevel)
+      clauses.push(eq(schema.observations.geographyLevel, query.geographyLevel));
     if (query.rankEligible !== undefined)
       clauses.push(eq(schema.observationInterpretations.rankEligible, query.rankEligible));
     if (query.q) {
@@ -350,7 +353,10 @@ const LOCAL_LEVELS = ['city', 'neighborhood', 'site'] as const;
  */
 export async function comparableSummaryFor(
   tx: Transaction,
-  obs: Pick<ObsRow, 'id' | 'marketId' | 'metric' | 'propertyCohort' | 'statistic' | 'geographyLevel'>,
+  obs: Pick<
+    ObsRow,
+    'id' | 'marketId' | 'metric' | 'propertyCohort' | 'statistic' | 'geographyLevel'
+  >,
   effectiveMarketId: string | null,
 ): Promise<ComparableSummary> {
   const min = await minComparables(tx);
@@ -430,7 +436,10 @@ export interface AdminObservationDetail extends AdminObservationDto {
   comparables: ComparableSummary;
 }
 
-export async function getObservation(ctx: AdminContext, id: string): Promise<AdminObservationDetail> {
+export async function getObservation(
+  ctx: AdminContext,
+  id: string,
+): Promise<AdminObservationDetail> {
   authorize(ctx, 'market_data.read_drafts');
   return transact(ctx, async (tx) => {
     const rows = await baseSelect(tx).where(eq(schema.observations.id, id));
@@ -476,18 +485,30 @@ export async function getObservation(ctx: AdminContext, id: string): Promise<Adm
 function assertValueShape(input: ObservationCreateInput): void {
   const hasNumeric = input.value !== null && input.value !== undefined;
   const hasRange =
-    input.valueLow !== null && input.valueLow !== undefined && input.valueHigh !== null && input.valueHigh !== undefined;
+    input.valueLow !== null &&
+    input.valueLow !== undefined &&
+    input.valueHigh !== null &&
+    input.valueHigh !== undefined;
   const hasText = Boolean(input.valueText);
   const fail = (path: string, message: string) =>
     new ApiError('validation_failed', message, { details: [{ path, message }] });
-  if (!hasNumeric && !hasRange && !hasText) throw fail('value', 'provide a value, a range or a categorical value');
-  if (input.statistic === 'range' && !hasRange) throw fail('valueLow', 'a range needs valueLow and valueHigh');
-  if (input.statistic === 'categorical' && !hasText) throw fail('valueText', 'a categorical observation needs valueText');
-  if (hasRange && (input.valueLow as number) > (input.valueHigh as number)) throw fail('valueHigh', 'valueHigh must be >= valueLow');
-  if (input.observationPeriodStart && input.observationPeriodEnd && input.observationPeriodStart > input.observationPeriodEnd)
+  if (!hasNumeric && !hasRange && !hasText)
+    throw fail('value', 'provide a value, a range or a categorical value');
+  if (input.statistic === 'range' && !hasRange)
+    throw fail('valueLow', 'a range needs valueLow and valueHigh');
+  if (input.statistic === 'categorical' && !hasText)
+    throw fail('valueText', 'a categorical observation needs valueText');
+  if (hasRange && (input.valueLow as number) > (input.valueHigh as number))
+    throw fail('valueHigh', 'valueHigh must be >= valueLow');
+  if (
+    input.observationPeriodStart &&
+    input.observationPeriodEnd &&
+    input.observationPeriodStart > input.observationPeriodEnd
+  )
     throw fail('observationPeriodEnd', 'period end must be on or after period start');
   const today = new Date().toISOString().slice(0, 10);
-  if (input.retrievedAt > today) throw fail('retrievedAt', 'retrieval date cannot be in the future');
+  if (input.retrievedAt > today)
+    throw fail('retrievedAt', 'retrieval date cannot be in the future');
   if (input.numericRepresentation === 'kobo' && hasNumeric && !Number.isInteger(input.value))
     throw fail('value', 'kobo values must be integers');
 }
@@ -514,7 +535,8 @@ export async function createObservation(
         .select({ id: schema.observations.id })
         .from(schema.observations)
         .where(eq(schema.observations.slug, input.slug));
-      if (dup.length > 0) throw new ApiError('conflict', `observation slug "${input.slug}" already exists`);
+      if (dup.length > 0)
+        throw new ApiError('conflict', `observation slug "${input.slug}" already exists`);
     }
     let marketId = input.marketId ?? null;
     let stateId = input.stateId ?? null;
@@ -532,9 +554,13 @@ export async function createObservation(
       case 'neighborhood':
       case 'site': {
         if (!marketId)
-          throw new ApiError('validation_failed', `${input.geographyLevel} observations need marketId`, {
-            details: [{ path: 'marketId', message: 'required' }],
-          });
+          throw new ApiError(
+            'validation_failed',
+            `${input.geographyLevel} observations need marketId`,
+            {
+              details: [{ path: 'marketId', message: 'required' }],
+            },
+          );
         if (input.geographyLevel === 'neighborhood' && !neighborhoodId)
           throw new ApiError('validation_failed', 'neighborhood observations need neighborhoodId', {
             details: [{ path: 'neighborhoodId', message: 'required' }],
@@ -551,12 +577,25 @@ export async function createObservation(
         .select({ id: schema.markets.id, mergedInto: schema.markets.mergedIntoMarketId })
         .from(schema.markets)
         .where(eq(schema.markets.id, marketId));
-      if (!market[0]) throw new ApiError('validation_failed', 'market not found', { details: [{ path: 'marketId', message: 'unknown market' }] });
-      if (market[0].mergedInto) throw new ApiError('validation_failed', 'market was merged; record against the target market');
+      if (!market[0])
+        throw new ApiError('validation_failed', 'market not found', {
+          details: [{ path: 'marketId', message: 'unknown market' }],
+        });
+      if (market[0].mergedInto)
+        throw new ApiError(
+          'validation_failed',
+          'market was merged; record against the target market',
+        );
     }
     if (stateId) {
-      const state = await tx.select({ id: schema.states.id }).from(schema.states).where(eq(schema.states.id, stateId));
-      if (!state[0]) throw new ApiError('validation_failed', 'state not found', { details: [{ path: 'stateId', message: 'unknown state' }] });
+      const state = await tx
+        .select({ id: schema.states.id })
+        .from(schema.states)
+        .where(eq(schema.states.id, stateId));
+      if (!state[0])
+        throw new ApiError('validation_failed', 'state not found', {
+          details: [{ path: 'stateId', message: 'unknown state' }],
+        });
     }
     if (neighborhoodId) {
       const hood = await tx
@@ -564,7 +603,9 @@ export async function createObservation(
         .from(schema.neighborhoods)
         .where(eq(schema.neighborhoods.id, neighborhoodId));
       if (!hood[0] || hood[0].marketId !== marketId)
-        throw new ApiError('validation_failed', 'neighborhood does not belong to the market', { details: [{ path: 'neighborhoodId', message: 'mismatch' }] });
+        throw new ApiError('validation_failed', 'neighborhood does not belong to the market', {
+          details: [{ path: 'neighborhoodId', message: 'mismatch' }],
+        });
     }
     const [obs] = await tx
       .insert(schema.observations)
@@ -573,9 +614,14 @@ export async function createObservation(
         sourceId: input.sourceId,
         sourceUrl: input.sourceUrl ?? null,
         metric: input.metric,
-        valueNumeric: input.value === null || input.value === undefined ? null : String(input.value),
-        valueLow: input.valueLow === null || input.valueLow === undefined ? null : String(input.valueLow),
-        valueHigh: input.valueHigh === null || input.valueHigh === undefined ? null : String(input.valueHigh),
+        valueNumeric:
+          input.value === null || input.value === undefined ? null : String(input.value),
+        valueLow:
+          input.valueLow === null || input.valueLow === undefined ? null : String(input.valueLow),
+        valueHigh:
+          input.valueHigh === null || input.valueHigh === undefined
+            ? null
+            : String(input.valueHigh),
         valueText: input.valueText ?? null,
         unit: input.unit,
         currency: input.currency ?? null,
@@ -631,7 +677,15 @@ export async function createObservation(
       action: 'observation.created',
       entityType: 'observation',
       entityId: obs!.id,
-      after: { metric: obs!.metric, statistic: obs!.statistic, geographyLevel: obs!.geographyLevel, marketId, stateId, sourceId: obs!.sourceId, interpretationVersion: 1 },
+      after: {
+        metric: obs!.metric,
+        statistic: obs!.statistic,
+        geographyLevel: obs!.geographyLevel,
+        marketId,
+        stateId,
+        sourceId: obs!.sourceId,
+        interpretationVersion: 1,
+      },
       reason: options.auditReason ?? null,
       correlationId: ctx.correlationId,
     });
@@ -672,7 +726,13 @@ export async function reviewObservation(
     const current = row.i;
     assertVersion(current.version, input.expectedVersion);
 
-    const owned = { type: 'observation_interpretation', id: current.id, createdBy: current.createdBy ?? obs.createdBy };
+    // Separation of duties anchors on the submitter of the observation (review decisions create
+    // later interpretation versions, and a reviewer's own decision must not make it "their work").
+    const owned = {
+      type: 'observation_interpretation',
+      id: current.id,
+      createdBy: obs.createdBy ?? current.createdBy,
+    };
     const unowned = { type: 'observation_interpretation', id: current.id };
     const fail = (message: string) => new ApiError('invalid_transition', message);
     const note = input.note?.trim() || null;
@@ -681,14 +741,16 @@ export async function reviewObservation(
     switch (input.decision) {
       case 'approve': {
         authorize(ctx, 'market_data.publish', owned);
-        if (current.reviewStatus === 'rejected') throw fail('a rejected observation cannot be approved; submit a new observation');
+        if (current.reviewStatus === 'rejected')
+          throw fail('a rejected observation cannot be approved; submit a new observation');
         next.reviewStatus = 'verified';
         next.reviewerId = userId;
         break;
       }
       case 'reject': {
         authorize(ctx, 'market_data.publish', unowned);
-        if (!note) throw new ApiError('validation_failed', 'a rejection needs a note explaining why');
+        if (!note)
+          throw new ApiError('validation_failed', 'a rejection needs a note explaining why');
         next.reviewStatus = 'rejected';
         next.reviewerId = userId;
         next.rankEligible = false;
@@ -698,7 +760,11 @@ export async function reviewObservation(
       }
       case 'dispute': {
         authorize(ctx, 'market_data.edit', unowned);
-        if (!note) throw new ApiError('validation_failed', 'a dispute needs a note describing the challenge');
+        if (!note)
+          throw new ApiError(
+            'validation_failed',
+            'a dispute needs a note describing the challenge',
+          );
         next.reviewStatus = 'disputed';
         next.rankEligible = false;
         next.reasonNotRankEligible = `Disputed: ${note}`;
@@ -715,7 +781,9 @@ export async function reviewObservation(
         authorize(ctx, 'market_data.publish', owned);
         if (current.publicationState === 'published') throw fail('already published');
         if (!['source_read_pending_business_review', 'verified'].includes(current.reviewStatus))
-          throw fail(`cannot publish an observation whose review status is ${current.reviewStatus}`);
+          throw fail(
+            `cannot publish an observation whose review status is ${current.reviewStatus}`,
+          );
         const comparables = await comparableSummaryFor(tx, obs, row.effectiveMarketId);
         if (comparables.applicable && !comparables.satisfied) {
           if (!input.publishAsContextual) {
@@ -760,7 +828,9 @@ export async function reviewObservation(
           );
         next.rankEligible = true;
         next.reasonNotRankEligible = null;
-        next.editorialNote = [current.editorialNote, `Rank-eligible: ${note}`].filter(Boolean).join(' ');
+        next.editorialNote = [current.editorialNote, `Rank-eligible: ${note}`]
+          .filter(Boolean)
+          .join(' ');
         break;
       }
       case 'mark_rank_ineligible': {
@@ -789,8 +859,20 @@ export async function reviewObservation(
       decision: input.decision,
       note,
     });
-    const before = { version: current.version, reviewStatus: current.reviewStatus, publicationState: current.publicationState, rankEligible: current.rankEligible, reasonNotRankEligible: current.reasonNotRankEligible };
-    const after = { version: created!.version, reviewStatus: created!.reviewStatus, publicationState: created!.publicationState, rankEligible: created!.rankEligible, reasonNotRankEligible: created!.reasonNotRankEligible };
+    const before = {
+      version: current.version,
+      reviewStatus: current.reviewStatus,
+      publicationState: current.publicationState,
+      rankEligible: current.rankEligible,
+      reasonNotRankEligible: current.reasonNotRankEligible,
+    };
+    const after = {
+      version: created!.version,
+      reviewStatus: created!.reviewStatus,
+      publicationState: created!.publicationState,
+      rankEligible: created!.rankEligible,
+      reasonNotRankEligible: created!.reasonNotRankEligible,
+    };
     await recordAudit(tx, ctx.identity, {
       action: `observation.${input.decision}`,
       entityType: 'observation',
