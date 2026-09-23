@@ -1,5 +1,5 @@
 import 'server-only';
-import { and, asc, desc, eq, ilike, lte, or, sql } from 'drizzle-orm';
+import { and, desc, eq, ilike, lte, or, sql } from 'drizzle-orm';
 import type { z } from 'zod';
 import {
   ApiError,
@@ -8,7 +8,6 @@ import {
   type ContentPageDto,
   type ContentRevisionCreate,
   type ContentRevisionDto,
-  type MediaAssetDto,
   type Page,
   type PublishedContent,
   contentPageCreateSchema,
@@ -603,30 +602,4 @@ export async function publishDueScheduledPages(now: Date = new Date()): Promise<
   );
   if (promoted > 0) await cacheDelete('content');
   return promoted;
-}
-
-/** Media picker: only assets approved for public use are listed; uploads arrive in Wave 2. */
-export async function listApprovedMedia(identity: RequestIdentity): Promise<MediaAssetDto[]> {
-  const rows = await withActor(getDb(), identity.ctx, (tx) =>
-    tx
-      .select({ m: schema.mediaAssets, f: schema.fileObjects })
-      .from(schema.mediaAssets)
-      .innerJoin(schema.fileObjects, eq(schema.fileObjects.id, schema.mediaAssets.fileId))
-      .where(
-        and(eq(schema.mediaAssets.approvedForPublic, true), eq(schema.fileObjects.status, 'clean')),
-      )
-      .orderBy(asc(schema.mediaAssets.createdAt))
-      .limit(200),
-  );
-  return rows.map((r) => ({
-    id: r.m.id,
-    fileId: r.m.fileId,
-    altText: r.m.altText,
-    caption: r.m.caption,
-    originalName: r.f.originalName,
-    declaredMime: r.f.declaredMime,
-    approvedForPublic: r.m.approvedForPublic,
-    rightsConfirmed: r.m.rightsConfirmed,
-    createdAt: r.m.createdAt.toISOString(),
-  }));
 }

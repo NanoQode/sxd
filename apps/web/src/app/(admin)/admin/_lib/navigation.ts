@@ -66,6 +66,15 @@ export const ADMIN_NAV: NavItem[] = [
     permissions: ['customers.read', 'projects.read_all'],
   },
   {
+    // Listing moderation queue (brief §8 land sales/leasing, §20): decisions
+    // need content.publish, verification checks rentals.manage.
+    key: 'listings',
+    label: 'Listings',
+    href: '/admin/listings',
+    icon: 'properties',
+    permissions: ['content.publish', 'rentals.manage'],
+  },
+  {
     key: 'projects',
     label: 'Projects',
     href: '/admin/projects',

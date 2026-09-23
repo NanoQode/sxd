@@ -15,7 +15,13 @@ import {
   StatusBadge,
 } from '@simplexd/ui';
 import { formatDateLabel, formatDateTimeLabel, formatPercent } from '@simplexd/ui/format';
-import type { MarketDetailDto, RankedMarketDto, RecommendationResponse } from '@simplexd/contracts';
+import type {
+  MarketDetailDto,
+  RankedMarketDto,
+  RecommendationResponse,
+  TenderOpportunitiesDto,
+  TenderOpportunityDto,
+} from '@simplexd/contracts';
 import {
   AVAILABILITY_LABELS,
   COPY,
@@ -52,6 +58,78 @@ function Section({ title, children, id }: { title: string; children: ReactNode; 
       </h3>
       {children}
     </section>
+  );
+}
+
+const LINKED_THROUGH_LABELS: Record<TenderOpportunityDto['linkedThrough'], string> = {
+  project: 'linked through its project',
+  property: 'linked through the project site',
+  service_request: 'linked through its service request',
+};
+
+/**
+ * Open, published tenders the caller may see for this market. Tenders are
+ * invitation-based, so the empty state says what is visible to whom instead
+ * of pretending nothing exists.
+ */
+export function TenderOpportunities({ tenders }: { tenders: TenderOpportunitiesDto }) {
+  const workspaceLink =
+    tenders.scope === 'partner' ? (
+      <Link href="/partner/tenders" className="text-sm text-primary underline underline-offset-2">
+        Open your tender invitations
+      </Link>
+    ) : tenders.scope === 'staff' ? (
+      <Link href="/admin/tenders" className="text-sm text-primary underline underline-offset-2">
+        Manage tenders
+      </Link>
+    ) : null;
+  if (!tenders.moduleEnabled) {
+    return <p className="text-sm text-fg-muted">{COPY.tendersModuleOff}</p>;
+  }
+  if (tenders.items.length === 0) {
+    return (
+      <>
+        <p className="text-sm text-fg-muted" data-testid="tenders-empty">
+          {tenders.scope === 'none' ? COPY.noTenders : COPY.noTendersForYou}
+        </p>
+        {workspaceLink}
+      </>
+    );
+  }
+  return (
+    <>
+      <ul className="space-y-2" aria-label="Open tenders" data-testid="tenders-list">
+        {tenders.items.map((tender) => (
+          <li key={tender.id} className="rounded-md border border-border p-2 text-sm">
+            <div className="flex flex-wrap items-center justify-between gap-1">
+              <span className="font-medium">
+                {tender.href ? (
+                  <Link href={tender.href} className="text-primary underline underline-offset-2">
+                    {tender.title}
+                  </Link>
+                ) : (
+                  tender.title
+                )}
+              </span>
+              <StatusBadge status={tender.status} />
+            </div>
+            <p className="text-xs text-fg-muted">
+              {tender.reference} · closes{' '}
+              {formatDateTimeLabel(tender.submissionDeadlineAt, tender.displayTimeZone)}
+              {tender.releaseAt
+                ? ` · released ${formatDateLabel(tender.releaseAt, tender.displayTimeZone)}`
+                : ''}{' '}
+              · {LINKED_THROUGH_LABELS[tender.linkedThrough]}
+            </p>
+          </li>
+        ))}
+      </ul>
+      <p className="text-xs text-fg-muted">
+        Closing dates are schedule constraints, never a score. Shown only to the organisation,
+        invited partners and staff.
+      </p>
+      {workspaceLink}
+    </>
   );
 }
 
@@ -325,7 +403,7 @@ export function LocationPanelContent({
       </Section>
 
       <Section id={`${prefix}-tenders`} title="Tender opportunities">
-        <p className="text-sm text-fg-muted">{COPY.noTenders}</p>
+        <TenderOpportunities tenders={detail.tenderOpportunities} />
         {ranked?.biddingWindowDays !== null && ranked?.biddingWindowDays !== undefined ? (
           <p className="text-sm">
             Bidding window: {ranked.biddingWindowDays} days (a schedule constraint, never a score).

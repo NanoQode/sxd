@@ -1,13 +1,15 @@
-import type {
-  EvidenceBadge,
-  EvidenceSummaryDto,
-  MarketDetailDto,
-  MarketGeoJson,
-  MarketSummaryDto,
-  ObservationDto,
-  SourceRefDto,
-  SupplierLeadDto,
-  SupplierQuoteDto,
+import {
+  NO_TENDER_OPPORTUNITIES,
+  type EvidenceBadge,
+  type EvidenceSummaryDto,
+  type MarketDetailDto,
+  type MarketGeoJson,
+  type MarketSummaryDto,
+  type ObservationDto,
+  type SourceRefDto,
+  type SupplierLeadDto,
+  type SupplierQuoteDto,
+  type TenderOpportunitiesDto,
 } from '@simplexd/contracts';
 import {
   observationBadge,
@@ -221,6 +223,7 @@ export function toMarketDetail(
   extras: MarketDetailExtras,
   coordinateSource: SourceRow | null,
   ctx: MapContext,
+  tenderOpportunities: TenderOpportunitiesDto = NO_TENDER_OPPORTUNITIES,
 ): MarketDetailDto {
   const { market } = bundle;
   const summary = toMarketSummary(bundle, ctx);
@@ -253,6 +256,7 @@ export function toMarketDetail(
     regionalContextObservations: bundle.regional.map((r) => toObservationDto(r, ctx)),
     supplierLeads: bundle.leads.map(toSupplierLeadDto),
     supplierQuotes: bundle.quotes.map((q) => toQuoteDto(q, ctx)),
+    tenderOpportunities,
     serviceCoverage: extras.serviceCoverage.map(({ coverage, service }) => ({
       serviceSlug: service.slug,
       serviceName: service.name,

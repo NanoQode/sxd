@@ -59,7 +59,12 @@ beforeAll(async () => {
     'diligence_memo',
     f.suffix,
     [
-      { key: 'summary', heading: 'Summary of findings', guidance: 'Two paragraphs.', required: true },
+      {
+        key: 'summary',
+        heading: 'Summary of findings',
+        guidance: 'Two paragraphs.',
+        required: true,
+      },
       { key: 'title', heading: 'Title and documents', required: true },
       { key: 'survey', heading: 'Survey and boundaries', required: false },
       { key: 'recommendation', heading: 'Recommendation', required: true },
@@ -162,7 +167,12 @@ describe('due diligence journey (scenario 3)', () => {
       .where(
         and(
           eq(schema.outboxEvents.aggregateType, 'engagement_item'),
-          inArray(schema.outboxEvents.aggregateId, [surveyRef.id, redFlag.id, query.id, docCheck.id]),
+          inArray(schema.outboxEvents.aggregateId, [
+            surveyRef.id,
+            redFlag.id,
+            query.id,
+            docCheck.id,
+          ]),
         ),
       );
     expect(events.map((e) => e.type).sort()).toEqual([
@@ -170,9 +180,9 @@ describe('due diligence journey (scenario 3)', () => {
       'engagement_item.customer_action',
       'engagement_item.customer_action',
     ]);
-    expect(
-      events.find((e) => e.type === 'engagement_item.assigned')?.payload,
-    ).toMatchObject({ recipientUserIds: [f.surveyor] });
+    expect(events.find((e) => e.type === 'engagement_item.assigned')?.payload).toMatchObject({
+      recipientUserIds: [f.surveyor],
+    });
 
     // --- The surveyor sees and works only what is theirs.
     const mine = await listMyEngagementItems(surveyor, {});
@@ -373,10 +383,18 @@ describe('due diligence journey (scenario 3)', () => {
 
     // --- Decision memorandum under the request, prefilled from the active template.
     await expect(
-      createServiceRequestReport(ownerA, f.requestA, { kind: 'diligence_memo', title: 'Nope', referenceItems: true }),
+      createServiceRequestReport(ownerA, f.requestA, {
+        kind: 'diligence_memo',
+        title: 'Nope',
+        referenceItems: true,
+      }),
     ).rejects.toSatisfy((e) => errorCode(e) === 'forbidden');
     await expect(
-      createServiceRequestReport(ops, f.requestA, { kind: 'diligence_memo', title: 'Nope', referenceItems: true }),
+      createServiceRequestReport(ops, f.requestA, {
+        kind: 'diligence_memo',
+        title: 'Nope',
+        referenceItems: true,
+      }),
     ).rejects.toSatisfy((e) => errorCode(e) === 'forbidden'); // operations managers do not draft
     const memo = await createServiceRequestReport(pm, f.requestA, {
       kind: 'diligence_memo',
@@ -401,7 +419,9 @@ describe('due diligence journey (scenario 3)', () => {
     expect(draft.scopeLimitations).toContain('Desk review of documents');
     const findings = draft.findings as {
       template: { id: string; sections: Array<{ key: string }> };
-      engagementItems: { items: Array<{ id: string; kind: string; evidence: Array<{ name: string }> }> };
+      engagementItems: {
+        items: Array<{ id: string; kind: string; evidence: Array<{ name: string }> }>;
+      };
     };
     expect(findings.template.id).toBe(templateId);
     expect(findings.template.sections.map((s) => s.key)).toEqual([
@@ -460,8 +480,12 @@ describe('due diligence journey (scenario 3)', () => {
     expect(finalDraft.currentVersion).toBe(3);
     // Each revision re-captures the item snapshot server-side.
     const rev3 = finalDraft.revisions.find((r) => r.version === 3)!;
-    const rev3Findings = rev3.findings as { engagementItems: { items: Array<{ status: string; id: string }> } };
-    expect(rev3Findings.engagementItems.items.find((i) => i.id === query.id)!.status).toBe('satisfied');
+    const rev3Findings = rev3.findings as {
+      engagementItems: { items: Array<{ status: string; id: string }> };
+    };
+    expect(rev3Findings.engagementItems.items.find((i) => i.id === query.id)!.status).toBe(
+      'satisfied',
+    );
 
     // A named professional reviewer who is not the author; the author can neither review nor release.
     await expect(
@@ -527,7 +551,10 @@ describe('due diligence journey (scenario 3)', () => {
       .select()
       .from(schema.auditEvents)
       .where(
-        and(eq(schema.auditEvents.action, 'report.exported'), eq(schema.auditEvents.entityId, memo.id)),
+        and(
+          eq(schema.auditEvents.action, 'report.exported'),
+          eq(schema.auditEvents.entityId, memo.id),
+        ),
       )
       .orderBy(desc(schema.auditEvents.createdAt));
     expect(exportAudit).toMatchObject({ actorUserId: f.ownerA, organizationId: f.orgA });

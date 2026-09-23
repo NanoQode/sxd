@@ -33,6 +33,7 @@ import {
   type PurchaseOrderRow,
   type ServiceOptions,
 } from './shared';
+import { recordSupplierQuotesFromAward } from './supplier-quotes';
 
 /**
  * Purchase orders: created from a submitted response (lines copied, totals
@@ -208,6 +209,8 @@ export async function issuePurchaseOrder(
         .update(schema.rfqs)
         .set({ status: 'awarded' })
         .where(and(eq(schema.rfqs.id, po.rfqId), inArray(schema.rfqs.status, ['sent', 'closed'])));
+    // The accepted response is now a real, dated supplier quotation for the delivery market.
+    const supplierQuoteIds = await recordSupplierQuotesFromAward(tx, identity, updated, options);
     await appendOutbox(tx, {
       eventType: 'purchase_order.issued',
       aggregateType: 'purchase_order',
@@ -227,7 +230,7 @@ export async function issuePurchaseOrder(
       entityId: poId,
       organizationId: po.organizationId,
       before: { status: 'draft' },
-      after: { status: 'issued', issuedAt: now.iso },
+      after: { status: 'issued', issuedAt: now.iso, supplierQuoteIds },
       correlationId: options.correlationId,
     });
     return detailInTx(tx, updated);

@@ -132,6 +132,22 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
                     )}
                   </dd>
                 </div>
+                {listingRef(lead.context) ? (
+                  <div>
+                    <dt className="text-fg-muted">Listing inquiry</dt>
+                    <dd>
+                      <Link
+                        href={`/admin/listings/${listingRef(lead.context)!.listingId}`}
+                        className="text-primary underline"
+                      >
+                        {listingRef(lead.context)!.listingTitle ?? 'Listing'}
+                      </Link>
+                      {listingRef(lead.context)!.interest
+                        ? ` · interested in ${humanize(listingRef(lead.context)!.interest!)}`
+                        : ''}
+                    </dd>
+                  </div>
+                ) : null}
                 <div>
                   <dt className="text-fg-muted">Marketing consent</dt>
                   <dd>{lead.marketingConsent ? 'Granted' : 'Not granted'}</dd>

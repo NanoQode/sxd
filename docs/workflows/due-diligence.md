@@ -18,13 +18,13 @@ request. `kind` decides the behaviour (`packages/domain/src/engagements/items.ts
 `ENGAGEMENT_ITEM_KIND_RULES` — change a kind's rule there and every surface
 follows):
 
-| Kind | Used for | Rule highlights |
-|---|---|---|
-| `document_check` | Title and document checklist | Customers may upload against it; evidence required before `satisfied` |
-| `survey_reference` | Survey plan / beacon references | `reference` required before `satisfied` |
-| `site_finding` | Site or on-camera findings | Severity required; attached inspectors (`site_visits.perform`) may create |
-| `query` | Question to the customer | Customers answer (response note) and may upload; customer notified on creation |
-| `red_flag` | Issue affecting the decision | Severity required; customer notified when customer-visible |
+| Kind                                                                | Used for                                      | Rule highlights                                                                                |
+| ------------------------------------------------------------------- | --------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| `document_check`                                                    | Title and document checklist                  | Customers may upload against it; evidence required before `satisfied`                          |
+| `survey_reference`                                                  | Survey plan / beacon references               | `reference` required before `satisfied`                                                        |
+| `site_finding`                                                      | Site or on-camera findings                    | Severity required; attached inspectors (`site_visits.perform`) may create                      |
+| `query`                                                             | Question to the customer                      | Customers answer (response note) and may upload; customer notified on creation                 |
+| `red_flag`                                                          | Issue affecting the decision                  | Severity required; customer notified when customer-visible                                     |
 | `condition`, `closing_task`, `handover_document`, `lease_milestone` | Purchase representation and land transactions | Handover documents need evidence before `satisfied`; closing tasks default to visibility `all` |
 
 Statuses: `open → in_progress → satisfied | failed | waived | cancelled`.
@@ -61,12 +61,12 @@ Every mutation takes `expectedVersion`, writes an audit entry
 (`engagement_item.created|updated|transitioned|evidence_attached|customer_responded|replied`)
 and, where someone must act, an outbox event:
 
-| Event | Recipients | Route |
-|---|---|---|
-| `engagement_item.assigned` | the assignee | partner: `/partner/items`; staff: the request page |
-| `engagement_item.customer_action` | customer organisation members | `/portal/requests/{id}?tab=workspace` (new query, red flag, reply) |
-| `engagement_item.responded`, `engagement_item.evidence_attached` | assignee, project manager, creator | request page |
-| `engagement_item.transitioned` | none (event stream only) | — |
+| Event                                                            | Recipients                         | Route                                                              |
+| ---------------------------------------------------------------- | ---------------------------------- | ------------------------------------------------------------------ |
+| `engagement_item.assigned`                                       | the assignee                       | partner: `/partner/items`; staff: the request page                 |
+| `engagement_item.customer_action`                                | customer organisation members      | `/portal/requests/{id}?tab=workspace` (new query, red flag, reply) |
+| `engagement_item.responded`, `engagement_item.evidence_attached` | assignee, project manager, creator | request page                                                       |
+| `engagement_item.transitioned`                                   | none (event stream only)           | —                                                                  |
 
 Resolvers live in `packages/notifications/src/registry.ts`; the worker maps
 the events in `apps/worker/src/outbox.ts`.

@@ -19,7 +19,10 @@ export const PATCH = route<{ params: Promise<{ id: string }> }>(async (req, ctx)
   const identity = await getIdentity();
   const { id } = await params(ctx, z.object({ id: uuidSchema }));
   const body = await parseJson(req, engagementItemUpdateSchema);
-  return json(await updateEngagementItem(identity, id, body, { correlationId: ctx.correlationId }), {
-    correlationId: ctx.correlationId,
-  });
+  return json(
+    await updateEngagementItem(identity, id, body, { correlationId: ctx.correlationId }),
+    {
+      correlationId: ctx.correlationId,
+    },
+  );
 });

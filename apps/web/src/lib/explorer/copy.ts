@@ -28,7 +28,10 @@ export const COPY = {
   mapNotConfiguredDetail:
     'A licensed map tile provider has not been connected (NEXT_PUBLIC_MAP_STYLE_URL). The list below has the complete functionality of the map.',
   mapFailed: 'The map could not be loaded',
-  noTenders: 'No tender opportunities are published for this market yet.',
+  noTenders:
+    'No tender opportunities are published publicly for this market. Tenders are invitation-based: invited partners see open tenders in their partner workspace after signing in, and customers see their own organisation’s tenders.',
+  noTendersForYou: 'No open tender opportunities for this market are visible to you right now.',
+  tendersModuleOff: 'Tendering is not enabled for this deployment or your account yet.',
   noSupplierQuotes:
     'No verified supplier quotations yet. Leads below are research pointers, not delivery routes or prices.',
   coverageVsAvailability:

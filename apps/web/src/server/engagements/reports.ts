@@ -205,7 +205,9 @@ export async function createServiceRequestReport(
         summary: own?.summary ?? null,
         bodyMarkdown:
           own?.bodyMarkdown ??
-          bodyFromSections(template.sections.map(({ key, heading, required }) => ({ key, heading, required }))),
+          bodyFromSections(
+            template.sections.map(({ key, heading, required }) => ({ key, heading, required })),
+          ),
         findings: findings as never,
         attachmentFileIds: own?.attachmentFileIds ?? [],
         scopeLimitations: own?.scopeLimitations ?? template.limitationsMarkdown ?? null,
@@ -464,11 +466,7 @@ export async function exportReleasedReport(
       version: r.releasedVersion,
       releasedAt: r.releasedAt ? r.releasedAt.toISOString() : null,
       organizationName: org?.name ?? null,
-      context: sr
-        ? `${sr.reference} · ${sr.title}`
-        : project
-          ? `Project: ${project.name}`
-          : null,
+      context: sr ? `${sr.reference} · ${sr.title}` : project ? `Project: ${project.name}` : null,
       authorName: r.createdBy ? (names.get(r.createdBy) ?? null) : null,
       reviewerName: r.namedReviewerUserId ? (names.get(r.namedReviewerUserId) ?? null) : null,
       reviewedAt: rev.reviewedAt ? rev.reviewedAt.toISOString() : null,

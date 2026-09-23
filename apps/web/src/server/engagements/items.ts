@@ -355,7 +355,10 @@ async function loadResponses(
       })
       .from(schema.notes)
       .where(
-        and(eq(schema.notes.entityType, 'engagement_item'), inArray(schema.notes.entityId, itemIds)),
+        and(
+          eq(schema.notes.entityType, 'engagement_item'),
+          inArray(schema.notes.entityId, itemIds),
+        ),
       )
       .orderBy(asc(schema.notes.createdAt), asc(schema.notes.id));
     const authors = [...new Set(rows.map((r) => r.authorUserId))];
@@ -506,7 +509,11 @@ interface LoadedItem {
 }
 
 /** Loads the item and its request under row-level security, then classifies the caller. */
-async function loadItem(tx: Transaction, identity: RequestIdentity, id: string): Promise<LoadedItem> {
+async function loadItem(
+  tx: Transaction,
+  identity: RequestIdentity,
+  id: string,
+): Promise<LoadedItem> {
   userIdOf(identity);
   const [row] = await tx
     .select()
@@ -792,7 +799,10 @@ export async function listMyEngagementItems(
     const entries: Array<ItemEntry & { createdAt: Date; id: string }> = [];
     for (const row of rows) {
       if (!accessBySr.has(row.serviceRequestId))
-        accessBySr.set(row.serviceRequestId, await loadServiceRequestAccess(tx, row.serviceRequestId));
+        accessBySr.set(
+          row.serviceRequestId,
+          await loadServiceRequestAccess(tx, row.serviceRequestId),
+        );
       const access = accessBySr.get(row.serviceRequestId);
       if (!access) continue;
       const viewer = classifyItemViewer(identity, access, row);
@@ -941,7 +951,9 @@ export async function updateEngagementItem(
     const [updated] = await tx
       .update(schema.engagementItems)
       .set({ ...next, version: row.version + 1, updatedAt: new Date() })
-      .where(and(eq(schema.engagementItems.id, id), eq(schema.engagementItems.version, row.version)))
+      .where(
+        and(eq(schema.engagementItems.id, id), eq(schema.engagementItems.version, row.version)),
+      )
       .returning();
     if (!updated) throw versionConflict(row.version);
     // Evidence follows the item: widening visibility to the customer shares
@@ -1029,7 +1041,9 @@ export async function transitionEngagementItem(
     const [updated] = await tx
       .update(schema.engagementItems)
       .set({ status: input.to, ...resolution, version: row.version + 1, updatedAt: now })
-      .where(and(eq(schema.engagementItems.id, id), eq(schema.engagementItems.version, row.version)))
+      .where(
+        and(eq(schema.engagementItems.id, id), eq(schema.engagementItems.version, row.version)),
+      )
       .returning();
     if (!updated) throw versionConflict(row.version);
     await recordAudit(tx, identity, {
@@ -1103,7 +1117,9 @@ export async function attachEngagementItemEvidence(
     if (!can.attachEvidence) {
       if (viewer === 'customer') {
         const c = customerMayAttach(row);
-        throw forbidden(c.ok ? 'your role cannot upload documents for this organisation' : c.message);
+        throw forbidden(
+          c.ok ? 'your role cannot upload documents for this organisation' : c.message,
+        );
       }
       throw new ApiError(
         'invalid_transition',
@@ -1133,14 +1149,21 @@ export async function attachEngagementItemEvidence(
           details: { fileId, status: file.status },
         });
       if (!ATTACHABLE_PURPOSES.includes(file.purpose) || isSensitivePurpose(file.purpose))
-        throw bad('attach request documents or evidence uploads; identity documents are requested separately');
+        throw bad(
+          'attach request documents or evidence uploads; identity documents are requested separately',
+        );
       const own = file.ownerUserId === actorId;
       const onRequest = file.organizationId === row.organizationId;
       if (viewer === 'assignee' && !staff && !own)
         throw bad('attach evidence you uploaded yourself');
       if ((customer || staff) && !own && !onRequest)
         throw bad('the file belongs to another organisation');
-      if (!own && onRequest && file.entityType === 'service_request' && file.entityId !== row.serviceRequestId)
+      if (
+        !own &&
+        onRequest &&
+        file.entityType === 'service_request' &&
+        file.entityId !== row.serviceRequestId
+      )
         throw bad('the file belongs to another request');
     }
     for (const file of files) {
@@ -1189,7 +1212,9 @@ export async function attachEngagementItemEvidence(
         version: row.version + 1,
         updatedAt: new Date(),
       })
-      .where(and(eq(schema.engagementItems.id, id), eq(schema.engagementItems.version, row.version)))
+      .where(
+        and(eq(schema.engagementItems.id, id), eq(schema.engagementItems.version, row.version)),
+      )
       .returning();
     if (!updated) throw versionConflict(row.version);
     await recordAudit(tx, identity, {
@@ -1245,7 +1270,10 @@ export async function respondToEngagementItem(
       if (!orgAllows(identity, access, 'org.comment'))
         throw forbidden('your role in this organisation cannot answer queries');
     } else if (!OPEN_ITEM_STATUSES.includes(row.status)) {
-      throw new ApiError('invalid_transition', `replies are added while the item is open (it is ${row.status})`);
+      throw new ApiError(
+        'invalid_transition',
+        `replies are added while the item is open (it is ${row.status})`,
+      );
     }
     assertVersion(row.version, input.expectedVersion);
     const customer = viewer === 'customer';
@@ -1261,7 +1289,9 @@ export async function respondToEngagementItem(
     const [updated] = await tx
       .update(schema.engagementItems)
       .set({ status: nextStatus, version: row.version + 1, updatedAt: new Date() })
-      .where(and(eq(schema.engagementItems.id, id), eq(schema.engagementItems.version, row.version)))
+      .where(
+        and(eq(schema.engagementItems.id, id), eq(schema.engagementItems.version, row.version)),
+      )
       .returning();
     if (!updated) throw versionConflict(row.version);
     await recordAudit(tx, identity, {

@@ -154,9 +154,7 @@ export type EngagementItemResponseDto = z.infer<typeof engagementItemResponseDto
 export const engagementItemCapabilitiesSchema = z.object({
   /** Fields the caller may change with PATCH (empty when none). */
   editableFields: z.array(z.string()),
-  transitions: z.array(
-    z.object({ to: engagementItemStatusSchema, reasonRequired: z.boolean() }),
-  ),
+  transitions: z.array(z.object({ to: engagementItemStatusSchema, reasonRequired: z.boolean() })),
   attachEvidence: z.boolean(),
   respond: z.boolean(),
 });

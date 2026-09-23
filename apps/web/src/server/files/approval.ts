@@ -9,6 +9,7 @@ import { getDb, schema, withActor } from '@simplexd/db';
 import { assertAllowed, authorizeAny } from '@simplexd/domain/authz';
 import { recordAudit } from '@/lib/audit';
 import type { RequestIdentity } from '@/lib/auth/session';
+import { cacheDelete } from '@/lib/cache';
 import { loadFileAccess } from './access';
 import {
   ctxFor,
@@ -36,7 +37,7 @@ export async function setPublicApproval(
 ): Promise<FilePublicApprovalResponse> {
   const userId = userIdOf(identity);
   const ctx = ctxFor(identity, options);
-  return withActor(getDb(), ctx, async (tx) => {
+  const result = await withActor(getDb(), ctx, async (tx) => {
     const access = await loadFileAccess(tx, ctx, fileId);
     if (!access) throw notFound();
     const { file } = access;
@@ -169,4 +170,8 @@ export async function setPublicApproval(
         : null,
     };
   });
+  // Public delivery (/media/{assetId}) caches resolutions briefly; a change in
+  // approval must not outlive that window.
+  await cacheDelete('content-media');
+  return result;
 }

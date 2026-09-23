@@ -203,6 +203,41 @@ export const neighborhoodDtoSchema = z.object({
   version: z.number().int(),
 });
 
+/**
+ * An open, published tender linked to the market through its project, the
+ * project's property or its service request. Tenders are never public: the
+ * list is scoped to what the caller may see (own organisation, invitations
+ * or staff) and the module's feature flag.
+ */
+export const tenderOpportunityDtoSchema = z.object({
+  id: uuidSchema,
+  reference: z.string(),
+  title: z.string(),
+  status: z.enum(['published', 'clarifications']),
+  releaseAt: isoDateTimeSchema.nullable(),
+  submissionDeadlineAt: isoDateTimeSchema,
+  displayTimeZone: z.string(),
+  linkedThrough: z.enum(['project', 'property', 'service_request']),
+  /** Where the caller may open the tender, when a workspace page exists for their role. */
+  href: z.string().nullable(),
+});
+export type TenderOpportunityDto = z.infer<typeof tenderOpportunityDtoSchema>;
+
+export const tenderOpportunitiesSchema = z.object({
+  /** `expansion.contractor_tendering` evaluated for the caller. */
+  moduleEnabled: z.boolean(),
+  /** Which tenders the caller may see at all; `none` for anonymous visitors. */
+  scope: z.enum(['none', 'customer', 'partner', 'staff']),
+  items: z.array(tenderOpportunityDtoSchema),
+});
+export type TenderOpportunitiesDto = z.infer<typeof tenderOpportunitiesSchema>;
+
+export const NO_TENDER_OPPORTUNITIES: TenderOpportunitiesDto = {
+  moduleEnabled: false,
+  scope: 'none',
+  items: [],
+};
+
 export const marketDetailSchema = marketSummarySchema.extend({
   selectionBasis: z.string().nullable(),
   coordinateSource: sourceRefSchema.nullable(),
@@ -217,6 +252,8 @@ export const marketDetailSchema = marketSummarySchema.extend({
   regionalContextObservations: z.array(observationDtoSchema),
   supplierLeads: z.array(supplierLeadDtoSchema),
   supplierQuotes: z.array(supplierQuoteDtoSchema),
+  /** Defaults keep older API responses parseable by the explorer client. */
+  tenderOpportunities: tenderOpportunitiesSchema.default(NO_TENDER_OPPORTUNITIES),
   serviceCoverage: z.array(serviceCoverageDtoSchema),
   flags: z.array(marketFlagDtoSchema),
   missingEvidence: z.array(z.string()),

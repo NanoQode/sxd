@@ -4,9 +4,9 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   CONTENT_FIELD_TEMPLATES,
+  type ContentMediaAssetDto,
   type ContentPageDetail,
   type ContentPageDto,
-  type MediaAssetDto,
 } from '@simplexd/contracts';
 import {
   Alert,
@@ -28,6 +28,7 @@ import {
   useToast,
 } from '@simplexd/ui';
 import { apiFetch, errorMessage } from '@/lib/api/client-fetch';
+import { MediaPicker } from './media-picker';
 
 type Action =
   'submit_for_review' | 'approve' | 'publish' | 'schedule' | 'unpublish' | 'archive' | 'rollback';
@@ -101,7 +102,6 @@ export function ContentEditor({
   const [actionNote, setActionNote] = useState('');
   const [publishAt, setPublishAt] = useState('');
   const [mediaOpen, setMediaOpen] = useState(false);
-  const [media, setMedia] = useState<MediaAssetDto[] | null>(null);
   const [diffPair, setDiffPair] = useState<[number | null, number | null]>([null, null]);
   const bodyRef = useRef<HTMLTextAreaElement>(null);
   const dirty =
@@ -230,20 +230,10 @@ export function ContentEditor({
     }
   }
 
-  async function openMedia() {
-    setMediaOpen(true);
-    if (media) return;
-    try {
-      const res = await apiFetch<{ items: MediaAssetDto[] }>('/api/v1/admin/content/media');
-      setMedia(res.items);
-    } catch (err) {
-      setError(errorMessage(err));
-      setMedia([]);
-    }
-  }
-
-  function insertMedia(asset: MediaAssetDto) {
-    const snippet = `\n![${asset.altText}](/media/${asset.id})\n`;
+  /** Inserts the approved asset's public URL as a Markdown image at the cursor. */
+  function insertMedia(asset: ContentMediaAssetDto) {
+    const alt = asset.altText.replace(/[[\]]/g, ' ');
+    const snippet = `\n![${alt}](${asset.publicUrl})\n`;
     const el = bodyRef.current;
     if (el) {
       const start = el.selectionStart ?? body.length;
@@ -367,8 +357,8 @@ export function ContentEditor({
               )}
             </Field>
             <div className="flex flex-wrap gap-2">
-              <Button variant="secondary" size="sm" onClick={() => void openMedia()}>
-                Insert approved media
+              <Button variant="secondary" size="sm" onClick={() => setMediaOpen(true)}>
+                Insert or upload media
               </Button>
               {CONTENT_FIELD_TEMPLATES[detail.kind] ? (
                 <Button
@@ -728,42 +718,13 @@ export function ContentEditor({
         ) : null}
       </Dialog>
 
-      <Dialog open={mediaOpen} onOpenChange={setMediaOpen}>
-        <DialogContent
-          title="Approved media"
-          description="Only assets approved for public use are listed. Uploads and public delivery arrive in Wave 2; private evidence is never reachable from here."
-          size="lg"
-        >
-          {media === null ? (
-            <p className="text-sm text-fg-muted">Loading…</p>
-          ) : media.length === 0 ? (
-            <p className="text-sm text-fg-muted">
-              No approved media assets yet. Once uploads land in Wave 2, assets approved with
-              confirmed rights appear here.
-            </p>
-          ) : (
-            <ul className="grid gap-2 sm:grid-cols-2">
-              {media.map((m) => (
-                <li key={m.id} className="rounded-md border border-border p-3 text-sm">
-                  <p className="font-medium">{m.altText}</p>
-                  <p className="text-xs text-fg-muted">
-                    {m.originalName} · {m.declaredMime}
-                    {m.rightsConfirmed ? ' · rights confirmed' : ' · rights unconfirmed'}
-                  </p>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    className="mt-2"
-                    onClick={() => insertMedia(m)}
-                  >
-                    Insert
-                  </Button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </DialogContent>
-      </Dialog>
+      <MediaPicker
+        open={mediaOpen}
+        onOpenChange={setMediaOpen}
+        pageId={detail.id}
+        currentUserId={currentUserId}
+        onInsert={insertMedia}
+      />
     </div>
   );
 }

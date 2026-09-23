@@ -1,15 +1,40 @@
-import { NextResponse, type NextRequest } from 'next/server';
+import { NextResponse, type NextFetchEvent, type NextRequest } from 'next/server';
+import {
+  isRedirectCandidate,
+  lookupRedirect,
+  redirectLocation,
+  reportRedirectHit,
+  type SnapshotSource,
+} from '@/lib/redirects/proxy-cache';
 
 /**
- * Edge-side request policy:
+ * Request policy (Node runtime proxy, runs before every route):
  * - Content Security Policy with a per-request nonce (scripts) and allow-listed
  *   map tile, payment and storage hosts.
  * - Anonymous visitor token cookie for saved scenarios before sign-up.
  * - Cheap gating of private surfaces: no session cookie means redirect to
  *   sign-in (full authorisation happens server-side in each layout/route).
+ * - Migrated-site redirects with their configured status (301/302/308) from an
+ *   in-memory snapshot of the redirect table (see lib/redirects/proxy-cache):
+ *   one Map lookup per navigation, refreshed in the background every 30 s
+ *   through the app's own snapshot route, never a database query here.
+ *   Redirect sources can only be paths that are not live pages (enforced when
+ *   redirects are created), so the app's own routes are never shadowed.
  */
 
 const PRIVATE_PREFIXES = ['/portal', '/admin', '/partner', '/tenant'];
+
+/**
+ * Where the proxy reaches this deployment for its snapshot refresh: the
+ * process itself by default (standalone server behind Caddy), overridable for
+ * other topologies.
+ */
+function snapshotSource(request: NextRequest): SnapshotSource {
+  const baseUrl =
+    process.env.INTERNAL_APP_URL?.replace(/\/$/, '') ??
+    `http://127.0.0.1:${process.env.PORT ?? '3000'}`;
+  return { baseUrl, host: request.headers.get('host') };
+}
 
 function nonce(): string {
   const bytes = new Uint8Array(16);
@@ -96,10 +121,32 @@ function isCrossSite(request: NextRequest): boolean {
   return !allowed.has(origin);
 }
 
-export default function proxy(request: NextRequest) {
+export default async function proxy(request: NextRequest, event?: NextFetchEvent) {
   const isDev = process.env.NODE_ENV !== 'production';
   const n = nonce();
   const policy = csp(n, isDev);
+
+  // Migrated-site redirects: served with the configured status before any route runs.
+  if (
+    (request.method === 'GET' || request.method === 'HEAD') &&
+    isRedirectCandidate(request.nextUrl.pathname)
+  ) {
+    const source = snapshotSource(request);
+    const waitUntil = event ? (p: Promise<unknown>) => event.waitUntil(p) : undefined;
+    const match = await lookupRedirect(request.nextUrl.pathname, source, waitUntil);
+    if (match) {
+      const location = redirectLocation(match, request.nextUrl);
+      const hit = reportRedirectHit(
+        request.nextUrl.pathname,
+        source,
+        request.headers.get('x-forwarded-for') ?? request.headers.get('x-real-ip'),
+      );
+      if (waitUntil) waitUntil(hit);
+      const response = NextResponse.redirect(location, match.status);
+      response.headers.set('cache-control', 'public, max-age=300');
+      return response;
+    }
+  }
 
   if (
     STATE_CHANGING.has(request.method) &&
@@ -123,8 +170,8 @@ export default function proxy(request: NextRequest) {
   requestHeaders.set('content-security-policy', policy);
 
   const { pathname } = request.nextUrl;
-  // Lets the not-found boundary look up migrated-site redirects for the
-  // requested path without a database query on every navigation.
+  // Lets layouts read the requested path, and the not-found boundary fall back
+  // to a database redirect lookup when the proxy snapshot was unavailable.
   requestHeaders.set('x-pathname', pathname);
   const secure = request.nextUrl.protocol === 'https:';
   const sessionCookie = request.cookies.get(
@@ -157,7 +204,9 @@ export default function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    // Skip static assets and Next internals; API routes get CSP too (harmless) but not redirects.
-    '/((?!_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml|manifest.webmanifest|icons/|images/).*)',
+    // Skip static assets, Next internals and public media bytes (/media/{id}
+    // sets its own headers and must not carry cookies or a CSP nonce); API
+    // routes get CSP too (harmless) but never redirects.
+    '/((?!_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml|manifest.webmanifest|icons/|images/|media/).*)',
   ],
 };

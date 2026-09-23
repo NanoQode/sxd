@@ -100,7 +100,17 @@ export async function loadAssignmentContext(
 /* ---------------------------------------------------------------------- */
 
 export type CollaborationEntityType =
-  'service_request' | 'project' | 'property' | 'lead' | 'site_visit' | 'report' | 'defect';
+  | 'service_request'
+  | 'project'
+  | 'property'
+  | 'lead'
+  | 'site_visit'
+  | 'report'
+  | 'defect'
+  // Commercial entities partners work on: assignees are the invited or named partners.
+  | 'tender'
+  | 'purchase_order'
+  | 'rfq';
 
 export interface EntityAccess {
   type: CollaborationEntityType;
@@ -122,6 +132,9 @@ export const ENTITY_STAFF_READ: Record<CollaborationEntityType, StaffPermission[
   site_visit: ['projects.read_all', 'site_visits.perform'],
   report: ['projects.read_all', 'reports.review', 'reports.release', 'reports.draft'],
   defect: ['projects.read_all', 'site_visits.perform'],
+  tender: ['tenders.manage', 'bids.evaluate', 'projects.read_all'],
+  purchase_order: ['procurement.manage', 'projects.read_all'],
+  rfq: ['procurement.manage', 'projects.read_all'],
 };
 
 /** Staff permissions that allow managing work (tasks, assignments) on an entity. */
@@ -133,6 +146,9 @@ export const ENTITY_STAFF_MANAGE: Record<CollaborationEntityType, StaffPermissio
   site_visit: ['projects.manage', 'site_visits.perform'],
   report: ['projects.manage', 'reports.review'],
   defect: ['projects.manage', 'site_visits.perform'],
+  tender: ['tenders.manage'],
+  purchase_order: ['procurement.manage'],
+  rfq: ['procurement.manage'],
 };
 
 /**
@@ -323,6 +339,82 @@ async function loadEntityRow(
         organizationId: row.organizationId,
         createdBy: row.createdBy,
         assigneeUserIds: uniqueIds([row.createdBy, row.verifiedBy]),
+        serviceRequestId: null,
+        projectId: row.projectId,
+      };
+    }
+    case 'tender': {
+      // Invited partners are the tender's assignees (a partner sees only their own invitation row).
+      const [row] = await tx
+        .select({
+          id: schema.tenders.id,
+          organizationId: schema.tenders.organizationId,
+          createdBy: schema.tenders.createdBy,
+          projectId: schema.tenders.projectId,
+          serviceRequestId: schema.tenders.serviceRequestId,
+        })
+        .from(schema.tenders)
+        .where(eq(schema.tenders.id, id));
+      if (!row) return null;
+      const invited = await tx
+        .select({ partnerUserId: schema.tenderInvitations.partnerUserId })
+        .from(schema.tenderInvitations)
+        .where(eq(schema.tenderInvitations.tenderId, id));
+      return {
+        type,
+        id: row.id,
+        organizationId: row.organizationId,
+        createdBy: row.createdBy,
+        assigneeUserIds: uniqueIds([row.createdBy, ...invited.map((i) => i.partnerUserId)]),
+        serviceRequestId: row.serviceRequestId,
+        projectId: row.projectId,
+      };
+    }
+    case 'purchase_order': {
+      const [row] = await tx
+        .select({
+          id: schema.purchaseOrders.id,
+          organizationId: schema.purchaseOrders.organizationId,
+          createdBy: schema.purchaseOrders.createdBy,
+          supplierUserId: schema.purchaseOrders.supplierUserId,
+          projectId: schema.purchaseOrders.projectId,
+          status: schema.purchaseOrders.status,
+        })
+        .from(schema.purchaseOrders)
+        .where(eq(schema.purchaseOrders.id, id));
+      if (!row) return null;
+      return {
+        type,
+        id: row.id,
+        organizationId: row.organizationId,
+        createdBy: row.createdBy,
+        // A supplier learns about an order only once it is issued.
+        assigneeUserIds: uniqueIds([row.createdBy, row.status === 'draft' ? null : row.supplierUserId]),
+        serviceRequestId: null,
+        projectId: row.projectId,
+      };
+    }
+    case 'rfq': {
+      const [row] = await tx
+        .select({
+          id: schema.rfqs.id,
+          organizationId: schema.rfqs.organizationId,
+          createdBy: schema.rfqs.createdBy,
+          projectId: schema.rfqs.projectId,
+        })
+        .from(schema.rfqs)
+        .where(eq(schema.rfqs.id, id));
+      if (!row) return null;
+      const responses = await tx
+        .select({ supplierUserId: schema.rfqResponses.supplierUserId })
+        .from(schema.rfqResponses)
+        .where(eq(schema.rfqResponses.rfqId, id));
+      return {
+        type,
+        id: row.id,
+        organizationId: row.organizationId,
+        createdBy: row.createdBy,
+        assigneeUserIds: uniqueIds([row.createdBy, ...responses.map((r) => r.supplierUserId)]),
         serviceRequestId: null,
         projectId: row.projectId,
       };

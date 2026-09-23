@@ -157,6 +157,7 @@ export function marketDetail(
     regionalContextObservations: [],
     supplierLeads: [],
     supplierQuotes: [],
+    tenderOpportunities: { moduleEnabled: false, scope: 'none', items: [] },
     serviceCoverage: [],
     flags: [],
     missingEvidence: [],

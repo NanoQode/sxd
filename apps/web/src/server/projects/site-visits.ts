@@ -4,19 +4,23 @@ import {
   ApiError,
   type Page,
   type SiteVisitDto,
+  type SiteVisitReject,
   type SiteVisitSchedule,
   type SiteVisitStart,
   type SiteVisitSubmit,
   type SiteVisitSync,
   type SiteVisitSyncItem,
   type SiteVisitSyncResult,
+  type SiteVisitUnscheduledStart,
 } from '@simplexd/contracts';
 import { appendOutbox, getDb, schema, withActor, type Transaction } from '@simplexd/db';
 import { AuthorizationError, authorizePartner, authorizeStaff } from '@simplexd/domain/authz';
 import { recordAudit } from '@/lib/audit';
 import type { RequestIdentity } from '@/lib/auth/session';
 import {
+  PARTNER_ASSIGNMENT_STATUSES,
   PROJECT_READ_CHECKS,
+  assertProjectAccess,
   loadProjectAccess,
   requireProject,
   type ProjectAccess,
@@ -35,6 +39,57 @@ import {
 
 type VisitRow = typeof schema.siteVisits.$inferSelect;
 
+/**
+ * Unscheduled visits (started in the field without a scheduled slot) have no
+ * `scheduledAt`; the inspector's reason is kept in `instructions` behind a
+ * fixed marker, the one column a later submission never overwrites.
+ */
+const UNSCHEDULED_MARKER = 'UNSCHEDULED: ';
+
+export function unscheduledReasonOf(v: Pick<VisitRow, 'scheduledAt' | 'instructions'>): string | null {
+  if (v.scheduledAt !== null) return null;
+  return v.instructions?.startsWith(UNSCHEDULED_MARKER)
+    ? v.instructions.slice(UNSCHEDULED_MARKER.length)
+    : null;
+}
+
+/** Assignment roles that may be on site: an accepted/active assignment in one of these lets a partner start an unscheduled visit. */
+export const FIELD_ASSIGNMENT_ROLES: ReadonlySet<string> = new Set([
+  'inspector',
+  'surveyor',
+  'valuer',
+  'architect',
+  'quantity_surveyor',
+  'contractor',
+]);
+
+/**
+ * Who may create a visit from the field: staff with `site_visits.perform`
+ * (inspectors attached to the project) or a partner holding an accepted or
+ * active field assignment on it.
+ */
+export function assertFieldAccess(identity: RequestIdentity, access: ProjectAccess): void {
+  const actorId = userIdOf(identity);
+  if (identity.actor.staffRoles.length > 0) {
+    assertProjectAccess(identity, access, [{ staff: 'site_visits.perform' }]);
+    return;
+  }
+  assertProjectAccess(identity, access, [{ partner: 'partner.assignments.view' }]);
+  const field = access.assignments.some(
+    (a) =>
+      a.assigneeUserId === actorId &&
+      (PARTNER_ASSIGNMENT_STATUSES as readonly string[]).includes(a.status) &&
+      FIELD_ASSIGNMENT_ROLES.has(a.role),
+  );
+  if (!field) {
+    throw new ApiError(
+      'forbidden',
+      'an accepted field assignment (inspector, surveyor, valuer, architect, quantity surveyor or contractor) on this project is required to start a visit',
+      { details: { code: 'not_assigned' } },
+    );
+  }
+}
+
 async function evidenceCount(tx: Transaction, visitId: string): Promise<number> {
   const [row] = await tx
     .select({ n: sql<number>`count(*)::int` })
@@ -52,6 +107,7 @@ async function toDto(tx: Transaction, v: VisitRow): Promise<SiteVisitDto> {
           .where(eq(schema.user.id, v.inspectorUserId))
       )[0]
     : undefined;
+  const unscheduledReason = unscheduledReasonOf(v);
   return {
     id: v.id,
     organizationId: v.organizationId,
@@ -63,7 +119,7 @@ async function toDto(tx: Transaction, v: VisitRow): Promise<SiteVisitDto> {
     inspectorUserId: v.inspectorUserId,
     inspectorName: inspector?.name ?? null,
     status: v.status,
-    instructions: v.instructions,
+    instructions: unscheduledReason === null ? v.instructions : null,
     checklist: v.checklist ?? null,
     findingsMarkdown: v.findingsMarkdown,
     weather: v.weather,
@@ -74,6 +130,8 @@ async function toDto(tx: Transaction, v: VisitRow): Promise<SiteVisitDto> {
     reviewedAt: iso(v.reviewedAt),
     offlineClientId: v.offlineClientId,
     evidenceCount: await evidenceCount(tx, v.id),
+    unscheduled: v.scheduledAt === null,
+    unscheduledReason,
     createdAt: v.createdAt.toISOString(),
     updatedAt: v.updatedAt.toISOString(),
   };
@@ -520,6 +578,174 @@ export async function cancelSiteVisit(
 }
 
 /**
+ * Inserts an in-progress visit created in the field. With a reason the visit
+ * is unscheduled (no `scheduledAt`, reason kept behind the marker) and staff
+ * are told; without one (staff inspectors' existing flow) the start time
+ * doubles as the schedule.
+ */
+async function createFieldVisitInTx(
+  tx: Transaction,
+  identity: RequestIdentity,
+  access: ProjectAccess,
+  input: {
+    reason: string | null;
+    scheduledAt: string | null;
+    startedAt: string | null;
+    offlineClientId: string | null;
+    options: ServiceOptions;
+  },
+): Promise<VisitRow> {
+  const actorId = userIdOf(identity);
+  const startedAt = input.startedAt ? new Date(input.startedAt) : new Date();
+  const unscheduled = input.reason !== null;
+  const [row] = await tx
+    .insert(schema.siteVisits)
+    .values({
+      organizationId: access.project.organizationId,
+      projectId: access.project.id,
+      propertyId: access.project.propertyId,
+      serviceRequestId: access.project.serviceRequestId,
+      scheduledAt: unscheduled
+        ? null
+        : input.scheduledAt
+          ? new Date(input.scheduledAt)
+          : startedAt,
+      inspectorUserId: actorId,
+      status: 'in_progress',
+      instructions: unscheduled ? `${UNSCHEDULED_MARKER}${input.reason}` : null,
+      startedAt,
+      offlineClientId: input.offlineClientId,
+    })
+    .returning();
+  await recordAudit(tx, identity, {
+    action: unscheduled ? 'site_visit.started_unscheduled' : 'site_visit.created_from_field',
+    entityType: 'site_visit',
+    entityId: row!.id,
+    organizationId: access.project.organizationId,
+    after: {
+      projectId: access.project.id,
+      offlineClientId: input.offlineClientId,
+      startedAt: startedAt.toISOString(),
+      unscheduled,
+    },
+    reason: input.reason,
+    correlationId: input.options.correlationId,
+  });
+  if (unscheduled) {
+    await appendOutbox(tx, {
+      eventType: 'project.site_visit.unscheduled_started',
+      aggregateType: 'site_visit',
+      aggregateId: row!.id,
+      organizationId: access.project.organizationId,
+      actorUserId: actorId,
+      payload: {
+        projectId: access.project.id,
+        siteVisitId: row!.id,
+        inspectorUserId: actorId,
+        pmUserId: access.project.pmUserId,
+        recipientUserIds: access.project.pmUserId ? [access.project.pmUserId] : [],
+      },
+      correlationId: input.options.correlationId ?? null,
+    });
+  }
+  return row!;
+}
+
+/**
+ * An inspector with an active field assignment starts a visit that nobody
+ * scheduled: reason required, flagged unscheduled, staff notified. Capture,
+ * evidence and offline rules are those of any in-progress visit; staff may
+ * reject it until it is reviewed. Idempotent on `offlineClientId`.
+ */
+export async function startUnscheduledSiteVisit(
+  identity: RequestIdentity,
+  projectId: string,
+  input: SiteVisitUnscheduledStart,
+  options: ServiceOptions = {},
+): Promise<SiteVisitDto & { idempotentReplay: boolean }> {
+  const actorId = userIdOf(identity);
+  return withActor(getDb(), ctxFor(identity, options), async (tx) => {
+    const access = await loadProjectAccess(tx, projectId);
+    if (!access) throw notFound('project');
+    assertFieldAccess(identity, access);
+    if (input.offlineClientId) {
+      const existing = await findByOfflineId(tx, input.offlineClientId);
+      if (existing) {
+        if (existing.inspectorUserId !== actorId || existing.projectId !== projectId)
+          throw new ApiError('conflict', 'this offline id was already used elsewhere');
+        return { ...(await toDto(tx, existing)), idempotentReplay: true };
+      }
+    }
+    const row = await createFieldVisitInTx(tx, identity, access, {
+      reason: input.reason,
+      scheduledAt: null,
+      startedAt: input.startedAt ?? null,
+      offlineClientId: input.offlineClientId ?? null,
+      options,
+    });
+    return { ...(await toDto(tx, row)), idempotentReplay: false };
+  });
+}
+
+/**
+ * Staff reject an unscheduled visit (`projects.manage` or `reports.review`)
+ * while it is in progress or submitted, i.e. before its findings were
+ * reviewed; the inspector is told. Scheduled visits go through cancellation.
+ */
+export async function rejectUnscheduledSiteVisit(
+  identity: RequestIdentity,
+  id: string,
+  input: SiteVisitReject,
+  options: ServiceOptions = {},
+): Promise<SiteVisitDto> {
+  const actorId = userIdOf(identity);
+  return withActor(getDb(), ctxFor(identity, options), async (tx) => {
+    const { v, access } = await loadVisit(tx, identity, id);
+    await requireProject(tx, identity, access.project.id, [
+      { staff: 'projects.manage' },
+      { staff: 'reports.review' },
+    ]);
+    if (v.scheduledAt !== null)
+      throw invalidTransition('only unscheduled visits can be rejected; cancel a scheduled visit');
+    if (v.inspectorUserId === actorId)
+      throw new ApiError('forbidden', 'an inspector cannot reject their own visit');
+    if (v.status !== 'in_progress' && v.status !== 'submitted')
+      throw invalidTransition(`visit is ${v.status}; only in-progress or submitted visits can be rejected`);
+    const [updated] = await tx
+      .update(schema.siteVisits)
+      .set({ status: 'cancelled' })
+      .where(and(eq(schema.siteVisits.id, id), eq(schema.siteVisits.status, v.status)))
+      .returning();
+    if (!updated) throw invalidTransition('the visit changed while rejecting; reload');
+    await recordAudit(tx, identity, {
+      action: 'site_visit.rejected',
+      entityType: 'site_visit',
+      entityId: id,
+      organizationId: access.project.organizationId,
+      before: { status: v.status },
+      after: { status: 'cancelled', rejectedBy: actorId },
+      reason: input.reason,
+      correlationId: options.correlationId,
+    });
+    await appendOutbox(tx, {
+      eventType: 'project.site_visit.rejected',
+      aggregateType: 'site_visit',
+      aggregateId: id,
+      organizationId: access.project.organizationId,
+      actorUserId: actorId,
+      payload: {
+        projectId: access.project.id,
+        siteVisitId: id,
+        inspectorUserId: v.inspectorUserId,
+        recipientUserIds: v.inspectorUserId ? [v.inspectorUserId] : [],
+      },
+      correlationId: options.correlationId ?? null,
+    });
+    return toDto(tx, updated);
+  });
+}
+
+/**
  * Offline resume (acceptance scenario 10): each item runs in its own
  * transaction; a repeated offline id replays the stored result instead of
  * duplicating, another user's id is refused, and failures are reported per item.
@@ -581,35 +807,23 @@ async function syncOne(
           'validation_failed',
           'projectId is required to create a visit from the field',
         );
-      access = await requireProject(tx, identity, item.projectId, [
-        { staff: 'site_visits.perform' },
-      ]);
-      const [row] = await tx
-        .insert(schema.siteVisits)
-        .values({
-          organizationId: access.project.organizationId,
-          projectId: access.project.id,
-          propertyId: access.project.propertyId,
-          serviceRequestId: access.project.serviceRequestId,
-          scheduledAt: item.scheduledAt
-            ? new Date(item.scheduledAt)
-            : item.startedAt
-              ? new Date(item.startedAt)
-              : new Date(),
-          inspectorUserId: actorId,
-          status: 'in_progress',
-          startedAt: item.startedAt ? new Date(item.startedAt) : new Date(),
-          offlineClientId: item.offlineClientId,
-        })
-        .returning();
-      v = row!;
-      await recordAudit(tx, identity, {
-        action: 'site_visit.created_from_field',
-        entityType: 'site_visit',
-        entityId: v.id,
-        organizationId: access.project.organizationId,
-        after: { projectId: access.project.id, offlineClientId: item.offlineClientId },
-        correlationId: options.correlationId,
+      const loaded = await loadProjectAccess(tx, item.projectId);
+      if (!loaded) throw notFound('project');
+      access = loaded;
+      if (identity.actor.staffRoles.length === 0 && !item.unscheduledReason) {
+        throw new ApiError(
+          'validation_failed',
+          'unscheduledReason is required when an assigned partner creates a visit from the field',
+          { details: [{ path: 'unscheduledReason', message: 'required' }] },
+        );
+      }
+      assertFieldAccess(identity, access);
+      v = await createFieldVisitInTx(tx, identity, access, {
+        reason: item.unscheduledReason ?? null,
+        scheduledAt: item.scheduledAt ?? null,
+        startedAt: item.startedAt ?? null,
+        offlineClientId: item.offlineClientId,
+        options,
       });
     }
     const outcome = await submitInTx(

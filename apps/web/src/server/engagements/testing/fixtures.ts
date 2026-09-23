@@ -263,24 +263,48 @@ export async function cleanupFixture(f: EngagementFixture, templateIds: string[]
     await attempt(() =>
       o
         .delete(schema.notes)
-        .where(and(eq(schema.notes.entityType, 'engagement_item'), inArray(schema.notes.entityId, items))),
+        .where(
+          and(
+            eq(schema.notes.entityType, 'engagement_item'),
+            inArray(schema.notes.entityId, items),
+          ),
+        ),
     );
-  await attempt(() => o.delete(schema.engagementItems).where(inArray(schema.engagementItems.serviceRequestId, srs)));
-  await attempt(() => o.delete(schema.evidence).where(inArray(schema.evidence.organizationId, orgs)));
+  await attempt(() =>
+    o.delete(schema.engagementItems).where(inArray(schema.engagementItems.serviceRequestId, srs)),
+  );
+  await attempt(() =>
+    o.delete(schema.evidence).where(inArray(schema.evidence.organizationId, orgs)),
+  );
   if (reports.length > 0) {
-    await attempt(() => o.delete(schema.reportRevisions).where(inArray(schema.reportRevisions.reportId, reports)));
+    await attempt(() =>
+      o.delete(schema.reportRevisions).where(inArray(schema.reportRevisions.reportId, reports)),
+    );
     await attempt(() => o.delete(schema.reports).where(inArray(schema.reports.id, reports)));
   }
   if (templateIds.length > 0)
-    await attempt(() => o.delete(schema.reportTemplates).where(inArray(schema.reportTemplates.id, templateIds)));
-  await attempt(() => o.delete(schema.appointments).where(inArray(schema.appointments.organizationId, orgs)));
+    await attempt(() =>
+      o.delete(schema.reportTemplates).where(inArray(schema.reportTemplates.id, templateIds)),
+    );
+  await attempt(() =>
+    o.delete(schema.appointments).where(inArray(schema.appointments.organizationId, orgs)),
+  );
   if (f.fileIds.length > 0) {
-    await attempt(() => o.delete(schema.fileAccessGrants).where(inArray(schema.fileAccessGrants.fileId, f.fileIds)));
-    await attempt(() => o.delete(schema.fileObjects).where(inArray(schema.fileObjects.id, f.fileIds)));
+    await attempt(() =>
+      o.delete(schema.fileAccessGrants).where(inArray(schema.fileAccessGrants.fileId, f.fileIds)),
+    );
+    await attempt(() =>
+      o.delete(schema.fileObjects).where(inArray(schema.fileObjects.id, f.fileIds)),
+    );
   }
   await attempt(() =>
     o
       .delete(schema.assignments)
-      .where(or(inArray(schema.assignments.serviceRequestId, srs), inArray(schema.assignments.organizationId, orgs))),
+      .where(
+        or(
+          inArray(schema.assignments.serviceRequestId, srs),
+          inArray(schema.assignments.organizationId, orgs),
+        ),
+      ),
   );
 }

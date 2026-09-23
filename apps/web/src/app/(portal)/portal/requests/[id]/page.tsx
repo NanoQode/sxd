@@ -92,7 +92,11 @@ export default async function RequestDetailPage({
         })
       : Promise.resolve(null),
   ]);
-  const workspaceTab = workspaceLabel(detail.serviceSlug.includes('inspection') ? 'virtual_inspection' : workspace?.workflowTemplateKey ?? '');
+  const workspaceTab = workspaceLabel(
+    detail.serviceSlug.includes('inspection')
+      ? 'virtual_inspection'
+      : (workspace?.workflowTemplateKey ?? ''),
+  );
   const awaitingCustomer = workspace
     ? workspace.summary.openCustomerQueries + workspace.summary.openDocumentRequests
     : 0;

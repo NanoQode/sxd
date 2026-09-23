@@ -18,6 +18,7 @@ import { visibilityFor, type Visibility } from './access';
 import { loadBundles, loadDetailExtras, loadMarketRows, marketPublicationFilter } from './load';
 import { toGeoFeature, toMarketDetail, toMarketSummary, toObservationDto } from './mappers';
 import { loadReadModelContext, type ReadModelContext } from './policy';
+import { loadTenderOpportunities } from './tenders';
 import type { MarketBundle, MarketRow, SourceRow } from './types';
 
 /**
@@ -176,7 +177,8 @@ export async function getMarketBySlug(
     if (!bundle) return null;
     const extras = await loadDetailExtras(tx, row.market.id, visibility);
     const coordinateSource = await loadCoordinateSource(tx, row.market.coordinateSourceId);
-    return toMarketDetail(bundle, extras, coordinateSource, ctx);
+    const tenderOpportunities = await loadTenderOpportunities(tx, identity, row.market.id);
+    return toMarketDetail(bundle, extras, coordinateSource, ctx, tenderOpportunities);
   });
 }
 

@@ -14,6 +14,7 @@ import {
   Receipt,
   Settings,
   ShieldAlert,
+  Tag,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
@@ -33,6 +34,7 @@ import { authClient } from '@/lib/auth/client';
 const NAV: Array<{ href: string; label: string; icon: typeof LayoutDashboard; exact?: boolean }> = [
   { href: '/portal', label: 'Home', icon: LayoutDashboard, exact: true },
   { href: '/portal/properties', label: 'Properties', icon: Building2 },
+  { href: '/portal/listings', label: 'Listings', icon: Tag },
   { href: '/portal/projects', label: 'Projects', icon: HardHat },
   { href: '/portal/requests', label: 'Requests', icon: ClipboardList },
   { href: '/portal/documents', label: 'Documents', icon: FolderOpen },

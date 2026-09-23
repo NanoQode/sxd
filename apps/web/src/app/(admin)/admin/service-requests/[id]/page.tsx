@@ -79,7 +79,9 @@ export default async function ServiceRequestDetailPage({
   const requestClosed = ['completed', 'cancelled', 'rejected'].includes(r.status);
   const [workspace, requestFiles] = await Promise.all([
     attempt(() => getEngagementWorkspace(identity, r.id)),
-    attempt(() => listFilesForEntity(identity, { entityType: 'service_request', entityId: r.id, limit: 100 })),
+    attempt(() =>
+      listFilesForEntity(identity, { entityType: 'service_request', entityId: r.id, limit: 100 }),
+    ),
   ]);
   // Items can be assigned to staff, or to partners whose assignment here is accepted or active.
   const itemAssignees = [
@@ -242,7 +244,11 @@ export default async function ServiceRequestDetailPage({
             description="Title and document checklist, survey references, site findings, queries, red flags, conditions and closing tasks. Customer-visible items appear on the customer's request page; internal ones stay here. Assign items to staff or to partners with an accepted assignment."
           >
             {!workspace.ok ? (
-              <LoadError code={workspace.code} message={workspace.message} what="Engagement records" />
+              <LoadError
+                code={workspace.code}
+                message={workspace.message}
+                what="Engagement records"
+              />
             ) : (
               <StaffItemManager
                 serviceRequestId={r.id}

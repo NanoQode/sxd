@@ -2,7 +2,8 @@ import { eq } from 'drizzle-orm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { closeDb, schema } from '@simplexd/db';
 import { connectTestDatabases, resetDatabase, type TestDatabases } from '@simplexd/db/testing';
-import { seedAndPublish } from '@/server/markets/test-fixtures';
+import { getMarketBySlug } from '@/server/markets/queries';
+import { anonymousIdentity, seedAndPublish } from '@/server/markets/test-fixtures';
 import {
   customerIdentity,
   enableCommercialFlags,
@@ -230,6 +231,45 @@ describe('RFQ → responses → comparison → purchase order → delivery → d
     expect(issuedPo.status).toBe('issued');
     expect((await getRfq(staff, rfq.id)).status).toBe('awarded');
     expect((await getRfq(vendorA, rfq.id)).responses[0]?.status).toBe('selected');
+
+    // The accepted response is now a dated, verified supplier quotation for the
+    // delivery market, and the public location panel shows it with its badge.
+    const quotes = await dbs.owner
+      .select()
+      .from(schema.supplierQuotes)
+      .where(eq(schema.supplierQuotes.marketId, lagosId));
+    expect(quotes).toHaveLength(2);
+    const sandQuote = quotes.find((q) => q.material === 'sand')!;
+    expect(sandQuote).toMatchObject({
+      unit: 'trip',
+      quantity: '4.000',
+      unitPriceKobo: 9_000_000n,
+      leadTimeDays: 3,
+      reviewStatus: 'verified',
+      rankEligible: false,
+      supplierName: 'prc-vendor-a',
+      createdBy: 'prc-staff',
+    });
+    expect(sandQuote.quotedAt).toBe(responseA.submittedAt!.slice(0, 10));
+    expect(sandQuote.routeConditions).toContain(po.number);
+    expect(sandQuote.routeConditions).toContain(rfq.reference);
+    const lagosPanel = await getMarketBySlug('ng-lagos', anonymousIdentity('tok-prc'));
+    expect(lagosPanel?.evidence.supplierQuotes).toBe(2);
+    expect(lagosPanel?.supplierQuotes.map((q) => q.badge)).toEqual([
+      'verified_operational_record',
+      'verified_operational_record',
+    ]);
+    expect(lagosPanel?.supplierQuotes.find((q) => q.material === 'cement')).toMatchObject({
+      unit: 'bags',
+      unitPrice: { amountKobo: '1200000', currency: 'NGN' },
+      quotedAt: sandQuote.quotedAt,
+      rankEligible: false,
+    });
+    const quoteAudit = await dbs.owner
+      .select()
+      .from(schema.auditEvents)
+      .where(eq(schema.auditEvents.action, 'supplier_quote.recorded'));
+    expect(quoteAudit).toHaveLength(2);
     const poEvents = await dbs.owner
       .select()
       .from(schema.outboxEvents)

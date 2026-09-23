@@ -110,7 +110,13 @@ describe('engagement item transitions', () => {
 
   it('refuses transitions that are not in the table', () => {
     expect(
-      evaluateItemTransition({ ...base, from: 'satisfied', to: 'waived', actor: 'manager', reason: 'x' }),
+      evaluateItemTransition({
+        ...base,
+        from: 'satisfied',
+        to: 'waived',
+        actor: 'manager',
+        reason: 'x',
+      }),
     ).toMatchObject({ ok: false, code: 'invalid_transition' });
   });
 

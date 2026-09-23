@@ -158,7 +158,8 @@ export const engagementRoutes: RouteSpec[] = [
     method: 'post',
     path: '/api/v1/engagement-items/{id}/responses',
     summary: 'Answer a query (customer, org.comment) or reply on an item (staff, assignee)',
-    permission: 'org.comment on a customer-visible open query / staff managing the request / assignee',
+    permission:
+      'org.comment on a customer-visible open query / staff managing the request / assignee',
     params: idParams,
     body: engagementItemResponseCreateSchema,
     response: engagementItemDtoSchema,
@@ -215,9 +216,11 @@ export const engagementRoutes: RouteSpec[] = [
     path: '/api/v1/reports/{id}/export',
     summary:
       'Print-ready HTML of the released report version (title, version, release date, named reviewer, sections, limitations, evidence references by name and checksum). Use the browser’s Print → Save as PDF for a PDF copy.',
-    permission: 'same as reading the released report (staff read / org.reports.view); the export is audited',
+    permission:
+      'same as reading the released report (staff read / org.reports.view); the export is audited',
     params: idParams,
     query: z.object({ download: z.enum(['1']).optional() }),
-    responseDescription: 'text/html document (Content-Disposition inline, or attachment with ?download=1)',
+    responseDescription:
+      'text/html document (Content-Disposition inline, or attachment with ?download=1)',
   }),
 ];

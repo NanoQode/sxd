@@ -135,7 +135,11 @@ export function decideRequestAccess(
   const kind: 'staff' | 'org' | 'partner' =
     actor.staffRoles.length > 0 ? 'staff' : actor.memberships.length > 0 ? 'org' : 'partner';
   let own: Decision | null = null;
-  let last: Decision = { allowed: false, code: 'no_permission', reason: 'no applicable permission' };
+  let last: Decision = {
+    allowed: false,
+    code: 'no_permission',
+    reason: 'no applicable permission',
+  };
   const consider = (d: Decision, k: typeof kind) => {
     last = d;
     if (k === kind && !own) own = d;
@@ -186,7 +190,10 @@ export async function requireServiceRequest(
 }
 
 /** Organisation-side user (not staff) of the request's organisation. */
-export function isRequestCustomer(identity: RequestIdentity, access: ServiceRequestAccess): boolean {
+export function isRequestCustomer(
+  identity: RequestIdentity,
+  access: ServiceRequestAccess,
+): boolean {
   return (
     identity.actor.staffRoles.length === 0 &&
     identity.actor.memberships.some((m) => m.organizationId === access.sr.organizationId)

@@ -44,28 +44,28 @@ export function ReportView({
       <Card>
         <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
           <div>
-          <CardTitle className="flex flex-wrap items-center gap-2">
-            {report.title}
-            <Badge tone="info">{humanize(report.kind)}</Badge>
-            <Badge tone="success">
-              Released v{report.releasedVersion ?? report.currentVersion}
-            </Badge>
-          </CardTitle>
-          <CardDescription>
-            {report.releasedAt
-              ? `Released ${formatDateTimeLabel(report.releasedAt, zone)}`
-              : 'Release date not recorded'}
-            {report.authorName ? ` · author ${report.authorName}` : ''}
-            {report.namedReviewerName ? ` · reviewed by ${report.namedReviewerName}` : ''}
-            {projectHref ? (
-              <>
-                {' · '}
-                <Link href={projectHref} className="underline">
-                  {report.projectId ? 'Open project' : 'Open request'}
-                </Link>
-              </>
-            ) : null}
-          </CardDescription>
+            <CardTitle className="flex flex-wrap items-center gap-2">
+              {report.title}
+              <Badge tone="info">{humanize(report.kind)}</Badge>
+              <Badge tone="success">
+                Released v{report.releasedVersion ?? report.currentVersion}
+              </Badge>
+            </CardTitle>
+            <CardDescription>
+              {report.releasedAt
+                ? `Released ${formatDateTimeLabel(report.releasedAt, zone)}`
+                : 'Release date not recorded'}
+              {report.authorName ? ` · author ${report.authorName}` : ''}
+              {report.namedReviewerName ? ` · reviewed by ${report.namedReviewerName}` : ''}
+              {projectHref ? (
+                <>
+                  {' · '}
+                  <Link href={projectHref} className="underline">
+                    {report.projectId ? 'Open project' : 'Open request'}
+                  </Link>
+                </>
+              ) : null}
+            </CardDescription>
           </div>
           {report.releasedVersion ? (
             <LinkButton

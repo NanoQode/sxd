@@ -6,10 +6,12 @@ import { resolveRedirect } from '@/server/content/redirects';
 
 /**
  * Rendered inside the root layout for notFound() and unmatched routes (404
- * status). Before rendering, the requested path (set by the proxy as
- * x-pathname) is checked against the admin-managed redirect table so URLs
- * from the migrated website keep working without a database query on every
- * navigation.
+ * status). The proxy normally serves migrated-site redirects with their
+ * configured status before any route runs; this boundary is the fallback for
+ * the moments the proxy's snapshot is unavailable (cold start, snapshot fetch
+ * failure). It checks the requested path (x-pathname) against the redirect
+ * table and answers with Next's redirect signals (307/308) so old URLs still
+ * resolve rather than 404.
  */
 export default async function NotFound() {
   const path = (await headers()).get('x-pathname');

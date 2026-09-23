@@ -84,15 +84,22 @@ function DraftDialog({
     setBusy(true);
     setError(null);
     try {
-      const report = await adminFetch<ReportDto>(`/api/v1/service-requests/${serviceRequestId}/reports`, {
-        body: {
-          kind,
-          title: title.trim(),
-          referenceItems,
-          ...(outline?.id ? { templateId: outline.id } : {}),
+      const report = await adminFetch<ReportDto>(
+        `/api/v1/service-requests/${serviceRequestId}/reports`,
+        {
+          body: {
+            kind,
+            title: title.trim(),
+            referenceItems,
+            ...(outline?.id ? { templateId: outline.id } : {}),
+          },
         },
+      );
+      toast({
+        title: 'Draft created',
+        description: 'Fill the sections, then submit for review.',
+        tone: 'success',
       });
-      toast({ title: 'Draft created', description: 'Fill the sections, then submit for review.', tone: 'success' });
       onOpenChange(false);
       router.push(`/admin/reports/${report.id}`);
       router.refresh();
@@ -138,7 +145,12 @@ function DraftDialog({
             </Field>
             <Field label="Title" required className="sm:col-span-2">
               {({ id }) => (
-                <Input id={id} value={title} maxLength={200} onChange={(e) => setTitle(e.target.value)} />
+                <Input
+                  id={id}
+                  value={title}
+                  maxLength={200}
+                  onChange={(e) => setTitle(e.target.value)}
+                />
               )}
             </Field>
             <label className="flex min-h-11 items-center gap-2 text-sm sm:col-span-2">
@@ -163,13 +175,19 @@ function DraftDialog({
                 <p className="text-xs text-fg-muted">
                   {outline.name}
                   {outline.version ? ` · v${outline.version}` : ''}
-                  {!outline.id ? ' · no active template of this kind; a built-in outline is used' : ''}
+                  {!outline.id
+                    ? ' · no active template of this kind; a built-in outline is used'
+                    : ''}
                 </p>
                 <ol className="mt-2 list-decimal space-y-1 pl-5">
                   {outline.sections.map((s) => (
                     <li key={s.key}>
                       <span className="font-medium">{s.heading}</span>
-                      {s.required ? <Badge tone="warning" className="ml-1">required</Badge> : null}
+                      {s.required ? (
+                        <Badge tone="warning" className="ml-1">
+                          required
+                        </Badge>
+                      ) : null}
                       {s.guidance ? (
                         <span className="block text-xs text-fg-muted">{s.guidance}</span>
                       ) : null}

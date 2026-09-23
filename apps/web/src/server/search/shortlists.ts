@@ -423,7 +423,7 @@ export async function addShortlistItem(
       if (existing.some((i) => i.listingId === input.listingId)) {
         throw new ApiError('conflict', 'this listing is already on the shortlist');
       }
-      [listing] = await loadPublishedListings({ listingIds: [input.listingId] });
+      listing = (await loadPublishedListings({ listingIds: [input.listingId] }))[0] ?? null;
       if (!listing || !listing.visible) {
         throw new ApiError('validation_failed', 'only published listings can be shortlisted', {
           details: [{ path: 'listingId', message: 'not a published listing' }],

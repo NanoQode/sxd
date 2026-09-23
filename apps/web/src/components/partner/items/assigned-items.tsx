@@ -83,11 +83,15 @@ function ItemCard({ item, zone }: { item: EngagementItemDto; zone: string }) {
       partnerFetch<EngagementItemDto>(`/api/v1/engagement-items/${item.id}`, {
         method: 'PATCH',
         body: {
-          ...(item.can.editableFields.includes('detail') ? { detail: form.detail.trim() || null } : {}),
+          ...(item.can.editableFields.includes('detail')
+            ? { detail: form.detail.trim() || null }
+            : {}),
           ...(item.can.editableFields.includes('reference')
             ? { reference: form.reference.trim() || null }
             : {}),
-          ...(item.can.editableFields.includes('severity') ? { severity: form.severity || null } : {}),
+          ...(item.can.editableFields.includes('severity')
+            ? { severity: form.severity || null }
+            : {}),
           expectedVersion: item.version,
         },
       }),
@@ -114,7 +118,11 @@ function ItemCard({ item, zone }: { item: EngagementItemDto; zone: string }) {
       void invalidate();
     },
     onError: (err) =>
-      toast({ tone: 'danger', title: 'Could not update the status', description: errorMessage(err) }),
+      toast({
+        tone: 'danger',
+        title: 'Could not update the status',
+        description: errorMessage(err),
+      }),
   });
   const respond = useMutation({
     mutationFn: () =>
@@ -250,7 +258,10 @@ function ItemCard({ item, zone }: { item: EngagementItemDto; zone: string }) {
             </p>
           )}
           {item.can.respond ? (
-            <Field label="Reply" hint="Visible to staff and, when the item is shared, the customer.">
+            <Field
+              label="Reply"
+              hint="Visible to staff and, when the item is shared, the customer."
+            >
               {({ id, describedBy }) => (
                 <div className="space-y-2">
                   <Textarea
@@ -334,7 +345,11 @@ function ItemCard({ item, zone }: { item: EngagementItemDto; zone: string }) {
             ) : null}
           </div>
           <DialogFooter>
-            <Button variant="secondary" onClick={() => setEditing(false)} disabled={update.isPending}>
+            <Button
+              variant="secondary"
+              onClick={() => setEditing(false)}
+              disabled={update.isPending}
+            >
               Cancel
             </Button>
             <Button
@@ -348,7 +363,10 @@ function ItemCard({ item, zone }: { item: EngagementItemDto; zone: string }) {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={transition !== null} onOpenChange={(o) => (!o ? setTransition(null) : undefined)}>
+      <Dialog
+        open={transition !== null}
+        onOpenChange={(o) => (!o ? setTransition(null) : undefined)}
+      >
         {transition ? (
           <DialogContent
             title={`${transitionLabel(transition.to)}?`}
@@ -420,13 +438,15 @@ export function AssignedItems() {
           </label>
         }
       />
-      {serviceRequestId ? (
-        <Badge tone="info">Filtered to one request</Badge>
-      ) : null}
+      {serviceRequestId ? <Badge tone="info">Filtered to one request</Badge> : null}
       {list.isPending ? (
         <LoadingBlock label="Loading items" />
       ) : list.isError ? (
-        <RequestFailed error={list.error} onRetry={() => void list.refetch()} context="Assigned items" />
+        <RequestFailed
+          error={list.error}
+          onRetry={() => void list.refetch()}
+          context="Assigned items"
+        />
       ) : list.data.items.length === 0 ? (
         <EmptyState
           title="No assigned items"

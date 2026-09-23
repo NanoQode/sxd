@@ -108,7 +108,11 @@ function assertReportContent(r: ReportRow, rev: RevisionRow | undefined, stage: 
   });
   if (problems.length > 0) {
     throw new ApiError('validation_failed', problems[0]!.message, {
-      details: problems.map((p) => ({ path: p.section ?? p.code, message: p.message, code: p.code })),
+      details: problems.map((p) => ({
+        path: p.section ?? p.code,
+        message: p.message,
+        code: p.code,
+      })),
     });
   }
 }
@@ -234,7 +238,8 @@ function requestChecksFor(checks: AccessCheck[]): AccessCheck[] {
   const out: AccessCheck[] = [];
   for (const c of checks) {
     if (c.staff === 'projects.read_all') out.push({ staff: 'service_requests.read_all' });
-    else if (c.staff || c.org) out.push({ ...(c.staff ? { staff: c.staff } : {}), ...(c.org ? { org: c.org } : {}) });
+    else if (c.staff || c.org)
+      out.push({ ...(c.staff ? { staff: c.staff } : {}), ...(c.org ? { org: c.org } : {}) });
   }
   return out;
 }

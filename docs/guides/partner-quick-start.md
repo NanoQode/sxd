@@ -6,12 +6,12 @@ Code: `apps/web/src/app/(partner)`, `apps/web/src/components/partner`, `apps/web
 
 ## Who sees what
 
-| Account                                                            | Modules                                                      |
-| ------------------------------------------------------------------ | ------------------------------------------------------------ |
-| Contractor, architect, quantity surveyor                           | Tenders & bids (when `expansion.contractor_tendering` is on) |
-| Vendor                                                             | RFQs & orders (when `expansion.materials_procurement` is on) |
-| Inspector, surveyor, valuer, architect, QS; staff `inspector` role | Visits (field capture), Evidence, Reports                    |
-| Legal partner                                                      | Evidence, Reports                                            |
+| Account                                                            | Modules                                                                  |
+| ------------------------------------------------------------------ | ------------------------------------------------------------------------ |
+| Contractor, architect, quantity surveyor                           | Tenders & bids (when `expansion.contractor_tendering` is on)             |
+| Vendor                                                             | RFQs & orders (when `expansion.materials_procurement` is on)             |
+| Inspector, surveyor, valuer, architect, QS; staff `inspector` role | Visits (field capture), Evidence, Reports                                |
+| Legal partner                                                      | Evidence, Reports                                                        |
 | Everyone                                                           | Home, Assignments, Assigned items, Messages, Notifications, Availability |
 
 `other`-type partners see every module. The rules live in `lib/partner/nav.ts`. A contractor's awarded work arrives as an assignment, and each accepted assignment card links to that project's visits, evidence and reports.

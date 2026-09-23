@@ -108,8 +108,8 @@ export function PortalWorkspace({
           <CardHeader>
             <CardTitle>Waiting on you</CardTitle>
             <CardDescription>
-              Answer the team&apos;s queries and upload the documents they asked for. Each answer
-              is recorded with your name and time.
+              Answer the team&apos;s queries and upload the documents they asked for. Each answer is
+              recorded with your name and time.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -139,7 +139,10 @@ export function PortalWorkspace({
               <CardTitle>
                 {group.label}{' '}
                 <Badge tone="neutral">
-                  {group.items.filter((i) => i.status === 'open' || i.status === 'in_progress').length}{' '}
+                  {
+                    group.items.filter((i) => i.status === 'open' || i.status === 'in_progress')
+                      .length
+                  }{' '}
                   open
                 </Badge>
               </CardTitle>
@@ -158,7 +161,9 @@ export function PortalWorkspace({
                     />
                   ))}
                 {group.items.every((i) => waiting.includes(i)) ? (
-                  <li className="text-sm text-fg-muted">All of these are listed above under “Waiting on you”.</li>
+                  <li className="text-sm text-fg-muted">
+                    All of these are listed above under “Waiting on you”.
+                  </li>
                 ) : null}
               </ul>
             </CardContent>
@@ -177,7 +182,9 @@ export function PortalWorkspace({
         </CardHeader>
         <CardContent>
           {workspace.reports.length === 0 ? (
-            <p className="text-sm text-fg-muted">No report has been released on this request yet.</p>
+            <p className="text-sm text-fg-muted">
+              No report has been released on this request yet.
+            </p>
           ) : (
             <ul className="space-y-2">
               {workspace.reports.map((r) => (
@@ -186,7 +193,10 @@ export function PortalWorkspace({
                   className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border p-3 text-sm"
                 >
                   <span className="min-w-0">
-                    <Link href={`/portal/reports/${r.id}`} className="font-medium text-primary underline">
+                    <Link
+                      href={`/portal/reports/${r.id}`}
+                      className="font-medium text-primary underline"
+                    >
                       {r.title}
                     </Link>
                     <span className="block text-xs text-fg-muted">
@@ -245,7 +255,12 @@ export function PortalWorkspace({
                   <span className="flex items-center gap-2">
                     <StatusBadge status={a.status} />
                     {a.meetingUrl ? (
-                      <LinkButton href={a.meetingUrl} target="_blank" rel="noopener noreferrer" size="sm">
+                      <LinkButton
+                        href={a.meetingUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        size="sm"
+                      >
                         Join live meeting
                       </LinkButton>
                     ) : null}

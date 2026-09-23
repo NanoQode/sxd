@@ -16,7 +16,7 @@ import {
   leadListQuerySchema,
   leadNoteCreateSchema,
   leadUpdateSchema,
-  mediaAssetDtoSchema,
+  contentMediaListResponseSchema,
   noteDtoSchema,
   pageOf,
   redirectDtoSchema,
@@ -130,16 +130,13 @@ export const contentCrmRoutes = [
   registerRoute({
     method: 'get',
     path: '/api/v1/admin/content/media',
-    summary: 'Media assets approved for public use',
+    summary: 'Content media: approved assets and pending uploads',
+    description:
+      'Approved assets carry their public URLs (/media/{id}). Pending rows are content_media uploads awaiting scanning, derivatives or approval by a content editor other than the uploader (POST /api/v1/files/{id}/public-approval). Private purposes are never listed.',
     tags: ['Admin: content'],
     operationId: 'adminListApprovedMedia',
     auth: 'staff',
-    responses: {
-      200: {
-        description: 'Assets',
-        body: z.object({ items: z.array(mediaAssetDtoSchema), uploads: z.literal('wave_2') }),
-      },
-    },
+    responses: { 200: { description: 'Media', body: contentMediaListResponseSchema } },
   }),
   registerRoute({
     method: 'get',

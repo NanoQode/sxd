@@ -324,9 +324,9 @@ export function availableItemTransitions(
   actor: ItemActor,
 ): Array<{ to: EngagementItemStatus; reasonRequired: boolean }> {
   if (from === 'cancelled') return [];
-  return ENGAGEMENT_ITEM_TRANSITIONS.filter((t) => t.from.includes(from) && t.by.includes(actor)).map(
-    (t) => ({ to: t.to, reasonRequired: t.reasonRequired }),
-  );
+  return ENGAGEMENT_ITEM_TRANSITIONS.filter(
+    (t) => t.from.includes(from) && t.by.includes(actor),
+  ).map((t) => ({ to: t.to, reasonRequired: t.reasonRequired }));
 }
 
 /* ---------------------------------------------------------------------- */

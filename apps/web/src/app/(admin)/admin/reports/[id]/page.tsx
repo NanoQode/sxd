@@ -77,9 +77,11 @@ export default async function ReportReviewPage({ params }: { params: Promise<{ i
   const missing = current ? missingRequiredSections(current.bodyMarkdown, sections) : [];
   const outline =
     findings.template && isServiceRequestReportKind(report.kind)
-      ? await getReportTemplateOutline(identity, report.kind, findings.template.id ?? undefined).catch(
-          () => null,
-        )
+      ? await getReportTemplateOutline(
+          identity,
+          report.kind,
+          findings.template.id ?? undefined,
+        ).catch(() => null)
       : null;
   const snapshot = findings.engagementItems ?? null;
   return (
@@ -211,7 +213,9 @@ export default async function ReportReviewPage({ params }: { params: Promise<{ i
               description={`Customer-visible records captured ${formatDateTimeLabel(snapshot.capturedAt)}; a new revision re-captures them. Internal records are never included automatically.`}
             >
               {snapshot.items.length === 0 ? (
-                <p className="text-fg-muted">No customer-visible records existed when this revision was created.</p>
+                <p className="text-fg-muted">
+                  No customer-visible records existed when this revision was created.
+                </p>
               ) : (
                 <ul className="space-y-1 text-sm">
                   {snapshot.items.map((i) => (

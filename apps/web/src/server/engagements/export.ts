@@ -117,7 +117,8 @@ export function renderReportExport(model: ReportExportModel): string {
     .filter((i) => i.kind === 'red_flag')
     .sort(
       (a, b) =>
-        (b.severity ? SEVERITY_RANK[b.severity] : -1) - (a.severity ? SEVERITY_RANK[a.severity] : -1),
+        (b.severity ? SEVERITY_RANK[b.severity] : -1) -
+        (a.severity ? SEVERITY_RANK[a.severity] : -1),
     );
   const findings = model.items.filter((i) => i.kind === 'site_finding');
   const checklist = model.items.filter((i) => i.kind !== 'red_flag' && i.kind !== 'site_finding');
