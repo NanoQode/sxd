@@ -373,7 +373,7 @@ export function TenderDetailView({ tenderId }: { tenderId: string }) {
                 label="Ask a clarification question"
                 hint={
                   cutoff
-                    ? `Questions close ${formatDateTimeLabel(cutoff, t.displayTimeZone)} (${t.displayTimeZone}), ${formatDateTimeLabel(cutoff, 'UTC')} UTC. The server clock decides.`
+                    ? `Questions close ${formatDateTimeLabel(cutoff, t.displayTimeZone)} (${t.displayTimeZone}), ${formatDateTimeLabel(cutoff, 'UTC')}. The server clock decides.`
                     : 'No cut-off set.'
                 }
                 error={ask.isError ? errorMessage(ask.error) : undefined}

@@ -75,7 +75,8 @@ export function DualTime({ iso, zone }: { iso: string | null | undefined; zone: 
   return (
     <span>
       {formatDateTimeLabel(iso, zone)}
-      <span className="block text-xs text-fg-muted">{formatDateTimeLabel(iso, 'UTC')} UTC</span>
+      {/* The UTC label already ends in "UTC". */}
+      <span className="block text-xs text-fg-muted">{formatDateTimeLabel(iso, 'UTC')}</span>
     </span>
   );
 }
