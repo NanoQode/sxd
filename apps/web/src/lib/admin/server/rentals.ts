@@ -22,21 +22,36 @@ import { attempt, can, orgNames, staffTx, userNames, type Loaded } from './conte
 import { listInvitablePartners } from './partners';
 
 /** Property names and unit labels for a set of rows. */
-async function placeNames(identity: RequestIdentity, rows: Array<{ organizationId: string; propertyId?: string | null; unitId?: string | null }>) {
+async function placeNames(
+  identity: RequestIdentity,
+  rows: Array<{ organizationId: string; propertyId?: string | null; unitId?: string | null }>,
+) {
   return staffTx(identity, async (tx) => {
-    const propertyIds = [...new Set(rows.map((r) => r.propertyId).filter((v): v is string => Boolean(v)))];
+    const propertyIds = [
+      ...new Set(rows.map((r) => r.propertyId).filter((v): v is string => Boolean(v))),
+    ];
     const unitIds = [...new Set(rows.map((r) => r.unitId).filter((v): v is string => Boolean(v)))];
     const props = propertyIds.length
-      ? await tx.select({ id: schema.properties.id, name: schema.properties.name }).from(schema.properties).where(inArray(schema.properties.id, propertyIds))
+      ? await tx
+          .select({ id: schema.properties.id, name: schema.properties.name })
+          .from(schema.properties)
+          .where(inArray(schema.properties.id, propertyIds))
       : [];
     const units = unitIds.length
-      ? await tx.select({ id: schema.units.id, label: schema.units.label }).from(schema.units).where(inArray(schema.units.id, unitIds))
+      ? await tx
+          .select({ id: schema.units.id, label: schema.units.label })
+          .from(schema.units)
+          .where(inArray(schema.units.id, unitIds))
       : [];
     const orgs = await orgNames(
       tx,
       rows.map((r) => r.organizationId),
     );
-    return { props: new Map(props.map((p) => [p.id, p.name])), units: new Map(units.map((u) => [u.id, u.label])), orgs };
+    return {
+      props: new Map(props.map((p) => [p.id, p.name])),
+      units: new Map(units.map((u) => [u.id, u.label])),
+      orgs,
+    };
   });
 }
 
@@ -47,7 +62,10 @@ export interface LeaseRow extends LeaseDto {
   tenantNames: string[];
 }
 
-export async function listLeasesView(identity: RequestIdentity, query: LeaseListQuery): Promise<{ items: LeaseRow[]; nextCursor: string | null }> {
+export async function listLeasesView(
+  identity: RequestIdentity,
+  query: LeaseListQuery,
+): Promise<{ items: LeaseRow[]; nextCursor: string | null }> {
   const page = await listLeases(identity, query);
   const names = await placeNames(identity, page.items);
   return {
@@ -57,7 +75,9 @@ export async function listLeasesView(identity: RequestIdentity, query: LeaseList
       organizationName: names.orgs.get(l.organizationId) ?? l.organizationId,
       propertyName: names.props.get(l.propertyId) ?? null,
       unitLabel: l.unitId ? (names.units.get(l.unitId) ?? null) : null,
-      tenantNames: l.parties.filter((p) => p.role === 'tenant' && p.accessStatus !== 'revoked').map((p) => p.name),
+      tenantNames: l.parties
+        .filter((p) => p.role === 'tenant' && p.accessStatus !== 'revoked')
+        .map((p) => p.name),
     })),
   };
 }
@@ -71,7 +91,10 @@ export interface LeaseWorkspace {
   canManage: boolean;
 }
 
-export async function leaseWorkspace(identity: RequestIdentity, id: string): Promise<LeaseWorkspace> {
+export async function leaseWorkspace(
+  identity: RequestIdentity,
+  id: string,
+): Promise<LeaseWorkspace> {
   const lease = await getLease(identity, id);
   const [names, schedule, charges, balance, workOrders] = await Promise.all([
     placeNames(identity, [lease]),
@@ -102,7 +125,10 @@ export interface WorkOrderRow extends WorkOrderDto {
   unitLabel: string | null;
 }
 
-export async function listWorkOrdersView(identity: RequestIdentity, query: WorkOrderListQuery): Promise<{ items: WorkOrderRow[]; nextCursor: string | null }> {
+export async function listWorkOrdersView(
+  identity: RequestIdentity,
+  query: WorkOrderListQuery,
+): Promise<{ items: WorkOrderRow[]; nextCursor: string | null }> {
   const page = await listWorkOrders(identity, query);
   const names = await placeNames(identity, page.items);
   return {
@@ -125,7 +151,10 @@ export interface WorkOrderWorkspace {
   canManage: boolean;
 }
 
-export async function workOrderWorkspace(identity: RequestIdentity, id: string): Promise<WorkOrderWorkspace> {
+export async function workOrderWorkspace(
+  identity: RequestIdentity,
+  id: string,
+): Promise<WorkOrderWorkspace> {
   const wo = await getWorkOrder(identity, id);
   const [names, people, staff, partners] = await Promise.all([
     placeNames(identity, [wo]),
@@ -145,7 +174,11 @@ export async function workOrderWorkspace(identity: RequestIdentity, id: string):
     verifiedByName: wo.verifiedBy ? (people.get(wo.verifiedBy)?.name ?? null) : null,
     assignees: [
       ...staff.map((s) => ({ userId: s.userId, name: s.name, kind: 'staff' as const })),
-      ...partners.map((p) => ({ userId: p.userId, name: `${p.name} (${p.partnerType})`, kind: 'partner' as const })),
+      ...partners.map((p) => ({
+        userId: p.userId,
+        name: `${p.name} (${p.partnerType})`,
+        kind: 'partner' as const,
+      })),
     ],
     canManage: can(identity, 'maintenance.manage') || can(identity, 'rentals.manage'),
   };
@@ -156,7 +189,10 @@ export interface StatementRow extends OwnerStatementDto {
   propertyName: string | null;
 }
 
-export async function listStatementsView(identity: RequestIdentity, query: OwnerStatementListQuery): Promise<{ items: StatementRow[]; nextCursor: string | null }> {
+export async function listStatementsView(
+  identity: RequestIdentity,
+  query: OwnerStatementListQuery,
+): Promise<{ items: StatementRow[]; nextCursor: string | null }> {
   const page = await listOwnerStatements(identity, query);
   const names = await placeNames(identity, page.items);
   return {

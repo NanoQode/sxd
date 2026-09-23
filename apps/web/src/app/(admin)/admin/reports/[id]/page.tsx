@@ -28,16 +28,32 @@ export default async function ReportReviewPage({ params }: { params: Promise<{ i
   const me = identity.session!.user.id;
   const [staff, people, evidence] = await Promise.all([
     listStaffAssignees(identity),
-    reportPeople(identity, [report.createdBy, report.namedReviewerUserId, report.releasedBy, ...report.revisions.map((r) => r.reviewerUserId), ...report.revisions.map((r) => r.createdBy)]),
-    listReportEvidence(identity, id).then((r) => ('items' in r ? r.items : [])).catch(() => []),
+    reportPeople(identity, [
+      report.createdBy,
+      report.namedReviewerUserId,
+      report.releasedBy,
+      ...report.revisions.map((r) => r.reviewerUserId),
+      ...report.revisions.map((r) => r.createdBy),
+    ]),
+    listReportEvidence(identity, id)
+      .then((r) => ('items' in r ? r.items : []))
+      .catch(() => []),
   ]);
   const isAuthor = report.createdBy === me;
   const isReviewer = report.namedReviewerUserId === me;
   const canDraft = can(identity, 'reports.draft');
   const canReview = can(identity, 'reports.review');
   const canRelease = can(identity, 'reports.release');
-  const current = report.revisions.find((r) => r.version === report.currentVersion) ?? report.revisions[report.revisions.length - 1];
-  const reviewers = staff.filter((s) => s.userId !== report.createdBy && s.roles.some((r) => ['project_manager', 'operations_manager', 'super_admin', 'inspector'].includes(r)));
+  const current =
+    report.revisions.find((r) => r.version === report.currentVersion) ??
+    report.revisions[report.revisions.length - 1];
+  const reviewers = staff.filter(
+    (s) =>
+      s.userId !== report.createdBy &&
+      s.roles.some((r) =>
+        ['project_manager', 'operations_manager', 'super_admin', 'inspector'].includes(r),
+      ),
+  );
   return (
     <div className="space-y-6">
       <PageHeader
@@ -50,8 +66,23 @@ export default async function ReportReviewPage({ params }: { params: Promise<{ i
         description={`${humanize(report.kind)} · v${report.currentVersion}${report.releasedVersion ? ` · released v${report.releasedVersion}` : ''}`}
         actions={
           <>
-            <StatusBadge status={report.status === 'released' ? 'delivered' : report.status === 'approved' ? 'accepted' : report.status === 'changes_requested' ? 'paused' : report.status} label={humanize(report.status)} />
-            {report.customerVisible ? <Badge tone="success">customer can see released version</Badge> : <Badge tone="neutral">not visible to customer</Badge>}
+            <StatusBadge
+              status={
+                report.status === 'released'
+                  ? 'delivered'
+                  : report.status === 'approved'
+                    ? 'accepted'
+                    : report.status === 'changes_requested'
+                      ? 'paused'
+                      : report.status
+              }
+              label={humanize(report.status)}
+            />
+            {report.customerVisible ? (
+              <Badge tone="success">customer can see released version</Badge>
+            ) : (
+              <Badge tone="neutral">not visible to customer</Badge>
+            )}
           </>
         }
       />
@@ -62,11 +93,20 @@ export default async function ReportReviewPage({ params }: { params: Promise<{ i
       ) : null}
       <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
         <div className="space-y-6">
-          <Section title={`Revision ${current?.version ?? '—'}`} description={current ? `Created ${formatDateTimeLabel(current.createdAt)} by ${people[current.createdBy ?? ''] ?? 'unknown'}` : undefined}>
+          <Section
+            title={`Revision ${current?.version ?? '—'}`}
+            description={
+              current
+                ? `Created ${formatDateTimeLabel(current.createdAt)} by ${people[current.createdBy ?? ''] ?? 'unknown'}`
+                : undefined
+            }
+          >
             {current ? (
               <>
                 {current.summary ? <p className="font-medium">{current.summary}</p> : null}
-                <article className="prose prose-sm max-w-none whitespace-pre-wrap rounded-md bg-bg-sunken p-3 dark:prose-invert">{current.bodyMarkdown}</article>
+                <article className="prose prose-sm max-w-none whitespace-pre-wrap rounded-md bg-bg-sunken p-3 dark:prose-invert">
+                  {current.bodyMarkdown}
+                </article>
                 {current.scopeLimitations ? (
                   <Alert tone="warning" title="Scope and limitations">
                     {current.scopeLimitations}
@@ -93,13 +133,30 @@ export default async function ReportReviewPage({ params }: { params: Promise<{ i
                 <li key={r.id} className="rounded-md border border-border p-2 text-sm">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <span className="font-medium">
-                      v{r.version} <span className="text-xs text-fg-muted">{formatDateTimeLabel(r.createdAt)} · {people[r.createdBy ?? ''] ?? 'unknown'}</span>
+                      v{r.version}{' '}
+                      <span className="text-xs text-fg-muted">
+                        {formatDateTimeLabel(r.createdAt)} ·{' '}
+                        {people[r.createdBy ?? ''] ?? 'unknown'}
+                      </span>
                     </span>
-                    <StatusBadge status={r.state === 'released' ? 'delivered' : r.state === 'approved' ? 'accepted' : r.state === 'changes_requested' ? 'paused' : r.state} label={humanize(r.state)} />
+                    <StatusBadge
+                      status={
+                        r.state === 'released'
+                          ? 'delivered'
+                          : r.state === 'approved'
+                            ? 'accepted'
+                            : r.state === 'changes_requested'
+                              ? 'paused'
+                              : r.state
+                      }
+                      label={humanize(r.state)}
+                    />
                   </div>
                   {r.reviewDecision ? (
                     <p className="mt-1 text-xs text-fg-muted">
-                      Review: {humanize(r.reviewDecision)} by {people[r.reviewerUserId ?? ''] ?? 'unknown'} {r.reviewedAt ? formatDateTimeLabel(r.reviewedAt) : ''}
+                      Review: {humanize(r.reviewDecision)} by{' '}
+                      {people[r.reviewerUserId ?? ''] ?? 'unknown'}{' '}
+                      {r.reviewedAt ? formatDateTimeLabel(r.reviewedAt) : ''}
                       {r.reviewNote ? ` · ${r.reviewNote}` : ''}
                     </p>
                   ) : null}
@@ -115,7 +172,9 @@ export default async function ReportReviewPage({ params }: { params: Promise<{ i
                     <a href={`/api/v1/files/${e.fileId}/download`} className="underline">
                       {e.file?.originalName ?? e.fileId.slice(0, 8)}
                     </a>{' '}
-                    <span className="text-xs text-fg-muted">{humanize(e.kind)} · {humanize(e.publication)}</span>
+                    <span className="text-xs text-fg-muted">
+                      {humanize(e.kind)} · {humanize(e.publication)}
+                    </span>
                   </li>
                 ))}
               </ul>
@@ -126,28 +185,80 @@ export default async function ReportReviewPage({ params }: { params: Promise<{ i
           <Section title="People">
             <DefinitionList
               items={[
-                { term: 'Author', value: report.authorName ?? people[report.createdBy ?? ''] ?? null },
-                { term: 'Named reviewer', value: report.namedReviewerName ?? (report.namedReviewerUserId ? people[report.namedReviewerUserId] : null) },
-                { term: 'Released by', value: report.releasedBy ? `${people[report.releasedBy] ?? 'unknown'} · ${report.releasedAt ? formatDateTimeLabel(report.releasedAt) : ''}` : null },
-                { term: 'Project', value: report.projectId ? <Link href={`/admin/projects/${report.projectId}?tab=reports`} className="underline">Open project</Link> : null },
+                {
+                  term: 'Author',
+                  value: report.authorName ?? people[report.createdBy ?? ''] ?? null,
+                },
+                {
+                  term: 'Named reviewer',
+                  value:
+                    report.namedReviewerName ??
+                    (report.namedReviewerUserId ? people[report.namedReviewerUserId] : null),
+                },
+                {
+                  term: 'Released by',
+                  value: report.releasedBy
+                    ? `${people[report.releasedBy] ?? 'unknown'} · ${report.releasedAt ? formatDateTimeLabel(report.releasedAt) : ''}`
+                    : null,
+                },
+                {
+                  term: 'Project',
+                  value: report.projectId ? (
+                    <Link
+                      href={`/admin/projects/${report.projectId}?tab=reports`}
+                      className="underline"
+                    >
+                      Open project
+                    </Link>
+                  ) : null,
+                },
               ]}
             />
           </Section>
-          <Section title="Workflow" description="Available transitions depend on the status and on who you are.">
+          <Section
+            title="Workflow"
+            description="Available transitions depend on the status and on who you are."
+          >
             <div className="flex flex-col gap-2">
-              {canDraft && ['draft', 'changes_requested', 'approved', 'released'].includes(report.status) ? (
+              {canDraft &&
+              ['draft', 'changes_requested', 'approved', 'released'].includes(report.status) ? (
                 <FormDialog
-                  trigger={report.status === 'released' ? 'New revision (released stays frozen)' : 'Add revision'}
+                  trigger={
+                    report.status === 'released'
+                      ? 'New revision (released stays frozen)'
+                      : 'Add revision'
+                  }
                   title="Add a revision"
                   description="Creates the next version; the report returns to draft."
                   path={`/api/v1/reports/${report.id}/revisions`}
                   successMessage="Revision added"
                   fields={[
-                    { name: 'summary', label: 'Summary', type: 'textarea', defaultValue: current?.summary ?? '', emptyAs: 'null' },
-                    { name: 'bodyMarkdown', label: 'Body (markdown)', type: 'textarea', required: true, defaultValue: current?.bodyMarkdown ?? '' },
-                    { name: 'scopeLimitations', label: 'Scope and limitations', type: 'textarea', defaultValue: current?.scopeLimitations ?? '', emptyAs: 'null' },
+                    {
+                      name: 'summary',
+                      label: 'Summary',
+                      type: 'textarea',
+                      defaultValue: current?.summary ?? '',
+                      emptyAs: 'null',
+                    },
+                    {
+                      name: 'bodyMarkdown',
+                      label: 'Body (markdown)',
+                      type: 'textarea',
+                      required: true,
+                      defaultValue: current?.bodyMarkdown ?? '',
+                    },
+                    {
+                      name: 'scopeLimitations',
+                      label: 'Scope and limitations',
+                      type: 'textarea',
+                      defaultValue: current?.scopeLimitations ?? '',
+                      emptyAs: 'null',
+                    },
                   ]}
-                  extraBody={{ attachmentFileIds: current?.attachmentFileIds ?? [], expectedVersion: report.version }}
+                  extraBody={{
+                    attachmentFileIds: current?.attachmentFileIds ?? [],
+                    expectedVersion: report.version,
+                  }}
                 />
               ) : null}
               {canDraft && ['draft', 'changes_requested'].includes(report.status) ? (
@@ -158,22 +269,88 @@ export default async function ReportReviewPage({ params }: { params: Promise<{ i
                   path={`/api/v1/reports/${report.id}/submit`}
                   successMessage="Submitted for review"
                   variant="primary"
-                  fields={[{ name: 'namedReviewerUserId', label: 'Named reviewer', type: 'select', required: true, options: reviewers.map((s) => ({ value: s.userId, label: `${s.name} (${s.roles.map(humanize).join(', ')})` })) }]}
+                  fields={[
+                    {
+                      name: 'namedReviewerUserId',
+                      label: 'Named reviewer',
+                      type: 'select',
+                      required: true,
+                      options: reviewers.map((s) => ({
+                        value: s.userId,
+                        label: `${s.name} (${s.roles.map(humanize).join(', ')})`,
+                      })),
+                    },
+                  ]}
                   extraBody={{ expectedVersion: report.version }}
                 />
               ) : null}
               {report.status === 'in_review' && canReview && !isAuthor ? (
                 <>
-                  <ApiAction path={`/api/v1/reports/${report.id}/review`} label="Approve" variant="primary" body={{ decision: 'approved', expectedVersion: report.version }} reasonKey="note" confirm={{ title: 'Approve this revision?', description: isReviewer ? 'You are the named reviewer.' : 'You are not the named reviewer; the server may refuse unless your role permits it.', confirmLabel: 'Approve' }} successMessage="Report approved" />
-                  <ApiAction path={`/api/v1/reports/${report.id}/review`} label="Request changes" body={{ decision: 'changes_requested', expectedVersion: report.version }} reasonKey="note" confirm={{ title: 'Request changes?', requireReason: true, reasonLabel: 'What must change (sent to the author)', confirmLabel: 'Request changes' }} successMessage="Changes requested" />
+                  <ApiAction
+                    path={`/api/v1/reports/${report.id}/review`}
+                    label="Approve"
+                    variant="primary"
+                    body={{ decision: 'approved', expectedVersion: report.version }}
+                    reasonKey="note"
+                    confirm={{
+                      title: 'Approve this revision?',
+                      description: isReviewer
+                        ? 'You are the named reviewer.'
+                        : 'You are not the named reviewer; the server may refuse unless your role permits it.',
+                      confirmLabel: 'Approve',
+                    }}
+                    successMessage="Report approved"
+                  />
+                  <ApiAction
+                    path={`/api/v1/reports/${report.id}/review`}
+                    label="Request changes"
+                    body={{ decision: 'changes_requested', expectedVersion: report.version }}
+                    reasonKey="note"
+                    confirm={{
+                      title: 'Request changes?',
+                      requireReason: true,
+                      reasonLabel: 'What must change (sent to the author)',
+                      confirmLabel: 'Request changes',
+                    }}
+                    successMessage="Changes requested"
+                  />
                 </>
               ) : null}
-              {report.status === 'in_review' && (!canReview || isAuthor) ? <p className="text-xs text-fg-muted">{isAuthor ? 'Authors cannot review their own report.' : 'Reviewing needs reports.review.'}</p> : null}
-              {report.status === 'approved' && canRelease && !isAuthor ? (
-                <ApiAction path={`/api/v1/reports/${report.id}/release`} label="Release to customer" variant="primary" body={{ expectedVersion: report.version }} reasonKey="note" confirm={{ title: 'Release this report?', description: 'The approved revision becomes visible to the customer and is frozen.', confirmLabel: 'Release' }} successMessage="Report released" />
+              {report.status === 'in_review' && (!canReview || isAuthor) ? (
+                <p className="text-xs text-fg-muted">
+                  {isAuthor
+                    ? 'Authors cannot review their own report.'
+                    : 'Reviewing needs reports.review.'}
+                </p>
               ) : null}
-              {report.status === 'approved' && (!canRelease || isAuthor) ? <p className="text-xs text-fg-muted">{isAuthor ? 'Authors cannot release their own report.' : 'Releasing needs reports.release.'}</p> : null}
-              {report.availableTransitions.length === 0 ? <p className="text-xs text-fg-muted">No transitions from {humanize(report.status)}.</p> : null}
+              {report.status === 'approved' && canRelease && !isAuthor ? (
+                <ApiAction
+                  path={`/api/v1/reports/${report.id}/release`}
+                  label="Release to customer"
+                  variant="primary"
+                  body={{ expectedVersion: report.version }}
+                  reasonKey="note"
+                  confirm={{
+                    title: 'Release this report?',
+                    description:
+                      'The approved revision becomes visible to the customer and is frozen.',
+                    confirmLabel: 'Release',
+                  }}
+                  successMessage="Report released"
+                />
+              ) : null}
+              {report.status === 'approved' && (!canRelease || isAuthor) ? (
+                <p className="text-xs text-fg-muted">
+                  {isAuthor
+                    ? 'Authors cannot release their own report.'
+                    : 'Releasing needs reports.release.'}
+                </p>
+              ) : null}
+              {report.availableTransitions.length === 0 ? (
+                <p className="text-xs text-fg-muted">
+                  No transitions from {humanize(report.status)}.
+                </p>
+              ) : null}
             </div>
           </Section>
         </div>

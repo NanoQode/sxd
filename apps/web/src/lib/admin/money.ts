@@ -11,7 +11,9 @@
 export function parseNairaToKobo(input: string): string | null {
   const trimmed = input.trim();
   const negative = trimmed.startsWith('-');
-  const cleaned = (negative ? trimmed.slice(1) : trimmed).replace(/[₦,\s]/g, '').replace(/^NGN/i, '');
+  const cleaned = (negative ? trimmed.slice(1) : trimmed)
+    .replace(/[₦,\s]/g, '')
+    .replace(/^NGN/i, '');
   if (!/^\d+(\.\d{1,2})?$/.test(cleaned)) return null;
   const [whole, frac = ''] = cleaned.split('.');
   const kobo = BigInt(whole!) * 100n + BigInt(frac.padEnd(2, '0'));

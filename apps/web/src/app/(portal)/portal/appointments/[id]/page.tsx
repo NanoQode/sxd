@@ -48,7 +48,7 @@ export default async function AppointmentDetailPage({
         description={`With ${appointment.staff.name}`}
         actions={<StatusBadge status={appointment.status} />}
       />
-      <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
+      <div className="grid gap-6 lg:grid-cols-[2fr_1fr] [&>*]:min-w-0">
         <Card>
           <CardHeader>
             <CardTitle>When</CardTitle>

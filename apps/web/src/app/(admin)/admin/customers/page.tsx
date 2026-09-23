@@ -12,11 +12,19 @@ export const dynamic = 'force-dynamic';
 
 const PAGE_SIZE = 25;
 
-export default async function CustomersPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
+export default async function CustomersPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | undefined>>;
+}) {
   const identity = await requireStaffPage('customers.read');
   const raw = await searchParams;
   const page = Math.max(1, Number(raw.page) || 1);
-  const result = await listCustomerOrganizations(identity, { q: raw.q?.trim() || undefined, page, pageSize: PAGE_SIZE });
+  const result = await listCustomerOrganizations(identity, {
+    q: raw.q?.trim() || undefined,
+    page,
+    pageSize: PAGE_SIZE,
+  });
   return (
     <div className="space-y-6">
       <PageHeader
@@ -25,10 +33,18 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
       />
       <SavedViewsBar tableKey="customers" />
       <FilterBar>
-        <FilterInput name="q" label="Search" value={raw.q} placeholder="Organisation name or slug" />
+        <FilterInput
+          name="q"
+          label="Search"
+          value={raw.q}
+          placeholder="Organisation name or slug"
+        />
       </FilterBar>
       {result.items.length === 0 ? (
-        <EmptyState title="No customer organisations match" description="Organisations are created when a customer signs up or accepts an invitation." />
+        <EmptyState
+          title="No customer organisations match"
+          description="Organisations are created when a customer signs up or accepts an invitation."
+        />
       ) : (
         <DataTable
           caption="Customer organisations"
@@ -41,7 +57,10 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
               header: 'Organisation',
               cell: (o) => (
                 <span>
-                  <Link href={`/admin/customers/${o.id}`} className="font-medium text-primary underline">
+                  <Link
+                    href={`/admin/customers/${o.id}`}
+                    className="font-medium text-primary underline"
+                  >
                     {o.name}
                   </Link>
                   <br />
@@ -49,11 +68,30 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
                 </span>
               ),
             },
-            { key: 'type', header: 'Type', cell: (o) => `${humanize(o.kind)}${o.ownershipType ? ` · ${humanize(o.ownershipType)}` : ''}` },
-            { key: 'country', header: 'Country', cell: (o) => o.countryCode ?? '—', hideOnMobile: true },
+            {
+              key: 'type',
+              header: 'Type',
+              cell: (o) =>
+                `${humanize(o.kind)}${o.ownershipType ? ` · ${humanize(o.ownershipType)}` : ''}`,
+            },
+            {
+              key: 'country',
+              header: 'Country',
+              cell: (o) => o.countryCode ?? '—',
+              hideOnMobile: true,
+            },
             { key: 'members', header: 'Members', cell: (o) => o.memberCount },
-            { key: 'requests', header: 'Requests (open)', cell: (o) => `${o.requestCount} (${o.openRequestCount})` },
-            { key: 'created', header: 'Since', cell: (o) => formatDateLabel(o.createdAt), hideOnMobile: true },
+            {
+              key: 'requests',
+              header: 'Requests (open)',
+              cell: (o) => `${o.requestCount} (${o.openRequestCount})`,
+            },
+            {
+              key: 'created',
+              header: 'Since',
+              cell: (o) => formatDateLabel(o.createdAt),
+              hideOnMobile: true,
+            },
           ]}
         />
       )}

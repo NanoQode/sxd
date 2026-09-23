@@ -5,7 +5,12 @@ import { requireStaffPage } from '@/lib/auth/session';
 import { can } from '@/lib/admin/server/context';
 import { listRequestQueue } from '@/lib/admin/server/service-requests';
 import { PRIORITY_LABELS } from '@/lib/admin/sla';
-import { FilterBar, FilterCheckbox, FilterInput, FilterSelect } from '@/components/admin/filter-bar';
+import {
+  FilterBar,
+  FilterCheckbox,
+  FilterInput,
+  FilterSelect,
+} from '@/components/admin/filter-bar';
 import { SavedViewsBar } from '@/components/admin/saved-views-bar';
 import { listStaffAssignees } from '@/server/leads/admin';
 import { Pagination } from '../_components/pagination';
@@ -39,10 +44,15 @@ export default async function ServiceRequestsPage({
     }),
     listStaffAssignees(identity),
   ]);
-  const open = ['inquiry', 'triage', 'quoted', 'accepted', 'awaiting_payment', 'in_progress', 'in_review'].reduce(
-    (s, k) => s + (result.counts[k] ?? 0),
-    0,
-  );
+  const open = [
+    'inquiry',
+    'triage',
+    'quoted',
+    'accepted',
+    'awaiting_payment',
+    'in_progress',
+    'in_review',
+  ].reduce((s, k) => s + (result.counts[k] ?? 0), 0);
   const overdue = result.items.filter((r) => r.sla.state === 'overdue').length;
   return (
     <div className="space-y-6">
@@ -52,20 +62,48 @@ export default async function ServiceRequestsPage({
       />
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <StatTile label="Open requests" value={open} href="/admin/service-requests" />
-        <StatTile label="New inquiries" value={result.counts.inquiry ?? 0} href="/admin/service-requests?status=inquiry" tone={(result.counts.inquiry ?? 0) > 0 ? 'warning' : 'neutral'} />
-        <StatTile label="In triage" value={result.counts.triage ?? 0} href="/admin/service-requests?status=triage" />
-        <StatTile label="Overdue on this page" value={overdue} href="/admin/service-requests?overdue=1" tone={overdue > 0 ? 'danger' : 'neutral'} hint="Filter for overdue to see every one" />
+        <StatTile
+          label="New inquiries"
+          value={result.counts.inquiry ?? 0}
+          href="/admin/service-requests?status=inquiry"
+          tone={(result.counts.inquiry ?? 0) > 0 ? 'warning' : 'neutral'}
+        />
+        <StatTile
+          label="In triage"
+          value={result.counts.triage ?? 0}
+          href="/admin/service-requests?status=triage"
+        />
+        <StatTile
+          label="Overdue on this page"
+          value={overdue}
+          href="/admin/service-requests?overdue=1"
+          tone={overdue > 0 ? 'danger' : 'neutral'}
+          hint="Filter for overdue to see every one"
+        />
       </div>
       <SavedViewsBar tableKey="service-requests" />
       <FilterBar>
-        <FilterSelect name="status" label="Status" value={status} options={engagementStatusSchema.options.map((s) => ({ value: s, label: humanize(s) }))} />
-        <FilterSelect name="priority" label="Priority" value={priority ? String(priority) : undefined} options={Object.entries(PRIORITY_LABELS).map(([v, l]) => ({ value: v, label: l }))} />
+        <FilterSelect
+          name="status"
+          label="Status"
+          value={status}
+          options={engagementStatusSchema.options.map((s) => ({ value: s, label: humanize(s) }))}
+        />
+        <FilterSelect
+          name="priority"
+          label="Priority"
+          value={priority ? String(priority) : undefined}
+          options={Object.entries(PRIORITY_LABELS).map(([v, l]) => ({ value: v, label: l }))}
+        />
         <FilterSelect
           name="assignee"
           label="Project manager"
           value={raw.assignee}
           allLabel="Anyone"
-          options={[{ value: 'unassigned', label: 'Unassigned' }, ...staff.map((s) => ({ value: s.userId, label: s.name }))]}
+          options={[
+            { value: 'unassigned', label: 'Unassigned' },
+            ...staff.map((s) => ({ value: s.userId, label: s.name })),
+          ]}
         />
         <FilterInput name="q" label="Search" value={raw.q} placeholder="Reference or title" />
         <FilterCheckbox name="overdue" label="Overdue only" checked={raw.overdue === '1'} />

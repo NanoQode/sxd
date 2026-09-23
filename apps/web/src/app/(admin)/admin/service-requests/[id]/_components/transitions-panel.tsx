@@ -28,12 +28,18 @@ export function TransitionsPanel({
   permissions: { triage: boolean; override: boolean };
 }) {
   const [billing, setBilling] = useState<string>('');
-  if (transitions.length === 0) return <p className="text-fg-muted">No staff transitions are available from the current status.</p>;
+  if (transitions.length === 0)
+    return (
+      <p className="text-fg-muted">No staff transitions are available from the current status.</p>
+    );
   const showBilling = transitions.some((t) => t.to === 'cancelled');
   return (
     <div className="space-y-3">
       {showBilling ? (
-        <Field label="Billing consequence for cancellation" hint="Defaults to the policy for the current status when left blank.">
+        <Field
+          label="Billing consequence for cancellation"
+          hint="Defaults to the policy for the current status when left blank."
+        >
           {({ id }) => (
             <NativeSelect id={id} value={billing} onChange={(e) => setBilling(e.target.value)}>
               <option value="">Policy default</option>
@@ -48,7 +54,10 @@ export function TransitionsPanel({
       ) : null}
       <ul className="space-y-2">
         {transitions.map((t) => (
-          <li key={t.to} className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border p-2">
+          <li
+            key={t.to}
+            className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border p-2"
+          >
             <span className="text-sm">
               <strong>{LABELS[t.to] ?? humanize(t.to)}</strong>
               {t.effect ? <span className="block text-xs text-fg-muted">{t.effect}</span> : null}

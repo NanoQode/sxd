@@ -24,7 +24,9 @@ export async function listAllProperties(
         and(
           eq(schema.properties.status, filters.status as never),
           filters.kind ? eq(schema.properties.kind, filters.kind as never) : undefined,
-          filters.q ? or(ilike(schema.properties.name, `%${filters.q.replace(/[%_]/g, '')}%`)) : undefined,
+          filters.q
+            ? or(ilike(schema.properties.name, `%${filters.q.replace(/[%_]/g, '')}%`))
+            : undefined,
         ),
       )
       .orderBy(desc(schema.properties.updatedAt))
@@ -38,7 +40,12 @@ export async function propertyProjects(identity: RequestIdentity, propertyId: st
   requireAnyStaff(identity, ['customers.read', 'projects.read_all']);
   return staffTx(identity, (tx) =>
     tx
-      .select({ id: schema.projects.id, name: schema.projects.name, status: schema.projects.status, kind: schema.projects.kind })
+      .select({
+        id: schema.projects.id,
+        name: schema.projects.name,
+        status: schema.projects.status,
+        kind: schema.projects.kind,
+      })
       .from(schema.projects)
       .where(eq(schema.projects.propertyId, propertyId))
       .orderBy(desc(schema.projects.updatedAt)),

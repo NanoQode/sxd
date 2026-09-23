@@ -61,7 +61,11 @@ export async function workloadView(
   staff: StaffAssigneeDto[];
   canAssign: boolean;
 }> {
-  requireAnyStaff(identity, ['service_requests.assign', 'projects.manage', 'service_requests.read_all']);
+  requireAnyStaff(identity, [
+    'service_requests.assign',
+    'projects.manage',
+    'service_requests.read_all',
+  ]);
   const staff = await listStaffAssignees(identity);
   return staffTx(identity, async (tx) => {
     const now = new Date();
@@ -161,7 +165,9 @@ export async function workloadView(
       ...staff.map((s) => row(s.userId, s.name, s.email, 'staff', s.roles, null, null)),
       ...partners
         .filter((p) => !staff.some((s) => s.userId === p.userId))
-        .map((p) => row(p.userId, p.name, p.email, 'partner', [], p.partnerType, p.verificationStatus)),
+        .map((p) =>
+          row(p.userId, p.name, p.email, 'partner', [], p.partnerType, p.verificationStatus),
+        ),
     ];
 
     const where = and(
@@ -177,7 +183,10 @@ export async function workloadView(
         projectName: schema.projects.name,
       })
       .from(schema.assignments)
-      .leftJoin(schema.serviceRequests, eq(schema.serviceRequests.id, schema.assignments.serviceRequestId))
+      .leftJoin(
+        schema.serviceRequests,
+        eq(schema.serviceRequests.id, schema.assignments.serviceRequestId),
+      )
       .leftJoin(schema.projects, eq(schema.projects.id, schema.assignments.projectId))
       .where(where)
       .orderBy(desc(schema.assignments.createdAt))
@@ -221,7 +230,11 @@ export async function calendarEntries(
   identity: RequestIdentity,
   window: { from: Date; to: Date; staffUserId?: string },
 ): Promise<CalendarEntry[]> {
-  requireAnyStaff(identity, ['appointments.manage_all', 'service_requests.assign', 'projects.manage']);
+  requireAnyStaff(identity, [
+    'appointments.manage_all',
+    'service_requests.assign',
+    'projects.manage',
+  ]);
   return staffTx(identity, async (tx) => {
     const appts = await tx
       .select({
@@ -259,7 +272,9 @@ export async function calendarEntries(
         and(
           gte(schema.siteVisits.scheduledAt, window.from),
           lt(schema.siteVisits.scheduledAt, window.to),
-          window.staffUserId ? eq(schema.siteVisits.inspectorUserId, window.staffUserId) : undefined,
+          window.staffUserId
+            ? eq(schema.siteVisits.inspectorUserId, window.staffUserId)
+            : undefined,
           sql`${schema.siteVisits.status} <> 'cancelled'`,
         ),
       )

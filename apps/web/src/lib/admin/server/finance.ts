@@ -87,7 +87,9 @@ export async function financeOverview(identity: RequestIdentity): Promise<Financ
         approveRefunds: can(identity, 'finance.refunds.approve'),
         requestRefunds: can(identity, 'finance.refunds.request'),
         exportAllowed: can(identity, 'finance.export'),
-        payouts: can(identity, 'finance.payouts.first_approve') || can(identity, 'finance.payouts.second_approve'),
+        payouts:
+          can(identity, 'finance.payouts.first_approve') ||
+          can(identity, 'finance.payouts.second_approve'),
       },
     };
   });
@@ -177,11 +179,7 @@ export async function listBankReceipts(
       invoiceStatus: r.invoiceStatus ?? null,
       invoiceBalanceKobo:
         r.totalKobo !== null && r.totalKobo !== undefined
-          ? (
-              BigInt(r.totalKobo) -
-              BigInt(r.paidKobo ?? 0) -
-              BigInt(r.creditedKobo ?? 0)
-            ).toString()
+          ? (BigInt(r.totalKobo) - BigInt(r.paidKobo ?? 0) - BigInt(r.creditedKobo ?? 0)).toString()
           : null,
       organizationName: orgs.get(r.r.organizationId) ?? r.r.organizationId,
       submittedByName: r.r.submittedBy ? (names.get(r.r.submittedBy)?.name ?? null) : null,
@@ -194,7 +192,10 @@ export interface CreditNoteRow extends CreditNoteDto {
   organizationName: string;
 }
 
-export async function listCreditNotes(identity: RequestIdentity, limit = 100): Promise<CreditNoteRow[]> {
+export async function listCreditNotes(
+  identity: RequestIdentity,
+  limit = 100,
+): Promise<CreditNoteRow[]> {
   requireAnyStaff(identity, ['finance.read']);
   return staffTx(identity, async (tx) => {
     const rows = await tx
@@ -275,7 +276,10 @@ export interface LedgerAccountRow {
 export async function listLedgerAccounts(identity: RequestIdentity): Promise<LedgerAccountRow[]> {
   requireAnyStaff(identity, ['finance.read']);
   return staffTx(identity, async (tx) => {
-    const accounts = await tx.select().from(schema.ledgerAccounts).orderBy(asc(schema.ledgerAccounts.code));
+    const accounts = await tx
+      .select()
+      .from(schema.ledgerAccounts)
+      .orderBy(asc(schema.ledgerAccounts.code));
     const totals = await tx
       .select({
         accountId: schema.journalLines.accountId,
@@ -340,7 +344,9 @@ export async function listJournals(
   requireAnyStaff(identity, ['finance.read']);
   return staffTx(identity, async (tx) => {
     const where = and(
-      filters.organizationId ? eq(schema.journals.organizationId, filters.organizationId) : undefined,
+      filters.organizationId
+        ? eq(schema.journals.organizationId, filters.organizationId)
+        : undefined,
       filters.sourceType ? eq(schema.journals.sourceType, filters.sourceType) : undefined,
     );
     const [totalRow] = await tx.select({ n: count() }).from(schema.journals).where(where);
@@ -360,7 +366,10 @@ export async function listJournals(
             name: schema.ledgerAccounts.name,
           })
           .from(schema.journalLines)
-          .innerJoin(schema.ledgerAccounts, eq(schema.ledgerAccounts.id, schema.journalLines.accountId))
+          .innerJoin(
+            schema.ledgerAccounts,
+            eq(schema.ledgerAccounts.id, schema.journalLines.accountId),
+          )
           .where(inArray(schema.journalLines.journalId, ids))
           .orderBy(asc(schema.journalLines.journalId), asc(schema.journalLines.lineNo))
       : [];
@@ -433,7 +442,11 @@ export interface PayoutRow {
   failureReason: string | null;
 }
 
-export async function listPayouts(identity: RequestIdentity, limit = 100, status?: string): Promise<PayoutRow[]> {
+export async function listPayouts(
+  identity: RequestIdentity,
+  limit = 100,
+  status?: string,
+): Promise<PayoutRow[]> {
   requireAnyStaff(identity, ['finance.read', 'rentals.manage']);
   return staffTx(identity, async (tx) => {
     const rows = await tx
@@ -551,7 +564,9 @@ export async function allocationsReconciliation(
         and(
           from ? gte(schema.receipts.issuedAt, from) : undefined,
           to ? lte(schema.receipts.issuedAt, to) : undefined,
-          query.organizationId ? eq(schema.receipts.organizationId, query.organizationId) : undefined,
+          query.organizationId
+            ? eq(schema.receipts.organizationId, query.organizationId)
+            : undefined,
         ),
       );
     return { n: Number(r?.n ?? 0), total: r?.total ?? '0' };
@@ -575,7 +590,13 @@ export interface InvoiceListRow extends InvoiceDto {
 /** Invoice list for finance staff (cursor pagination, organisation names, request references). */
 export async function listInvoicesView(
   identity: RequestIdentity,
-  query: { status?: InvoiceDto['status']; organizationId?: string; serviceRequestId?: string; cursor?: string; limit: number },
+  query: {
+    status?: InvoiceDto['status'];
+    organizationId?: string;
+    serviceRequestId?: string;
+    cursor?: string;
+    limit: number;
+  },
 ): Promise<{ items: InvoiceListRow[]; nextCursor: string | null }> {
   requireAnyStaff(identity, ['finance.read']);
   const { rt, fa } = financeFor(identity);
@@ -591,7 +612,9 @@ export async function listInvoicesView(
       tx,
       page.items.map((i) => i.organizationId),
     );
-    const srIds = [...new Set(page.items.map((i) => i.serviceRequestId).filter((v): v is string => Boolean(v)))];
+    const srIds = [
+      ...new Set(page.items.map((i) => i.serviceRequestId).filter((v): v is string => Boolean(v))),
+    ];
     const refs = srIds.length
       ? await tx
           .select({ id: schema.serviceRequests.id, reference: schema.serviceRequests.reference })
@@ -605,7 +628,9 @@ export async function listInvoicesView(
     items: page.items.map((i) => ({
       ...i,
       organizationName: extras.orgs.get(i.organizationId) ?? i.organizationId,
-      serviceRequestReference: i.serviceRequestId ? (extras.refs.get(i.serviceRequestId) ?? null) : null,
+      serviceRequestReference: i.serviceRequestId
+        ? (extras.refs.get(i.serviceRequestId) ?? null)
+        : null,
     })),
   };
 }
@@ -624,7 +649,10 @@ export interface InvoiceDetailView {
   refundableByAttempt: Record<string, string>;
 }
 
-export async function invoiceDetail(identity: RequestIdentity, invoiceId: string): Promise<InvoiceDetailView> {
+export async function invoiceDetail(
+  identity: RequestIdentity,
+  invoiceId: string,
+): Promise<InvoiceDetailView> {
   requireAnyStaff(identity, ['finance.read']);
   const { rt, fa } = financeFor(identity);
   const [invoice, related, receipts] = await Promise.all([
@@ -636,7 +664,11 @@ export async function invoiceDetail(identity: RequestIdentity, invoiceId: string
     const orgs = await orgNames(tx, [invoice.organizationId]);
     const [sr] = invoice.serviceRequestId
       ? await tx
-          .select({ id: schema.serviceRequests.id, reference: schema.serviceRequests.reference, title: schema.serviceRequests.title })
+          .select({
+            id: schema.serviceRequests.id,
+            reference: schema.serviceRequests.reference,
+            title: schema.serviceRequests.title,
+          })
           .from(schema.serviceRequests)
           .where(eq(schema.serviceRequests.id, invoice.serviceRequestId))
       : [];
@@ -644,14 +676,19 @@ export async function invoiceDetail(identity: RequestIdentity, invoiceId: string
       invoice.customerUserId,
       ...related.refunds.flatMap((r) => [r.requestedBy, r.approvedBy]),
     ]);
-    return { orgName: orgs.get(invoice.organizationId) ?? invoice.organizationId, sr: sr ?? null, names };
+    return {
+      orgName: orgs.get(invoice.organizationId) ?? invoice.organizationId,
+      sr: sr ?? null,
+      names,
+    };
   });
   const refundableByAttempt: Record<string, string> = {};
   for (const a of related.attempts) {
     if (a.status !== 'successful') continue;
     let remaining = BigInt(a.amountKobo);
     for (const r of related.refunds) {
-      if (r.paymentAttemptId === a.id && !['rejected', 'failed'].includes(r.status)) remaining -= BigInt(r.amountKobo);
+      if (r.paymentAttemptId === a.id && !['rejected', 'failed'].includes(r.status))
+        remaining -= BigInt(r.amountKobo);
     }
     refundableByAttempt[a.id] = (remaining < 0n ? 0n : remaining).toString();
   }
@@ -660,7 +697,10 @@ export async function invoiceDetail(identity: RequestIdentity, invoiceId: string
     organizationName: extras.orgName,
     serviceRequest: extras.sr,
     customer: invoice.customerUserId
-      ? { id: invoice.customerUserId, name: extras.names.get(invoice.customerUserId)?.name ?? invoice.customerUserId }
+      ? {
+          id: invoice.customerUserId,
+          name: extras.names.get(invoice.customerUserId)?.name ?? invoice.customerUserId,
+        }
       : null,
     attempts: related.attempts,
     bankReceipts: related.bankReceipts,

@@ -22,14 +22,20 @@ export interface AvailabilityWindow {
 }
 
 /** staff_availability rows with names (read-only; there is no write endpoint yet). */
-export async function listAvailabilityWindows(identity: RequestIdentity): Promise<AvailabilityWindow[]> {
+export async function listAvailabilityWindows(
+  identity: RequestIdentity,
+): Promise<AvailabilityWindow[]> {
   requireAnyStaff(identity, ['appointments.manage_all']);
   return staffTx(identity, async (tx) => {
     const rows = await tx
       .select({ a: schema.staffAvailability, name: schema.user.name })
       .from(schema.staffAvailability)
       .innerJoin(schema.user, eq(schema.user.id, schema.staffAvailability.staffUserId))
-      .orderBy(asc(schema.user.name), asc(schema.staffAvailability.weekday), asc(schema.staffAvailability.startTime));
+      .orderBy(
+        asc(schema.user.name),
+        asc(schema.staffAvailability.weekday),
+        asc(schema.staffAvailability.startTime),
+      );
     return rows.map((r) => ({
       id: r.a.id,
       staffUserId: r.a.staffUserId,

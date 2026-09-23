@@ -1,7 +1,14 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { refundStatusSchema } from '@simplexd/contracts';
-import { Alert, DataTable, PageHeader, StatusBadge, formatDateTimeLabel, humanize } from '@simplexd/ui';
+import {
+  Alert,
+  DataTable,
+  PageHeader,
+  StatusBadge,
+  formatDateTimeLabel,
+  humanize,
+} from '@simplexd/ui';
 import { requireStaffPage } from '@/lib/auth/session';
 import { can } from '@/lib/admin/server/context';
 import { listRefunds } from '@/lib/admin/server/finance';
@@ -14,7 +21,11 @@ import { SavedViewsBar } from '@/components/admin/saved-views-bar';
 export const metadata: Metadata = { title: 'Refunds' };
 export const dynamic = 'force-dynamic';
 
-export default async function RefundsPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
+export default async function RefundsPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | undefined>>;
+}) {
   const identity = await requireStaffPage('finance.read');
   const raw = await searchParams;
   const status = refundStatusSchema.safeParse(raw.status).success ? raw.status : undefined;
@@ -37,7 +48,12 @@ export default async function RefundsPage({ searchParams }: { searchParams: Prom
       ) : null}
       <SavedViewsBar tableKey="finance-refunds" />
       <FilterBar>
-        <FilterSelect name="status" label="Status" value={status} options={refundStatusSchema.options.map((s) => ({ value: s, label: humanize(s) }))} />
+        <FilterSelect
+          name="status"
+          label="Status"
+          value={status}
+          options={refundStatusSchema.options.map((s) => ({ value: s, label: humanize(s) }))}
+        />
       </FilterBar>
       <div className="flex justify-end">
         <ExportCsvButton
@@ -63,13 +79,49 @@ export default async function RefundsPage({ searchParams }: { searchParams: Prom
         rowLabel={(r) => `${r.invoiceNumber ?? ''} refund`}
         emptyMessage="No refunds in this view."
         columns={[
-          { key: 'inv', header: 'Invoice', cell: (r) => <Link href={`/admin/finance/invoices/${r.invoiceId}`} className="underline">{r.invoiceNumber ?? 'invoice'}</Link> },
-          { key: 'org', header: 'Organisation', cell: (r) => r.organizationName, hideOnMobile: true },
-          { key: 'amt', header: 'Amount', cell: (r) => <Money kobo={r.amountKobo} currency={r.currency} /> },
-          { key: 'st', header: 'Status', cell: (r) => <StatusBadge status={r.status === 'settled' ? 'successful' : r.status} label={humanize(r.status)} /> },
+          {
+            key: 'inv',
+            header: 'Invoice',
+            cell: (r) => (
+              <Link href={`/admin/finance/invoices/${r.invoiceId}`} className="underline">
+                {r.invoiceNumber ?? 'invoice'}
+              </Link>
+            ),
+          },
+          {
+            key: 'org',
+            header: 'Organisation',
+            cell: (r) => r.organizationName,
+            hideOnMobile: true,
+          },
+          {
+            key: 'amt',
+            header: 'Amount',
+            cell: (r) => <Money kobo={r.amountKobo} currency={r.currency} />,
+          },
+          {
+            key: 'st',
+            header: 'Status',
+            cell: (r) => (
+              <StatusBadge
+                status={r.status === 'settled' ? 'successful' : r.status}
+                label={humanize(r.status)}
+              />
+            ),
+          },
           { key: 'reason', header: 'Reason', cell: (r) => r.reason },
-          { key: 'who', header: 'Requested → approved', cell: (r) => `${r.requestedByName ?? '—'} → ${r.approvedByName ?? '—'}`, hideOnMobile: true },
-          { key: 'when', header: 'Requested', cell: (r) => formatDateTimeLabel(r.createdAt), hideOnMobile: true },
+          {
+            key: 'who',
+            header: 'Requested → approved',
+            cell: (r) => `${r.requestedByName ?? '—'} → ${r.approvedByName ?? '—'}`,
+            hideOnMobile: true,
+          },
+          {
+            key: 'when',
+            header: 'Requested',
+            cell: (r) => formatDateTimeLabel(r.createdAt),
+            hideOnMobile: true,
+          },
           {
             key: 'act',
             header: 'Decision',
@@ -83,13 +135,33 @@ export default async function RefundsPage({ searchParams }: { searchParams: Prom
                     variant="primary"
                     disabled={r.requestedBy === me}
                     disabledReason="You requested this refund; separation of duties requires another approver."
-                    confirm={{ title: 'Approve this refund?', description: 'Posts the refund liability and queues provider submission. Settlement waits for the provider.', confirmLabel: 'Approve refund' }}
+                    confirm={{
+                      title: 'Approve this refund?',
+                      description:
+                        'Posts the refund liability and queues provider submission. Settlement waits for the provider.',
+                      confirmLabel: 'Approve refund',
+                    }}
                     successMessage="Refund approved"
                   />
-                  <ApiAction path={`/api/v1/refunds/${r.id}/reject`} reasonKey="reason" label="Reject" variant="ghost" confirm={{ title: 'Reject this refund?', requireReason: true, confirmLabel: 'Reject', tone: 'danger' }} successMessage="Refund rejected" />
+                  <ApiAction
+                    path={`/api/v1/refunds/${r.id}/reject`}
+                    reasonKey="reason"
+                    label="Reject"
+                    variant="ghost"
+                    confirm={{
+                      title: 'Reject this refund?',
+                      requireReason: true,
+                      confirmLabel: 'Reject',
+                      tone: 'danger',
+                    }}
+                    successMessage="Refund rejected"
+                  />
                 </span>
               ) : (
-                <span className="text-xs text-fg-muted">{r.failureReason ?? (r.status === 'requested' ? 'Needs finance.refunds.approve' : '')}</span>
+                <span className="text-xs text-fg-muted">
+                  {r.failureReason ??
+                    (r.status === 'requested' ? 'Needs finance.refunds.approve' : '')}
+                </span>
               ),
           },
         ]}

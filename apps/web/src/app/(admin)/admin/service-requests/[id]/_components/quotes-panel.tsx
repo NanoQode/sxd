@@ -3,7 +3,23 @@
 import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
 import type { QuoteDto, QuoteLineInput } from '@simplexd/contracts';
-import { Alert, Badge, Button, Dialog, DialogContent, DialogFooter, Field, Input, NativeSelect, StatusBadge, Textarea, formatDateTimeLabel, formatNairaString, humanize, useToast } from '@simplexd/ui';
+import {
+  Alert,
+  Badge,
+  Button,
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  Field,
+  Input,
+  NativeSelect,
+  StatusBadge,
+  Textarea,
+  formatDateTimeLabel,
+  formatNairaString,
+  humanize,
+  useToast,
+} from '@simplexd/ui';
 import { adminFetch, errorMessage } from '@/lib/admin/client';
 import { lineAmountKobo, parseNairaToKobo, sumKobo } from '@/lib/admin/money';
 import type { QuoteTemplateOption } from '@/lib/admin/server/service-requests';
@@ -36,7 +52,9 @@ export function QuotesPanel({
   const router = useRouter();
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
-  const [mode, setMode] = useState<'lines' | 'template'>(templates.length > 0 ? 'template' : 'lines');
+  const [mode, setMode] = useState<'lines' | 'template'>(
+    templates.length > 0 ? 'template' : 'lines',
+  );
   const [templateId, setTemplateId] = useState(templates[0]?.id ?? '');
   const [lines, setLines] = useState<DraftLine[]>([{ ...EMPTY_LINE }]);
   const [scope, setScope] = useState('');
@@ -55,12 +73,19 @@ export function QuotesPanel({
       lines.map((l) => {
         const unit = parseNairaToKobo(l.unitNaira);
         const qtyOk = /^\d+(\.\d{1,3})?$/.test(l.quantity);
-        return { ...l, unitKobo: unit, qtyOk, amountKobo: unit && qtyOk ? lineAmountKobo(l.quantity, unit) : null };
+        return {
+          ...l,
+          unitKobo: unit,
+          qtyOk,
+          amountKobo: unit && qtyOk ? lineAmountKobo(l.quantity, unit) : null,
+        };
       }),
     [lines],
   );
   const subtotal = sumKobo(parsedLines.map((l) => l.amountKobo));
-  const linesValid = parsedLines.length > 0 && parsedLines.every((l) => l.description.trim() && l.unitKobo && l.qtyOk);
+  const linesValid =
+    parsedLines.length > 0 &&
+    parsedLines.every((l) => l.description.trim() && l.unitKobo && l.qtyOk);
   const ready = mode === 'template' ? Boolean(templateId) : linesValid;
 
   function openNew(existing: QuoteDto | null) {
@@ -71,7 +96,11 @@ export function QuotesPanel({
       setMode('lines');
       setLines(
         v
-          ? v.lines.map((l) => ({ description: l.description, quantity: l.quantity, unitNaira: formatNairaString(l.unitAmountKobo).replace('₦', '') }))
+          ? v.lines.map((l) => ({
+              description: l.description,
+              quantity: l.quantity,
+              unitNaira: formatNairaString(l.unitAmountKobo).replace('₦', ''),
+            }))
           : [{ ...EMPTY_LINE }],
       );
       setScope(v?.scopeMarkdown ?? '');
@@ -84,7 +113,11 @@ export function QuotesPanel({
   async function submit() {
     setBusy(true);
     setError(null);
-    const lineInputs: QuoteLineInput[] = parsedLines.map((l) => ({ description: l.description.trim(), quantity: l.quantity, unitAmountKobo: l.unitKobo! }));
+    const lineInputs: QuoteLineInput[] = parsedLines.map((l) => ({
+      description: l.description.trim(),
+      quantity: l.quantity,
+      unitAmountKobo: l.unitKobo!,
+    }));
     const base = {
       scopeMarkdown: scope.trim() || undefined,
       exclusions: exclusions.trim() || undefined,
@@ -94,13 +127,19 @@ export function QuotesPanel({
     };
     try {
       if (target) {
-        await adminFetch(`/api/v1/quotes/${target.id}/versions`, { body: { lines: lineInputs, ...base } });
+        await adminFetch(`/api/v1/quotes/${target.id}/versions`, {
+          body: { lines: lineInputs, ...base },
+        });
         toast({ title: 'New quote version drafted', tone: 'success' });
       } else {
         await adminFetch(`/api/v1/service-requests/${requestId}/quotes`, {
           body: mode === 'template' ? { templateId, ...base } : { lines: lineInputs, ...base },
         });
-        toast({ title: 'Quote drafted', description: 'Issue it to send it to the customer.', tone: 'success' });
+        toast({
+          title: 'Quote drafted',
+          description: 'Issue it to send it to the customer.',
+          tone: 'success',
+        });
       }
       setOpen(false);
       setLines([{ ...EMPTY_LINE }]);
@@ -117,7 +156,11 @@ export function QuotesPanel({
       {quotes.length === 0 ? (
         <p className="text-fg-muted">
           No quote yet.{' '}
-          {status === 'inquiry' ? 'Triage the request first; quotes can only be drafted from triage.' : canDraft ? 'Draft one from a template or from lines.' : ''}
+          {status === 'inquiry'
+            ? 'Triage the request first; quotes can only be drafted from triage.'
+            : canDraft
+              ? 'Draft one from a template or from lines.'
+              : ''}
         </p>
       ) : (
         <ul className="space-y-3">
@@ -129,7 +172,11 @@ export function QuotesPanel({
                   <div>
                     <span className="font-medium">Quote v{q.currentVersion}</span>{' '}
                     <StatusBadge status={q.status === 'issued' ? 'issued' : q.status} />
-                    {latest?.validUntil ? <span className="ml-2 text-xs text-fg-muted">valid until {formatDateTimeLabel(latest.validUntil)}</span> : null}
+                    {latest?.validUntil ? (
+                      <span className="ml-2 text-xs text-fg-muted">
+                        valid until {formatDateTimeLabel(latest.validUntil)}
+                      </span>
+                    ) : null}
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {canQuote && q.status === 'draft' ? (
@@ -144,7 +191,16 @@ export function QuotesPanel({
                           confirmLabel: 'Issue quote',
                           children: (
                             <Field label="Valid for (days)">
-                              {({ id }) => <Input id={id} type="number" min={1} max={180} value={validDays} onChange={(e) => setValidDays(e.target.value)} />}
+                              {({ id }) => (
+                                <Input
+                                  id={id}
+                                  type="number"
+                                  min={1}
+                                  max={180}
+                                  value={validDays}
+                                  onChange={(e) => setValidDays(e.target.value)}
+                                />
+                              )}
                             </Field>
                           ),
                         }}
@@ -160,18 +216,26 @@ export function QuotesPanel({
                 </div>
                 {q.acceptance ? (
                   <p className="mt-1 text-xs text-success">
-                    Accepted by {q.acceptance.signatureName} on {formatDateTimeLabel(q.acceptance.acceptedAt)} (terms {q.acceptance.termsVersion})
+                    Accepted by {q.acceptance.signatureName} on{' '}
+                    {formatDateTimeLabel(q.acceptance.acceptedAt)} (terms{' '}
+                    {q.acceptance.termsVersion})
                   </p>
                 ) : null}
                 <details className="mt-2">
                   <summary className="cursor-pointer text-sm text-fg-muted">
-                    {q.versions.length} version{q.versions.length === 1 ? '' : 's'} · latest total <Money kobo={latest?.totalKobo} currency={latest?.currency} />
+                    {q.versions.length} version{q.versions.length === 1 ? '' : 's'} · latest total{' '}
+                    <Money kobo={latest?.totalKobo} currency={latest?.currency} />
                   </summary>
                   <div className="mt-2 space-y-3">
                     {[...q.versions].reverse().map((v) => (
                       <div key={v.id} className="rounded-md bg-bg-sunken p-2 text-sm">
                         <p className="font-medium">
-                          Version {v.version} <span className="text-xs text-fg-muted">{v.issuedAt ? `issued ${formatDateTimeLabel(v.issuedAt)}` : 'not issued'}</span>
+                          Version {v.version}{' '}
+                          <span className="text-xs text-fg-muted">
+                            {v.issuedAt
+                              ? `issued ${formatDateTimeLabel(v.issuedAt)}`
+                              : 'not issued'}
+                          </span>
                         </p>
                         <table className="mt-1 w-full text-xs">
                           <thead className="text-fg-muted">
@@ -187,28 +251,52 @@ export function QuotesPanel({
                               <tr key={i}>
                                 <td>{l.description}</td>
                                 <td className="text-right">{l.quantity}</td>
-                                <td className="text-right"><Money kobo={l.unitAmountKobo} /></td>
-                                <td className="text-right"><Money kobo={l.amountKobo} /></td>
+                                <td className="text-right">
+                                  <Money kobo={l.unitAmountKobo} />
+                                </td>
+                                <td className="text-right">
+                                  <Money kobo={l.amountKobo} />
+                                </td>
                               </tr>
                             ))}
                           </tbody>
                           <tfoot>
                             <tr>
-                              <td colSpan={3} className="text-right text-fg-muted">Subtotal</td>
-                              <td className="text-right"><Money kobo={v.subtotalKobo} /></td>
+                              <td colSpan={3} className="text-right text-fg-muted">
+                                Subtotal
+                              </td>
+                              <td className="text-right">
+                                <Money kobo={v.subtotalKobo} />
+                              </td>
                             </tr>
                             <tr>
-                              <td colSpan={3} className="text-right text-fg-muted">Tax{v.taxTreatmentKey ? ` (${v.taxTreatmentKey})` : ''}</td>
-                              <td className="text-right"><Money kobo={v.taxKobo} /></td>
+                              <td colSpan={3} className="text-right text-fg-muted">
+                                Tax{v.taxTreatmentKey ? ` (${v.taxTreatmentKey})` : ''}
+                              </td>
+                              <td className="text-right">
+                                <Money kobo={v.taxKobo} />
+                              </td>
                             </tr>
                             <tr className="font-medium">
-                              <td colSpan={3} className="text-right">Total</td>
-                              <td className="text-right"><Money kobo={v.totalKobo} currency={v.currency} /></td>
+                              <td colSpan={3} className="text-right">
+                                Total
+                              </td>
+                              <td className="text-right">
+                                <Money kobo={v.totalKobo} currency={v.currency} />
+                              </td>
                             </tr>
                           </tfoot>
                         </table>
-                        {v.scopeMarkdown ? <p className="mt-2 whitespace-pre-wrap"><strong>Scope:</strong> {v.scopeMarkdown}</p> : null}
-                        {v.exclusions ? <p className="mt-1 whitespace-pre-wrap"><strong>Exclusions:</strong> {v.exclusions}</p> : null}
+                        {v.scopeMarkdown ? (
+                          <p className="mt-2 whitespace-pre-wrap">
+                            <strong>Scope:</strong> {v.scopeMarkdown}
+                          </p>
+                        ) : null}
+                        {v.exclusions ? (
+                          <p className="mt-1 whitespace-pre-wrap">
+                            <strong>Exclusions:</strong> {v.exclusions}
+                          </p>
+                        ) : null}
                       </div>
                     ))}
                   </div>
@@ -219,15 +307,25 @@ export function QuotesPanel({
         </ul>
       )}
       {canDraft ? (
-        <Button size="sm" variant={quotes.length === 0 ? 'primary' : 'secondary'} onClick={() => openNew(null)}>
+        <Button
+          size="sm"
+          variant={quotes.length === 0 ? 'primary' : 'secondary'}
+          onClick={() => openNew(null)}
+        >
           Draft a quote
         </Button>
       ) : canQuote && !['triage', 'quoted'].includes(status) && status !== 'inquiry' ? (
-        <p className="text-xs text-fg-muted">Quotes can only be drafted while the request is in triage or quoted.</p>
+        <p className="text-xs text-fg-muted">
+          Quotes can only be drafted while the request is in triage or quoted.
+        </p>
       ) : null}
 
       <Dialog open={open} onOpenChange={(v) => !busy && setOpen(v)}>
-        <DialogContent title={target ? `New version of quote v${target.currentVersion}` : 'Draft a quote'} description="Amounts are whole naira; the server recomputes every line, tax and total from what it stores." size="lg">
+        <DialogContent
+          title={target ? `New version of quote v${target.currentVersion}` : 'Draft a quote'}
+          description="Amounts are whole naira; the server recomputes every line, tax and total from what it stores."
+          size="lg"
+        >
           <div className="space-y-4">
             {error ? (
               <Alert tone="danger" title="Could not save">
@@ -236,18 +334,34 @@ export function QuotesPanel({
             ) : null}
             {!target && templates.length > 0 ? (
               <div className="flex gap-2">
-                <Button variant={mode === 'template' ? 'primary' : 'secondary'} size="sm" onClick={() => setMode('template')}>
+                <Button
+                  variant={mode === 'template' ? 'primary' : 'secondary'}
+                  size="sm"
+                  onClick={() => setMode('template')}
+                >
                   From template
                 </Button>
-                <Button variant={mode === 'lines' ? 'primary' : 'secondary'} size="sm" onClick={() => setMode('lines')}>
+                <Button
+                  variant={mode === 'lines' ? 'primary' : 'secondary'}
+                  size="sm"
+                  onClick={() => setMode('lines')}
+                >
                   From lines
                 </Button>
               </div>
             ) : null}
             {!target && mode === 'template' ? (
-              <Field label="Quotation template" required hint="Templates are managed in the database (quote_templates); there is no editor in the console yet.">
+              <Field
+                label="Quotation template"
+                required
+                hint="Templates are managed in the database (quote_templates); there is no editor in the console yet."
+              >
                 {({ id }) => (
-                  <NativeSelect id={id} value={templateId} onChange={(e) => setTemplateId(e.target.value)}>
+                  <NativeSelect
+                    id={id}
+                    value={templateId}
+                    onChange={(e) => setTemplateId(e.target.value)}
+                  >
                     {templates.map((t) => (
                       <option key={t.id} value={t.id}>
                         {t.name} ({t.lineCount} lines)
@@ -261,16 +375,57 @@ export function QuotesPanel({
                 <p className="text-sm font-medium">Lines</p>
                 {lines.map((l, i) => (
                   <div key={i} className="grid gap-2 sm:grid-cols-[3fr_1fr_1.5fr_auto]">
-                    <Input aria-label={`Line ${i + 1} description`} placeholder="Description" value={l.description} onChange={(e) => setLines(lines.map((x, j) => (j === i ? { ...x, description: e.target.value } : x)))} />
-                    <Input aria-label={`Line ${i + 1} quantity`} placeholder="Qty" value={l.quantity} onChange={(e) => setLines(lines.map((x, j) => (j === i ? { ...x, quantity: e.target.value } : x)))} />
-                    <Input aria-label={`Line ${i + 1} unit amount in naira`} placeholder="Unit ₦" inputMode="decimal" value={l.unitNaira} onChange={(e) => setLines(lines.map((x, j) => (j === i ? { ...x, unitNaira: e.target.value } : x)))} aria-invalid={l.unitNaira !== '' && !parsedLines[i]?.unitKobo} />
-                    <Button variant="ghost" size="sm" aria-label={`Remove line ${i + 1}`} disabled={lines.length === 1} onClick={() => setLines(lines.filter((_, j) => j !== i))}>
+                    <Input
+                      aria-label={`Line ${i + 1} description`}
+                      placeholder="Description"
+                      value={l.description}
+                      onChange={(e) =>
+                        setLines(
+                          lines.map((x, j) =>
+                            j === i ? { ...x, description: e.target.value } : x,
+                          ),
+                        )
+                      }
+                    />
+                    <Input
+                      aria-label={`Line ${i + 1} quantity`}
+                      placeholder="Qty"
+                      value={l.quantity}
+                      onChange={(e) =>
+                        setLines(
+                          lines.map((x, j) => (j === i ? { ...x, quantity: e.target.value } : x)),
+                        )
+                      }
+                    />
+                    <Input
+                      aria-label={`Line ${i + 1} unit amount in naira`}
+                      placeholder="Unit ₦"
+                      inputMode="decimal"
+                      value={l.unitNaira}
+                      onChange={(e) =>
+                        setLines(
+                          lines.map((x, j) => (j === i ? { ...x, unitNaira: e.target.value } : x)),
+                        )
+                      }
+                      aria-invalid={l.unitNaira !== '' && !parsedLines[i]?.unitKobo}
+                    />
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      aria-label={`Remove line ${i + 1}`}
+                      disabled={lines.length === 1}
+                      onClick={() => setLines(lines.filter((_, j) => j !== i))}
+                    >
                       Remove
                     </Button>
                   </div>
                 ))}
                 <div className="flex items-center justify-between">
-                  <Button variant="ghost" size="sm" onClick={() => setLines([...lines, { ...EMPTY_LINE }])}>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setLines([...lines, { ...EMPTY_LINE }])}
+                  >
                     Add line
                   </Button>
                   <span className="text-sm">
@@ -293,21 +448,53 @@ export function QuotesPanel({
                 )}
               </Field>
               <Field label="Deposit % on acceptance">
-                {({ id }) => <Input id={id} type="number" min={0} max={100} value={depositPct} onChange={(e) => setDepositPct(e.target.value)} disabled={!requiresPayment} />}
+                {({ id }) => (
+                  <Input
+                    id={id}
+                    type="number"
+                    min={0}
+                    max={100}
+                    value={depositPct}
+                    onChange={(e) => setDepositPct(e.target.value)}
+                    disabled={!requiresPayment}
+                  />
+                )}
               </Field>
               <label className="flex h-full items-end gap-2 pb-3 text-sm">
-                <input type="checkbox" className="h-4 w-4" checked={requiresPayment} onChange={(e) => setRequiresPayment(e.target.checked)} />
+                <input
+                  type="checkbox"
+                  className="h-4 w-4"
+                  checked={requiresPayment}
+                  onChange={(e) => setRequiresPayment(e.target.checked)}
+                />
                 Requires payment before work
               </label>
             </div>
             <Field label="Scope (markdown)">
-              {({ id }) => <Textarea id={id} value={scope} onChange={(e) => setScope(e.target.value)} className="min-h-20" maxLength={20000} />}
+              {({ id }) => (
+                <Textarea
+                  id={id}
+                  value={scope}
+                  onChange={(e) => setScope(e.target.value)}
+                  className="min-h-20"
+                  maxLength={20000}
+                />
+              )}
             </Field>
             <Field label="Exclusions">
-              {({ id }) => <Textarea id={id} value={exclusions} onChange={(e) => setExclusions(e.target.value)} className="min-h-16" maxLength={8000} />}
+              {({ id }) => (
+                <Textarea
+                  id={id}
+                  value={exclusions}
+                  onChange={(e) => setExclusions(e.target.value)}
+                  className="min-h-16"
+                  maxLength={8000}
+                />
+              )}
             </Field>
             <p className="text-xs text-fg-muted">
-              {humanize('deposit')} {depositPct}% · {requiresPayment ? 'invoice issued on acceptance' : 'no upfront invoice'}{' '}
+              {humanize('deposit')} {depositPct}% ·{' '}
+              {requiresPayment ? 'invoice issued on acceptance' : 'no upfront invoice'}{' '}
               <Badge tone="neutral">draft only; issue separately</Badge>
             </p>
             <DialogFooter>

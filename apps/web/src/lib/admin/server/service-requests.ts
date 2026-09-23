@@ -89,10 +89,7 @@ export async function listRequestQueue(
           )
         : undefined,
     );
-    const [totalRow] = await tx
-      .select({ n: count() })
-      .from(schema.serviceRequests)
-      .where(where);
+    const [totalRow] = await tx.select({ n: count() }).from(schema.serviceRequests).where(where);
     const rows = await tx
       .select({
         sr: schema.serviceRequests,
@@ -301,7 +298,10 @@ export async function getStaffRequestView(
       .where(
         and(
           eq(schema.quoteTemplates.active, true),
-          or(eq(schema.quoteTemplates.serviceId, sr.serviceId), isNull(schema.quoteTemplates.serviceId)),
+          or(
+            eq(schema.quoteTemplates.serviceId, sr.serviceId),
+            isNull(schema.quoteTemplates.serviceId),
+          ),
         ),
       )
       .orderBy(asc(schema.quoteTemplates.name));
@@ -344,7 +344,9 @@ export async function getStaffRequestView(
     };
   });
   const staffTransitions = availableTransitions(engagementMachine, request.status, 'staff')
-    .filter((rule) => rule.to !== 'triage' && rule.to !== 'quoted' && rule.to !== 'awaiting_payment')
+    .filter(
+      (rule) => rule.to !== 'triage' && rule.to !== 'quoted' && rule.to !== 'awaiting_payment',
+    )
     .map((rule) => ({
       to: rule.to,
       reasonRequired: Boolean(rule.reasonRequired),

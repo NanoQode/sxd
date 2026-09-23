@@ -1,3 +1,5 @@
+import fs from 'node:fs';
+import path from 'node:path';
 import { LocalDevStorageProvider, type LocalDevStorageOptions } from './local-dev';
 import { S3StorageProvider, type S3StorageOptions } from './s3';
 import { StorageError, type StorageProvider, type StorageProviderId } from './types';
@@ -58,9 +60,27 @@ export function storageConfigFromEnv(env: Record<string, string | undefined>): S
     provider: 'local-dev',
     signedUrlTtlSeconds: ttl,
     localDev: {
-      root: env.DEV_STORAGE_ROOT || './uploads-dev',
+      root: env.DEV_STORAGE_ROOT || defaultDevStorageRoot(),
       appUrl: env.APP_URL ?? 'http://localhost:3000',
       signingSecret: env.DEV_STORAGE_SIGNING_SECRET || env.AUTH_SECRET || '',
     },
   };
+}
+
+/**
+ * Default development storage directory: `var/uploads-dev` at the workspace
+ * root (the nearest directory containing pnpm-workspace.yaml), so the web app
+ * and the worker, which run from different working directories, share one
+ * store. Falls back to the current directory outside a workspace.
+ */
+export function defaultDevStorageRoot(start: string = process.cwd()): string {
+  let dir = path.resolve(start);
+  for (;;) {
+    if (fs.existsSync(path.join(dir, 'pnpm-workspace.yaml'))) {
+      return path.join(dir, 'var', 'uploads-dev');
+    }
+    const parent = path.dirname(dir);
+    if (parent === dir) return path.resolve(start, 'uploads-dev');
+    dir = parent;
+  }
 }

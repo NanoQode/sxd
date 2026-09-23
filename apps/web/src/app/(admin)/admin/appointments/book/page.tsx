@@ -11,7 +11,11 @@ export const dynamic = 'force-dynamic';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-export default async function BookAppointmentPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
+export default async function BookAppointmentPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | undefined>>;
+}) {
   const identity = await requireStaffPage('appointments.manage_all');
   const raw = await searchParams;
   const staff = await listStaffAssignees(identity);
@@ -29,7 +33,11 @@ export default async function BookAppointmentPage({ searchParams }: { searchPara
       <Section title="Slot and details">
         <BookingForm
           staff={staff.map((s) => ({ userId: s.userId, name: s.name }))}
-          serviceRequestId={raw.serviceRequestId && UUID.test(raw.serviceRequestId) ? raw.serviceRequestId : undefined}
+          serviceRequestId={
+            raw.serviceRequestId && UUID.test(raw.serviceRequestId)
+              ? raw.serviceRequestId
+              : undefined
+          }
           leadId={raw.leadId && UUID.test(raw.leadId) ? raw.leadId : undefined}
           customerHint={raw.customer?.slice(0, 200)}
         />

@@ -3,7 +3,17 @@
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import type { StaffAssigneeDto } from '@simplexd/contracts';
-import { Alert, Button, Field, Input, NativeSelect, Textarea, formatDateTimeLabel, humanize, useToast } from '@simplexd/ui';
+import {
+  Alert,
+  Button,
+  Field,
+  Input,
+  NativeSelect,
+  Textarea,
+  formatDateTimeLabel,
+  humanize,
+  useToast,
+} from '@simplexd/ui';
 import { adminFetch, errorMessage } from '@/lib/admin/client';
 import { PRIORITY_LABELS } from '@/lib/admin/sla';
 
@@ -12,7 +22,14 @@ export function TriagePanel({
   staff,
   permissions,
 }: {
-  request: { id: string; status: string; version: number; priority: number; assignedPmUserId: string | null; slaDueAt: string | null };
+  request: {
+    id: string;
+    status: string;
+    version: number;
+    priority: number;
+    assignedPmUserId: string | null;
+    slaDueAt: string | null;
+  };
   staff: StaffAssigneeDto[];
   permissions: { triage: boolean; assign: boolean };
 }) {
@@ -27,25 +44,32 @@ export function TriagePanel({
   const [error, setError] = useState<string | null>(null);
 
   const isInquiry = request.status === 'inquiry';
-  const pms = staff.filter((s) => s.roles.some((r) => ['project_manager', 'operations_manager', 'super_admin'].includes(r)));
+  const pms = staff.filter((s) =>
+    s.roles.some((r) => ['project_manager', 'operations_manager', 'super_admin'].includes(r)),
+  );
   const options = pms.length > 0 ? pms : staff;
 
   async function triage() {
     setBusy(true);
     setError(null);
     try {
-      const res = await adminFetch<{ slaDueAt: string | null }>(`/api/v1/service-requests/${request.id}/triage`, {
-        body: {
-          assignedPmUserId: pm,
-          priority: Number(priority),
-          slaDueAt: slaOverride ? new Date(slaOverride).toISOString() : undefined,
-          note: note.trim() || undefined,
-          expectedVersion: request.version,
+      const res = await adminFetch<{ slaDueAt: string | null }>(
+        `/api/v1/service-requests/${request.id}/triage`,
+        {
+          body: {
+            assignedPmUserId: pm,
+            priority: Number(priority),
+            slaDueAt: slaOverride ? new Date(slaOverride).toISOString() : undefined,
+            note: note.trim() || undefined,
+            expectedVersion: request.version,
+          },
         },
-      });
+      );
       toast({
         title: 'Request triaged',
-        description: res.slaDueAt ? `SLA due ${formatDateTimeLabel(res.slaDueAt)}` : 'No SLA policy exists for this service; set a due time manually if needed.',
+        description: res.slaDueAt
+          ? `SLA due ${formatDateTimeLabel(res.slaDueAt)}`
+          : 'No SLA policy exists for this service; set a due time manually if needed.',
         tone: 'success',
       });
       setNote('');
@@ -62,9 +86,17 @@ export function TriagePanel({
     setError(null);
     try {
       await adminFetch(`/api/v1/service-requests/${request.id}/assign`, {
-        body: { assignedPmUserId: pm, startWork, reason: note.trim() || undefined, expectedVersion: request.version },
+        body: {
+          assignedPmUserId: pm,
+          startWork,
+          reason: note.trim() || undefined,
+          expectedVersion: request.version,
+        },
       });
-      toast({ title: startWork ? 'Assigned; work started' : 'Project manager assigned', tone: 'success' });
+      toast({
+        title: startWork ? 'Assigned; work started' : 'Project manager assigned',
+        tone: 'success',
+      });
       setNote('');
       router.refresh();
     } catch (err) {
@@ -77,7 +109,8 @@ export function TriagePanel({
   if (!permissions.triage && !permissions.assign) {
     return (
       <Alert tone="info" title="Read-only">
-        Your role can view requests. Triage needs service_requests.triage; assignment needs service_requests.assign.
+        Your role can view requests. Triage needs service_requests.triage; assignment needs
+        service_requests.assign.
       </Alert>
     );
   }
@@ -89,10 +122,27 @@ export function TriagePanel({
           {error}
         </Alert>
       ) : null}
-      {terminal ? <p className="text-fg-muted">This request is {humanize(request.status)}; assignment is closed.</p> : null}
-      <Field label="Project manager" required hint={pms.length > 0 ? 'Staff with a project-management role.' : 'No project manager role found; showing all staff.'}>
+      {terminal ? (
+        <p className="text-fg-muted">
+          This request is {humanize(request.status)}; assignment is closed.
+        </p>
+      ) : null}
+      <Field
+        label="Project manager"
+        required
+        hint={
+          pms.length > 0
+            ? 'Staff with a project-management role.'
+            : 'No project manager role found; showing all staff.'
+        }
+      >
         {({ id }) => (
-          <NativeSelect id={id} value={pm} onChange={(e) => setPm(e.target.value)} disabled={terminal}>
+          <NativeSelect
+            id={id}
+            value={pm}
+            onChange={(e) => setPm(e.target.value)}
+            disabled={terminal}
+          >
             <option value="">Choose</option>
             {options.map((s) => (
               <option key={s.userId} value={s.userId}>
@@ -115,26 +165,66 @@ export function TriagePanel({
               </NativeSelect>
             )}
           </Field>
-          <Field label="SLA due (override)" hint="Leave empty to compute from the service's SLA policy.">
-            {({ id }) => <Input id={id} type="datetime-local" value={slaOverride} onChange={(e) => setSlaOverride(e.target.value)} />}
+          <Field
+            label="SLA due (override)"
+            hint="Leave empty to compute from the service's SLA policy."
+          >
+            {({ id }) => (
+              <Input
+                id={id}
+                type="datetime-local"
+                value={slaOverride}
+                onChange={(e) => setSlaOverride(e.target.value)}
+              />
+            )}
           </Field>
         </>
       ) : null}
       <Field label={isInquiry ? 'Triage note (optional)' : 'Reason (optional)'}>
-        {({ id }) => <Textarea id={id} value={note} onChange={(e) => setNote(e.target.value)} className="min-h-16" maxLength={4000} />}
+        {({ id }) => (
+          <Textarea
+            id={id}
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            className="min-h-16"
+            maxLength={4000}
+          />
+        )}
       </Field>
       {!isInquiry && request.status === 'accepted' ? (
         <label className="flex items-center gap-2 text-sm">
-          <input type="checkbox" className="h-4 w-4" checked={startWork} onChange={(e) => setStartWork(e.target.checked)} />
+          <input
+            type="checkbox"
+            className="h-4 w-4"
+            checked={startWork}
+            onChange={(e) => setStartWork(e.target.checked)}
+          />
           Start work without upfront payment (policy decision; recorded)
         </label>
       ) : null}
       {isInquiry ? (
-        <Button size="sm" loading={busy} disabled={!pm || !permissions.triage} onClick={() => void triage()} title={!permissions.triage ? 'Needs service_requests.triage' : undefined}>
+        <Button
+          size="sm"
+          loading={busy}
+          disabled={!pm || !permissions.triage}
+          onClick={() => void triage()}
+          title={!permissions.triage ? 'Needs service_requests.triage' : undefined}
+        >
           Triage and assign
         </Button>
       ) : (
-        <Button size="sm" loading={busy} disabled={!pm || !permissions.assign || terminal || pm === (request.assignedPmUserId ?? '') && !startWork} onClick={() => void assign()} title={!permissions.assign ? 'Needs service_requests.assign' : undefined}>
+        <Button
+          size="sm"
+          loading={busy}
+          disabled={
+            !pm ||
+            !permissions.assign ||
+            terminal ||
+            (pm === (request.assignedPmUserId ?? '') && !startWork)
+          }
+          onClick={() => void assign()}
+          title={!permissions.assign ? 'Needs service_requests.assign' : undefined}
+        >
           {request.assignedPmUserId ? 'Reassign' : 'Assign'} project manager
         </Button>
       )}

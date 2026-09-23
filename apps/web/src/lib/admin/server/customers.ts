@@ -137,7 +137,13 @@ export interface CustomerOrgView {
   };
   sensitiveVisible: boolean;
   members: CustomerMember[];
-  invitations: Array<{ id: string; email: string; role: string; status: string; expiresAt: string }>;
+  invitations: Array<{
+    id: string;
+    email: string;
+    role: string;
+    status: string;
+    expiresAt: string;
+  }>;
   properties: PropertyDto[];
   projects: Array<{ id: string; name: string; status: string; kind: string; updatedAt: string }>;
   invoices: InvoiceDto[];
@@ -209,7 +215,10 @@ export async function getCustomerOrganization(
       })
       .from(schema.invitation)
       .where(
-        and(eq(schema.invitation.organizationId, organizationId), eq(schema.invitation.status, 'pending')),
+        and(
+          eq(schema.invitation.organizationId, organizationId),
+          eq(schema.invitation.status, 'pending'),
+        ),
       )
       .orderBy(desc(schema.invitation.expiresAt));
     const projects = await tx
@@ -324,7 +333,10 @@ export async function searchOrganizations(
       )
       .where(
         and(
-          or(isNull(schema.organizationProfiles.kind), eq(schema.organizationProfiles.kind, 'customer')),
+          or(
+            isNull(schema.organizationProfiles.kind),
+            eq(schema.organizationProfiles.kind, 'customer'),
+          ),
           q ? ilike(schema.organization.name, `%${q.replace(/[%_]/g, '')}%`) : undefined,
         ),
       )

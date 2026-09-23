@@ -19,7 +19,11 @@ export function SavedViewsBar({ tableKey }: { tableKey: string }) {
       <span className="inline-flex items-center gap-1 text-xs font-medium uppercase tracking-wide text-fg-muted">
         <Bookmark aria-hidden="true" className="h-3.5 w-3.5" /> Views
       </span>
-      <Button variant={activeName || currentQuery ? 'ghost' : 'secondary'} size="sm" onClick={clear}>
+      <Button
+        variant={activeName || currentQuery ? 'ghost' : 'secondary'}
+        size="sm"
+        onClick={clear}
+      >
         All
       </Button>
       {views.map((v) => (
@@ -53,7 +57,10 @@ export function SavedViewsBar({ tableKey }: { tableKey: string }) {
         Save current filters
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent title="Save view" description="Names the current filters so you can reopen them from this bar.">
+        <DialogContent
+          title="Save view"
+          description="Names the current filters so you can reopen them from this bar."
+        >
           <Field label="View name" required>
             {({ id }) => (
               <Input

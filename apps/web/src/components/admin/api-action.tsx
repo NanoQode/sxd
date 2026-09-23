@@ -82,7 +82,9 @@ export function ApiAction({
     if (successMessage) toast({ title: successMessage, tone: 'success' });
     onSuccess?.(result);
     if (redirectTo) {
-      router.push(typeof redirectTo === 'function' ? redirectTo(result) : fillTemplate(redirectTo, result));
+      router.push(
+        typeof redirectTo === 'function' ? redirectTo(result) : fillTemplate(redirectTo, result),
+      );
     }
     router.refresh();
   }
@@ -117,7 +119,11 @@ export function ApiAction({
       </Button>
       {disabled && disabledReason ? <span className="sr-only">{disabledReason}</span> : null}
       {error ? (
-        <Alert tone="danger" title={mfa ? 'Authenticator required' : 'Action failed'} className="mt-2">
+        <Alert
+          tone="danger"
+          title={mfa ? 'Authenticator required' : 'Action failed'}
+          className="mt-2"
+        >
           {error}
           {mfa ? (
             <>

@@ -169,7 +169,7 @@ async function OverviewTab({
     over_spent: 'Actual spend exceeds the approved budget.',
   };
   return (
-    <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
+    <div className="grid gap-6 lg:grid-cols-[2fr_1fr] [&>*]:min-w-0">
       <div className="space-y-6">
         <div className="grid gap-4 sm:grid-cols-2">
           <Card>

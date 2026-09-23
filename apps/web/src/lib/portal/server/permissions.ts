@@ -23,6 +23,10 @@ export interface CustomerCapabilities {
   sendMessages: boolean;
   manageAppointments: boolean;
   viewReports: boolean;
+  /** Raise maintenance work orders on the organisation's properties. */
+  requestMaintenance: boolean;
+  /** Approve maintenance cost estimates (same authority as change orders). */
+  approveMaintenanceCosts: boolean;
 }
 
 export function customerCapabilities(
@@ -51,6 +55,8 @@ export function customerCapabilities(
     sendMessages: can('org.messages.send'),
     manageAppointments: can('org.appointments.manage'),
     viewReports: can('org.reports.view'),
+    requestMaintenance: can('org.maintenance.request'),
+    approveMaintenanceCosts: guarded('org.change_orders.approve'),
   };
 }
 

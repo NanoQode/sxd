@@ -2,9 +2,28 @@
 
 import { useRouter } from 'next/navigation';
 import { useState, type ReactNode } from 'react';
-import { Alert, Button, Dialog, DialogContent, DialogFooter, Field, Input, NativeSelect, Textarea, useToast, type ButtonProps } from '@simplexd/ui';
+import {
+  Alert,
+  Button,
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  Field,
+  Input,
+  NativeSelect,
+  Textarea,
+  useToast,
+  type ButtonProps,
+} from '@simplexd/ui';
 import { adminFetch, errorMessage, isMfaError } from '@/lib/admin/client';
-import { FORM_TRANSFORMS, buildBody, fillTemplate, type BodyFieldSpec, type FormTransformName, type FormValues } from '@/lib/admin/form-body';
+import {
+  FORM_TRANSFORMS,
+  buildBody,
+  fillTemplate,
+  type BodyFieldSpec,
+  type FormTransformName,
+  type FormValues,
+} from '@/lib/admin/form-body';
 import { parseNairaToKobo } from '@/lib/admin/money';
 
 export type { FormValues };
@@ -89,7 +108,10 @@ export function FormDialog({
   }
 
   const invalid = fields.filter((f) => f.required && !values[f.name] && f.type !== 'checkbox');
-  const badMoney = fields.filter((f) => f.type === 'naira' && values[f.name] && parseNairaToKobo(String(values[f.name])) === null);
+  const badMoney = fields.filter(
+    (f) =>
+      f.type === 'naira' && values[f.name] && parseNairaToKobo(String(values[f.name])) === null,
+  );
 
   async function submit() {
     setBusy(true);
@@ -115,7 +137,10 @@ export function FormDialog({
       if (successMessage) toast({ title: successMessage, tone: 'success' });
       setOpen(false);
       setValues(initial(fields));
-      if (redirectTo) router.push(typeof redirectTo === 'function' ? redirectTo(result) : fillTemplate(redirectTo, result));
+      if (redirectTo)
+        router.push(
+          typeof redirectTo === 'function' ? redirectTo(result) : fillTemplate(redirectTo, result),
+        );
       router.refresh();
     } catch (err) {
       if (isMfaError(err)) setMfa(true);
@@ -127,7 +152,13 @@ export function FormDialog({
 
   return (
     <>
-      <Button variant={variant} size={size} disabled={disabled} title={disabled ? disabledReason : undefined} onClick={() => setOpen(true)}>
+      <Button
+        variant={variant}
+        size={size}
+        disabled={disabled}
+        title={disabled ? disabledReason : undefined}
+        onClick={() => setOpen(true)}
+      >
         {trigger}
       </Button>
       {disabled && disabledReason ? <span className="sr-only">{disabledReason}</span> : null}
@@ -152,20 +183,50 @@ export function FormDialog({
             ) : null}
             {children ? <div className="sm:col-span-2">{children}</div> : null}
             {fields.map((f) => (
-              <div key={f.name} className={f.wide || f.type === 'textarea' ? 'sm:col-span-2' : undefined}>
+              <div
+                key={f.name}
+                className={f.wide || f.type === 'textarea' ? 'sm:col-span-2' : undefined}
+              >
                 {f.type === 'checkbox' ? (
                   <label className="flex min-h-11 items-center gap-2 text-sm">
-                    <input type="checkbox" className="h-4 w-4" checked={Boolean(values[f.name])} onChange={(e) => set(f.name, e.target.checked)} />
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4"
+                      checked={Boolean(values[f.name])}
+                      onChange={(e) => set(f.name, e.target.checked)}
+                    />
                     {f.label}
                     {f.hint ? <span className="text-fg-muted">— {f.hint}</span> : null}
                   </label>
                 ) : (
-                  <Field label={f.label} required={f.required} hint={f.hint} error={f.type === 'naira' && badMoney.includes(f) ? 'Enter a naira amount such as 250000 or 1,250.50' : undefined}>
+                  <Field
+                    label={f.label}
+                    required={f.required}
+                    hint={f.hint}
+                    error={
+                      f.type === 'naira' && badMoney.includes(f)
+                        ? 'Enter a naira amount such as 250000 or 1,250.50'
+                        : undefined
+                    }
+                  >
                     {({ id, describedBy, invalid: isInvalid }) =>
                       f.type === 'textarea' ? (
-                        <Textarea id={id} aria-describedby={describedBy} aria-invalid={isInvalid} value={String(values[f.name] ?? '')} onChange={(e) => set(f.name, e.target.value)} placeholder={f.placeholder} className="min-h-20" />
+                        <Textarea
+                          id={id}
+                          aria-describedby={describedBy}
+                          aria-invalid={isInvalid}
+                          value={String(values[f.name] ?? '')}
+                          onChange={(e) => set(f.name, e.target.value)}
+                          placeholder={f.placeholder}
+                          className="min-h-20"
+                        />
                       ) : f.type === 'select' ? (
-                        <NativeSelect id={id} aria-describedby={describedBy} value={String(values[f.name] ?? '')} onChange={(e) => set(f.name, e.target.value)}>
+                        <NativeSelect
+                          id={id}
+                          aria-describedby={describedBy}
+                          value={String(values[f.name] ?? '')}
+                          onChange={(e) => set(f.name, e.target.value)}
+                        >
                           {!f.required ? <option value="">—</option> : null}
                           {(f.options ?? []).map((o) => (
                             <option key={o.value} value={o.value}>
@@ -178,7 +239,13 @@ export function FormDialog({
                           id={id}
                           aria-describedby={describedBy}
                           aria-invalid={isInvalid}
-                          type={f.type === 'datetime' ? 'datetime-local' : f.type === 'naira' ? 'text' : (f.type ?? 'text')}
+                          type={
+                            f.type === 'datetime'
+                              ? 'datetime-local'
+                              : f.type === 'naira'
+                                ? 'text'
+                                : (f.type ?? 'text')
+                          }
                           inputMode={f.type === 'naira' ? 'decimal' : undefined}
                           min={f.min}
                           max={f.max}
@@ -197,7 +264,11 @@ export function FormDialog({
             <Button variant="secondary" onClick={() => setOpen(false)} disabled={busy}>
               Cancel
             </Button>
-            <Button loading={busy} disabled={invalid.length > 0 || badMoney.length > 0} onClick={() => void submit()}>
+            <Button
+              loading={busy}
+              disabled={invalid.length > 0 || badMoney.length > 0}
+              onClick={() => void submit()}
+            >
               {submitLabel}
             </Button>
           </DialogFooter>

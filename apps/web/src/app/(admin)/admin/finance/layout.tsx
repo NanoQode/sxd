@@ -31,8 +31,9 @@ export default async function FinanceLayout({ children }: { children: ReactNode 
       <SectionNav items={NAV} label="Finance sections" />
       {!identity.actor.mfaVerified ? (
         <Alert tone="warning" title="Authenticator not verified">
-          You can read finance records, but issuing or voiding invoices, reconciling, confirming bank transfers, approving
-          refunds or payouts and exporting all require a verified authenticator.{' '}
+          You can read finance records, but issuing or voiding invoices, reconciling, confirming
+          bank transfers, approving refunds or payouts and exporting all require a verified
+          authenticator.{' '}
           <Link href="/admin/security/mfa" className="font-medium underline">
             Set up multi-factor authentication
           </Link>

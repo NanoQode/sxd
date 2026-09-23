@@ -3,7 +3,19 @@
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { projectKindSchema, type ProjectDto } from '@simplexd/contracts';
-import { Alert, Button, Dialog, DialogContent, DialogFooter, Field, Input, NativeSelect, Textarea, humanize, useToast } from '@simplexd/ui';
+import {
+  Alert,
+  Button,
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  Field,
+  Input,
+  NativeSelect,
+  Textarea,
+  humanize,
+  useToast,
+} from '@simplexd/ui';
 import { adminFetch, errorMessage } from '@/lib/admin/client';
 
 export function CreateProjectDialog({
@@ -60,7 +72,15 @@ export function CreateProjectDialog({
     <>
       <Button onClick={() => setOpen(true)}>New project</Button>
       <Dialog open={open} onOpenChange={(v) => !busy && setOpen(v)}>
-        <DialogContent title="Create a project" description={prefill.serviceRequestId ? 'Linked to the service request you came from.' : 'Projects belong to one customer organisation.'} size="lg">
+        <DialogContent
+          title="Create a project"
+          description={
+            prefill.serviceRequestId
+              ? 'Linked to the service request you came from.'
+              : 'Projects belong to one customer organisation.'
+          }
+          size="lg"
+        >
           <div className="grid gap-3 sm:grid-cols-2">
             {error ? (
               <div className="sm:col-span-2">
@@ -71,7 +91,11 @@ export function CreateProjectDialog({
             ) : null}
             <Field label="Organisation" required>
               {({ id }) => (
-                <NativeSelect id={id} value={organizationId} onChange={(e) => setOrganizationId(e.target.value)}>
+                <NativeSelect
+                  id={id}
+                  value={organizationId}
+                  onChange={(e) => setOrganizationId(e.target.value)}
+                >
                   <option value="">Choose</option>
                   {organizations.map((o) => (
                     <option key={o.id} value={o.id}>
@@ -94,7 +118,14 @@ export function CreateProjectDialog({
             </Field>
             <div className="sm:col-span-2">
               <Field label="Name" required hint="3 to 160 characters.">
-                {({ id }) => <Input id={id} value={name} onChange={(e) => setName(e.target.value)} maxLength={160} />}
+                {({ id }) => (
+                  <Input
+                    id={id}
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    maxLength={160}
+                  />
+                )}
               </Field>
             </div>
             <Field label="Project manager">
@@ -110,17 +141,47 @@ export function CreateProjectDialog({
               )}
             </Field>
             <Field label="Gross floor area (m²)" hint="Used by area-rate budgets.">
-              {({ id }) => <Input id={id} inputMode="decimal" value={area} onChange={(e) => setArea(e.target.value)} placeholder="e.g. 240" />}
+              {({ id }) => (
+                <Input
+                  id={id}
+                  inputMode="decimal"
+                  value={area}
+                  onChange={(e) => setArea(e.target.value)}
+                  placeholder="e.g. 240"
+                />
+              )}
             </Field>
             <Field label="Start date">
-              {({ id }) => <Input id={id} type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />}
+              {({ id }) => (
+                <Input
+                  id={id}
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                />
+              )}
             </Field>
             <Field label="Target completion">
-              {({ id }) => <Input id={id} type="date" value={target} onChange={(e) => setTarget(e.target.value)} />}
+              {({ id }) => (
+                <Input
+                  id={id}
+                  type="date"
+                  value={target}
+                  onChange={(e) => setTarget(e.target.value)}
+                />
+              )}
             </Field>
             <div className="sm:col-span-2">
               <Field label="Description">
-                {({ id }) => <Textarea id={id} value={description} onChange={(e) => setDescription(e.target.value)} className="min-h-20" maxLength={8000} />}
+                {({ id }) => (
+                  <Textarea
+                    id={id}
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    className="min-h-20"
+                    maxLength={8000}
+                  />
+                )}
               </Field>
             </div>
           </div>
@@ -128,7 +189,11 @@ export function CreateProjectDialog({
             <Button variant="secondary" onClick={() => setOpen(false)} disabled={busy}>
               Cancel
             </Button>
-            <Button loading={busy} disabled={!organizationId || name.trim().length < 3} onClick={() => void create()}>
+            <Button
+              loading={busy}
+              disabled={!organizationId || name.trim().length < 3}
+              onClick={() => void create()}
+            >
               Create project
             </Button>
           </DialogFooter>

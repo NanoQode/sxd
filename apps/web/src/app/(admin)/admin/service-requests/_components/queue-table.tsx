@@ -3,7 +3,16 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
-import { Badge, DataTable, EmptyState, Field, NativeSelect, StatusBadge, formatDateTimeLabel, humanize } from '@simplexd/ui';
+import {
+  Badge,
+  DataTable,
+  EmptyState,
+  Field,
+  NativeSelect,
+  StatusBadge,
+  formatDateTimeLabel,
+  humanize,
+} from '@simplexd/ui';
 import { adminFetch } from '@/lib/admin/client';
 import type { QueueRow } from '@/lib/admin/server/service-requests';
 import { priorityLabel } from '@/lib/admin/sla';
@@ -43,7 +52,10 @@ export function QueueTable({
   const [bulkPriority, setBulkPriority] = useState('3');
 
   const selectedItems = useMemo(
-    () => rows.filter((r) => selected.has(r.id)).map((r) => ({ id: r.id, label: `${r.reference} · ${r.title}` })),
+    () =>
+      rows
+        .filter((r) => selected.has(r.id))
+        .map((r) => ({ id: r.id, label: `${r.reference} · ${r.title}` })),
     [rows, selected],
   );
   const byId = useMemo(() => new Map(rows.map((r) => [r.id, r])), [rows]);
@@ -53,9 +65,11 @@ export function QueueTable({
     actions.push({
       key: 'triage',
       label: 'Triage and assign PM',
-      description: 'Moves each new inquiry into triage with the chosen project manager and priority. Requests already past inquiry are skipped.',
+      description:
+        'Moves each new inquiry into triage with the chosen project manager and priority. Requests already past inquiry are skipped.',
       ready: Boolean(bulkPm),
-      eligible: (item) => (byId.get(item.id)?.status === 'inquiry' ? null : 'only inquiries can be triaged'),
+      eligible: (item) =>
+        byId.get(item.id)?.status === 'inquiry' ? null : 'only inquiries can be triaged',
       form: (
         <div className="grid gap-3 sm:grid-cols-2">
           <Field label="Project manager" required>
@@ -72,7 +86,11 @@ export function QueueTable({
           </Field>
           <Field label="Priority">
             {({ id }) => (
-              <NativeSelect id={id} value={bulkPriority} onChange={(e) => setBulkPriority(e.target.value)}>
+              <NativeSelect
+                id={id}
+                value={bulkPriority}
+                onChange={(e) => setBulkPriority(e.target.value)}
+              >
                 {[1, 2, 3, 4, 5].map((p) => (
                   <option key={p} value={p}>
                     {priorityLabel(p)}
@@ -85,10 +103,20 @@ export function QueueTable({
       ),
       run: async (item, reason) => {
         const row = byId.get(item.id)!;
-        const res = await adminFetch<{ slaDueAt: string | null }>(`/api/v1/service-requests/${item.id}/triage`, {
-          body: { assignedPmUserId: bulkPm, priority: Number(bulkPriority), note: reason || undefined, expectedVersion: row.version },
-        });
-        return res.slaDueAt ? `triaged; SLA due ${formatDateTimeLabel(res.slaDueAt)}` : 'triaged; no SLA policy for this service';
+        const res = await adminFetch<{ slaDueAt: string | null }>(
+          `/api/v1/service-requests/${item.id}/triage`,
+          {
+            body: {
+              assignedPmUserId: bulkPm,
+              priority: Number(bulkPriority),
+              note: reason || undefined,
+              expectedVersion: row.version,
+            },
+          },
+        );
+        return res.slaDueAt
+          ? `triaged; SLA due ${formatDateTimeLabel(res.slaDueAt)}`
+          : 'triaged; no SLA policy for this service';
       },
     });
   }
@@ -96,9 +124,11 @@ export function QueueTable({
     actions.push({
       key: 'assign',
       label: 'Reassign PM',
-      description: 'Changes the project manager on requests that are already triaged. New inquiries are skipped (triage them first).',
+      description:
+        'Changes the project manager on requests that are already triaged. New inquiries are skipped (triage them first).',
       ready: Boolean(bulkPm),
-      eligible: (item) => (byId.get(item.id)?.status === 'inquiry' ? 'still an inquiry; use triage' : null),
+      eligible: (item) =>
+        byId.get(item.id)?.status === 'inquiry' ? 'still an inquiry; use triage' : null,
       form: (
         <Field label="Project manager" required>
           {({ id }) => (
@@ -116,7 +146,11 @@ export function QueueTable({
       run: async (item, reason) => {
         const row = byId.get(item.id)!;
         await adminFetch(`/api/v1/service-requests/${item.id}/assign`, {
-          body: { assignedPmUserId: bulkPm, reason: reason || undefined, expectedVersion: row.version },
+          body: {
+            assignedPmUserId: bulkPm,
+            reason: reason || undefined,
+            expectedVersion: row.version,
+          },
         });
         return 'reassigned';
       },
@@ -175,7 +209,12 @@ export function QueueTable({
           ]}
         />
       </div>
-      <BulkActionBar selected={selectedItems} actions={actions} onClear={() => setSelected(new Set())} onDone={() => router.refresh()} />
+      <BulkActionBar
+        selected={selectedItems}
+        actions={actions}
+        onClear={() => setSelected(new Set())}
+        onDone={() => router.refresh()}
+      />
       <DataTable
         caption="Service request queue"
         rows={rows}
@@ -205,7 +244,10 @@ export function QueueTable({
             header: 'Request',
             cell: (r) => (
               <span>
-                <Link href={`/admin/service-requests/${r.id}`} className="font-medium text-primary underline">
+                <Link
+                  href={`/admin/service-requests/${r.id}`}
+                  className="font-medium text-primary underline"
+                >
                   {r.reference}
                 </Link>
                 <br />
@@ -224,22 +266,45 @@ export function QueueTable({
             ),
           },
           { key: 'status', header: 'Status', cell: (r) => <StatusBadge status={r.status} /> },
-          { key: 'priority', header: 'Priority', cell: (r) => <Badge tone={PRIORITY_TONE[r.priority] ?? 'neutral'}>{priorityLabel(r.priority)}</Badge> },
+          {
+            key: 'priority',
+            header: 'Priority',
+            cell: (r) => (
+              <Badge tone={PRIORITY_TONE[r.priority] ?? 'neutral'}>
+                {priorityLabel(r.priority)}
+              </Badge>
+            ),
+          },
           {
             key: 'sla',
             header: 'SLA',
             cell: (r) => (
               <span>
                 <Badge tone={SLA_TONE[r.sla.state]}>{r.sla.label}</Badge>
-                {r.slaDueAt ? <span className="block text-xs text-fg-muted">{formatDateTimeLabel(r.slaDueAt)}</span> : null}
+                {r.slaDueAt ? (
+                  <span className="block text-xs text-fg-muted">
+                    {formatDateTimeLabel(r.slaDueAt)}
+                  </span>
+                ) : null}
               </span>
             ),
           },
-          { key: 'pm', header: 'Project manager', cell: (r) => r.assignedPm?.name ?? <span className="text-fg-muted">Unassigned</span> },
-          { key: 'created', header: 'Received', cell: (r) => formatDateTimeLabel(r.createdAt), hideOnMobile: true },
+          {
+            key: 'pm',
+            header: 'Project manager',
+            cell: (r) => r.assignedPm?.name ?? <span className="text-fg-muted">Unassigned</span>,
+          },
+          {
+            key: 'created',
+            header: 'Received',
+            cell: (r) => formatDateTimeLabel(r.createdAt),
+            hideOnMobile: true,
+          },
         ]}
       />
-      <p className="text-xs text-fg-muted">{humanize('sla')} clocks stop while a request is paused, delivered or closed.</p>
+      <p className="text-xs text-fg-muted">
+        {humanize('sla')} clocks stop while a request is paused, delivered or closed.
+      </p>
     </div>
   );
 }

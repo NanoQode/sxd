@@ -2,7 +2,18 @@
 
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { Alert, Button, Dialog, DialogContent, DialogFooter, Field, Input, Textarea, humanize, useToast } from '@simplexd/ui';
+import {
+  Alert,
+  Button,
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  Field,
+  Input,
+  Textarea,
+  humanize,
+  useToast,
+} from '@simplexd/ui';
 import { adminFetch, errorMessage } from '@/lib/admin/client';
 
 export function SupportEscalation({
@@ -19,7 +30,9 @@ export function SupportEscalation({
   const [open, setOpen] = useState(false);
   const [subject, setSubject] = useState('');
   const [message, setMessage] = useState('');
-  const [participants, setParticipants] = useState<string[]>(members.filter((m) => m.role === 'owner').map((m) => m.userId));
+  const [participants, setParticipants] = useState<string[]>(
+    members.filter((m) => m.role === 'owner').map((m) => m.userId),
+  );
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -47,15 +60,27 @@ export function SupportEscalation({
   }
 
   if (!canManage) {
-    return <p className="text-fg-muted">Opening tickets needs support.tickets.manage or customers.manage.</p>;
+    return (
+      <p className="text-fg-muted">
+        Opening tickets needs support.tickets.manage or customers.manage.
+      </p>
+    );
   }
   return (
     <>
-      <Button size="sm" onClick={() => setOpen(true)} disabled={members.length === 0} title={members.length === 0 ? 'The organisation has no members to message' : undefined}>
+      <Button
+        size="sm"
+        onClick={() => setOpen(true)}
+        disabled={members.length === 0}
+        title={members.length === 0 ? 'The organisation has no members to message' : undefined}
+      >
         Open support ticket
       </Button>
       <Dialog open={open} onOpenChange={(v) => !busy && setOpen(v)}>
-        <DialogContent title="Open a support ticket" description="Creates a support-ticket conversation with the selected members. You are added as a participant.">
+        <DialogContent
+          title="Open a support ticket"
+          description="Creates a support-ticket conversation with the selected members. You are added as a participant."
+        >
           <div className="space-y-3">
             {error ? (
               <Alert tone="danger" title="Could not open ticket">
@@ -63,7 +88,14 @@ export function SupportEscalation({
               </Alert>
             ) : null}
             <Field label="Subject" required>
-              {({ id }) => <Input id={id} value={subject} onChange={(e) => setSubject(e.target.value)} maxLength={200} />}
+              {({ id }) => (
+                <Input
+                  id={id}
+                  value={subject}
+                  onChange={(e) => setSubject(e.target.value)}
+                  maxLength={200}
+                />
+              )}
             </Field>
             <fieldset className="space-y-1">
               <legend className="text-sm font-medium">Participants</legend>
@@ -73,20 +105,38 @@ export function SupportEscalation({
                     type="checkbox"
                     className="h-4 w-4"
                     checked={participants.includes(m.userId)}
-                    onChange={(e) => setParticipants(e.target.checked ? [...participants, m.userId] : participants.filter((p) => p !== m.userId))}
+                    onChange={(e) =>
+                      setParticipants(
+                        e.target.checked
+                          ? [...participants, m.userId]
+                          : participants.filter((p) => p !== m.userId),
+                      )
+                    }
                   />
                   {m.name} <span className="text-fg-muted">({humanize(m.role)})</span>
                 </label>
               ))}
             </fieldset>
             <Field label="First message (optional)">
-              {({ id }) => <Textarea id={id} value={message} onChange={(e) => setMessage(e.target.value)} className="min-h-20" maxLength={20000} />}
+              {({ id }) => (
+                <Textarea
+                  id={id}
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  className="min-h-20"
+                  maxLength={20000}
+                />
+              )}
             </Field>
             <DialogFooter>
               <Button variant="secondary" onClick={() => setOpen(false)} disabled={busy}>
                 Cancel
               </Button>
-              <Button loading={busy} disabled={subject.trim().length < 2 || participants.length === 0} onClick={() => void create()}>
+              <Button
+                loading={busy}
+                disabled={subject.trim().length < 2 || participants.length === 0}
+                onClick={() => void create()}
+              >
                 Open ticket
               </Button>
             </DialogFooter>

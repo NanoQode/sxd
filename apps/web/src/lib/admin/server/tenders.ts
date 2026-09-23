@@ -1,6 +1,14 @@
 import 'server-only';
 import { eq, inArray } from 'drizzle-orm';
-import type { AwardDto, AwardOutcomeDto, BidReadDto, TenderComparisonDto, TenderDetail, TenderDto, TenderListQuery } from '@simplexd/contracts';
+import type {
+  AwardDto,
+  AwardOutcomeDto,
+  BidReadDto,
+  TenderComparisonDto,
+  TenderDetail,
+  TenderDto,
+  TenderListQuery,
+} from '@simplexd/contracts';
 import { schema } from '@simplexd/db';
 import type { RequestIdentity } from '@/lib/auth/session';
 import { getAward } from '@/server/tenders/awards';
@@ -25,9 +33,14 @@ export async function listTendersView(
       tx,
       page.items.map((t) => t.organizationId),
     );
-    const projectIds = [...new Set(page.items.map((t) => t.projectId).filter((v): v is string => Boolean(v)))];
+    const projectIds = [
+      ...new Set(page.items.map((t) => t.projectId).filter((v): v is string => Boolean(v))),
+    ];
     const projects = projectIds.length
-      ? await tx.select({ id: schema.projects.id, name: schema.projects.name }).from(schema.projects).where(inArray(schema.projects.id, projectIds))
+      ? await tx
+          .select({ id: schema.projects.id, name: schema.projects.name })
+          .from(schema.projects)
+          .where(inArray(schema.projects.id, projectIds))
       : [];
     return { orgs, projects: new Map(projects.map((p) => [p.id, p.name])) };
   });
@@ -49,13 +62,22 @@ export interface TenderWorkspace {
   bids: Loaded<BidReadDto[]>;
   comparison: Loaded<TenderComparisonDto>;
   award: AwardDto | null;
-  partners: Array<{ userId: string; name: string; email: string; partnerType: string; verificationStatus: string }>;
+  partners: Array<{
+    userId: string;
+    name: string;
+    email: string;
+    partnerType: string;
+    verificationStatus: string;
+  }>;
   askerNames: Record<string, string>;
   permissions: { manage: boolean; evaluate: boolean; openSealed: boolean; mfaVerified: boolean };
 }
 
 /** Everything the staff tender page needs; reads that the actor may not perform come back as refusals, not page errors. */
-export async function tenderWorkspace(identity: RequestIdentity, id: string): Promise<TenderWorkspace> {
+export async function tenderWorkspace(
+  identity: RequestIdentity,
+  id: string,
+): Promise<TenderWorkspace> {
   const tender = await getTender(identity, id);
   const permissions = {
     manage: can(identity, 'tenders.manage'),
@@ -71,13 +93,26 @@ export async function tenderWorkspace(identity: RequestIdentity, id: string): Pr
     staffTx(identity, async (tx) => {
       const orgs = await orgNames(tx, [tender.organizationId]);
       const [project] = tender.projectId
-        ? await tx.select({ name: schema.projects.name }).from(schema.projects).where(eq(schema.projects.id, tender.projectId))
+        ? await tx
+            .select({ name: schema.projects.name })
+            .from(schema.projects)
+            .where(eq(schema.projects.id, tender.projectId))
         : [];
-      const names = await userNames(tx, [tender.createdBy, ...tender.questions.map((q) => q.askedByUserId)]);
-      return { orgName: orgs.get(tender.organizationId) ?? tender.organizationId, projectName: project?.name ?? null, names };
+      const names = await userNames(tx, [
+        tender.createdBy,
+        ...tender.questions.map((q) => q.askedByUserId),
+      ]);
+      return {
+        orgName: orgs.get(tender.organizationId) ?? tender.organizationId,
+        projectName: project?.name ?? null,
+        names,
+      };
     }),
   ]);
-  const awardValue = award.ok && 'bidId' in (award.value as AwardDto | AwardOutcomeDto) ? (award.value as AwardDto) : null;
+  const awardValue =
+    award.ok && 'bidId' in (award.value as AwardDto | AwardOutcomeDto)
+      ? (award.value as AwardDto)
+      : null;
   return {
     tender,
     organizationName: extras.orgName,

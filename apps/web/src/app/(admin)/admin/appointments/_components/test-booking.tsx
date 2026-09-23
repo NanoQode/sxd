@@ -16,7 +16,9 @@ export function TestBookingButton() {
     setError(null);
     setResult(null);
     try {
-      setResult(await adminFetch<TestBookingResult>('/api/v1/admin/calendar/test-booking', { body: {} }));
+      setResult(
+        await adminFetch<TestBookingResult>('/api/v1/admin/calendar/test-booking', { body: {} }),
+      );
     } catch (err) {
       setError(errorMessage(err));
     } finally {
@@ -35,9 +37,18 @@ export function TestBookingButton() {
         </Alert>
       ) : null}
       {result ? (
-        <Alert tone={result.ok ? 'success' : 'danger'} title={result.ok ? `Test booking succeeded (${result.adapter} adapter)` : `Test booking failed (${result.adapter} adapter)`}>
+        <Alert
+          tone={result.ok ? 'success' : 'danger'}
+          title={
+            result.ok
+              ? `Test booking succeeded (${result.adapter} adapter)`
+              : `Test booking failed (${result.adapter} adapter)`
+          }
+        >
           {result.message} Conference: {result.conferenceStatus}
-          {result.meetUrl ? ' · Meet link created' : ''}. Event {result.deleted ? 'deleted again' : 'NOT deleted, remove it manually'}. Checked {formatDateTimeLabel(result.checkedAt)}.
+          {result.meetUrl ? ' · Meet link created' : ''}. Event{' '}
+          {result.deleted ? 'deleted again' : 'NOT deleted, remove it manually'}. Checked{' '}
+          {formatDateTimeLabel(result.checkedAt)}.
           {result.adapter === 'dev' ? ' The development adapter does not contact Google.' : ''}
         </Alert>
       ) : null}

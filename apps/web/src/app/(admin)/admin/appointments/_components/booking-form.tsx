@@ -64,8 +64,8 @@ export function BookingForm({
   return (
     <div className="space-y-4">
       <Alert tone="info" title="Booking on behalf of a customer">
-        The booking API records you as the booking contact. Put the customer&apos;s name and how to reach them in the notes, and link the
-        service request so the appointment appears on it.
+        The booking API records you as the booking contact. Put the customer&apos;s name and how to
+        reach them in the notes, and link the service request so the appointment appears on it.
       </Alert>
       {error ? (
         <Alert tone="danger" title="Could not book">
@@ -73,9 +73,13 @@ export function BookingForm({
         </Alert>
       ) : null}
       {hold ? (
-        <Alert tone="success" title={`Held: ${humanize(hold.kind)} · ${DateTime.fromISO(hold.start).setZone('Africa/Lagos').toFormat('cccc d LLLL, HH:mm')}`}>
-          With {staff.find((s) => s.userId === hold.staffUserId)?.name ?? 'staff'}. The hold expires at{' '}
-          {DateTime.fromISO(hold.expiresAt).setZone('Africa/Lagos').toFormat('HH:mm')}; book before then.{' '}
+        <Alert
+          tone="success"
+          title={`Held: ${humanize(hold.kind)} · ${DateTime.fromISO(hold.start).setZone('Africa/Lagos').toFormat('cccc d LLLL, HH:mm')}`}
+        >
+          With {staff.find((s) => s.userId === hold.staffUserId)?.name ?? 'staff'}. The hold expires
+          at {DateTime.fromISO(hold.expiresAt).setZone('Africa/Lagos').toFormat('HH:mm')}; book
+          before then.{' '}
           <button type="button" className="underline" onClick={() => setHold(null)}>
             Choose another slot
           </button>
@@ -85,14 +89,29 @@ export function BookingForm({
       )}
       <div className="grid gap-3 sm:grid-cols-2">
         <Field label="Topic">
-          {({ id }) => <Input id={id} value={topic} maxLength={200} onChange={(e) => setTopic(e.target.value)} />}
+          {({ id }) => (
+            <Input
+              id={id}
+              value={topic}
+              maxLength={200}
+              onChange={(e) => setTopic(e.target.value)}
+            />
+          )}
         </Field>
         <Field label="Service request id (optional)">
           {({ id }) => <Input id={id} value={srId} onChange={(e) => setSrId(e.target.value)} />}
         </Field>
       </div>
       <Field label="Notes (customer name, phone, access instructions)">
-        {({ id }) => <Textarea id={id} value={notes} maxLength={4000} onChange={(e) => setNotes(e.target.value)} className="min-h-24" />}
+        {({ id }) => (
+          <Textarea
+            id={id}
+            value={notes}
+            maxLength={4000}
+            onChange={(e) => setNotes(e.target.value)}
+            className="min-h-24"
+          />
+        )}
       </Field>
       <Button loading={busy} disabled={!hold} onClick={() => void book()}>
         Book appointment

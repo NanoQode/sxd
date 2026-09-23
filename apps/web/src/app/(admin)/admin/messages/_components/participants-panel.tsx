@@ -35,7 +35,9 @@ export function ParticipantsPanel({
     setBusy(id);
     setError(null);
     try {
-      await adminFetch(`/api/v1/conversations/${conversationId}/participants`, { body: { userId: id } });
+      await adminFetch(`/api/v1/conversations/${conversationId}/participants`, {
+        body: { userId: id },
+      });
       toast({ title: `${label} added`, tone: 'success' });
       setUserId('');
       router.refresh();
@@ -50,8 +52,14 @@ export function ParticipantsPanel({
     setBusy(id);
     setError(null);
     try {
-      await adminFetch(`/api/v1/conversations/${conversationId}/participants/${encodeURIComponent(id)}`, { method: 'DELETE' });
-      toast({ title: id === me ? 'You left the conversation' : `${label} removed`, tone: 'success' });
+      await adminFetch(
+        `/api/v1/conversations/${conversationId}/participants/${encodeURIComponent(id)}`,
+        { method: 'DELETE' },
+      );
+      toast({
+        title: id === me ? 'You left the conversation' : `${label} removed`,
+        tone: 'success',
+      });
       router.refresh();
     } catch (err) {
       setError(errorMessage(err));
@@ -71,10 +79,16 @@ export function ParticipantsPanel({
         {participants.map((p) => (
           <li key={p.userId} className="flex flex-wrap items-center justify-between gap-2">
             <span className={p.leftAt ? 'text-fg-muted line-through' : undefined}>
-              {p.name ?? p.userId} <Badge>{humanize(p.role)}</Badge> {p.userId === me ? <Badge tone="primary">you</Badge> : null}
+              {p.name ?? p.userId} <Badge>{humanize(p.role)}</Badge>{' '}
+              {p.userId === me ? <Badge tone="primary">you</Badge> : null}
             </span>
             {!p.leftAt && !closed ? (
-              <Button size="sm" variant="ghost" loading={busy === p.userId} onClick={() => void remove(p.userId, p.name ?? 'Participant')}>
+              <Button
+                size="sm"
+                variant="ghost"
+                loading={busy === p.userId}
+                onClick={() => void remove(p.userId, p.name ?? 'Participant')}
+              >
                 {p.userId === me ? 'Leave' : 'Remove'}
               </Button>
             ) : p.leftAt ? (
@@ -90,9 +104,17 @@ export function ParticipantsPanel({
       ) : null}
       {!closed && available.length > 0 ? (
         <div className="flex flex-wrap items-end gap-2">
-          <Field label="Add participant" hint="They must already have access to the linked record or organisation.">
+          <Field
+            label="Add participant"
+            hint="They must already have access to the linked record or organisation."
+          >
             {({ id, describedBy }) => (
-              <NativeSelect id={id} aria-describedby={describedBy} value={userId} onChange={(e) => setUserId(e.target.value)}>
+              <NativeSelect
+                id={id}
+                aria-describedby={describedBy}
+                value={userId}
+                onChange={(e) => setUserId(e.target.value)}
+              >
                 <option value="">Choose</option>
                 {groups.map((g) => (
                   <optgroup key={g} label={g}>
@@ -108,7 +130,15 @@ export function ParticipantsPanel({
               </NativeSelect>
             )}
           </Field>
-          <Button size="sm" variant="secondary" disabled={!userId} loading={busy === userId && Boolean(userId)} onClick={() => void add(userId, available.find((c) => c.userId === userId)?.name ?? 'Participant')}>
+          <Button
+            size="sm"
+            variant="secondary"
+            disabled={!userId}
+            loading={busy === userId && Boolean(userId)}
+            onClick={() =>
+              void add(userId, available.find((c) => c.userId === userId)?.name ?? 'Participant')
+            }
+          >
             Add
           </Button>
         </div>

@@ -83,3 +83,26 @@ export function relativeTime(iso: string, now: Date = new Date()): string {
 export function pluralize(count: number, singular: string, plural = `${singular}s`): string {
   return `${count} ${count === 1 ? singular : plural}`;
 }
+
+/**
+ * Parses a naira amount typed by a person ("12,500", "₦12,500.5") into an
+ * integer kobo string without floating-point arithmetic. Returns null for
+ * anything that is not a non-negative amount with at most two decimals.
+ */
+export function nairaInputToKobo(input: string): string | null {
+  const cleaned = input.replace(/[₦,\s]/g, '');
+  const match = /^(\d+)(?:\.(\d{0,2}))?$/.exec(cleaned);
+  if (!match) return null;
+  const whole = match[1]!.replace(/^0+(?=\d)/, '');
+  const fraction = (match[2] ?? '').padEnd(2, '0');
+  const kobo = `${whole}${fraction}`.replace(/^0+(?=\d)/, '');
+  return kobo;
+}
+
+/** Kobo string to a plain naira input value ("12500.50"), for pre-filling amount fields. */
+export function koboToNairaInput(kobo: string | null | undefined): string {
+  if (!kobo || !/^\d+$/.test(kobo)) return '';
+  const padded = kobo.padStart(3, '0');
+  const fraction = padded.slice(-2);
+  return `${padded.slice(0, -2)}${fraction === '00' ? '' : `.${fraction}`}`;
+}

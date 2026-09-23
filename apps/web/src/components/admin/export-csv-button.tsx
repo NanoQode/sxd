@@ -1,10 +1,11 @@
-'use client';
+import { rowsToCsv, type CsvColumn } from '@/lib/admin/csv';
+import { CsvDownloadButton } from './csv-download-button';
 
-import { Download } from 'lucide-react';
-import { Button } from '@simplexd/ui';
-import { downloadCsv, rowsToCsv, type CsvColumn } from '@/lib/admin/csv';
-
-/** Downloads the rows currently shown as CSV (what you see is what you export). */
+/**
+ * Downloads the rows currently shown as CSV (what you see is what you export).
+ * Server-safe: the CSV text is built where the component renders, so column
+ * accessor functions never cross from a server component to the client.
+ */
 export function ExportCsvButton<T>({
   rows,
   columns,
@@ -17,15 +18,11 @@ export function ExportCsvButton<T>({
   label?: string;
 }) {
   return (
-    <Button
-      variant="ghost"
-      size="sm"
-      disabled={rows.length === 0}
-      title={rows.length === 0 ? 'Nothing to export' : `Export ${rows.length} rows`}
-      onClick={() => downloadCsv(filename, rowsToCsv(rows, columns))}
-    >
-      <Download aria-hidden="true" className="h-4 w-4" />
-      {label}
-    </Button>
+    <CsvDownloadButton
+      csv={rowsToCsv(rows, columns)}
+      count={rows.length}
+      filename={filename}
+      label={label}
+    />
   );
 }

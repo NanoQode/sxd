@@ -27,9 +27,14 @@ export default async function PropertiesPage() {
         title="Properties"
         description="Land, buildings and units your organisation owns or manages through SimplexD, with title status that states what was checked."
         actions={
-          caps.manageProperties ? (
-            <LinkButton href="/portal/properties/new">Add a property</LinkButton>
-          ) : undefined
+          <span className="flex flex-wrap gap-2">
+            <LinkButton href="/portal/properties/statements" variant="secondary">
+              Owner statements
+            </LinkButton>
+            {caps.manageProperties ? (
+              <LinkButton href="/portal/properties/new">Add a property</LinkButton>
+            ) : null}
+          </span>
         }
       />
       {properties.length === 0 ? (

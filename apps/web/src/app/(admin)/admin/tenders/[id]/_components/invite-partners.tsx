@@ -12,7 +12,13 @@ export function InvitePartners({
   invitedIds,
 }: {
   tenderId: string;
-  partners: Array<{ userId: string; name: string; email: string; partnerType: string; verificationStatus: string }>;
+  partners: Array<{
+    userId: string;
+    name: string;
+    email: string;
+    partnerType: string;
+    verificationStatus: string;
+  }>;
   invitedIds: string[];
 }) {
   const router = useRouter();
@@ -26,8 +32,13 @@ export function InvitePartners({
     setBusy(true);
     setError(null);
     try {
-      await adminFetch(`/api/v1/tenders/${tenderId}/invitations`, { body: { partnerUserIds: picked } });
-      toast({ title: `${picked.length} partner${picked.length === 1 ? '' : 's'} invited`, tone: 'success' });
+      await adminFetch(`/api/v1/tenders/${tenderId}/invitations`, {
+        body: { partnerUserIds: picked },
+      });
+      toast({
+        title: `${picked.length} partner${picked.length === 1 ? '' : 's'} invited`,
+        tone: 'success',
+      });
       setPicked([]);
       router.refresh();
     } catch (err) {
@@ -37,7 +48,10 @@ export function InvitePartners({
     }
   }
 
-  if (available.length === 0) return <p className="text-sm text-fg-muted">Every partner in the directory is already invited.</p>;
+  if (available.length === 0)
+    return (
+      <p className="text-sm text-fg-muted">Every partner in the directory is already invited.</p>
+    );
   return (
     <div className="space-y-2">
       {error ? (
@@ -54,11 +68,20 @@ export function InvitePartners({
                 type="checkbox"
                 className="h-4 w-4"
                 checked={picked.includes(p.userId)}
-                onChange={(e) => setPicked((prev) => (e.target.checked ? [...prev, p.userId] : prev.filter((x) => x !== p.userId)))}
+                onChange={(e) =>
+                  setPicked((prev) =>
+                    e.target.checked ? [...prev, p.userId] : prev.filter((x) => x !== p.userId),
+                  )
+                }
               />
               <span>{p.name}</span>
               <span className="text-xs text-fg-muted">
-                {humanize(p.partnerType)} · {p.verificationStatus === 'verified' ? 'verified' : <strong className="text-warning">{humanize(p.verificationStatus)}</strong>}
+                {humanize(p.partnerType)} ·{' '}
+                {p.verificationStatus === 'verified' ? (
+                  'verified'
+                ) : (
+                  <strong className="text-warning">{humanize(p.verificationStatus)}</strong>
+                )}
               </span>
             </label>
           ))}

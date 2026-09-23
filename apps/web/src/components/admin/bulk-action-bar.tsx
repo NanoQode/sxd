@@ -83,7 +83,12 @@ export function BulkActionBar({
         const detail = await active.run(item, reason.trim());
         results.push({ id: item.id, label: item.label, status: 'ok', detail });
       } catch (err) {
-        results.push({ id: item.id, label: item.label, status: 'failed', detail: errorMessage(err) });
+        results.push({
+          id: item.id,
+          label: item.label,
+          status: 'failed',
+          detail: errorMessage(err),
+        });
       }
     }
     setOutcomes(results);
@@ -122,7 +127,10 @@ export function BulkActionBar({
               </Alert>
               <ul className="max-h-72 space-y-1 overflow-auto text-sm">
                 {outcomes.map((o) => (
-                  <li key={o.id} className="flex flex-wrap gap-x-2 rounded-md border border-border px-2 py-1">
+                  <li
+                    key={o.id}
+                    className="flex flex-wrap gap-x-2 rounded-md border border-border px-2 py-1"
+                  >
                     <span className="font-medium">{o.label}</span>
                     <span
                       className={
@@ -152,20 +160,39 @@ export function BulkActionBar({
               ) : null}
               {active?.form}
               <p className="text-sm text-fg-muted">
-                {runnable} of {preview.length} selected rows will be processed, one server call each.
+                {runnable} of {preview.length} selected rows will be processed, one server call
+                each.
               </p>
               <ul className="max-h-60 space-y-1 overflow-auto text-sm">
                 {preview.map(({ item, skip }) => (
-                  <li key={item.id} className="flex flex-wrap gap-x-2 rounded-md border border-border px-2 py-1">
-                    <span className={skip ? 'text-fg-muted line-through' : 'font-medium'}>{item.label}</span>
-                    {skip ? <span className="text-warning">Skipped: {skip}</span> : <span className="text-fg-muted">Will run</span>}
+                  <li
+                    key={item.id}
+                    className="flex flex-wrap gap-x-2 rounded-md border border-border px-2 py-1"
+                  >
+                    <span className={skip ? 'text-fg-muted line-through' : 'font-medium'}>
+                      {item.label}
+                    </span>
+                    {skip ? (
+                      <span className="text-warning">Skipped: {skip}</span>
+                    ) : (
+                      <span className="text-fg-muted">Will run</span>
+                    )}
                   </li>
                 ))}
               </ul>
               {active?.requireReason ? (
-                <Field label="Reason (recorded in the audit log)" required hint="At least 3 characters.">
+                <Field
+                  label="Reason (recorded in the audit log)"
+                  required
+                  hint="At least 3 characters."
+                >
                   {({ id }) => (
-                    <Textarea id={id} value={reason} onChange={(e) => setReason(e.target.value)} className="min-h-20" />
+                    <Textarea
+                      id={id}
+                      value={reason}
+                      onChange={(e) => setReason(e.target.value)}
+                      className="min-h-20"
+                    />
                   )}
                 </Field>
               ) : null}
@@ -180,7 +207,7 @@ export function BulkActionBar({
                   disabled={
                     runnable === 0 ||
                     (active?.requireReason ? reason.trim().length < 3 : false) ||
-                    (active?.ready === false)
+                    active?.ready === false
                   }
                   onClick={() => void execute()}
                 >

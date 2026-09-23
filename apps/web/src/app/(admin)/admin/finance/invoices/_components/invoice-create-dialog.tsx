@@ -4,7 +4,20 @@ import { Plus, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { invoiceKindSchema, type InvoiceDto } from '@simplexd/contracts';
-import { Alert, Button, Dialog, DialogContent, DialogFooter, Field, Input, NativeSelect, Textarea, formatNairaString, humanize, useToast } from '@simplexd/ui';
+import {
+  Alert,
+  Button,
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  Field,
+  Input,
+  NativeSelect,
+  Textarea,
+  formatNairaString,
+  humanize,
+  useToast,
+} from '@simplexd/ui';
 import { adminFetch, errorMessage, isMfaError } from '@/lib/admin/client';
 import { lineAmountKobo, parseNairaToKobo, sumKobo } from '@/lib/admin/money';
 
@@ -16,7 +29,13 @@ interface LineDraft {
   accountCode: string;
 }
 
-const EMPTY_LINE: LineDraft = { description: '', quantity: '1', unitNaira: '', taxPercent: '', accountCode: '' };
+const EMPTY_LINE: LineDraft = {
+  description: '',
+  quantity: '1',
+  unitNaira: '',
+  taxPercent: '',
+  accountCode: '',
+};
 
 /** Tax percent ("7.5") to basis points (750); null when not a valid 0–100 value. */
 export function percentToBps(value: string): number | null {
@@ -29,7 +48,8 @@ export function percentToBps(value: string): number | null {
 /** Line validation shared with the preview total; returns a message or null. */
 export function lineProblem(line: LineDraft): string | null {
   if (!line.description.trim()) return 'Description is required';
-  if (!/^\d+(\.\d{1,3})?$/.test(line.quantity) || Number(line.quantity) <= 0) return 'Quantity must be positive (up to 3 decimals)';
+  if (!/^\d+(\.\d{1,3})?$/.test(line.quantity) || Number(line.quantity) <= 0)
+    return 'Quantity must be positive (up to 3 decimals)';
   const kobo = parseNairaToKobo(line.unitNaira);
   if (kobo === null || BigInt(kobo) < 0n) return 'Unit amount must be a naira amount';
   if (percentToBps(line.taxPercent) === null) return 'Tax must be a percentage between 0 and 100';
@@ -70,7 +90,9 @@ export function InvoiceCreateDialog({
   const problems = lines.map(lineProblem);
   const valid = Boolean(organizationId) && problems.every((p) => p === null);
   const subtotal = sumKobo(
-    lines.map((l, i) => (problems[i] ? '0' : lineAmountKobo(l.quantity, parseNairaToKobo(l.unitNaira) ?? '0'))),
+    lines.map((l, i) =>
+      problems[i] ? '0' : lineAmountKobo(l.quantity, parseNairaToKobo(l.unitNaira) ?? '0'),
+    ),
   );
   const tax = sumKobo(
     lines.map((l, i) => {
@@ -107,7 +129,10 @@ export function InvoiceCreateDialog({
           })),
         },
       });
-      toast({ title: issue ? `Invoice ${invoice.number} issued` : `Draft ${invoice.number} created`, tone: 'success' });
+      toast({
+        title: issue ? `Invoice ${invoice.number} issued` : `Draft ${invoice.number} created`,
+        tone: 'success',
+      });
       setOpen(false);
       router.push(`/admin/finance/invoices/${invoice.id}`);
       router.refresh();
@@ -124,10 +149,17 @@ export function InvoiceCreateDialog({
     <>
       <Button onClick={() => setOpen(true)}>New invoice</Button>
       <Dialog open={open} onOpenChange={(v) => !busy && setOpen(v)}>
-        <DialogContent title="New invoice" description="Manual invoice for a milestone, management fee or other agreed charge. Quote acceptance creates service invoices automatically." size="lg">
+        <DialogContent
+          title="New invoice"
+          description="Manual invoice for a milestone, management fee or other agreed charge. Quote acceptance creates service invoices automatically."
+          size="lg"
+        >
           <div className="space-y-4">
             {error ? (
-              <Alert tone="danger" title={mfa ? 'Authenticator required' : 'Could not create the invoice'}>
+              <Alert
+                tone="danger"
+                title={mfa ? 'Authenticator required' : 'Could not create the invoice'}
+              >
                 {error}
                 {mfa ? (
                   <>
@@ -143,7 +175,11 @@ export function InvoiceCreateDialog({
             <div className="grid gap-3 sm:grid-cols-2">
               <Field label="Customer organisation" required>
                 {({ id }) => (
-                  <NativeSelect id={id} value={organizationId} onChange={(e) => setOrganizationId(e.target.value)}>
+                  <NativeSelect
+                    id={id}
+                    value={organizationId}
+                    onChange={(e) => setOrganizationId(e.target.value)}
+                  >
                     <option value="">Choose</option>
                     {organizations.map((o) => (
                       <option key={o.id} value={o.id}>
@@ -164,52 +200,138 @@ export function InvoiceCreateDialog({
                   </NativeSelect>
                 )}
               </Field>
-              <Field label="Service request id (optional)" hint="Links the invoice to a request of the same organisation.">
-                {({ id, describedBy }) => <Input id={id} aria-describedby={describedBy} value={serviceRequestId} onChange={(e) => setServiceRequestId(e.target.value)} />}
+              <Field
+                label="Service request id (optional)"
+                hint="Links the invoice to a request of the same organisation."
+              >
+                {({ id, describedBy }) => (
+                  <Input
+                    id={id}
+                    aria-describedby={describedBy}
+                    value={serviceRequestId}
+                    onChange={(e) => setServiceRequestId(e.target.value)}
+                  />
+                )}
               </Field>
               <Field label="Due date (optional)">
-                {({ id }) => <Input id={id} type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />}
+                {({ id }) => (
+                  <Input
+                    id={id}
+                    type="date"
+                    value={dueDate}
+                    onChange={(e) => setDueDate(e.target.value)}
+                  />
+                )}
               </Field>
             </div>
             <fieldset className="space-y-2">
               <legend className="text-sm font-medium">Lines</legend>
               {lines.map((l, i) => (
-                <div key={i} className="grid gap-2 rounded-md border border-border p-2 sm:grid-cols-[2fr_0.7fr_1fr_0.7fr_0.8fr_auto] sm:items-end">
-                  <Field label={`Line ${i + 1} description`} required error={problems[i] && l.description ? problems[i] : undefined}>
-                    {({ id }) => <Input id={id} value={l.description} onChange={(e) => update(i, { description: e.target.value })} />}
+                <div
+                  key={i}
+                  className="grid gap-2 rounded-md border border-border p-2 sm:grid-cols-[2fr_0.7fr_1fr_0.7fr_0.8fr_auto] sm:items-end"
+                >
+                  <Field
+                    label={`Line ${i + 1} description`}
+                    required
+                    error={problems[i] && l.description ? problems[i] : undefined}
+                  >
+                    {({ id }) => (
+                      <Input
+                        id={id}
+                        value={l.description}
+                        onChange={(e) => update(i, { description: e.target.value })}
+                      />
+                    )}
                   </Field>
                   <Field label="Qty">
-                    {({ id }) => <Input id={id} inputMode="decimal" value={l.quantity} onChange={(e) => update(i, { quantity: e.target.value })} />}
+                    {({ id }) => (
+                      <Input
+                        id={id}
+                        inputMode="decimal"
+                        value={l.quantity}
+                        onChange={(e) => update(i, { quantity: e.target.value })}
+                      />
+                    )}
                   </Field>
                   <Field label="Unit (₦)" required>
-                    {({ id }) => <Input id={id} inputMode="decimal" value={l.unitNaira} onChange={(e) => update(i, { unitNaira: e.target.value })} />}
+                    {({ id }) => (
+                      <Input
+                        id={id}
+                        inputMode="decimal"
+                        value={l.unitNaira}
+                        onChange={(e) => update(i, { unitNaira: e.target.value })}
+                      />
+                    )}
                   </Field>
                   <Field label="Tax %">
-                    {({ id }) => <Input id={id} inputMode="decimal" placeholder="0" value={l.taxPercent} onChange={(e) => update(i, { taxPercent: e.target.value })} />}
+                    {({ id }) => (
+                      <Input
+                        id={id}
+                        inputMode="decimal"
+                        placeholder="0"
+                        value={l.taxPercent}
+                        onChange={(e) => update(i, { taxPercent: e.target.value })}
+                      />
+                    )}
                   </Field>
                   <Field label="Account">
-                    {({ id }) => <Input id={id} inputMode="numeric" placeholder="4000" value={l.accountCode} onChange={(e) => update(i, { accountCode: e.target.value })} />}
+                    {({ id }) => (
+                      <Input
+                        id={id}
+                        inputMode="numeric"
+                        placeholder="4000"
+                        value={l.accountCode}
+                        onChange={(e) => update(i, { accountCode: e.target.value })}
+                      />
+                    )}
                   </Field>
-                  <Button variant="ghost" size="sm" aria-label={`Remove line ${i + 1}`} disabled={lines.length === 1} onClick={() => setLines((prev) => prev.filter((_, j) => j !== i))}>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    aria-label={`Remove line ${i + 1}`}
+                    disabled={lines.length === 1}
+                    onClick={() => setLines((prev) => prev.filter((_, j) => j !== i))}
+                  >
                     <Trash2 aria-hidden="true" className="h-4 w-4" />
                   </Button>
                 </div>
               ))}
-              <Button variant="ghost" size="sm" onClick={() => setLines((prev) => [...prev, { ...EMPTY_LINE }])} disabled={lines.length >= 200}>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setLines((prev) => [...prev, { ...EMPTY_LINE }])}
+                disabled={lines.length >= 200}
+              >
                 <Plus aria-hidden="true" className="h-4 w-4" /> Add line
               </Button>
             </fieldset>
             <Field label="Notes (shown on the invoice)">
-              {({ id }) => <Textarea id={id} value={notes} onChange={(e) => setNotes(e.target.value)} className="min-h-16" maxLength={4000} />}
+              {({ id }) => (
+                <Textarea
+                  id={id}
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  className="min-h-16"
+                  maxLength={4000}
+                />
+              )}
             </Field>
             <label className="flex min-h-11 items-center gap-2 text-sm">
-              <input type="checkbox" className="h-4 w-4" checked={issue} onChange={(e) => setIssue(e.target.checked)} />
+              <input
+                type="checkbox"
+                className="h-4 w-4"
+                checked={issue}
+                onChange={(e) => setIssue(e.target.checked)}
+              />
               Issue immediately (otherwise it stays a draft you can review)
             </label>
             <p className="text-sm text-fg-muted" aria-live="polite">
               Preview: subtotal {formatNairaString(subtotal)} + tax {formatNairaString(tax)} ={' '}
-              <strong className="text-fg">{formatNairaString((BigInt(subtotal) + BigInt(tax)).toString())}</strong>. The server recomputes
-              the totals and applies the organisation&apos;s tax treatment.
+              <strong className="text-fg">
+                {formatNairaString((BigInt(subtotal) + BigInt(tax)).toString())}
+              </strong>
+              . The server recomputes the totals and applies the organisation&apos;s tax treatment.
             </p>
             <DialogFooter>
               <Button variant="secondary" onClick={() => setOpen(false)} disabled={busy}>

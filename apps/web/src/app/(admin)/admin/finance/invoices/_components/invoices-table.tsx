@@ -20,20 +20,29 @@ export function InvoicesTable({ rows, canManage }: { rows: InvoiceListRow[]; can
   const router = useRouter();
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const byId = useMemo(() => new Map(rows.map((r) => [r.id, r])), [rows]);
-  const selectedItems = rows.filter((r) => selected.has(r.id)).map((r) => ({ id: r.id, label: `${r.number} · ${r.organizationName}` }));
+  const selectedItems = rows
+    .filter((r) => selected.has(r.id))
+    .map((r) => ({ id: r.id, label: `${r.number} · ${r.organizationName}` }));
 
   const actions: BulkAction[] = canManage
     ? [
         {
           key: 'issue',
           label: 'Issue drafts',
-          description: 'Issues each selected draft invoice so the customer can pay it. Invoices that are not drafts are skipped.',
-          eligible: (item) => (byId.get(item.id)?.status === 'draft' ? null : `already ${humanize(byId.get(item.id)?.status ?? 'unknown')}`),
+          description:
+            'Issues each selected draft invoice so the customer can pay it. Invoices that are not drafts are skipped.',
+          eligible: (item) =>
+            byId.get(item.id)?.status === 'draft'
+              ? null
+              : `already ${humanize(byId.get(item.id)?.status ?? 'unknown')}`,
           run: async (item) => {
             const inv = byId.get(item.id)!;
-            const res = await adminFetch<{ status: string; number: string }>(`/api/v1/invoices/${item.id}/issue`, {
-              body: { expectedVersion: inv.version },
-            });
+            const res = await adminFetch<{ status: string; number: string }>(
+              `/api/v1/invoices/${item.id}/issue`,
+              {
+                body: { expectedVersion: inv.version },
+              },
+            );
             return `${res.number} is now ${humanize(res.status)}`;
           },
         },
@@ -85,7 +94,12 @@ export function InvoicesTable({ rows, canManage }: { rows: InvoiceListRow[]; can
           ]}
         />
       </div>
-      <BulkActionBar selected={selectedItems} actions={actions} onClear={() => setSelected(new Set())} onDone={() => router.refresh()} />
+      <BulkActionBar
+        selected={selectedItems}
+        actions={actions}
+        onClear={() => setSelected(new Set())}
+        onDone={() => router.refresh()}
+      />
       <DataTable
         caption="Invoices"
         rows={rows}
@@ -99,7 +113,13 @@ export function InvoicesTable({ rows, canManage }: { rows: InvoiceListRow[]; can
                   key: 'select',
                   header: <span className="sr-only">Select</span>,
                   cell: (r: InvoiceListRow) => (
-                    <input type="checkbox" className="h-4 w-4" aria-label={`Select ${r.number}`} checked={selected.has(r.id)} onChange={() => toggle(r.id)} />
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4"
+                      aria-label={`Select ${r.number}`}
+                      checked={selected.has(r.id)}
+                      onChange={() => toggle(r.id)}
+                    />
                   ),
                 },
               ]
@@ -109,22 +129,53 @@ export function InvoicesTable({ rows, canManage }: { rows: InvoiceListRow[]; can
             header: 'Invoice',
             cell: (r) => (
               <span>
-                <Link href={`/admin/finance/invoices/${r.id}`} className="font-medium text-primary underline">
+                <Link
+                  href={`/admin/finance/invoices/${r.id}`}
+                  className="font-medium text-primary underline"
+                >
                   {r.number}
                 </Link>
                 <span className="block text-xs text-fg-muted">{humanize(r.kind)}</span>
               </span>
             ),
           },
-          { key: 'org', header: 'Organisation', cell: (r) => <Link href={`/admin/customers/${r.organizationId}`} className="underline">{r.organizationName}</Link> },
+          {
+            key: 'org',
+            header: 'Organisation',
+            cell: (r) => (
+              <Link href={`/admin/customers/${r.organizationId}`} className="underline">
+                {r.organizationName}
+              </Link>
+            ),
+          },
           { key: 'status', header: 'Status', cell: (r) => <StatusBadge status={r.status} /> },
-          { key: 'total', header: 'Total', cell: (r) => <Money kobo={r.totalKobo} currency={r.currency} /> },
-          { key: 'balance', header: 'Balance', cell: (r) => <Money kobo={r.balanceKobo} currency={r.currency} /> },
-          { key: 'due', header: 'Due', cell: (r) => (r.dueDate ? formatDateLabel(r.dueDate) : '—'), hideOnMobile: true },
+          {
+            key: 'total',
+            header: 'Total',
+            cell: (r) => <Money kobo={r.totalKobo} currency={r.currency} />,
+          },
+          {
+            key: 'balance',
+            header: 'Balance',
+            cell: (r) => <Money kobo={r.balanceKobo} currency={r.currency} />,
+          },
+          {
+            key: 'due',
+            header: 'Due',
+            cell: (r) => (r.dueDate ? formatDateLabel(r.dueDate) : '—'),
+            hideOnMobile: true,
+          },
           {
             key: 'request',
             header: 'Request',
-            cell: (r) => (r.serviceRequestId ? <Link href={`/admin/service-requests/${r.serviceRequestId}`} className="underline">{r.serviceRequestReference ?? 'request'}</Link> : '—'),
+            cell: (r) =>
+              r.serviceRequestId ? (
+                <Link href={`/admin/service-requests/${r.serviceRequestId}`} className="underline">
+                  {r.serviceRequestReference ?? 'request'}
+                </Link>
+              ) : (
+                '—'
+              ),
             hideOnMobile: true,
           },
         ]}

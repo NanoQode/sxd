@@ -72,7 +72,7 @@ export default async function DocumentsPage({
           description="Uploads you make and files the team shares with you appear here, grouped by request, project and property."
         />
       ) : (
-        <div className="grid gap-6 lg:grid-cols-[240px_1fr]">
+        <div className="grid gap-6 lg:grid-cols-[240px_1fr] [&>*]:min-w-0">
           <nav aria-label="Folders" className="lg:sticky lg:top-4 lg:self-start">
             <ul className="flex gap-2 overflow-x-auto lg:flex-col">
               {folders.map((f) => (

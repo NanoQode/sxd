@@ -32,7 +32,14 @@ export interface InboxRow {
  */
 export async function staffInbox(
   identity: RequestIdentity,
-  filters: { status: 'open' | 'closed' | 'all'; kind?: string; mine?: boolean; q?: string; page: number; pageSize: number },
+  filters: {
+    status: 'open' | 'closed' | 'all';
+    kind?: string;
+    mine?: boolean;
+    q?: string;
+    page: number;
+    pageSize: number;
+  },
 ): Promise<{ items: InboxRow[]; total: number; readAll: boolean }> {
   requireAnyStaff(identity, ['messages.read_all', 'support.tickets.read']);
   const me = userIdOf(identity);
@@ -42,7 +49,12 @@ export async function staffInbox(
       await tx
         .select({ id: schema.conversationParticipants.conversationId })
         .from(schema.conversationParticipants)
-        .where(and(eq(schema.conversationParticipants.userId, me), isNull(schema.conversationParticipants.leftAt)))
+        .where(
+          and(
+            eq(schema.conversationParticipants.userId, me),
+            isNull(schema.conversationParticipants.leftAt),
+          ),
+        )
     ).map((r) => r.id);
     const restrictToMine = !readAll || filters.mine;
     if (restrictToMine && mineIds.length === 0) return { items: [], total: 0, readAll };
@@ -54,14 +66,19 @@ export async function staffInbox(
           : undefined,
       filters.kind ? eq(schema.conversations.kind, filters.kind as never) : undefined,
       restrictToMine ? inArray(schema.conversations.id, mineIds) : undefined,
-      filters.q ? sql`${schema.conversations.subject} ilike ${`%${filters.q.replace(/[%_]/g, '')}%`}` : undefined,
+      filters.q
+        ? sql`${schema.conversations.subject} ilike ${`%${filters.q.replace(/[%_]/g, '')}%`}`
+        : undefined,
     );
     const [totalRow] = await tx.select({ n: count() }).from(schema.conversations).where(where);
     const rows = await tx
       .select()
       .from(schema.conversations)
       .where(where)
-      .orderBy(sql`${schema.conversations.lastMessageAt} desc nulls last`, desc(schema.conversations.createdAt))
+      .orderBy(
+        sql`${schema.conversations.lastMessageAt} desc nulls last`,
+        desc(schema.conversations.createdAt),
+      )
       .limit(filters.pageSize)
       .offset((filters.page - 1) * filters.pageSize);
     const ids = rows.map((r) => r.id);
@@ -75,7 +92,12 @@ export async function staffInbox(
       })
       .from(schema.conversationParticipants)
       .innerJoin(schema.user, eq(schema.user.id, schema.conversationParticipants.userId))
-      .where(and(inArray(schema.conversationParticipants.conversationId, ids), isNull(schema.conversationParticipants.leftAt)));
+      .where(
+        and(
+          inArray(schema.conversationParticipants.conversationId, ids),
+          isNull(schema.conversationParticipants.leftAt),
+        ),
+      );
     const lastMessages = await tx
       .select({
         conversationId: schema.messages.conversationId,
@@ -91,7 +113,10 @@ export async function staffInbox(
       tx,
       rows.map((r) => r.organizationId),
     );
-    const byConv = new Map<string, Array<{ userId: string; name: string; lastReadAt: Date | null }>>();
+    const byConv = new Map<
+      string,
+      Array<{ userId: string; name: string; lastReadAt: Date | null }>
+    >();
     for (const p of participants) {
       const list = byConv.get(p.conversationId) ?? [];
       list.push({ userId: p.userId, name: p.name, lastReadAt: p.lastReadAt ?? null });
@@ -149,7 +174,10 @@ export interface ThreadView {
  * conversation directly (row-level security permits staff) and is told they
  * must join before replying.
  */
-export async function staffThread(identity: RequestIdentity, conversationId: string): Promise<ThreadView | null> {
+export async function staffThread(
+  identity: RequestIdentity,
+  conversationId: string,
+): Promise<ThreadView | null> {
   requireAnyStaff(identity, ['messages.read_all', 'support.tickets.read']);
   const me = userIdOf(identity);
   const readAll = can(identity, 'messages.read_all');
@@ -173,7 +201,10 @@ export async function staffThread(identity: RequestIdentity, conversationId: str
   }
   if (!readAll) return null;
   return staffTx(identity, async (tx) => {
-    const [c] = await tx.select().from(schema.conversations).where(eq(schema.conversations.id, conversationId));
+    const [c] = await tx
+      .select()
+      .from(schema.conversations)
+      .where(eq(schema.conversations.id, conversationId));
     if (!c) return null;
     const participants = await tx
       .select({ p: schema.conversationParticipants, name: schema.user.name })
@@ -222,7 +253,9 @@ export async function staffThread(identity: RequestIdentity, conversationId: str
         senderUserId: m.senderUserId ?? null,
         senderName: m.senderUserId ? (names.get(m.senderUserId)?.name ?? null) : null,
         body: m.body,
-        attachmentFileIds: Array.isArray(m.attachmentFileIds) ? (m.attachmentFileIds as string[]) : [],
+        attachmentFileIds: Array.isArray(m.attachmentFileIds)
+          ? (m.attachmentFileIds as string[])
+          : [],
         internalOnly: Boolean(m.internalOnly),
         createdAt: m.createdAt.toISOString(),
         editedAt: iso(m.editedAt),

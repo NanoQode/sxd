@@ -2,7 +2,18 @@
 
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { Alert, Button, Dialog, DialogContent, DialogFooter, Field, Input, Textarea, formatNairaString, useToast } from '@simplexd/ui';
+import {
+  Alert,
+  Button,
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  Field,
+  Input,
+  Textarea,
+  formatNairaString,
+  useToast,
+} from '@simplexd/ui';
 import { adminFetch, errorMessage, isMfaError } from '@/lib/admin/client';
 import { koboToNairaInput, parseNairaToKobo } from '@/lib/admin/money';
 
@@ -33,9 +44,11 @@ export function BankReceiptActions({
   const [error, setError] = useState<string | null>(null);
   const [mfa, setMfa] = useState(false);
 
-  if (!canReconcile) return <span className="text-xs text-fg-muted">Review needs finance.reconcile</span>;
+  if (!canReconcile)
+    return <span className="text-xs text-fg-muted">Review needs finance.reconcile</span>;
   const kobo = parseNairaToKobo(amount);
-  const over = kobo !== null && invoiceBalanceKobo !== null && BigInt(kobo) > BigInt(invoiceBalanceKobo);
+  const over =
+    kobo !== null && invoiceBalanceKobo !== null && BigInt(kobo) > BigInt(invoiceBalanceKobo);
 
   async function run() {
     setBusy(true);
@@ -47,9 +60,15 @@ export function BankReceiptActions({
           `/api/v1/bank-transfer-receipts/${receiptId}/confirm`,
           { body: { confirmedAmountKobo: kobo, note: note.trim() || undefined } },
         );
-        toast({ title: 'Transfer confirmed', description: `Receipt ${res.receiptNumber ?? 'pending'} · invoice ${res.invoiceStatus.replace(/_/g, ' ')}`, tone: 'success' });
+        toast({
+          title: 'Transfer confirmed',
+          description: `Receipt ${res.receiptNumber ?? 'pending'} · invoice ${res.invoiceStatus.replace(/_/g, ' ')}`,
+          tone: 'success',
+        });
       } else {
-        await adminFetch(`/api/v1/bank-transfer-receipts/${receiptId}/reject`, { body: { note: note.trim() } });
+        await adminFetch(`/api/v1/bank-transfer-receipts/${receiptId}/reject`, {
+          body: { note: note.trim() },
+        });
         toast({ title: 'Declaration rejected', tone: 'success' });
       }
       setMode(null);
@@ -74,7 +93,11 @@ export function BankReceiptActions({
       </Button>
       <Dialog open={mode !== null} onOpenChange={(v) => !busy && !v && setMode(null)}>
         <DialogContent
-          title={mode === 'confirm' ? `Confirm transfer for ${invoiceNumber ?? 'invoice'}` : 'Reject this declaration'}
+          title={
+            mode === 'confirm'
+              ? `Confirm transfer for ${invoiceNumber ?? 'invoice'}`
+              : 'Reject this declaration'
+          }
           description={
             mode === 'confirm'
               ? 'Enter the amount that actually arrived on the bank statement. Confirmation allocates it to the invoice, posts the journal and issues a receipt.'
@@ -100,21 +123,56 @@ export function BankReceiptActions({
               <>
                 <p className="text-sm">
                   Declared {formatNairaString(declaredAmountKobo)}
-                  {invoiceBalanceKobo !== null ? ` · invoice balance ${formatNairaString(invoiceBalanceKobo)}` : ''}
+                  {invoiceBalanceKobo !== null
+                    ? ` · invoice balance ${formatNairaString(invoiceBalanceKobo)}`
+                    : ''}
                 </p>
-                <Field label="Amount on the bank statement (₦)" required error={kobo === null && amount ? 'Enter a naira amount' : undefined} hint={over ? 'More than the invoice balance: the server decides whether the excess is accepted.' : undefined}>
-                  {({ id, describedBy }) => <Input id={id} aria-describedby={describedBy} inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} />}
+                <Field
+                  label="Amount on the bank statement (₦)"
+                  required
+                  error={kobo === null && amount ? 'Enter a naira amount' : undefined}
+                  hint={
+                    over
+                      ? 'More than the invoice balance: the server decides whether the excess is accepted.'
+                      : undefined
+                  }
+                >
+                  {({ id, describedBy }) => (
+                    <Input
+                      id={id}
+                      aria-describedby={describedBy}
+                      inputMode="decimal"
+                      value={amount}
+                      onChange={(e) => setAmount(e.target.value)}
+                    />
+                  )}
                 </Field>
               </>
             ) : null}
-            <Field label={mode === 'reject' ? 'Reason (sent to the customer)' : 'Note (optional)'} required={mode === 'reject'}>
-              {({ id }) => <Textarea id={id} value={note} onChange={(e) => setNote(e.target.value)} className="min-h-16" maxLength={2000} />}
+            <Field
+              label={mode === 'reject' ? 'Reason (sent to the customer)' : 'Note (optional)'}
+              required={mode === 'reject'}
+            >
+              {({ id }) => (
+                <Textarea
+                  id={id}
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  className="min-h-16"
+                  maxLength={2000}
+                />
+              )}
             </Field>
             <DialogFooter>
               <Button variant="secondary" onClick={() => setMode(null)} disabled={busy}>
                 Cancel
               </Button>
-              <Button variant={mode === 'reject' ? 'danger' : 'primary'} loading={busy} disabled={!ready} onClick={() => void run()}>
+              <Button
+                variant={mode === 'reject' ? 'danger' : 'primary'}
+                loading={busy}
+                disabled={!ready}
+                onClick={() => void run()}
+              >
                 {mode === 'confirm' ? 'Confirm and allocate' : 'Reject'}
               </Button>
             </DialogFooter>

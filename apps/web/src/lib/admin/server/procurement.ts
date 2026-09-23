@@ -20,17 +20,26 @@ import { listInvitablePartners } from './partners';
 
 type WithOrg<T> = T & { organizationName: string };
 
-async function withOrgNames<T extends { organizationId: string }>(identity: RequestIdentity, rows: T[]): Promise<Array<WithOrg<T>>> {
+async function withOrgNames<T extends { organizationId: string }>(
+  identity: RequestIdentity,
+  rows: T[],
+): Promise<Array<WithOrg<T>>> {
   const names = await staffTx(identity, (tx) =>
     orgNames(
       tx,
       rows.map((r) => r.organizationId),
     ),
   );
-  return rows.map((r) => ({ ...r, organizationName: names.get(r.organizationId) ?? r.organizationId }));
+  return rows.map((r) => ({
+    ...r,
+    organizationName: names.get(r.organizationId) ?? r.organizationId,
+  }));
 }
 
-export async function listRfqsView(identity: RequestIdentity, query: RfqListQuery): Promise<{ items: Array<WithOrg<RfqDto>>; nextCursor: string | null }> {
+export async function listRfqsView(
+  identity: RequestIdentity,
+  query: RfqListQuery,
+): Promise<{ items: Array<WithOrg<RfqDto>>; nextCursor: string | null }> {
   const page = await listRfqs(identity, query);
   return { items: await withOrgNames(identity, page.items), nextCursor: page.nextCursor };
 }
@@ -43,12 +52,25 @@ export async function listPurchaseOrdersView(
   return { items: await withOrgNames(identity, page.items), nextCursor: page.nextCursor };
 }
 
-export async function listDeliveriesView(identity: RequestIdentity, query: { status?: DeliveryDto['status']; cursor?: string; limit: number }) {
-  return listDeliveries(identity, { status: query.status, cursor: query.cursor, limit: query.limit });
+export async function listDeliveriesView(
+  identity: RequestIdentity,
+  query: { status?: DeliveryDto['status']; cursor?: string; limit: number },
+) {
+  return listDeliveries(identity, {
+    status: query.status,
+    cursor: query.cursor,
+    limit: query.limit,
+  });
 }
 
-export async function supplierDirectory(identity: RequestIdentity, query: { material?: SupplierDirectoryEntry['material'] }) {
-  return listSupplierDirectory(identity, { material: query.material as never, includeArchived: 'false' });
+export async function supplierDirectory(
+  identity: RequestIdentity,
+  query: { material?: SupplierDirectoryEntry['material'] },
+) {
+  return listSupplierDirectory(identity, {
+    material: query.material as never,
+    includeArchived: 'false',
+  });
 }
 
 export interface RfqWorkspace {
@@ -57,7 +79,13 @@ export interface RfqWorkspace {
   createdByName: string | null;
   comparison: Loaded<RfqComparisonDto>;
   orders: PurchaseOrderDto[];
-  suppliers: Array<{ userId: string; name: string; email: string; partnerType: string; verificationStatus: string }>;
+  suppliers: Array<{
+    userId: string;
+    name: string;
+    email: string;
+    partnerType: string;
+    verificationStatus: string;
+  }>;
   canManage: boolean;
 }
 
@@ -90,11 +118,19 @@ export interface PurchaseOrderWorkspace {
   canManage: boolean;
 }
 
-export async function purchaseOrderWorkspace(identity: RequestIdentity, id: string): Promise<PurchaseOrderWorkspace> {
+export async function purchaseOrderWorkspace(
+  identity: RequestIdentity,
+  id: string,
+): Promise<PurchaseOrderWorkspace> {
   const po = await getPurchaseOrder(identity, id);
   const [deliveries, orgs] = await Promise.all([
     listDeliveries(identity, { purchaseOrderId: id, limit: 100 }).then((p) => p.items),
     staffTx(identity, (tx) => orgNames(tx, [po.organizationId])),
   ]);
-  return { po, organizationName: orgs.get(po.organizationId) ?? po.organizationId, deliveries, canManage: can(identity, 'procurement.manage') };
+  return {
+    po,
+    organizationName: orgs.get(po.organizationId) ?? po.organizationId,
+    deliveries,
+    canManage: can(identity, 'procurement.manage'),
+  };
 }

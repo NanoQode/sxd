@@ -89,6 +89,11 @@ export type FormTransformName = keyof typeof FORM_TRANSFORMS;
 
 /** Replaces `{id}` (or any `{key}`) in a redirect template with fields of the API result. */
 export function fillTemplate(template: string, result: unknown): string {
-  const rec = (typeof result === 'object' && result !== null ? result : {}) as Record<string, unknown>;
-  return template.replace(/\{(\w+)\}/g, (_, key: string) => encodeURIComponent(String(rec[key] ?? '')));
+  const rec = (typeof result === 'object' && result !== null ? result : {}) as Record<
+    string,
+    unknown
+  >;
+  return template.replace(/\{(\w+)\}/g, (_, key: string) =>
+    encodeURIComponent(String(rec[key] ?? '')),
+  );
 }

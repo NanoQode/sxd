@@ -2,11 +2,27 @@
 
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { Alert, Button, Dialog, DialogContent, DialogFooter, Field, Input, Textarea, useToast } from '@simplexd/ui';
+import {
+  Alert,
+  Button,
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  Field,
+  Input,
+  Textarea,
+  useToast,
+} from '@simplexd/ui';
 import { adminFetch, errorMessage } from '@/lib/admin/client';
 
 /** Staff-only conversation (kind `internal`). Customer and partner conversations start from the customer or request page. */
-export function NewInternalConversation({ staff, me }: { staff: Array<{ userId: string; name: string }>; me: string }) {
+export function NewInternalConversation({
+  staff,
+  me,
+}: {
+  staff: Array<{ userId: string; name: string }>;
+  me: string;
+}) {
   const router = useRouter();
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
@@ -22,7 +38,12 @@ export function NewInternalConversation({ staff, me }: { staff: Array<{ userId: 
     setError(null);
     try {
       const res = await adminFetch<{ id: string }>('/api/v1/conversations', {
-        body: { kind: 'internal', subject: subject.trim(), participantUserIds: picked, initialMessage: message.trim() || undefined },
+        body: {
+          kind: 'internal',
+          subject: subject.trim(),
+          participantUserIds: picked,
+          initialMessage: message.trim() || undefined,
+        },
       });
       toast({ title: 'Conversation started', tone: 'success' });
       setOpen(false);
@@ -40,7 +61,10 @@ export function NewInternalConversation({ staff, me }: { staff: Array<{ userId: 
         New internal conversation
       </Button>
       <Dialog open={open} onOpenChange={(v) => !busy && setOpen(v)}>
-        <DialogContent title="New internal conversation" description="Staff only. You are added automatically.">
+        <DialogContent
+          title="New internal conversation"
+          description="Staff only. You are added automatically."
+        >
           <div className="space-y-3">
             {error ? (
               <Alert tone="danger" title="Could not start">
@@ -48,7 +72,14 @@ export function NewInternalConversation({ staff, me }: { staff: Array<{ userId: 
               </Alert>
             ) : null}
             <Field label="Subject" required>
-              {({ id }) => <Input id={id} value={subject} maxLength={200} onChange={(e) => setSubject(e.target.value)} />}
+              {({ id }) => (
+                <Input
+                  id={id}
+                  value={subject}
+                  maxLength={200}
+                  onChange={(e) => setSubject(e.target.value)}
+                />
+              )}
             </Field>
             <fieldset>
               <legend className="mb-1 text-sm font-medium">Participants</legend>
@@ -59,7 +90,13 @@ export function NewInternalConversation({ staff, me }: { staff: Array<{ userId: 
                       type="checkbox"
                       className="h-4 w-4"
                       checked={picked.includes(s.userId)}
-                      onChange={(e) => setPicked((prev) => (e.target.checked ? [...prev, s.userId] : prev.filter((x) => x !== s.userId)))}
+                      onChange={(e) =>
+                        setPicked((prev) =>
+                          e.target.checked
+                            ? [...prev, s.userId]
+                            : prev.filter((x) => x !== s.userId),
+                        )
+                      }
                     />
                     {s.name}
                   </label>
@@ -67,13 +104,24 @@ export function NewInternalConversation({ staff, me }: { staff: Array<{ userId: 
               </div>
             </fieldset>
             <Field label="First message">
-              {({ id }) => <Textarea id={id} value={message} onChange={(e) => setMessage(e.target.value)} className="min-h-20" />}
+              {({ id }) => (
+                <Textarea
+                  id={id}
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  className="min-h-20"
+                />
+              )}
             </Field>
             <DialogFooter>
               <Button variant="secondary" onClick={() => setOpen(false)} disabled={busy}>
                 Cancel
               </Button>
-              <Button loading={busy} disabled={subject.trim().length < 2 || picked.length === 0} onClick={() => void create()}>
+              <Button
+                loading={busy}
+                disabled={subject.trim().length < 2 || picked.length === 0}
+                onClick={() => void create()}
+              >
                 Start
               </Button>
             </DialogFooter>

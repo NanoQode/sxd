@@ -6,7 +6,15 @@ import { Alert } from '@simplexd/ui';
  * a missing authenticator links to enrolment, a disabled feature says so, and
  * anything else shows the server's message.
  */
-export function LoadError({ code, message, what }: { code: string; message: string; what: string }) {
+export function LoadError({
+  code,
+  message,
+  what,
+}: {
+  code: string;
+  message: string;
+  what: string;
+}) {
   if (code === 'mfa_required') {
     return (
       <Alert tone="warning" title={`${what} needs a verified authenticator`}>
@@ -21,8 +29,8 @@ export function LoadError({ code, message, what }: { code: string; message: stri
   if (code === 'feature_disabled') {
     return (
       <Alert tone="info" title={`${what} is switched off`}>
-        The feature flag for this module is disabled, so its endpoints answer as if it did not exist. Records created
-        while it was on are retained.{' '}
+        The feature flag for this module is disabled, so its endpoints answer as if it did not
+        exist. Records created while it was on are retained.{' '}
         <Link href="/admin/settings/feature-flags" className="font-medium underline">
           Feature flags
         </Link>

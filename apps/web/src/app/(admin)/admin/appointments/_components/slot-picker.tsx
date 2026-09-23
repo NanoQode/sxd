@@ -2,14 +2,25 @@
 
 import { DateTime } from 'luxon';
 import { useState } from 'react';
-import { appointmentKindSchema, type AppointmentKind, type AvailabilityResponse, type HoldDto } from '@simplexd/contracts';
+import {
+  appointmentKindSchema,
+  type AppointmentKind,
+  type AvailabilityResponse,
+  type HoldDto,
+} from '@simplexd/contracts';
 import { Alert, Button, Field, Input, NativeSelect, humanize } from '@simplexd/ui';
 import { adminFetch, errorMessage } from '@/lib/admin/client';
 
 const ZONE = 'Africa/Lagos';
 
 /** Builds the availability query for `days` days starting on a Lagos calendar date. */
-export function availabilityUrl(input: { kind: string; staffUserId?: string; fromDate: string; days: number; tz?: string }): string {
+export function availabilityUrl(input: {
+  kind: string;
+  staffUserId?: string;
+  fromDate: string;
+  days: number;
+  tz?: string;
+}): string {
   const from = DateTime.fromISO(input.fromDate, { zone: ZONE }).startOf('day');
   const to = from.plus({ days: input.days });
   const params = new URLSearchParams({
@@ -49,7 +60,11 @@ export function SlotPicker({
     setBusy('search');
     setError(null);
     try {
-      setAvailability(await adminFetch<AvailabilityResponse>(availabilityUrl({ kind, staffUserId: staffUserId || undefined, fromDate, days: 7 })));
+      setAvailability(
+        await adminFetch<AvailabilityResponse>(
+          availabilityUrl({ kind, staffUserId: staffUserId || undefined, fromDate, days: 7 }),
+        ),
+      );
     } catch (err) {
       setError(errorMessage(err));
     } finally {
@@ -100,7 +115,11 @@ export function SlotPicker({
         {fixedStaffUserId ? null : (
           <Field label="Staff member">
             {({ id }) => (
-              <NativeSelect id={id} value={staffUserId} onChange={(e) => setStaffUserId(e.target.value)}>
+              <NativeSelect
+                id={id}
+                value={staffUserId}
+                onChange={(e) => setStaffUserId(e.target.value)}
+              >
                 <option value="">Anyone available</option>
                 {staff.map((s) => (
                   <option key={s.userId} value={s.userId}>
@@ -112,7 +131,14 @@ export function SlotPicker({
           </Field>
         )}
         <Field label="Week starting (Lagos date)">
-          {({ id }) => <Input id={id} type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} />}
+          {({ id }) => (
+            <Input
+              id={id}
+              type="date"
+              value={fromDate}
+              onChange={(e) => setFromDate(e.target.value)}
+            />
+          )}
         </Field>
         <Button variant="secondary" loading={busy === 'search'} onClick={() => void search()}>
           Find free slots
@@ -131,19 +157,33 @@ export function SlotPicker({
               : 'This kind of appointment is not bookable.'}
           </Alert>
         ) : availability.slots.length === 0 ? (
-          <p className="text-sm text-fg-muted">No free slots in this week. Try the next week or another staff member.</p>
+          <p className="text-sm text-fg-muted">
+            No free slots in this week. Try the next week or another staff member.
+          </p>
         ) : (
           <div className="space-y-2">
             <p className="text-xs text-fg-muted">
-              {availability.durationMinutes}-minute slots, {availability.minNoticeHours} h minimum notice. Times in {availability.businessTimeZone}.
-              {availability.providerBusyIncluded ? ' Organiser calendar busy times are excluded.' : ' External calendar busy times were not available.'}
+              {availability.durationMinutes}-minute slots, {availability.minNoticeHours} h minimum
+              notice. Times in {availability.businessTimeZone}.
+              {availability.providerBusyIncluded
+                ? ' Organiser calendar busy times are excluded.'
+                : ' External calendar busy times were not available.'}
             </p>
             {[...byDay.entries()].map(([day, slots]) => (
               <fieldset key={day} className="rounded-md border border-border p-2">
-                <legend className="px-1 text-xs font-medium uppercase tracking-wide text-fg-muted">{DateTime.fromISO(day).toFormat('ccc d LLL')}</legend>
+                <legend className="px-1 text-xs font-medium uppercase tracking-wide text-fg-muted">
+                  {DateTime.fromISO(day).toFormat('ccc d LLL')}
+                </legend>
                 <div className="flex flex-wrap gap-1">
                   {slots.map((s) => (
-                    <Button key={`${s.start}-${s.staffUserId}`} size="sm" variant="secondary" loading={busy === s.start} onClick={() => void hold(s.start, s.staffUserId)} title={s.label.customer}>
+                    <Button
+                      key={`${s.start}-${s.staffUserId}`}
+                      size="sm"
+                      variant="secondary"
+                      loading={busy === s.start}
+                      onClick={() => void hold(s.start, s.staffUserId)}
+                      title={s.label.customer}
+                    >
                       {DateTime.fromISO(s.start).setZone(ZONE).toFormat('HH:mm')}
                       {staffUserId ? '' : ` · ${staffName(s.staffUserId)}`}
                     </Button>

@@ -13,7 +13,10 @@ export const dynamic = 'force-dynamic';
 
 export default async function FinanceDocumentsPage() {
   const identity = await requireStaffPage('finance.read');
-  const [credits, receipts] = await Promise.all([listCreditNotes(identity, 200), listReceipts(identity, 200)]);
+  const [credits, receipts] = await Promise.all([
+    listCreditNotes(identity, 200),
+    listReceipts(identity, 200),
+  ]);
   return (
     <div className="space-y-6">
       <PageHeader
@@ -47,11 +50,33 @@ export default async function FinanceDocumentsPage() {
           emptyMessage="No receipts yet."
           columns={[
             { key: 'n', header: 'Receipt', cell: (r) => <Mono>{r.number}</Mono> },
-            { key: 'inv', header: 'Invoice', cell: (r) => <Link href={`/admin/finance/invoices/${r.invoiceId}`} className="underline">{r.invoiceNumber || 'invoice'}</Link> },
-            { key: 'org', header: 'Organisation', cell: (r) => r.organizationName, hideOnMobile: true },
+            {
+              key: 'inv',
+              header: 'Invoice',
+              cell: (r) => (
+                <Link href={`/admin/finance/invoices/${r.invoiceId}`} className="underline">
+                  {r.invoiceNumber || 'invoice'}
+                </Link>
+              ),
+            },
+            {
+              key: 'org',
+              header: 'Organisation',
+              cell: (r) => r.organizationName,
+              hideOnMobile: true,
+            },
             { key: 'src', header: 'Source', cell: (r) => humanize(r.source) },
-            { key: 'amt', header: 'Amount', cell: (r) => <Money kobo={r.amountKobo} currency={r.currency} /> },
-            { key: 'at', header: 'Issued', cell: (r) => formatDateTimeLabel(r.issuedAt), hideOnMobile: true },
+            {
+              key: 'amt',
+              header: 'Amount',
+              cell: (r) => <Money kobo={r.amountKobo} currency={r.currency} />,
+            },
+            {
+              key: 'at',
+              header: 'Issued',
+              cell: (r) => formatDateTimeLabel(r.issuedAt),
+              hideOnMobile: true,
+            },
           ]}
         />
       </Section>
@@ -64,12 +89,34 @@ export default async function FinanceDocumentsPage() {
           emptyMessage="No credit notes."
           columns={[
             { key: 'n', header: 'Credit note', cell: (c) => <Mono>{c.number}</Mono> },
-            { key: 'inv', header: 'Invoice', cell: (c) => <Link href={`/admin/finance/invoices/${c.invoiceId}`} className="underline">{c.invoiceNumber ?? 'invoice'}</Link> },
-            { key: 'org', header: 'Organisation', cell: (c) => c.organizationName, hideOnMobile: true },
-            { key: 'amt', header: 'Amount', cell: (c) => <Money kobo={c.amountKobo} currency={c.currency} /> },
+            {
+              key: 'inv',
+              header: 'Invoice',
+              cell: (c) => (
+                <Link href={`/admin/finance/invoices/${c.invoiceId}`} className="underline">
+                  {c.invoiceNumber ?? 'invoice'}
+                </Link>
+              ),
+            },
+            {
+              key: 'org',
+              header: 'Organisation',
+              cell: (c) => c.organizationName,
+              hideOnMobile: true,
+            },
+            {
+              key: 'amt',
+              header: 'Amount',
+              cell: (c) => <Money kobo={c.amountKobo} currency={c.currency} />,
+            },
             { key: 'st', header: 'Status', cell: (c) => humanize(c.status) },
             { key: 'reason', header: 'Reason', cell: (c) => c.reason, hideOnMobile: true },
-            { key: 'at', header: 'Issued', cell: (c) => (c.issuedAt ? formatDateTimeLabel(c.issuedAt) : '—'), hideOnMobile: true },
+            {
+              key: 'at',
+              header: 'Issued',
+              cell: (c) => (c.issuedAt ? formatDateTimeLabel(c.issuedAt) : '—'),
+              hideOnMobile: true,
+            },
           ]}
         />
       </Section>

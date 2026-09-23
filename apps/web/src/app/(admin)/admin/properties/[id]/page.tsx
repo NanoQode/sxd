@@ -1,7 +1,15 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { Badge, DataTable, PageHeader, StatusBadge, formatArea, formatDateTimeLabel, humanize } from '@simplexd/ui';
+import {
+  Badge,
+  DataTable,
+  PageHeader,
+  StatusBadge,
+  formatArea,
+  formatDateTimeLabel,
+  humanize,
+} from '@simplexd/ui';
 import { requireSignedIn } from '@/lib/auth/session';
 import { can, requireAnyStaff, staffTx, orgNames } from '@/lib/admin/server/context';
 import { propertyProjects } from '@/lib/admin/server/properties';
@@ -33,7 +41,9 @@ export default async function PropertyDetailPage({ params }: { params: Promise<{
     listParcels(identity, id),
     listOwnerAuthorities(identity, id),
     propertyProjects(identity, id),
-    listNotes(identity, { entityType: 'property', entityId: id, limit: 100 }).then((p) => p.items).catch(() => []),
+    listNotes(identity, { entityType: 'property', entityId: id, limit: 100 })
+      .then((p) => p.items)
+      .catch(() => []),
     staffTx(identity, (tx) => orgNames(tx, [overview!.property.organizationId])),
   ]);
   const p = overview.property;
@@ -56,28 +66,78 @@ export default async function PropertyDetailPage({ params }: { params: Promise<{
         }
       />
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <StatTile label="Units" value={overview.units.total} hint={overview.units.occupancyPercent !== null ? `${overview.units.occupancyPercent}% occupied` : 'No units'} />
+        <StatTile
+          label="Units"
+          value={overview.units.total}
+          hint={
+            overview.units.occupancyPercent !== null
+              ? `${overview.units.occupancyPercent}% occupied`
+              : 'No units'
+          }
+        />
         <StatTile label="Parcels" value={overview.parcelsCount} />
         <StatTile label="Linked projects" value={overview.linkedProjectsCount} />
-        <StatTile label="Documents" value={overview.documents.available} hint={overview.documents.pending > 0 ? `${overview.documents.pending} awaiting scan` : 'All scanned'} tone={overview.documents.pending > 0 ? 'warning' : 'neutral'} />
+        <StatTile
+          label="Documents"
+          value={overview.documents.available}
+          hint={
+            overview.documents.pending > 0
+              ? `${overview.documents.pending} awaiting scan`
+              : 'All scanned'
+          }
+          tone={overview.documents.pending > 0 ? 'warning' : 'neutral'}
+        />
       </div>
       <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
         <div className="space-y-6">
           <Section title="Details">
             <DefinitionList
               items={[
-                { term: 'Organisation', value: <Link href={`/admin/customers/${p.organizationId}`} className="underline">{names.get(p.organizationId) ?? p.organizationId}</Link> },
-                { term: 'Address', value: p.address ? [p.address.line1, p.address.line2, p.address.city, p.address.state, p.address.country].filter(Boolean).join(', ') : null },
-                { term: 'Land area', value: p.landArea ? `${p.landArea.declaredValue} ${p.landArea.declaredUnit}${p.landArea.m2 ? ` (${formatArea(p.landArea.m2)})` : ' (not convertible)'}` : null },
+                {
+                  term: 'Organisation',
+                  value: (
+                    <Link href={`/admin/customers/${p.organizationId}`} className="underline">
+                      {names.get(p.organizationId) ?? p.organizationId}
+                    </Link>
+                  ),
+                },
+                {
+                  term: 'Address',
+                  value: p.address
+                    ? [
+                        p.address.line1,
+                        p.address.line2,
+                        p.address.city,
+                        p.address.state,
+                        p.address.country,
+                      ]
+                        .filter(Boolean)
+                        .join(', ')
+                    : null,
+                },
+                {
+                  term: 'Land area',
+                  value: p.landArea
+                    ? `${p.landArea.declaredValue} ${p.landArea.declaredUnit}${p.landArea.m2 ? ` (${formatArea(p.landArea.m2)})` : ' (not convertible)'}`
+                    : null,
+                },
                 { term: 'Floor area', value: p.floorAreaM2 ? formatArea(p.floorAreaM2) : null },
                 { term: 'Title type', value: p.titleType },
                 { term: 'Title note', value: p.titleNote },
-                { term: 'Location', value: p.location ? `${p.location.lat.toFixed(5)}, ${p.location.lon.toFixed(5)}${p.preciseLocationPublic ? '' : ' (precise location private)'}` : null },
+                {
+                  term: 'Location',
+                  value: p.location
+                    ? `${p.location.lat.toFixed(5)}, ${p.location.lon.toFixed(5)}${p.preciseLocationPublic ? '' : ' (precise location private)'}`
+                    : null,
+                },
                 { term: 'Updated', value: formatDateTimeLabel(p.updatedAt) },
               ]}
             />
           </Section>
-          <Section title={`Units (${units.length})`} description="Units are managed by the customer or through the property API; leases reference them.">
+          <Section
+            title={`Units (${units.length})`}
+            description="Units are managed by the customer or through the property API; leases reference them."
+          >
             <DataTable
               caption="Units"
               rows={units}
@@ -87,9 +147,33 @@ export default async function PropertyDetailPage({ params }: { params: Promise<{
               columns={[
                 { key: 'label', header: 'Unit', cell: (u) => u.label },
                 { key: 'type', header: 'Type', cell: (u) => u.unitType },
-                { key: 'beds', header: 'Bed / bath', cell: (u) => `${u.bedrooms ?? '—'} / ${u.bathrooms ?? '—'}` },
-                { key: 'area', header: 'Floor area', cell: (u) => (u.floorAreaM2 ? formatArea(u.floorAreaM2) : '—'), hideOnMobile: true },
-                { key: 'status', header: 'Status', cell: (u) => <StatusBadge status={u.status === 'occupied' ? 'in_progress' : u.status === 'vacant' ? 'open' : 'disabled'} label={humanize(u.status)} /> },
+                {
+                  key: 'beds',
+                  header: 'Bed / bath',
+                  cell: (u) => `${u.bedrooms ?? '—'} / ${u.bathrooms ?? '—'}`,
+                },
+                {
+                  key: 'area',
+                  header: 'Floor area',
+                  cell: (u) => (u.floorAreaM2 ? formatArea(u.floorAreaM2) : '—'),
+                  hideOnMobile: true,
+                },
+                {
+                  key: 'status',
+                  header: 'Status',
+                  cell: (u) => (
+                    <StatusBadge
+                      status={
+                        u.status === 'occupied'
+                          ? 'in_progress'
+                          : u.status === 'vacant'
+                            ? 'open'
+                            : 'disabled'
+                      }
+                      label={humanize(u.status)}
+                    />
+                  ),
+                },
               ]}
             />
           </Section>
@@ -103,8 +187,17 @@ export default async function PropertyDetailPage({ params }: { params: Promise<{
               columns={[
                 { key: 'ref', header: 'Reference', cell: (x) => x.reference ?? '—' },
                 { key: 'survey', header: 'Survey plan', cell: (x) => x.surveyPlanRef ?? '—' },
-                { key: 'area', header: 'Area', cell: (x) => (x.area ? `${x.area.declaredValue} ${x.area.declaredUnit}` : '—') },
-                { key: 'boundary', header: 'Boundary', cell: (x) => (x.boundary ? `${x.boundary.coordinates[0]?.length ?? 0} points` : 'not drawn') },
+                {
+                  key: 'area',
+                  header: 'Area',
+                  cell: (x) => (x.area ? `${x.area.declaredValue} ${x.area.declaredUnit}` : '—'),
+                },
+                {
+                  key: 'boundary',
+                  header: 'Boundary',
+                  cell: (x) =>
+                    x.boundary ? `${x.boundary.coordinates[0]?.length ?? 0} points` : 'not drawn',
+                },
               ]}
             />
           </Section>
@@ -129,7 +222,10 @@ export default async function PropertyDetailPage({ params }: { params: Promise<{
           </Section>
         </div>
         <div className="space-y-6">
-          <Section title="Owner authority" description="Verification needs rentals.manage. A verified authority lapses at its expiry date.">
+          <Section
+            title="Owner authority"
+            description="Verification needs rentals.manage. A verified authority lapses at its expiry date."
+          >
             {authorities.length === 0 ? (
               <p className="text-fg-muted">No authority document submitted.</p>
             ) : (
@@ -146,7 +242,10 @@ export default async function PropertyDetailPage({ params }: { params: Promise<{
                       {a.expiresAt ? ` · expires ${formatDateTimeLabel(a.expiresAt)}` : ''}
                     </p>
                     {a.authorityDocumentFileId ? (
-                      <a href={`/api/v1/files/${a.authorityDocumentFileId}/download`} className="text-xs underline">
+                      <a
+                        href={`/api/v1/files/${a.authorityDocumentFileId}/download`}
+                        className="text-xs underline"
+                      >
                         Open document
                       </a>
                     ) : null}
@@ -158,7 +257,12 @@ export default async function PropertyDetailPage({ params }: { params: Promise<{
                           label="Verify"
                           variant="primary"
                           reasonKey="note"
-                          confirm={{ title: 'Verify owner authority?', description: 'Confirms the document authorises this owner. Add a note for the record.', confirmLabel: 'Verify' }}
+                          confirm={{
+                            title: 'Verify owner authority?',
+                            description:
+                              'Confirms the document authorises this owner. Add a note for the record.',
+                            confirmLabel: 'Verify',
+                          }}
                           successMessage="Authority verified"
                         />
                         <ApiAction
@@ -166,7 +270,12 @@ export default async function PropertyDetailPage({ params }: { params: Promise<{
                           label="Reject"
                           variant="danger"
                           reasonKey="reason"
-                          confirm={{ title: 'Reject owner authority?', requireReason: true, confirmLabel: 'Reject', tone: 'danger' }}
+                          confirm={{
+                            title: 'Reject owner authority?',
+                            requireReason: true,
+                            confirmLabel: 'Reject',
+                            tone: 'danger',
+                          }}
                           successMessage="Authority rejected"
                         />
                       </div>

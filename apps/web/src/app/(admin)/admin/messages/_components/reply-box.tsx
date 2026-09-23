@@ -10,7 +10,15 @@ import { adminFetch, errorMessage } from '@/lib/admin/client';
  * only; customers and partners never receive them. Opening the thread marks
  * it read for a participant.
  */
-export function ReplyBox({ conversationId, amParticipant, closed }: { conversationId: string; amParticipant: boolean; closed: boolean }) {
+export function ReplyBox({
+  conversationId,
+  amParticipant,
+  closed,
+}: {
+  conversationId: string;
+  amParticipant: boolean;
+  closed: boolean;
+}) {
   const router = useRouter();
   const { toast } = useToast();
   const [body, setBody] = useState('');
@@ -20,7 +28,9 @@ export function ReplyBox({ conversationId, amParticipant, closed }: { conversati
 
   useEffect(() => {
     if (!amParticipant) return;
-    void adminFetch(`/api/v1/conversations/${conversationId}/read`, { body: {} }).catch(() => undefined);
+    void adminFetch(`/api/v1/conversations/${conversationId}/read`, { body: {} }).catch(
+      () => undefined,
+    );
   }, [conversationId, amParticipant]);
 
   async function send() {
@@ -40,9 +50,17 @@ export function ReplyBox({ conversationId, amParticipant, closed }: { conversati
     }
   }
 
-  if (closed) return <p className="text-sm text-fg-muted">This conversation is closed; replies are disabled.</p>;
+  if (closed)
+    return (
+      <p className="text-sm text-fg-muted">This conversation is closed; replies are disabled.</p>
+    );
   if (!amParticipant) {
-    return <p className="text-sm text-fg-muted">You can read this conversation because your role reads all messages. Join it (Participants) to reply.</p>;
+    return (
+      <p className="text-sm text-fg-muted">
+        You can read this conversation because your role reads all messages. Join it (Participants)
+        to reply.
+      </p>
+    );
   }
   return (
     <div className="space-y-2 rounded-md border border-dashed border-border p-3">
@@ -66,7 +84,12 @@ export function ReplyBox({ conversationId, amParticipant, closed }: { conversati
         )}
       </Field>
       <label className="flex min-h-11 items-center gap-2 text-sm">
-        <input type="checkbox" className="h-4 w-4" checked={internalOnly} onChange={(e) => setInternalOnly(e.target.checked)} />
+        <input
+          type="checkbox"
+          className="h-4 w-4"
+          checked={internalOnly}
+          onChange={(e) => setInternalOnly(e.target.checked)}
+        />
         Internal note: visible to staff participants only
       </label>
       <Button size="sm" loading={busy} disabled={!body.trim()} onClick={() => void send()}>

@@ -46,15 +46,33 @@ export default async function ChartOfAccountsPage() {
             header: 'Account',
             cell: (a) => (
               <span>
-                {a.name} {a.isControl ? <Badge tone="info">control</Badge> : null} {!a.active ? <Badge>inactive</Badge> : null}
-                {a.description ? <span className="block text-xs text-fg-muted">{a.description}</span> : null}
+                {a.name} {a.isControl ? <Badge tone="info">control</Badge> : null}{' '}
+                {!a.active ? <Badge>inactive</Badge> : null}
+                {a.description ? (
+                  <span className="block text-xs text-fg-muted">{a.description}</span>
+                ) : null}
               </span>
             ),
           },
-          { key: 'type', header: 'Type', cell: (a) => `${humanize(a.type)}${a.subtype ? ` · ${humanize(a.subtype)}` : ''}`, hideOnMobile: true },
+          {
+            key: 'type',
+            header: 'Type',
+            cell: (a) => `${humanize(a.type)}${a.subtype ? ` · ${humanize(a.subtype)}` : ''}`,
+            hideOnMobile: true,
+          },
           { key: 'nb', header: 'Normal', cell: (a) => a.normalBalance, hideOnMobile: true },
-          { key: 'dr', header: 'Debits', cell: (a) => <Money kobo={a.debitKobo} />, hideOnMobile: true },
-          { key: 'cr', header: 'Credits', cell: (a) => <Money kobo={a.creditKobo} />, hideOnMobile: true },
+          {
+            key: 'dr',
+            header: 'Debits',
+            cell: (a) => <Money kobo={a.debitKobo} />,
+            hideOnMobile: true,
+          },
+          {
+            key: 'cr',
+            header: 'Credits',
+            cell: (a) => <Money kobo={a.creditKobo} />,
+            hideOnMobile: true,
+          },
           { key: 'bal', header: 'Balance', cell: (a) => <Money kobo={a.balanceKobo} /> },
         ]}
       />

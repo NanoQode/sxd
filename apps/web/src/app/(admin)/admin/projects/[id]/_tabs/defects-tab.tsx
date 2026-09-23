@@ -1,4 +1,8 @@
-import { accountablePartySchema, defectSeveritySchema, defectStatusSchema } from '@simplexd/contracts';
+import {
+  accountablePartySchema,
+  defectSeveritySchema,
+  defectStatusSchema,
+} from '@simplexd/contracts';
 import { Badge, formatDateLabel, humanize } from '@simplexd/ui';
 import type { RequestIdentity } from '@/lib/auth/session';
 import type { ProjectShell } from '@/lib/admin/server/projects';
@@ -17,9 +21,21 @@ const NEXT: Record<string, string[]> = {
   closed: [],
 };
 
-const SEVERITY_TONE: Record<string, 'neutral' | 'warning' | 'danger' | 'info'> = { cosmetic: 'neutral', minor: 'info', major: 'warning', critical: 'danger', safety: 'danger' };
+const SEVERITY_TONE: Record<string, 'neutral' | 'warning' | 'danger' | 'info'> = {
+  cosmetic: 'neutral',
+  minor: 'info',
+  major: 'warning',
+  critical: 'danger',
+  safety: 'danger',
+};
 
-export async function DefectsTab({ identity, shell }: { identity: RequestIdentity; shell: ProjectShell }) {
+export async function DefectsTab({
+  identity,
+  shell,
+}: {
+  identity: RequestIdentity;
+  shell: ProjectShell;
+}) {
   const p = shell.overview.project;
   const { items } = await listDefects(identity, p.id, { limit: 100, unresolvedOnly: false });
   const columns = defectStatusSchema.options;
@@ -38,8 +54,28 @@ export async function DefectsTab({ identity, shell }: { identity: RequestIdentit
             successMessage="Defect raised"
             fields={[
               { name: 'title', label: 'Title', required: true, wide: true },
-              { name: 'severity', label: 'Severity', type: 'select', required: true, options: defectSeveritySchema.options.map((s) => ({ value: s, label: humanize(s) })), defaultValue: 'minor' },
-              { name: 'accountableParty', label: 'Accountable party', type: 'select', required: true, options: accountablePartySchema.options.map((s) => ({ value: s, label: humanize(s) })), defaultValue: 'unknown' },
+              {
+                name: 'severity',
+                label: 'Severity',
+                type: 'select',
+                required: true,
+                options: defectSeveritySchema.options.map((s) => ({
+                  value: s,
+                  label: humanize(s),
+                })),
+                defaultValue: 'minor',
+              },
+              {
+                name: 'accountableParty',
+                label: 'Accountable party',
+                type: 'select',
+                required: true,
+                options: accountablePartySchema.options.map((s) => ({
+                  value: s,
+                  label: humanize(s),
+                })),
+                defaultValue: 'unknown',
+              },
               { name: 'locationNote', label: 'Location', emptyAs: 'null' },
               { name: 'dueDate', label: 'Due date', type: 'date', emptyAs: 'null' },
               { name: 'description', label: 'Description', type: 'textarea', emptyAs: 'null' },
@@ -58,16 +94,25 @@ export async function DefectsTab({ identity, shell }: { identity: RequestIdentit
               </p>
               <ul className="space-y-2">
                 {cards.map((d) => (
-                  <li key={d.id} className="rounded-md border border-border bg-bg-elevated p-2 text-sm">
+                  <li
+                    key={d.id}
+                    className="rounded-md border border-border bg-bg-elevated p-2 text-sm"
+                  >
                     <p className="font-medium">
                       #{d.number ?? '?'} {d.title}
                     </p>
                     <p className="flex flex-wrap gap-1 text-xs">
-                      <Badge tone={SEVERITY_TONE[d.severity] ?? 'neutral'}>{humanize(d.severity)}</Badge>
+                      <Badge tone={SEVERITY_TONE[d.severity] ?? 'neutral'}>
+                        {humanize(d.severity)}
+                      </Badge>
                       <Badge tone="neutral">{humanize(d.accountableParty)}</Badge>
-                      {d.dueDate ? <span className="text-fg-muted">due {formatDateLabel(d.dueDate)}</span> : null}
+                      {d.dueDate ? (
+                        <span className="text-fg-muted">due {formatDateLabel(d.dueDate)}</span>
+                      ) : null}
                     </p>
-                    {d.locationNote ? <p className="text-xs text-fg-muted">{d.locationNote}</p> : null}
+                    {d.locationNote ? (
+                      <p className="text-xs text-fg-muted">{d.locationNote}</p>
+                    ) : null}
                     {canManage || canVerify ? (
                       <div className="mt-1 flex flex-wrap gap-1">
                         {(NEXT[d.status] ?? [])
@@ -78,8 +123,17 @@ export async function DefectsTab({ identity, shell }: { identity: RequestIdentit
                               path={`/api/v1/defects/${d.id}/transitions`}
                               label={humanize(to)}
                               variant="ghost"
-                              body={{ to }} reasonKey="reason"
-                              confirm={to === 'disputed' || to === 'closed' ? { title: `Move #${d.number} to ${humanize(to)}?`, requireReason: to === 'disputed', confirmLabel: humanize(to) } : undefined}
+                              body={{ to }}
+                              reasonKey="reason"
+                              confirm={
+                                to === 'disputed' || to === 'closed'
+                                  ? {
+                                      title: `Move #${d.number} to ${humanize(to)}?`,
+                                      requireReason: to === 'disputed',
+                                      confirmLabel: humanize(to),
+                                    }
+                                  : undefined
+                              }
                               successMessage={`Defect ${humanize(to)}`}
                             />
                           ))}

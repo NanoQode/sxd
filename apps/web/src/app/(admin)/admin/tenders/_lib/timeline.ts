@@ -2,7 +2,11 @@ import { DateTime } from 'luxon';
 import { validateTenderTimeline, type TenderStageTimestamps } from '@simplexd/domain/timelines';
 
 /** Tender timeline fields in canonical order (shared by the server page and the client form). */
-export const TIMELINE_FIELDS: Array<{ key: keyof TenderStageTimestamps; label: string; required?: boolean }> = [
+export const TIMELINE_FIELDS: Array<{
+  key: keyof TenderStageTimestamps;
+  label: string;
+  required?: boolean;
+}> = [
   { key: 'releaseAt', label: 'Release', required: true },
   { key: 'siteVisitAt', label: 'Site visit' },
   { key: 'questionCutoffAt', label: 'Question cut-off' },
@@ -36,7 +40,9 @@ export function isoToWallClock(iso: string | null | undefined, zone: string): st
 }
 
 /** Human messages for timeline problems, e.g. "Question cut-off must be after Site visit." */
-export function timelineMessages(values: Partial<Record<keyof TenderStageTimestamps, string | null>>): string[] {
+export function timelineMessages(
+  values: Partial<Record<keyof TenderStageTimestamps, string | null>>,
+): string[] {
   const result = validateTenderTimeline({
     releaseAt: values.releaseAt ?? '',
     siteVisitAt: values.siteVisitAt ?? null,

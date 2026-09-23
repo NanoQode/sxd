@@ -24,13 +24,21 @@ export interface ProjectShell {
   overview: ProjectOverviewDto;
   organizationName: string;
   staff: StaffAssigneeDto[];
-  partners: Array<{ userId: string; name: string; partnerType: string; verificationStatus: string }>;
+  partners: Array<{
+    userId: string;
+    name: string;
+    partnerType: string;
+    verificationStatus: string;
+  }>;
   assignments: Awaited<ReturnType<typeof listAssignments>>['items'];
   permissions: ProjectPermissions;
 }
 
 /** Header data shared by every project tab. */
-export async function projectShell(identity: RequestIdentity, projectId: string): Promise<ProjectShell> {
+export async function projectShell(
+  identity: RequestIdentity,
+  projectId: string,
+): Promise<ProjectShell> {
   const overview = await getProjectOverview(identity, projectId);
   const [names, staff, partners, assignments] = await Promise.all([
     staffTx(identity, (tx) => orgNames(tx, [overview.project.organizationId])),
@@ -42,7 +50,12 @@ export async function projectShell(identity: RequestIdentity, projectId: string)
     overview,
     organizationName: names.get(overview.project.organizationId) ?? overview.project.organizationId,
     staff,
-    partners: partners.map((p) => ({ userId: p.userId, name: p.name, partnerType: p.partnerType, verificationStatus: p.verificationStatus })),
+    partners: partners.map((p) => ({
+      userId: p.userId,
+      name: p.name,
+      partnerType: p.partnerType,
+      verificationStatus: p.verificationStatus,
+    })),
     assignments,
     permissions: {
       manage: can(identity, 'projects.manage'),

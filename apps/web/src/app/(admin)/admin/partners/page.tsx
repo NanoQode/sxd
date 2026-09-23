@@ -1,6 +1,14 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { Badge, DataTable, PageHeader, StatusBadge, buttonVariants, formatDateLabel, humanize } from '@simplexd/ui';
+import {
+  Badge,
+  DataTable,
+  PageHeader,
+  StatusBadge,
+  buttonVariants,
+  formatDateLabel,
+  humanize,
+} from '@simplexd/ui';
 import { requireSignedIn } from '@/lib/auth/session';
 import { attempt, can } from '@/lib/admin/server/context';
 import { listPartners } from '@/lib/admin/server/partners';
@@ -13,10 +21,36 @@ import { StatTile } from '../_components/bits';
 export const metadata: Metadata = { title: 'Partners' };
 export const dynamic = 'force-dynamic';
 
-const PARTNER_TYPES = ['contractor', 'inspector', 'surveyor', 'legal', 'architect', 'quantity_surveyor', 'valuer', 'vendor', 'agent', 'other'];
+const PARTNER_TYPES = [
+  'contractor',
+  'inspector',
+  'surveyor',
+  'legal',
+  'architect',
+  'quantity_surveyor',
+  'valuer',
+  'vendor',
+  'agent',
+  'other',
+];
 const VERIFICATION = ['unverified', 'pending', 'verified', 'expired', 'rejected'];
 
-export default async function PartnersPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
+/** Verifications that lapse within `days` (or already have). */
+function countExpiringWithin(
+  rows: Array<{ verificationExpiresAt: string | null }>,
+  days: number,
+): number {
+  const limit = Date.now() + days * 86_400_000;
+  return rows.filter(
+    (r) => r.verificationExpiresAt && new Date(r.verificationExpiresAt).getTime() < limit,
+  ).length;
+}
+
+export default async function PartnersPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | undefined>>;
+}) {
   const identity = await requireSignedIn('/admin/partners');
   const raw = await searchParams;
   const loaded = await attempt(() =>
@@ -26,11 +60,11 @@ export default async function PartnersPage({ searchParams }: { searchParams: Pro
       q: raw.q?.trim() || undefined,
     }),
   );
-  if (!loaded.ok) return <LoadError code={loaded.code} message={loaded.message} what="The partner directory" />;
+  if (!loaded.ok)
+    return <LoadError code={loaded.code} message={loaded.message} what="The partner directory" />;
   const rows = loaded.value;
   const canVerify = can(identity, 'access.partners.verify');
-  const now = Date.now();
-  const expiringSoon = rows.filter((r) => r.verificationExpiresAt && new Date(r.verificationExpiresAt).getTime() - now < 30 * 86_400_000).length;
+  const expiringSoon = countExpiringWithin(rows, 30);
   return (
     <div className="space-y-6">
       <PageHeader
@@ -46,15 +80,44 @@ export default async function PartnersPage({ searchParams }: { searchParams: Pro
       />
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <StatTile label="Partners" value={rows.length} />
-        <StatTile label="Verified" value={rows.filter((r) => r.verificationStatus === 'verified').length} tone="success" href="/admin/partners?status=verified" />
-        <StatTile label="Awaiting verification" value={rows.filter((r) => r.verificationStatus === 'pending').length} tone="warning" href={canVerify ? '/admin/access/partners' : '/admin/partners?status=pending'} />
-        <StatTile label="Verification expiring ≤ 30 days" value={expiringSoon} tone={expiringSoon > 0 ? 'warning' : 'neutral'} />
+        <StatTile
+          label="Verified"
+          value={rows.filter((r) => r.verificationStatus === 'verified').length}
+          tone="success"
+          href="/admin/partners?status=verified"
+        />
+        <StatTile
+          label="Awaiting verification"
+          value={rows.filter((r) => r.verificationStatus === 'pending').length}
+          tone="warning"
+          href={canVerify ? '/admin/access/partners' : '/admin/partners?status=pending'}
+        />
+        <StatTile
+          label="Verification expiring ≤ 30 days"
+          value={expiringSoon}
+          tone={expiringSoon > 0 ? 'warning' : 'neutral'}
+        />
       </div>
       <SavedViewsBar tableKey="partners" />
       <FilterBar>
-        <FilterSelect name="type" label="Type" value={raw.type} options={PARTNER_TYPES.map((t) => ({ value: t, label: humanize(t) }))} />
-        <FilterSelect name="status" label="Verification" value={raw.status} options={VERIFICATION.map((t) => ({ value: t, label: humanize(t) }))} />
-        <FilterInput name="q" label="Search" value={raw.q} placeholder="Name, email or trading name" />
+        <FilterSelect
+          name="type"
+          label="Type"
+          value={raw.type}
+          options={PARTNER_TYPES.map((t) => ({ value: t, label: humanize(t) }))}
+        />
+        <FilterSelect
+          name="status"
+          label="Verification"
+          value={raw.status}
+          options={VERIFICATION.map((t) => ({ value: t, label: humanize(t) }))}
+        />
+        <FilterInput
+          name="q"
+          label="Search"
+          value={raw.q}
+          placeholder="Name, email or trading name"
+        />
       </FilterBar>
       <div className="flex justify-end">
         <ExportCsvButton
@@ -102,29 +165,80 @@ export default async function PartnersPage({ searchParams }: { searchParams: Pro
             header: 'Verification',
             cell: (r) => (
               <span>
-                <StatusBadge status={r.verificationStatus === 'verified' ? 'verified' : r.verificationStatus === 'pending' ? 'pending' : r.verificationStatus === 'rejected' ? 'rejected' : r.verificationStatus === 'expired' ? 'expired' : 'draft'} label={humanize(r.verificationStatus)} />
+                <StatusBadge
+                  status={
+                    r.verificationStatus === 'verified'
+                      ? 'verified'
+                      : r.verificationStatus === 'pending'
+                        ? 'pending'
+                        : r.verificationStatus === 'rejected'
+                          ? 'rejected'
+                          : r.verificationStatus === 'expired'
+                            ? 'expired'
+                            : 'draft'
+                  }
+                  label={humanize(r.verificationStatus)}
+                />
                 <span className="block text-xs text-fg-muted">
                   {r.verifiedAt ? `checked ${formatDateLabel(r.verifiedAt)}` : 'no check recorded'}
-                  {r.verificationExpiresAt ? ` · until ${formatDateLabel(r.verificationExpiresAt)}` : ''}
+                  {r.verificationExpiresAt
+                    ? ` · until ${formatDateLabel(r.verificationExpiresAt)}`
+                    : ''}
                   {` · ${r.credentialCount} credential${r.credentialCount === 1 ? '' : 's'}`}
                 </span>
               </span>
             ),
           },
-          { key: 'cov', header: 'Coverage / availability', cell: (r) => `${r.coverageStateCount} state${r.coverageStateCount === 1 ? '' : 's'} · ${humanize(r.availabilityStatus)}`, hideOnMobile: true },
-          { key: 'conf', header: 'Conflicts', cell: (r) => (r.conflictDisclosure ? <span title={r.conflictDisclosure}><Badge tone="warning">disclosed</Badge></span> : <span className="text-xs text-fg-muted">none recorded</span>), hideOnMobile: true },
+          {
+            key: 'cov',
+            header: 'Coverage / availability',
+            cell: (r) =>
+              `${r.coverageStateCount} state${r.coverageStateCount === 1 ? '' : 's'} · ${humanize(r.availabilityStatus)}`,
+            hideOnMobile: true,
+          },
+          {
+            key: 'conf',
+            header: 'Conflicts',
+            cell: (r) =>
+              r.conflictDisclosure ? (
+                <span title={r.conflictDisclosure}>
+                  <Badge tone="warning">disclosed</Badge>
+                </span>
+              ) : (
+                <span className="text-xs text-fg-muted">none recorded</span>
+              ),
+            hideOnMobile: true,
+          },
           {
             key: 'work',
             header: 'Assignments',
             cell: (r) => (
-              <Link href={`/admin/assignments?view=list&assignee=${encodeURIComponent(r.userId)}`} className="underline">
+              <Link
+                href={`/admin/assignments?view=list&assignee=${encodeURIComponent(r.userId)}`}
+                className="underline"
+              >
                 {r.assignments.active} active · {r.assignments.completed} done
               </Link>
             ),
           },
-          { key: 'perf', header: 'Declined / revoked', cell: (r) => `${r.assignments.declined} / ${r.assignments.revoked}`, hideOnMobile: true },
-          { key: 'tenders', header: 'Tenders', cell: (r) => `${r.tenderInvitations} invited · ${r.bids.submitted} bids · ${r.bids.awarded} won` },
-          { key: 'rating', header: 'Rating', cell: (r) => r.ratingAverage ?? <span className="text-fg-subtle">none</span>, hideOnMobile: true },
+          {
+            key: 'perf',
+            header: 'Declined / revoked',
+            cell: (r) => `${r.assignments.declined} / ${r.assignments.revoked}`,
+            hideOnMobile: true,
+          },
+          {
+            key: 'tenders',
+            header: 'Tenders',
+            cell: (r) =>
+              `${r.tenderInvitations} invited · ${r.bids.submitted} bids · ${r.bids.awarded} won`,
+          },
+          {
+            key: 'rating',
+            header: 'Rating',
+            cell: (r) => r.ratingAverage ?? <span className="text-fg-subtle">none</span>,
+            hideOnMobile: true,
+          },
         ]}
       />
     </div>

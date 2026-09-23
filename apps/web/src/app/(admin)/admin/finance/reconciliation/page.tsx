@@ -1,7 +1,14 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { paymentAttemptStatusSchema } from '@simplexd/contracts';
-import { Badge, DataTable, PageHeader, StatusBadge, formatDateTimeLabel, humanize } from '@simplexd/ui';
+import {
+  Badge,
+  DataTable,
+  PageHeader,
+  StatusBadge,
+  formatDateTimeLabel,
+  humanize,
+} from '@simplexd/ui';
 import { requireStaffPage } from '@/lib/auth/session';
 import { attempt, can } from '@/lib/admin/server/context';
 import { reconciliationView } from '@/lib/admin/server/finance';
@@ -15,7 +22,11 @@ import { Mono } from '../../_components/bits';
 export const metadata: Metadata = { title: 'Reconciliation' };
 export const dynamic = 'force-dynamic';
 
-export default async function ReconciliationPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
+export default async function ReconciliationPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | undefined>>;
+}) {
   const identity = await requireStaffPage('finance.read');
   const raw = await searchParams;
   const status = paymentAttemptStatusSchema.safeParse(raw.status).success ? raw.status : undefined;
@@ -28,7 +39,16 @@ export default async function ReconciliationPage({ searchParams }: { searchParam
         description="Gateway payments that are not settled yet, and exceptions found by the reconciliation job (amount or currency mismatches, reversals, chargebacks). Verification asks the provider again; a mismatch never settles an invoice."
       />
       <FilterBar>
-        <FilterSelect name="status" label="Attempt status" value={status} allLabel="Open (initialized, pending, uncertain, reversed)" options={paymentAttemptStatusSchema.options.map((s) => ({ value: s, label: humanize(s) }))} />
+        <FilterSelect
+          name="status"
+          label="Attempt status"
+          value={status}
+          allLabel="Open (initialized, pending, uncertain, reversed)"
+          options={paymentAttemptStatusSchema.options.map((s) => ({
+            value: s,
+            label: humanize(s),
+          }))}
+        />
       </FilterBar>
       {!loaded.ok ? (
         <LoadError code={loaded.code} message={loaded.message} what="Reconciliation" />
@@ -43,18 +63,58 @@ export default async function ReconciliationPage({ searchParams }: { searchParam
               emptyMessage="Nothing is waiting for verification."
               columns={[
                 { key: 'ref', header: 'Reference', cell: (a) => <Mono>{a.reference}</Mono> },
-                { key: 'inv', header: 'Invoice', cell: (a) => <Link href={`/admin/finance/invoices/${a.invoiceId}`} className="underline">open</Link> },
+                {
+                  key: 'inv',
+                  header: 'Invoice',
+                  cell: (a) => (
+                    <Link href={`/admin/finance/invoices/${a.invoiceId}`} className="underline">
+                      open
+                    </Link>
+                  ),
+                },
                 { key: 'st', header: 'Status', cell: (a) => <StatusBadge status={a.status} /> },
-                { key: 'amt', header: 'Amount', cell: (a) => <Money kobo={a.amountKobo} currency={a.currency} /> },
-                { key: 'env', header: 'Provider', cell: (a) => <span>{a.provider} · {a.environment}{a.developmentAdapter ? <Badge tone="warning" className="ml-1">dev adapter</Badge> : null}</span>, hideOnMobile: true },
-                { key: 'when', header: 'Started', cell: (a) => formatDateTimeLabel(a.createdAt), hideOnMobile: true },
-                { key: 'why', header: 'Note', cell: (a) => a.failureReason ?? '—', hideOnMobile: true },
+                {
+                  key: 'amt',
+                  header: 'Amount',
+                  cell: (a) => <Money kobo={a.amountKobo} currency={a.currency} />,
+                },
+                {
+                  key: 'env',
+                  header: 'Provider',
+                  cell: (a) => (
+                    <span>
+                      {a.provider} · {a.environment}
+                      {a.developmentAdapter ? (
+                        <Badge tone="warning" className="ml-1">
+                          dev adapter
+                        </Badge>
+                      ) : null}
+                    </span>
+                  ),
+                  hideOnMobile: true,
+                },
+                {
+                  key: 'when',
+                  header: 'Started',
+                  cell: (a) => formatDateTimeLabel(a.createdAt),
+                  hideOnMobile: true,
+                },
+                {
+                  key: 'why',
+                  header: 'Note',
+                  cell: (a) => a.failureReason ?? '—',
+                  hideOnMobile: true,
+                },
                 {
                   key: 'act',
                   header: 'Action',
                   cell: (a) =>
                     canReconcile && ['initialized', 'pending', 'uncertain'].includes(a.status) ? (
-                      <ApiAction path={`/api/v1/payment-attempts/${a.id}/verify`} label="Verify now" successMessage="Verification recorded" />
+                      <ApiAction
+                        path={`/api/v1/payment-attempts/${a.id}/verify`}
+                        label="Verify now"
+                        successMessage="Verification recorded"
+                      />
                     ) : (
                       '—'
                     ),
@@ -62,7 +122,10 @@ export default async function ReconciliationPage({ searchParams }: { searchParam
               ]}
             />
           </Section>
-          <Section title={`Exceptions (${loaded.value.exceptions.length})`} description="Each exception names the record to inspect. Corrections are new records (credit notes, reversals), never edits.">
+          <Section
+            title={`Exceptions (${loaded.value.exceptions.length})`}
+            description="Each exception names the record to inspect. Corrections are new records (credit notes, reversals), never edits."
+          >
             <DataTable
               caption="Reconciliation exceptions"
               rows={loaded.value.exceptions}
@@ -73,8 +136,33 @@ export default async function ReconciliationPage({ searchParams }: { searchParam
                 { key: 'period', header: 'Run', cell: (e) => e.periodStart },
                 { key: 'code', header: 'Code', cell: (e) => <Mono>{e.code}</Mono> },
                 { key: 'msg', header: 'Message', cell: (e) => e.message },
-                { key: 'entity', header: 'Record', cell: (e) => (e.entityType === 'payment_attempt' || e.entityType === 'invoice') && e.entityId ? (e.entityType === 'invoice' ? <Link href={`/admin/finance/invoices/${e.entityId}`} className="underline">invoice</Link> : <Mono>{e.entityId.slice(0, 8)}</Mono>) : e.entityType ?? '—' },
-                { key: 'st', header: 'Run status', cell: (e) => <StatusBadge status={e.status === 'exceptions' ? 'open' : e.status} label={humanize(e.status)} /> },
+                {
+                  key: 'entity',
+                  header: 'Record',
+                  cell: (e) =>
+                    (e.entityType === 'payment_attempt' || e.entityType === 'invoice') &&
+                    e.entityId ? (
+                      e.entityType === 'invoice' ? (
+                        <Link href={`/admin/finance/invoices/${e.entityId}`} className="underline">
+                          invoice
+                        </Link>
+                      ) : (
+                        <Mono>{e.entityId.slice(0, 8)}</Mono>
+                      )
+                    ) : (
+                      (e.entityType ?? '—')
+                    ),
+                },
+                {
+                  key: 'st',
+                  header: 'Run status',
+                  cell: (e) => (
+                    <StatusBadge
+                      status={e.status === 'exceptions' ? 'open' : e.status}
+                      label={humanize(e.status)}
+                    />
+                  ),
+                },
               ]}
             />
           </Section>

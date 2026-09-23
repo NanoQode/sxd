@@ -17,11 +17,18 @@ export const dynamic = 'force-dynamic';
 const PAGE_SIZE = 25;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-export default async function InvoicesPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
+export default async function InvoicesPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | undefined>>;
+}) {
   const identity = await requireStaffPage('finance.read');
   const raw = await searchParams;
-  const status = invoiceStatusSchema.safeParse(raw.status).success ? (raw.status as InvoiceDto['status']) : undefined;
-  const serviceRequestId = raw.serviceRequestId && UUID.test(raw.serviceRequestId) ? raw.serviceRequestId : undefined;
+  const status = invoiceStatusSchema.safeParse(raw.status).success
+    ? (raw.status as InvoiceDto['status'])
+    : undefined;
+  const serviceRequestId =
+    raw.serviceRequestId && UUID.test(raw.serviceRequestId) ? raw.serviceRequestId : undefined;
   const [page, organizations] = await Promise.all([
     listInvoicesView(identity, {
       status,
@@ -42,13 +49,36 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Pro
       <PageHeader
         title="Invoices"
         description="Draft, issued, partially paid, paid, overdue and void. Credit notes and refunds are separate records; a void invoice keeps its history."
-        actions={<InvoiceCreateDialog organizations={organizations} defaultOrganizationId={raw.organizationId} defaultServiceRequestId={serviceRequestId} canManage={canManage} />}
+        actions={
+          <InvoiceCreateDialog
+            organizations={organizations}
+            defaultOrganizationId={raw.organizationId}
+            defaultServiceRequestId={serviceRequestId}
+            canManage={canManage}
+          />
+        }
       />
       <SavedViewsBar tableKey="finance-invoices" />
       <FilterBar>
-        <FilterSelect name="status" label="Status" value={status} options={invoiceStatusSchema.options.map((s) => ({ value: s, label: humanize(s) }))} />
-        <FilterSelect name="organizationId" label="Organisation" value={raw.organizationId} allLabel="All organisations" options={organizations.map((o) => ({ value: o.id, label: o.name }))} />
-        <FilterInput name="serviceRequestId" label="Service request id" value={serviceRequestId} placeholder="UUID" />
+        <FilterSelect
+          name="status"
+          label="Status"
+          value={status}
+          options={invoiceStatusSchema.options.map((s) => ({ value: s, label: humanize(s) }))}
+        />
+        <FilterSelect
+          name="organizationId"
+          label="Organisation"
+          value={raw.organizationId}
+          allLabel="All organisations"
+          options={organizations.map((o) => ({ value: o.id, label: o.name }))}
+        />
+        <FilterInput
+          name="serviceRequestId"
+          label="Service request id"
+          value={serviceRequestId}
+          placeholder="UUID"
+        />
       </FilterBar>
       <InvoicesTable rows={page.items} canManage={canManage} />
       <nav aria-label="Invoice pages" className="flex flex-wrap items-center gap-3 text-sm">

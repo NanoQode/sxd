@@ -13,6 +13,7 @@ import {
   EmptyState,
   PageHeader,
   StatusBadge,
+  formatDateLabel,
   formatDateTimeLabel,
   humanize,
 } from '@simplexd/ui';
@@ -22,12 +23,19 @@ import {
   customerCapabilities,
   type CustomerCapabilities,
 } from '@/lib/portal/server/permissions';
+import { koboToNaira } from '@/lib/portal/format';
 import {
   buildPropertyTimeline,
   listPropertyProjects,
   listPropertyVisits,
 } from '@/lib/portal/server/properties';
+import {
+  loadOwnerStatements,
+  loadPropertyLeases,
+  loadPropertyWorkOrders,
+} from '@/lib/portal/server/rentals';
 import { FilesPanel } from '@/components/portal/files-panel';
+import { NewWorkOrderButton, WorkOrderActions } from '@/components/portal/maintenance';
 import { NotesPanel } from '@/components/portal/notes-panel';
 import {
   EditPropertyButton,
@@ -47,7 +55,17 @@ import { listUnits } from '@/server/properties/units';
 export const metadata: Metadata = { title: 'Property' };
 export const dynamic = 'force-dynamic';
 
-const TABS = ['overview', 'units', 'projects', 'documents', 'visits', 'timeline'] as const;
+const TABS = [
+  'overview',
+  'units',
+  'leases',
+  'maintenance',
+  'statements',
+  'projects',
+  'documents',
+  'visits',
+  'timeline',
+] as const;
 
 const TITLE_COPY: Record<string, string> = {
   unknown: 'Title has not been checked. This is what we know today, not a verdict.',
@@ -115,6 +133,9 @@ export default async function PropertyDetailPage({
                 <Badge tone="neutral">{overview.units.total}</Badge>
               ) : undefined,
           },
+          { value: 'leases', label: 'Leases' },
+          { value: 'maintenance', label: 'Maintenance' },
+          { value: 'statements', label: 'Statements' },
           {
             value: 'projects',
             label: 'Projects',
@@ -140,6 +161,13 @@ export default async function PropertyDetailPage({
       ) : null}
       {tab === 'units' ? (
         <UnitsTab identity={identity} propertyId={id} caps={caps} zone={zone} />
+      ) : null}
+      {tab === 'leases' ? <LeasesTab identity={identity} propertyId={id} zone={zone} /> : null}
+      {tab === 'maintenance' ? (
+        <MaintenanceTab identity={identity} propertyId={id} caps={caps} zone={zone} />
+      ) : null}
+      {tab === 'statements' ? (
+        <StatementsTab identity={identity} propertyId={id} zone={zone} />
       ) : null}
       {tab === 'projects' ? <ProjectsTab identity={identity} propertyId={id} zone={zone} /> : null}
       {tab === 'documents' ? (
@@ -173,7 +201,7 @@ async function OverviewTab({
     listNotes(identity, { entityType: 'property', entityId: p.id, limit: 50 }),
   ]);
   return (
-    <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
+    <div className="grid gap-6 lg:grid-cols-[2fr_1fr] [&>*]:min-w-0">
       <div className="space-y-6">
         <Card>
           <CardHeader>
@@ -537,6 +565,332 @@ async function TimelineTab({
       </CardHeader>
       <CardContent>
         <Timeline events={events} zone={zone} />
+      </CardContent>
+    </Card>
+  );
+}
+
+async function LeasesTab({
+  identity,
+  propertyId,
+  zone,
+}: {
+  identity: RequestIdentity;
+  propertyId: string;
+  zone: string;
+}) {
+  const [leases, units] = await Promise.all([
+    loadPropertyLeases(identity, propertyId),
+    listUnits(identity, propertyId),
+  ]);
+  const unitLabels = new Map(units.map((u) => [u.id, u.label]));
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Leases</CardTitle>
+        <CardDescription>
+          Tenancies on this property with what has been charged, paid and is overdue. Balances come
+          from settled payments only; a declared transfer counts once finance confirms it.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        {leases.length === 0 ? (
+          <EmptyState
+            title="No leases"
+            description="Leases appear here once the property management team sets up a tenancy on this property."
+          />
+        ) : (
+          <DataTable
+            caption="Leases"
+            rows={leases}
+            rowKey={(l) => l.lease.id}
+            rowLabel={(l) =>
+              l.lease.unitId
+                ? (unitLabels.get(l.lease.unitId) ?? 'Unit')
+                : `Lease from ${l.lease.startDate}`
+            }
+            columns={[
+              {
+                key: 'unit',
+                header: 'Unit',
+                cell: (l) => (
+                  <span className="flex flex-col">
+                    <span className="font-medium">
+                      {l.lease.unitId
+                        ? (unitLabels.get(l.lease.unitId) ?? 'Unit')
+                        : 'Whole property'}
+                    </span>
+                    <span className="text-xs text-fg-muted">{humanize(l.lease.kind)}</span>
+                  </span>
+                ),
+              },
+              {
+                key: 'tenant',
+                header: 'Tenant',
+                cell: (l) =>
+                  l.lease.parties
+                    .filter((p) => p.role === 'tenant' && !p.revokedAt)
+                    .map((p) => p.name)
+                    .join(', ') || '—',
+              },
+              {
+                key: 'status',
+                header: 'Status',
+                cell: (l) => <StatusBadge status={l.lease.status} />,
+              },
+              {
+                key: 'rent',
+                header: 'Rent',
+                cell: (l) =>
+                  `${koboToNaira(l.lease.rentAmountKobo)} / ${humanize(l.lease.rentPeriod).toLowerCase()}`,
+                className: 'text-right',
+              },
+              {
+                key: 'term',
+                header: 'Term',
+                cell: (l) =>
+                  `${formatDateLabel(l.lease.startDate, zone)} – ${l.lease.endDate ? formatDateLabel(l.lease.endDate, zone) : 'open'}`,
+                hideOnMobile: true,
+              },
+              {
+                key: 'balance',
+                header: 'Outstanding',
+                cell: (l) =>
+                  l.balance ? (
+                    <span className="flex flex-col text-right">
+                      <span>{koboToNaira(l.balance.outstandingKobo)}</span>
+                      {l.balance.arrears.totalOutstandingKobo !== '0' ? (
+                        <span className="text-xs text-danger">
+                          {koboToNaira(l.balance.arrears.totalOutstandingKobo)} overdue
+                        </span>
+                      ) : null}
+                    </span>
+                  ) : (
+                    <span className="text-xs text-fg-muted">Not available</span>
+                  ),
+                className: 'text-right',
+              },
+              {
+                key: 'next',
+                header: 'Next due',
+                cell: (l) =>
+                  l.balance?.nextDue
+                    ? `${koboToNaira(l.balance.nextDue.amountKobo)} on ${formatDateLabel(l.balance.nextDue.dueDate, zone)}`
+                    : '—',
+                hideOnMobile: true,
+              },
+            ]}
+          />
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+async function MaintenanceTab({
+  identity,
+  propertyId,
+  caps,
+  zone,
+}: {
+  identity: RequestIdentity;
+  propertyId: string;
+  caps: CustomerCapabilities;
+  zone: string;
+}) {
+  const [orders, units] = await Promise.all([
+    loadPropertyWorkOrders(identity, propertyId),
+    listUnits(identity, propertyId),
+  ]);
+  const unitLabels = new Map(units.map((u) => [u.id, u.label]));
+  const awaiting = orders.filter((o) => o.status === 'awaiting_approval').length;
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <CardTitle>Maintenance</CardTitle>
+            <CardDescription>
+              Requests from you and your tenants. Costs are incurred only after you approve the
+              estimate; verified work is charged to the property on your statement.
+              {awaiting > 0
+                ? ` ${awaiting} estimate${awaiting === 1 ? '' : 's'} await your approval.`
+                : ''}
+            </CardDescription>
+          </div>
+          <NewWorkOrderButton
+            propertyId={propertyId}
+            units={units.map((u) => ({ id: u.id, label: u.label }))}
+            canRequest={caps.requestMaintenance}
+            cannotRequestReason={capabilityNote(caps, 'Requesting maintenance')}
+          />
+        </div>
+      </CardHeader>
+      <CardContent>
+        {orders.length === 0 ? (
+          <EmptyState
+            title="No maintenance requests"
+            description="Raise a request for anything that needs fixing; the team triages it and asks for your approval before spending."
+          />
+        ) : (
+          <DataTable
+            caption="Maintenance requests"
+            rows={orders}
+            rowKey={(o) => o.id}
+            rowLabel={(o) => o.title}
+            columns={[
+              {
+                key: 'title',
+                header: 'Request',
+                cell: (o) => (
+                  <span className="flex flex-col">
+                    <span className="font-medium">{o.title}</span>
+                    <span className="text-xs text-fg-muted">
+                      {humanize(o.category)}
+                      {o.unitId ? ` · ${unitLabels.get(o.unitId) ?? 'unit'}` : ''}
+                      {o.leaseId ? ' · reported by tenant' : ''}
+                      {o.evidence.length > 0 ? ` · ${o.evidence.length} evidence file(s)` : ''}
+                    </span>
+                  </span>
+                ),
+              },
+              {
+                key: 'status',
+                header: 'Status',
+                cell: (o) => (
+                  <span className="flex flex-col gap-1">
+                    <StatusBadge status={o.status} />
+                    {o.slaBreached ? <Badge tone="danger">Response overdue</Badge> : null}
+                  </span>
+                ),
+              },
+              {
+                key: 'priority',
+                header: 'Priority',
+                cell: (o) => (
+                  <Badge
+                    tone={
+                      o.priority === 'urgent'
+                        ? 'danger'
+                        : o.priority === 'high'
+                          ? 'warning'
+                          : 'neutral'
+                    }
+                  >
+                    {humanize(o.priority)}
+                  </Badge>
+                ),
+                hideOnMobile: true,
+              },
+              {
+                key: 'cost',
+                header: 'Cost',
+                cell: (o) =>
+                  o.actualCostKobo
+                    ? `${koboToNaira(o.actualCostKobo)} actual`
+                    : o.approvedAmountKobo
+                      ? `${koboToNaira(o.approvedAmountKobo)} approved`
+                      : o.estimateKobo
+                        ? `${koboToNaira(o.estimateKobo)} estimate`
+                        : 'No estimate yet',
+                className: 'text-right',
+              },
+              {
+                key: 'who',
+                header: 'Assigned',
+                cell: (o) => o.assigneeName ?? '—',
+                hideOnMobile: true,
+              },
+              {
+                key: 'due',
+                header: 'Respond by',
+                cell: (o) => (o.slaDueAt ? formatDateTimeLabel(o.slaDueAt, zone) : '—'),
+                hideOnMobile: true,
+              },
+              {
+                key: 'actions',
+                header: <span className="sr-only">Actions</span>,
+                mobileLabel: 'Actions',
+                cell: (o) => (
+                  <WorkOrderActions
+                    workOrder={o}
+                    canApprove={caps.approveMaintenanceCosts}
+                    canRequest={caps.requestMaintenance}
+                  />
+                ),
+              },
+            ]}
+          />
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+async function StatementsTab({
+  identity,
+  propertyId,
+  zone,
+}: {
+  identity: RequestIdentity;
+  propertyId: string;
+  zone: string;
+}) {
+  const page = await loadOwnerStatements(identity, { propertyId });
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Owner statements</CardTitle>
+        <CardDescription>
+          Period statements for this property once finance reconciles them.{' '}
+          <Link href="/portal/properties/statements" className="underline">
+            All statements
+          </Link>
+          .
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        {page.items.length === 0 ? (
+          <p className="text-sm text-fg-muted">
+            No reconciled statements for this property yet. Statements are produced when SimplexD
+            manages the property and a period closes.
+          </p>
+        ) : (
+          <DataTable
+            caption="Statements for this property"
+            rows={page.items}
+            rowKey={(s) => s.id}
+            rowLabel={(s) => `Statement ${s.periodStart} to ${s.periodEnd}`}
+            columns={[
+              {
+                key: 'period',
+                header: 'Period',
+                cell: (s) => (
+                  <Link
+                    href={`/portal/properties/statements/${s.id}`}
+                    className="font-medium text-primary underline"
+                  >
+                    {formatDateLabel(s.periodStart, zone)} – {formatDateLabel(s.periodEnd, zone)}
+                  </Link>
+                ),
+              },
+              {
+                key: 'collected',
+                header: 'Collected',
+                cell: (s) => koboToNaira(s.totals.collectedKobo),
+                className: 'text-right',
+                hideOnMobile: true,
+              },
+              {
+                key: 'net',
+                header: 'Net payable',
+                cell: (s) => koboToNaira(s.totals.netKobo),
+                className: 'text-right',
+              },
+              { key: 'status', header: 'Status', cell: (s) => <StatusBadge status={s.status} /> },
+            ]}
+          />
+        )}
       </CardContent>
     </Card>
   );

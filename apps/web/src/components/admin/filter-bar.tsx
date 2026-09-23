@@ -31,7 +31,10 @@ export function FilterBar({
             .map(([k, v]) => <input key={k} type="hidden" name={k} value={v} />)
         : null}
       {children}
-      <button type="submit" className="sx-touch rounded-md border border-border-strong px-4 text-sm font-medium hover:bg-bg-sunken">
+      <button
+        type="submit"
+        className="sx-touch rounded-md border border-border-strong px-4 text-sm font-medium hover:bg-bg-sunken"
+      >
         {submitLabel}
       </button>
     </form>
@@ -93,7 +96,15 @@ export function FilterInput({
   );
 }
 
-export function FilterCheckbox({ name, label, checked }: { name: string; label: string; checked: boolean }) {
+export function FilterCheckbox({
+  name,
+  label,
+  checked,
+}: {
+  name: string;
+  label: string;
+  checked: boolean;
+}) {
   return (
     <label className="flex h-11 items-center gap-2 text-sm">
       <input type="checkbox" name={name} value="1" defaultChecked={checked} className="h-4 w-4" />

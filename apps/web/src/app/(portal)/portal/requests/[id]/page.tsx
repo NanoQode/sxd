@@ -129,7 +129,7 @@ export default async function RequestDetailPage({
       />
 
       {tab === 'overview' ? (
-        <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
+        <div className="grid gap-6 lg:grid-cols-[2fr_1fr] [&>*]:min-w-0">
           <div className="space-y-6">
             <Card>
               <CardHeader>
