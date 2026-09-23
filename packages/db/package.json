@@ -1,0 +1,43 @@
+{
+  "name": "@simplexd/db",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Drizzle schema, SQL migrations, row-level security, database client, tenant-scoped transactions, seed importer and bootstrap commands.",
+  "exports": {
+    ".": "./src/index.ts",
+    "./schema": "./src/schema/index.ts",
+    "./client": "./src/client.ts",
+    "./tenant": "./src/tenant.ts",
+    "./seed": "./src/seed/index.ts",
+    "./testing": "./src/testing/index.ts"
+  },
+  "scripts": {
+    "generate": "drizzle-kit generate",
+    "migrate": "tsx src/cli/migrate.ts",
+    "seed": "tsx src/cli/seed.ts",
+    "import-markets": "tsx src/cli/import-markets.ts",
+    "bootstrap-admin": "tsx src/cli/bootstrap-admin.ts",
+    "check-rls": "tsx src/cli/check-rls.ts",
+    "typecheck": "tsc -p tsconfig.json",
+    "lint": "eslint src",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@simplexd/domain": "workspace:*",
+    "@simplexd/contracts": "workspace:*",
+    "drizzle-orm": "0.45.3",
+    "pg": "8.23.0",
+    "zod": "4.6.5"
+  },
+  "devDependencies": {
+    "@types/pg": "8.23.1",
+    "dotenv": "18.0.3",
+    "drizzle-kit": "0.31.11",
+    "eslint": "9.39.5",
+    "tsx": "4.23.15",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.70.1",
+    "vitest": "5.0.1"
+  }
+}

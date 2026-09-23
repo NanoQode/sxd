@@ -1,0 +1,36 @@
+{
+  "name": "@simplexd/domain",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Pure business logic: money, calculators, ranking policy, timelines, state machines and authorization policies. No I/O.",
+  "exports": {
+    ".": "./src/index.ts",
+    "./money": "./src/money/index.ts",
+    "./finance": "./src/finance/index.ts",
+    "./ranking": "./src/ranking/index.ts",
+    "./timelines": "./src/timelines/index.ts",
+    "./workflow": "./src/workflow/index.ts",
+    "./authz": "./src/authz/index.ts",
+    "./ledger": "./src/ledger/index.ts",
+    "./evidence": "./src/evidence/index.ts",
+    "./services": "./src/services/index.ts",
+    "./time": "./src/time/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "lint": "eslint src",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "luxon": "3.7.2",
+    "zod": "4.6.5"
+  },
+  "devDependencies": {
+    "@types/luxon": "3.7.5",
+    "eslint": "9.39.5",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.70.1",
+    "vitest": "5.0.1"
+  }
+}

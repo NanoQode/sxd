@@ -1,0 +1,129 @@
+import type { Logger } from 'pino';
+import {
+  claimOutboxBatch,
+  enqueueJob,
+  markOutboxFailed,
+  markOutboxPublished,
+  type Database,
+  type OutboxRow,
+} from '@simplexd/db';
+
+/**
+ * Maps business events to jobs. Each mapping is idempotent through the job
+ * dedupe key, so replaying an outbox row never duplicates side effects.
+ */
+export type OutboxRoute = (
+  event: OutboxRow,
+) => Array<{
+  type: string;
+  queue?: string;
+  payload?: Record<string, unknown>;
+  dedupeSuffix?: string;
+}>;
+
+const routes: Record<string, OutboxRoute> = {
+  'lead.created': () => [{ type: 'notifications.lead_created', queue: 'notifications' }],
+  'service_request.transitioned': (e) => [
+    {
+      type: 'notifications.engagement_transition',
+      queue: 'notifications',
+      payload: { ...(e.payload as object) },
+    },
+  ],
+  'quote.issued': () => [{ type: 'notifications.quote_issued', queue: 'notifications' }],
+  'invoice.issued': () => [{ type: 'notifications.invoice_issued', queue: 'notifications' }],
+  'payment.verified': () => [
+    { type: 'finance.post_payment', queue: 'payments' },
+    { type: 'notifications.payment_receipt', queue: 'notifications' },
+  ],
+  'payment.event_received': () => [{ type: 'payments.process_provider_event', queue: 'payments' }],
+  'refund.approved': () => [{ type: 'payments.submit_refund', queue: 'payments' }],
+  'appointment.confirmed': () => [
+    { type: 'calendar.sync_appointment', queue: 'calendar' },
+    { type: 'notifications.booking_confirmation', queue: 'notifications' },
+  ],
+  'appointment.rescheduled': () => [
+    { type: 'calendar.sync_appointment', queue: 'calendar' },
+    { type: 'notifications.visit_change', queue: 'notifications' },
+  ],
+  'appointment.cancelled': () => [
+    { type: 'calendar.cancel_appointment', queue: 'calendar' },
+    { type: 'notifications.visit_change', queue: 'notifications' },
+  ],
+  'report.released': () => [{ type: 'notifications.report_ready', queue: 'notifications' }],
+  'change_order.submitted': () => [
+    { type: 'notifications.urgent_decision', queue: 'notifications' },
+  ],
+  'file.uploaded': () => [{ type: 'media.scan_and_process', queue: 'media' }],
+  'tender.published': () => [{ type: 'notifications.tender_invitation', queue: 'notifications' }],
+  'award.published': () => [{ type: 'notifications.award_published', queue: 'notifications' }],
+  'market_data.published': () => [{ type: 'market_data.invalidate_caches', queue: 'default' }],
+  'notification.requested': () => [{ type: 'notifications.deliver', queue: 'notifications' }],
+  'integration.test_requested': () => [{ type: 'integrations.run_test', queue: 'default' }],
+  'work_order.transitioned': () => [{ type: 'notifications.work_order', queue: 'notifications' }],
+  'invitation.created': () => [{ type: 'notifications.invitation', queue: 'notifications' }],
+  'setup_token.issued': () => [{ type: 'notifications.admin_setup', queue: 'notifications' }],
+};
+
+export function routeOutboxEvent(event: OutboxRow): ReturnType<OutboxRoute> {
+  const route = routes[event.eventType];
+  return route ? route(event) : [];
+}
+
+export function runOutboxRelay(opts: {
+  db: Database;
+  log: Logger;
+  intervalMs: number;
+  batch?: number;
+}): () => void {
+  let stopped = false;
+  let timer: NodeJS.Timeout | null = null;
+  const loop = async () => {
+    if (stopped) return;
+    try {
+      const processed = await opts.db.transaction(async (tx) => {
+        const events = await claimOutboxBatch(tx, opts.batch ?? 50);
+        const done: number[] = [];
+        for (const event of events) {
+          try {
+            for (const target of routeOutboxEvent(event)) {
+              await enqueueJob(tx, {
+                type: target.type,
+                queue: target.queue ?? 'default',
+                payload: {
+                  event: {
+                    id: event.id,
+                    type: event.eventType,
+                    aggregateType: event.aggregateType,
+                    aggregateId: event.aggregateId,
+                    payload: event.payload,
+                  },
+                  ...(target.payload ?? {}),
+                },
+                organizationId: event.organizationId,
+                actorUserId: event.actorUserId,
+                correlationId: event.correlationId,
+                dedupeKey: `outbox:${event.id}:${target.type}${target.dedupeSuffix ?? ''}`,
+              });
+            }
+            done.push(event.id);
+          } catch (err) {
+            await markOutboxFailed(tx, event.id, err);
+            opts.log.error({ err, outboxId: event.id }, 'outbox routing failed');
+          }
+        }
+        await markOutboxPublished(tx, done);
+        return events.length;
+      });
+      timer = setTimeout(() => void loop(), processed > 0 ? 0 : opts.intervalMs);
+    } catch (err) {
+      opts.log.error({ err }, 'outbox relay failed');
+      timer = setTimeout(() => void loop(), opts.intervalMs * 5);
+    }
+  };
+  void loop();
+  return () => {
+    stopped = true;
+    if (timer) clearTimeout(timer);
+  };
+}

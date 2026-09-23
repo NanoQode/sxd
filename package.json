@@ -1,0 +1,50 @@
+{
+  "name": "simplexd",
+  "version": "0.1.0",
+  "private": true,
+  "description": "SimplexD property services and oversight platform: public website, customer portal, admin console, partner workspace, API and worker.",
+  "license": "UNLICENSED",
+  "packageManager": "pnpm@10.33.0",
+  "engines": {
+    "node": ">=22.0.0",
+    "pnpm": ">=10.0.0"
+  },
+  "scripts": {
+    "dev": "pnpm --filter @simplexd/web dev",
+    "dev:worker": "pnpm --filter @simplexd/worker dev",
+    "build": "pnpm --filter @simplexd/web build && pnpm --filter @simplexd/worker build",
+    "start": "pnpm --filter @simplexd/web start",
+    "start:worker": "pnpm --filter @simplexd/worker start",
+    "typecheck": "pnpm -r --workspace-concurrency=2 typecheck",
+    "lint": "pnpm -r lint",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "vitest run",
+    "test:unit": "vitest run --project domain --project contracts --project integrations --project ui --project web-unit",
+    "test:integration": "vitest run --project db --project web-integration --project worker",
+    "test:e2e": "pnpm --filter @simplexd/e2e test",
+    "test:a11y": "pnpm --filter @simplexd/e2e test:a11y",
+    "db:generate": "pnpm --filter @simplexd/db generate",
+    "db:migrate": "pnpm --filter @simplexd/db migrate",
+    "db:seed": "pnpm --filter @simplexd/db seed",
+    "db:import-markets": "pnpm --filter @simplexd/db import-markets",
+    "db:bootstrap-admin": "pnpm --filter @simplexd/db bootstrap-admin",
+    "db:check-rls": "pnpm --filter @simplexd/db check-rls",
+    "openapi": "pnpm --filter @simplexd/contracts openapi",
+    "backup": "bash ops/backup/backup.sh",
+    "restore": "bash ops/backup/restore.sh",
+    "ci": "pnpm typecheck && pnpm lint && pnpm test && pnpm build"
+  },
+  "devDependencies": {
+    "@types/node": "22.20.4",
+    "@vitest/coverage-v8": "5.0.1",
+    "eslint": "9.39.5",
+    "prettier": "3.9.8",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "tsx": "4.23.15",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.70.1",
+    "vitest": "5.0.1"
+  }
+}

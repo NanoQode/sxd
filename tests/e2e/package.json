@@ -1,0 +1,18 @@
+{
+  "name": "@simplexd/e2e",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Playwright end-to-end journeys and automated accessibility checks against a running web app.",
+  "scripts": {
+    "test": "playwright test",
+    "test:a11y": "playwright test --grep @a11y",
+    "typecheck": "tsc -p tsconfig.json",
+    "lint": "echo 'no lint for e2e'"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "4.13.0",
+    "@playwright/test": "1.63.0",
+    "typescript": "5.9.3"
+  }
+}

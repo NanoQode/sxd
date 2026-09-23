@@ -1,0 +1,38 @@
+# dependencies
+node_modules/
+.pnpm-store/
+
+# builds
+.next/
+out/
+dist/
+build/
+*.tsbuildinfo
+next-env.d.ts
+
+# environment (never commit real secrets)
+.env
+.env.*
+!.env.example
+!.env.test.example
+
+# test artifacts
+coverage/
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+
+# local runtime data
+.data/
+.local/
+var/
+*.log
+uploads-dev/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json

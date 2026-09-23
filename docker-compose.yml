@@ -1,0 +1,87 @@
+# Local development dependencies only. The application itself runs with
+# `pnpm dev` / `pnpm dev:worker` on the host. For a full server deployment see
+# deploy/docker-compose.prod.yml and docs/operations/deployment.md.
+name: simplexd-dev
+
+services:
+  db:
+    image: postgis/postgis:16-3.4
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: simplexd_owner
+      POSTGRES_PASSWORD: ${POSTGRES_OWNER_PASSWORD:-simplexd_owner_local}
+      POSTGRES_DB: simplexd_dev
+      SIMPLEXD_APP_PASSWORD: ${SIMPLEXD_APP_PASSWORD:-simplexd_app_local}
+      SIMPLEXD_EXTRA_DATABASES: simplexd_test
+    ports:
+      - '${POSTGRES_PORT:-5432}:5432'
+    volumes:
+      - db-data:/var/lib/postgresql/data
+      - ./deploy/db/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U simplexd_owner -d simplexd_dev']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ['redis-server', '--appendonly', 'yes', '--save', '60', '1']
+    ports:
+      - '${REDIS_PORT:-6379}:6379'
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  minio:
+    image: minio/minio:RELEASE.2025-09-07T16-13-09Z
+    restart: unless-stopped
+    command: server /data --console-address ':9001'
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-simplexd}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-simplexd_minio_local}
+    ports:
+      - '${MINIO_PORT:-9000}:9000'
+      - '${MINIO_CONSOLE_PORT:-9001}:9001'
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ['CMD', 'mc', 'ready', 'local']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  minio-init:
+    image: minio/mc:RELEASE.2025-08-13T08-35-41Z
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set local http://minio:9000 ${MINIO_ROOT_USER:-simplexd} ${MINIO_ROOT_PASSWORD:-simplexd_minio_local} &&
+      mc mb --ignore-existing local/simplexd-private &&
+      mc mb --ignore-existing local/simplexd-quarantine &&
+      mc anonymous set none local/simplexd-private &&
+      mc anonymous set none local/simplexd-quarantine
+      "
+
+  mailpit:
+    # Development-only SMTP sink. Never used in production mode.
+    image: axllent/mailpit:v1.27
+    restart: unless-stopped
+    ports:
+      - '${MAILPIT_SMTP_PORT:-1025}:1025'
+      - '${MAILPIT_UI_PORT:-8025}:8025'
+    environment:
+      MP_SMTP_AUTH_ACCEPT_ANY: 1
+      MP_SMTP_AUTH_ALLOW_INSECURE: 1
+
+volumes:
+  db-data:
+  redis-data:
+  minio-data:

@@ -1,0 +1,29 @@
+{
+  "name": "@simplexd/contracts",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Zod validation schemas, API contracts, error codes and the OpenAPI generator shared by web, worker and tests.",
+  "exports": {
+    ".": "./src/index.ts",
+    "./errors": "./src/errors.ts",
+    "./openapi": "./src/openapi/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "lint": "eslint src",
+    "test": "vitest run",
+    "openapi": "tsx src/openapi/cli.ts"
+  },
+  "dependencies": {
+    "@simplexd/domain": "workspace:*",
+    "zod": "4.6.5"
+  },
+  "devDependencies": {
+    "eslint": "9.39.5",
+    "tsx": "4.23.15",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.70.1",
+    "vitest": "5.0.1"
+  }
+}

@@ -1,0 +1,3612 @@
+{
+  "schema_version": "1.0.0",
+  "prepared_at": "2026-09-22",
+  "country": "Nigeria",
+  "selection_method": "36 state capitals plus Abuja and 13 editorially selected additional markets; approved national-coverage approach, not a measured top-50 rank",
+  "coordinate_system": "WGS84 EPSG:4326; GeoJSON longitude,latitude",
+  "status": "research_seed_not_complete_financial_dataset",
+  "default_financial_ranking_enabled": false,
+  "source_registry": [
+    {
+      "id": "simplemaps-ng",
+      "title": "Simplemaps Nigeria Cities Database",
+      "url": "https://simplemaps.com/data/ng-cities",
+      "data_url": "https://simplemaps.com/static/data/country-cities/ng/ng.json",
+      "license": "MIT as stated on the Nigeria subset page; retain source attribution and license notice",
+      "use": "City labels, state and map-point coordinates. Not property boundaries or market prices.",
+      "retrieved_at": "2026-09-22"
+    },
+    {
+      "id": "npc-q3-2026",
+      "title": "Nigeria Property Centre Q3 2026 asking-price report",
+      "url": "https://nigeriapropertycentre.com/market-reports/q3-2026",
+      "license": "Selected attributed factual observations; obtain permission/appropriate license for ongoing commercial ingestion",
+      "use": "Snapshot of advertised medians, not completed sale values. Quarter was incomplete at retrieval.",
+      "retrieved_at": "2026-09-22"
+    },
+    {
+      "id": "dangote-operations",
+      "title": "Dangote Cement Nigeria operations",
+      "url": "https://www.dangotecement.com/nigeria-operations/",
+      "license": "Factual facility references only",
+      "use": "Facility existence/location, not stock, dealer pricing or delivery coverage.",
+      "retrieved_at": "2026-09-22"
+    },
+    {
+      "id": "lafarge-locations",
+      "title": "Lafarge Africa contact and plant locations",
+      "url": "https://www.lafarge.com.ng/contact-us",
+      "license": "Factual facility references only",
+      "use": "Facility location, not supplier service commitment.",
+      "retrieved_at": "2026-09-22"
+    },
+    {
+      "id": "bua-operations",
+      "title": "BUA Cement operations",
+      "url": "https://buacement.com/operations",
+      "license": "Factual facility references only",
+      "use": "Edo and Sokoto facility leads.",
+      "retrieved_at": "2026-09-22"
+    },
+    {
+      "id": "nihsa",
+      "title": "Nigeria Hydrological Services Agency",
+      "url": "https://nihsa.gov.ng/",
+      "license": "Check reuse terms before importing layers",
+      "use": "Research lead for current flood evidence; no city risk classification extracted.",
+      "retrieved_at": "2026-09-22"
+    }
+  ],
+  "observations": [
+    {
+      "id": "npc-rent-lagos",
+      "geography_level": "state_or_fct",
+      "geography_name": "Lagos",
+      "metric": "median_annual_asking_rent",
+      "value_ngn": 14000000,
+      "sample_size": 34389,
+      "source_id": "npc-q3-2026",
+      "source_url": "https://nigeriapropertycentre.com/market-reports/q3-2026",
+      "source_geography_label": "Lagos",
+      "currency": "NGN",
+      "numeric_representation": "whole_naira_not_kobo",
+      "unit": "NGN/year",
+      "property_cohort": "all_reported_property_types_mixed",
+      "statistic": "median",
+      "observation_period_start": "2026-07-01",
+      "observation_period_end": "2026-09-30",
+      "period_complete_at_retrieval": false,
+      "source_updated_at": "2026-09-21",
+      "retrieved_at": "2026-09-22",
+      "valid_until": null,
+      "review_status": "source_read_pending_business_review",
+      "rank_eligible": false,
+      "reason_not_rank_eligible": "Mixed property types and unmatched stock; contextual observation only. Validate cohort, rights and locality before financial use."
+    },
+    {
+      "id": "npc-rent-federal-capital-territory",
+      "geography_level": "state_or_fct",
+      "geography_name": "Federal Capital Territory",
+      "metric": "median_annual_asking_rent",
+      "value_ngn": 13000000,
+      "sample_size": 5041,
+      "source_id": "npc-q3-2026",
+      "source_url": "https://nigeriapropertycentre.com/market-reports/q3-2026",
+      "source_geography_label": "Abuja",
+      "currency": "NGN",
+      "numeric_representation": "whole_naira_not_kobo",
+      "unit": "NGN/year",
+      "property_cohort": "all_reported_property_types_mixed",
+      "statistic": "median",
+      "observation_period_start": "2026-07-01",
+      "observation_period_end": "2026-09-30",
+      "period_complete_at_retrieval": false,
+      "source_updated_at": "2026-09-21",
+      "retrieved_at": "2026-09-22",
+      "valid_until": null,
+      "review_status": "source_read_pending_business_review",
+      "rank_eligible": false,
+      "reason_not_rank_eligible": "Mixed property types and unmatched stock; contextual observation only. Validate cohort, rights and locality before financial use."
+    },
+    {
+      "id": "npc-rent-rivers",
+      "geography_level": "state_or_fct",
+      "geography_name": "Rivers",
+      "metric": "median_annual_asking_rent",
+      "value_ngn": 4000000,
+      "sample_size": 265,
+      "source_id": "npc-q3-2026",
+      "source_url": "https://nigeriapropertycentre.com/market-reports/q3-2026",
+      "source_geography_label": "Rivers",
+      "currency": "NGN",
+      "numeric_representation": "whole_naira_not_kobo",
+      "unit": "NGN/year",
+      "property_cohort": "all_reported_property_types_mixed",
+      "statistic": "median",
+      "observation_period_start": "2026-07-01",
+      "observation_period_end": "2026-09-30",
+      "period_complete_at_retrieval": false,
+      "source_updated_at": "2026-09-21",
+      "retrieved_at": "2026-09-22",
+      "valid_until": null,
+      "review_status": "source_read_pending_business_review",
+      "rank_eligible": false,
+      "reason_not_rank_eligible": "Mixed property types and unmatched stock; contextual observation only. Validate cohort, rights and locality before financial use."
+    },
+    {
+      "id": "npc-rent-ogun",
+      "geography_level": "state_or_fct",
+      "geography_name": "Ogun",
+      "metric": "median_annual_asking_rent",
+      "value_ngn": 1300000,
+      "sample_size": 242,
+      "source_id": "npc-q3-2026",
+      "source_url": "https://nigeriapropertycentre.com/market-reports/q3-2026",
+      "source_geography_label": "Ogun",
+      "currency": "NGN",
+      "numeric_representation": "whole_naira_not_kobo",
+      "unit": "NGN/year",
+      "property_cohort": "all_reported_property_types_mixed",
+      "statistic": "median",
+      "observation_period_start": "2026-07-01",
+      "observation_period_end": "2026-09-30",
+      "period_complete_at_retrieval": false,
+      "source_updated_at": "2026-09-21",
+      "retrieved_at": "2026-09-22",
+      "valid_until": null,
+      "review_status": "source_read_pending_business_review",
+      "rank_eligible": false,
+      "reason_not_rank_eligible": "Mixed property types and unmatched stock; contextual observation only. Validate cohort, rights and locality before financial use."
+    },
+    {
+      "id": "npc-rent-oyo",
+      "geography_level": "state_or_fct",
+      "geography_name": "Oyo",
+      "metric": "median_annual_asking_rent",
+      "value_ngn": 4500000,
+      "sample_size": 230,
+      "source_id": "npc-q3-2026",
+      "source_url": "https://nigeriapropertycentre.com/market-reports/q3-2026",
+      "source_geography_label": "Oyo",
+      "currency": "NGN",
+      "numeric_representation": "whole_naira_not_kobo",
+      "unit": "NGN/year",
+      "property_cohort": "all_reported_property_types_mixed",
+      "statistic": "median",
+      "observation_period_start": "2026-07-01",
+      "observation_period_end": "2026-09-30",
+      "period_complete_at_retrieval": false,
+      "source_updated_at": "2026-09-21",
+      "retrieved_at": "2026-09-22",
+      "valid_until": null,
+      "review_status": "source_read_pending_business_review",
+      "rank_eligible": false,
+      "reason_not_rank_eligible": "Mixed property types and unmatched stock; contextual observation only. Validate cohort, rights and locality before financial use."
+    },
+    {
+      "id": "npc-sale-federal-capital-territory",
+      "geography_level": "state_or_fct",
+      "geography_name": "Federal Capital Territory",
+      "metric": "median_asking_sale_price",
+      "value_ngn": 350000000,
+      "sample_size": null,
+      "source_id": "npc-q3-2026",
+      "source_url": "https://nigeriapropertycentre.com/market-reports/q3-2026",
+      "source_geography_label": "Abuja",
+      "currency": "NGN",
+      "numeric_representation": "whole_naira_not_kobo",
+      "unit": "NGN/property",
+      "property_cohort": "all_reported_property_types_mixed",
+      "statistic": "median",
+      "observation_period_start": "2026-07-01",
+      "observation_period_end": "2026-09-30",
+      "period_complete_at_retrieval": false,
+      "source_updated_at": "2026-09-21",
+      "retrieved_at": "2026-09-22",
+      "valid_until": null,
+      "review_status": "source_read_pending_business_review",
+      "rank_eligible": false,
+      "reason_not_rank_eligible": "Mixed property types and unmatched stock; contextual observation only. Validate cohort, rights and locality before financial use."
+    },
+    {
+      "id": "npc-sale-lagos",
+      "geography_level": "state_or_fct",
+      "geography_name": "Lagos",
+      "metric": "median_asking_sale_price",
+      "value_ngn": 340000000,
+      "sample_size": null,
+      "source_id": "npc-q3-2026",
+      "source_url": "https://nigeriapropertycentre.com/market-reports/q3-2026",
+      "source_geography_label": "Lagos",
+      "currency": "NGN",
+      "numeric_representation": "whole_naira_not_kobo",
+      "unit": "NGN/property",
+      "property_cohort": "all_reported_property_types_mixed",
+      "statistic": "median",
+      "observation_period_start": "2026-07-01",
+      "observation_period_end": "2026-09-30",
+      "period_complete_at_retrieval": false,
+      "source_updated_at": "2026-09-21",
+      "retrieved_at": "2026-09-22",
+      "valid_until": null,
+      "review_status": "source_read_pending_business_review",
+      "rank_eligible": false,
+      "reason_not_rank_eligible": "Mixed property types and unmatched stock; contextual observation only. Validate cohort, rights and locality before financial use."
+    },
+    {
+      "id": "npc-sale-rivers",
+      "geography_level": "state_or_fct",
+      "geography_name": "Rivers",
+      "metric": "median_asking_sale_price",
+      "value_ngn": 200000000,
+      "sample_size": null,
+      "source_id": "npc-q3-2026",
+      "source_url": "https://nigeriapropertycentre.com/market-reports/q3-2026",
+      "source_geography_label": "Rivers",
+      "currency": "NGN",
+      "numeric_representation": "whole_naira_not_kobo",
+      "unit": "NGN/property",
+      "property_cohort": "all_reported_property_types_mixed",
+      "statistic": "median",
+      "observation_period_start": "2026-07-01",
+      "observation_period_end": "2026-09-30",
+      "period_complete_at_retrieval": false,
+      "source_updated_at": "2026-09-21",
+      "retrieved_at": "2026-09-22",
+      "valid_until": null,
+      "review_status": "source_read_pending_business_review",
+      "rank_eligible": false,
+      "reason_not_rank_eligible": "Mixed property types and unmatched stock; contextual observation only. Validate cohort, rights and locality before financial use."
+    },
+    {
+      "id": "npc-sale-oyo",
+      "geography_level": "state_or_fct",
+      "geography_name": "Oyo",
+      "metric": "median_asking_sale_price",
+      "value_ngn": 150000000,
+      "sample_size": null,
+      "source_id": "npc-q3-2026",
+      "source_url": "https://nigeriapropertycentre.com/market-reports/q3-2026",
+      "source_geography_label": "Oyo",
+      "currency": "NGN",
+      "numeric_representation": "whole_naira_not_kobo",
+      "unit": "NGN/property",
+      "property_cohort": "all_reported_property_types_mixed",
+      "statistic": "median",
+      "observation_period_start": "2026-07-01",
+      "observation_period_end": "2026-09-30",
+      "period_complete_at_retrieval": false,
+      "source_updated_at": "2026-09-21",
+      "retrieved_at": "2026-09-22",
+      "valid_until": null,
+      "review_status": "source_read_pending_business_review",
+      "rank_eligible": false,
+      "reason_not_rank_eligible": "Mixed property types and unmatched stock; contextual observation only. Validate cohort, rights and locality before financial use."
+    },
+    {
+      "id": "npc-sale-enugu",
+      "geography_level": "state_or_fct",
+      "geography_name": "Enugu",
+      "metric": "median_asking_sale_price",
+      "value_ngn": 150000000,
+      "sample_size": null,
+      "source_id": "npc-q3-2026",
+      "source_url": "https://nigeriapropertycentre.com/market-reports/q3-2026",
+      "source_geography_label": "Enugu",
+      "currency": "NGN",
+      "numeric_representation": "whole_naira_not_kobo",
+      "unit": "NGN/property",
+      "property_cohort": "all_reported_property_types_mixed",
+      "statistic": "median",
+      "observation_period_start": "2026-07-01",
+      "observation_period_end": "2026-09-30",
+      "period_complete_at_retrieval": false,
+      "source_updated_at": "2026-09-21",
+      "retrieved_at": "2026-09-22",
+      "valid_until": null,
+      "review_status": "source_read_pending_business_review",
+      "rank_eligible": false,
+      "reason_not_rank_eligible": "Mixed property types and unmatched stock; contextual observation only. Validate cohort, rights and locality before financial use."
+    },
+    {
+      "id": "npc-sale-delta",
+      "geography_level": "state_or_fct",
+      "geography_name": "Delta",
+      "metric": "median_asking_sale_price",
+      "value_ngn": 150000000,
+      "sample_size": null,
+      "source_id": "npc-q3-2026",
+      "source_url": "https://nigeriapropertycentre.com/market-reports/q3-2026",
+      "source_geography_label": "Delta",
+      "currency": "NGN",
+      "numeric_representation": "whole_naira_not_kobo",
+      "unit": "NGN/property",
+      "property_cohort": "all_reported_property_types_mixed",
+      "statistic": "median",
+      "observation_period_start": "2026-07-01",
+      "observation_period_end": "2026-09-30",
+      "period_complete_at_retrieval": false,
+      "source_updated_at": "2026-09-21",
+      "retrieved_at": "2026-09-22",
+      "valid_until": null,
+      "review_status": "source_read_pending_business_review",
+      "rank_eligible": false,
+      "reason_not_rank_eligible": "Mixed property types and unmatched stock; contextual observation only. Validate cohort, rights and locality before financial use."
+    },
+    {
+      "id": "npc-sale-edo",
+      "geography_level": "state_or_fct",
+      "geography_name": "Edo",
+      "metric": "median_asking_sale_price",
+      "value_ngn": 140000000,
+      "sample_size": null,
+      "source_id": "npc-q3-2026",
+      "source_url": "https://nigeriapropertycentre.com/market-reports/q3-2026",
+      "source_geography_label": "Edo",
+      "currency": "NGN",
+      "numeric_representation": "whole_naira_not_kobo",
+      "unit": "NGN/property",
+      "property_cohort": "all_reported_property_types_mixed",
+      "statistic": "median",
+      "observation_period_start": "2026-07-01",
+      "observation_period_end": "2026-09-30",
+      "period_complete_at_retrieval": false,
+      "source_updated_at": "2026-09-21",
+      "retrieved_at": "2026-09-22",
+      "valid_until": null,
+      "review_status": "source_read_pending_business_review",
+      "rank_eligible": false,
+      "reason_not_rank_eligible": "Mixed property types and unmatched stock; contextual observation only. Validate cohort, rights and locality before financial use."
+    },
+    {
+      "id": "npc-sale-ogun",
+      "geography_level": "state_or_fct",
+      "geography_name": "Ogun",
+      "metric": "median_asking_sale_price",
+      "value_ngn": 60000000,
+      "sample_size": null,
+      "source_id": "npc-q3-2026",
+      "source_url": "https://nigeriapropertycentre.com/market-reports/q3-2026",
+      "source_geography_label": "Ogun",
+      "currency": "NGN",
+      "numeric_representation": "whole_naira_not_kobo",
+      "unit": "NGN/property",
+      "property_cohort": "all_reported_property_types_mixed",
+      "statistic": "median",
+      "observation_period_start": "2026-07-01",
+      "observation_period_end": "2026-09-30",
+      "period_complete_at_retrieval": false,
+      "source_updated_at": "2026-09-21",
+      "retrieved_at": "2026-09-22",
+      "valid_until": null,
+      "review_status": "source_read_pending_business_review",
+      "rank_eligible": false,
+      "reason_not_rank_eligible": "Mixed property types and unmatched stock; contextual observation only. Validate cohort, rights and locality before financial use."
+    },
+    {
+      "id": "npc-sale-akwa-ibom",
+      "geography_level": "state_or_fct",
+      "geography_name": "Akwa Ibom",
+      "metric": "median_asking_sale_price",
+      "value_ngn": 48000000,
+      "sample_size": null,
+      "source_id": "npc-q3-2026",
+      "source_url": "https://nigeriapropertycentre.com/market-reports/q3-2026",
+      "source_geography_label": "Akwa Ibom",
+      "currency": "NGN",
+      "numeric_representation": "whole_naira_not_kobo",
+      "unit": "NGN/property",
+      "property_cohort": "all_reported_property_types_mixed",
+      "statistic": "median",
+      "observation_period_start": "2026-07-01",
+      "observation_period_end": "2026-09-30",
+      "period_complete_at_retrieval": false,
+      "source_updated_at": "2026-09-21",
+      "retrieved_at": "2026-09-22",
+      "valid_until": null,
+      "review_status": "source_read_pending_business_review",
+      "rank_eligible": false,
+      "reason_not_rank_eligible": "Mixed property types and unmatched stock; contextual observation only. Validate cohort, rights and locality before financial use."
+    },
+    {
+      "id": "npc-ibadan-rent",
+      "geography_level": "city",
+      "geography_name": "Ibadan",
+      "metric": "median_annual_asking_rent",
+      "value_ngn": 5000000,
+      "sample_size": 214,
+      "source_id": "npc-q3-2026",
+      "source_url": "https://nigeriapropertycentre.com/market-reports/q3-2026",
+      "source_geography_label": "Ibadan",
+      "currency": "NGN",
+      "numeric_representation": "whole_naira_not_kobo",
+      "unit": "NGN/year",
+      "property_cohort": "all_reported_property_types_mixed",
+      "statistic": "median",
+      "observation_period_start": "2026-07-01",
+      "observation_period_end": "2026-09-30",
+      "period_complete_at_retrieval": false,
+      "source_updated_at": "2026-09-21",
+      "retrieved_at": "2026-09-22",
+      "valid_until": null,
+      "review_status": "source_read_pending_business_review",
+      "rank_eligible": false,
+      "reason_not_rank_eligible": "Mixed property types and unmatched stock; contextual observation only. Validate cohort, rights and locality before financial use."
+    },
+    {
+      "id": "npc-ibadan-sale",
+      "geography_level": "city",
+      "geography_name": "Ibadan",
+      "metric": "median_asking_sale_price",
+      "value_ngn": 150000000,
+      "sample_size": 2613,
+      "source_id": "npc-q3-2026",
+      "source_url": "https://nigeriapropertycentre.com/market-reports/q3-2026",
+      "source_geography_label": "Ibadan",
+      "currency": "NGN",
+      "numeric_representation": "whole_naira_not_kobo",
+      "unit": "NGN/property",
+      "property_cohort": "all_reported_property_types_mixed",
+      "statistic": "median",
+      "observation_period_start": "2026-07-01",
+      "observation_period_end": "2026-09-30",
+      "period_complete_at_retrieval": false,
+      "source_updated_at": "2026-09-21",
+      "retrieved_at": "2026-09-22",
+      "valid_until": null,
+      "review_status": "source_read_pending_business_review",
+      "rank_eligible": false,
+      "reason_not_rank_eligible": "Mixed property types and unmatched stock; contextual observation only. Validate cohort, rights and locality before financial use."
+    }
+  ],
+  "supply_facilities": [
+    {
+      "id": "dangote-obajana",
+      "name": "Dangote Obajana",
+      "state": "Kogi",
+      "material": "cement",
+      "source_id": "dangote-operations",
+      "evidence_status": "published_facility_location",
+      "coordinates": null,
+      "delivery_coverage_verified": false,
+      "delivered_quote_ngn": null,
+      "lead_time_days": null,
+      "stock_status": "unknown",
+      "rank_eligible": false
+    },
+    {
+      "id": "dangote-ibese",
+      "name": "Dangote Ibese",
+      "state": "Ogun",
+      "material": "cement",
+      "source_id": "dangote-operations",
+      "evidence_status": "published_facility_location",
+      "coordinates": null,
+      "delivery_coverage_verified": false,
+      "delivered_quote_ngn": null,
+      "lead_time_days": null,
+      "stock_status": "unknown",
+      "rank_eligible": false
+    },
+    {
+      "id": "dangote-gboko",
+      "name": "Dangote Gboko",
+      "state": "Benue",
+      "material": "cement",
+      "source_id": "dangote-operations",
+      "evidence_status": "published_facility_location",
+      "coordinates": null,
+      "delivery_coverage_verified": false,
+      "delivered_quote_ngn": null,
+      "lead_time_days": null,
+      "stock_status": "unknown",
+      "rank_eligible": false
+    },
+    {
+      "id": "dangote-okpella",
+      "name": "Dangote Okpella",
+      "state": "Edo",
+      "material": "cement",
+      "source_id": "dangote-operations",
+      "evidence_status": "published_facility_location",
+      "coordinates": null,
+      "delivery_coverage_verified": false,
+      "delivered_quote_ngn": null,
+      "lead_time_days": null,
+      "stock_status": "unknown",
+      "rank_eligible": false
+    },
+    {
+      "id": "lafarge-ewekoro",
+      "name": "Lafarge Ewekoro",
+      "state": "Ogun",
+      "material": "cement",
+      "source_id": "lafarge-locations",
+      "evidence_status": "published_facility_location",
+      "coordinates": null,
+      "delivery_coverage_verified": false,
+      "delivered_quote_ngn": null,
+      "lead_time_days": null,
+      "stock_status": "unknown",
+      "rank_eligible": false
+    },
+    {
+      "id": "lafarge-sagamu",
+      "name": "Lafarge Sagamu",
+      "state": "Ogun",
+      "material": "cement",
+      "source_id": "lafarge-locations",
+      "evidence_status": "published_facility_location",
+      "coordinates": null,
+      "delivery_coverage_verified": false,
+      "delivered_quote_ngn": null,
+      "lead_time_days": null,
+      "stock_status": "unknown",
+      "rank_eligible": false
+    },
+    {
+      "id": "lafarge-ashaka",
+      "name": "Lafarge Ashaka",
+      "state": "Gombe",
+      "material": "cement",
+      "source_id": "lafarge-locations",
+      "evidence_status": "published_facility_location",
+      "coordinates": null,
+      "delivery_coverage_verified": false,
+      "delivered_quote_ngn": null,
+      "lead_time_days": null,
+      "stock_status": "unknown",
+      "rank_eligible": false
+    },
+    {
+      "id": "lafarge-mfamosing",
+      "name": "Lafarge Mfamosing",
+      "state": "Cross River",
+      "material": "cement",
+      "source_id": "lafarge-locations",
+      "evidence_status": "published_facility_location",
+      "coordinates": null,
+      "delivery_coverage_verified": false,
+      "delivered_quote_ngn": null,
+      "lead_time_days": null,
+      "stock_status": "unknown",
+      "rank_eligible": false
+    },
+    {
+      "id": "lafarge-idu",
+      "name": "Lafarge Idu Abuja",
+      "state": "Federal Capital Territory",
+      "material": "ready_mix",
+      "source_id": "lafarge-locations",
+      "evidence_status": "published_facility_location",
+      "coordinates": null,
+      "delivery_coverage_verified": false,
+      "delivered_quote_ngn": null,
+      "lead_time_days": null,
+      "stock_status": "unknown",
+      "rank_eligible": false
+    },
+    {
+      "id": "lafarge-oregun",
+      "name": "Lafarge Oregun Ikeja",
+      "state": "Lagos",
+      "material": "ready_mix",
+      "source_id": "lafarge-locations",
+      "evidence_status": "published_facility_location",
+      "coordinates": null,
+      "delivery_coverage_verified": false,
+      "delivered_quote_ngn": null,
+      "lead_time_days": null,
+      "stock_status": "unknown",
+      "rank_eligible": false
+    },
+    {
+      "id": "lafarge-trans-amadi",
+      "name": "Lafarge Trans Amadi Port Harcourt",
+      "state": "Rivers",
+      "material": "ready_mix",
+      "source_id": "lafarge-locations",
+      "evidence_status": "published_facility_location",
+      "coordinates": null,
+      "delivery_coverage_verified": false,
+      "delivered_quote_ngn": null,
+      "lead_time_days": null,
+      "stock_status": "unknown",
+      "rank_eligible": false
+    },
+    {
+      "id": "bua-edo",
+      "name": "BUA Edo operation",
+      "state": "Edo",
+      "material": "cement",
+      "source_id": "bua-operations",
+      "evidence_status": "published_facility_location",
+      "coordinates": null,
+      "delivery_coverage_verified": false,
+      "delivered_quote_ngn": null,
+      "lead_time_days": null,
+      "stock_status": "unknown",
+      "rank_eligible": false
+    },
+    {
+      "id": "bua-sokoto",
+      "name": "BUA Sokoto operation",
+      "state": "Sokoto",
+      "material": "cement",
+      "source_id": "bua-operations",
+      "evidence_status": "published_facility_location",
+      "coordinates": null,
+      "delivery_coverage_verified": false,
+      "delivered_quote_ngn": null,
+      "lead_time_days": null,
+      "stock_status": "unknown",
+      "rank_eligible": false
+    }
+  ],
+  "markets": [
+    {
+      "id": "ng-abeokuta",
+      "name": "Abeokuta",
+      "aliases": [],
+      "country_code": "NG",
+      "state": "Ogun",
+      "geopolitical_zone": "SW",
+      "display_order": 1,
+      "selection_basis": "State capital or federal capital; national service coverage anchor",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          3.35,
+          7.15
+        ]
+      },
+      "coordinate_source_id": "simplemaps-ng",
+      "coordinate_accuracy": "city_reference_point_not_parcel_or_boundary",
+      "source_city_name": "Abeokuta",
+      "parent_market_id": null,
+      "overlap_note": null,
+      "service_availability": "pending_operations_confirmation",
+      "publication_state": "draft",
+      "local_observation_ids": [],
+      "regional_context_observation_ids": [
+        "npc-rent-ogun",
+        "npc-sale-ogun"
+      ],
+      "supply_research_lead_ids": [
+        "dangote-ibese",
+        "lafarge-ewekoro",
+        "lafarge-sagamu"
+      ],
+      "supply_mapping_method": "Editorial regional research leads. No verified delivery routes, nearest-facility claim or availability score.",
+      "metrics": {
+        "land_price_ngn_per_m2": null,
+        "build_rate_ngn_per_m2": null,
+        "annual_rent_by_property_cohort": null,
+        "material_delivery_cost_ngn": null,
+        "material_delivery_days": null,
+        "contractor_bid_window_days": null,
+        "construction_duration_days": null,
+        "approval_duration_days": null,
+        "projected_net_yield_percent": null,
+        "flood_risk": null,
+        "soil_suitability": null,
+        "power_reliability": null,
+        "water_reliability": null,
+        "demand_index": null
+      },
+      "recommendation_status": "insufficient_local_evidence",
+      "research_tasks": [
+        "Collect property-type and neighborhood matched sale/rent comparables",
+        "Obtain current land and BOQ/build-rate evidence with units and scope",
+        "Verify supplier coverage, stock, delivered quote and validity",
+        "Collect jurisdiction-specific permit steps and observed durations",
+        "Create a project-specific tender and construction schedule",
+        "Review current site-specific flood, drainage and geotechnical evidence"
+      ],
+      "last_researched_at": "2026-09-22"
+    },
+    {
+      "id": "ng-abakaliki",
+      "name": "Abakaliki",
+      "aliases": [],
+      "country_code": "NG",
+      "state": "Ebonyi",
+      "geopolitical_zone": "SE",
+      "display_order": 2,
+      "selection_basis": "State capital or federal capital; national service coverage anchor",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          8.1,
+          6.3333
+        ]
+      },
+      "coordinate_source_id": "simplemaps-ng",
+      "coordinate_accuracy": "city_reference_point_not_parcel_or_boundary",
+      "source_city_name": "Abakaliki",
+      "parent_market_id": null,
+      "overlap_note": null,
+      "service_availability": "pending_operations_confirmation",
+      "publication_state": "draft",
+      "local_observation_ids": [],
+      "regional_context_observation_ids": [],
+      "supply_research_lead_ids": [
+        "lafarge-mfamosing",
+        "dangote-okpella"
+      ],
+      "supply_mapping_method": "Editorial regional research leads. No verified delivery routes, nearest-facility claim or availability score.",
+      "metrics": {
+        "land_price_ngn_per_m2": null,
+        "build_rate_ngn_per_m2": null,
+        "annual_rent_by_property_cohort": null,
+        "material_delivery_cost_ngn": null,
+        "material_delivery_days": null,
+        "contractor_bid_window_days": null,
+        "construction_duration_days": null,
+        "approval_duration_days": null,
+        "projected_net_yield_percent": null,
+        "flood_risk": null,
+        "soil_suitability": null,
+        "power_reliability": null,
+        "water_reliability": null,
+        "demand_index": null
+      },
+      "recommendation_status": "insufficient_local_evidence",
+      "research_tasks": [
+        "Collect property-type and neighborhood matched sale/rent comparables",
+        "Obtain current land and BOQ/build-rate evidence with units and scope",
+        "Verify supplier coverage, stock, delivered quote and validity",
+        "Collect jurisdiction-specific permit steps and observed durations",
+        "Create a project-specific tender and construction schedule",
+        "Review current site-specific flood, drainage and geotechnical evidence"
+      ],
+      "last_researched_at": "2026-09-22"
+    },
+    {
+      "id": "ng-abuja",
+      "name": "Abuja",
+      "aliases": [],
+      "country_code": "NG",
+      "state": "Federal Capital Territory",
+      "geopolitical_zone": "NC",
+      "display_order": 3,
+      "selection_basis": "State capital or federal capital; national service coverage anchor",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          7.4914,
+          9.0556
+        ]
+      },
+      "coordinate_source_id": "simplemaps-ng",
+      "coordinate_accuracy": "city_reference_point_not_parcel_or_boundary",
+      "source_city_name": "Abuja",
+      "parent_market_id": null,
+      "overlap_note": null,
+      "service_availability": "pending_operations_confirmation",
+      "publication_state": "draft",
+      "local_observation_ids": [],
+      "regional_context_observation_ids": [
+        "npc-rent-federal-capital-territory",
+        "npc-sale-federal-capital-territory"
+      ],
+      "supply_research_lead_ids": [
+        "lafarge-idu",
+        "dangote-obajana",
+        "dangote-gboko"
+      ],
+      "supply_mapping_method": "Editorial regional research leads. No verified delivery routes, nearest-facility claim or availability score.",
+      "metrics": {
+        "land_price_ngn_per_m2": null,
+        "build_rate_ngn_per_m2": null,
+        "annual_rent_by_property_cohort": null,
+        "material_delivery_cost_ngn": null,
+        "material_delivery_days": null,
+        "contractor_bid_window_days": null,
+        "construction_duration_days": null,
+        "approval_duration_days": null,
+        "projected_net_yield_percent": null,
+        "flood_risk": null,
+        "soil_suitability": null,
+        "power_reliability": null,
+        "water_reliability": null,
+        "demand_index": null
+      },
+      "recommendation_status": "insufficient_local_evidence",
+      "research_tasks": [
+        "Collect property-type and neighborhood matched sale/rent comparables",
+        "Obtain current land and BOQ/build-rate evidence with units and scope",
+        "Verify supplier coverage, stock, delivered quote and validity",
+        "Collect jurisdiction-specific permit steps and observed durations",
+        "Create a project-specific tender and construction schedule",
+        "Review current site-specific flood, drainage and geotechnical evidence"
+      ],
+      "last_researched_at": "2026-09-22"
+    },
+    {
+      "id": "ng-ado-ekiti",
+      "name": "Ado-Ekiti",
+      "aliases": [],
+      "country_code": "NG",
+      "state": "Ekiti",
+      "geopolitical_zone": "SW",
+      "display_order": 4,
+      "selection_basis": "State capital or federal capital; national service coverage anchor",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          5.2167,
+          7.6167
+        ]
+      },
+      "coordinate_source_id": "simplemaps-ng",
+      "coordinate_accuracy": "city_reference_point_not_parcel_or_boundary",
+      "source_city_name": "Ado-Ekiti",
+      "parent_market_id": null,
+      "overlap_note": null,
+      "service_availability": "pending_operations_confirmation",
+      "publication_state": "draft",
+      "local_observation_ids": [],
+      "regional_context_observation_ids": [],
+      "supply_research_lead_ids": [
+        "dangote-ibese",
+        "lafarge-ewekoro",
+        "lafarge-sagamu"
+      ],
+      "supply_mapping_method": "Editorial regional research leads. No verified delivery routes, nearest-facility claim or availability score.",
+      "metrics": {
+        "land_price_ngn_per_m2": null,
+        "build_rate_ngn_per_m2": null,
+        "annual_rent_by_property_cohort": null,
+        "material_delivery_cost_ngn": null,
+        "material_delivery_days": null,
+        "contractor_bid_window_days": null,
+        "construction_duration_days": null,
+        "approval_duration_days": null,
+        "projected_net_yield_percent": null,
+        "flood_risk": null,
+        "soil_suitability": null,
+        "power_reliability": null,
+        "water_reliability": null,
+        "demand_index": null
+      },
+      "recommendation_status": "insufficient_local_evidence",
+      "research_tasks": [
+        "Collect property-type and neighborhood matched sale/rent comparables",
+        "Obtain current land and BOQ/build-rate evidence with units and scope",
+        "Verify supplier coverage, stock, delivered quote and validity",
+        "Collect jurisdiction-specific permit steps and observed durations",
+        "Create a project-specific tender and construction schedule",
+        "Review current site-specific flood, drainage and geotechnical evidence"
+      ],
+      "last_researched_at": "2026-09-22"
+    },
+    {
+      "id": "ng-akure",
+      "name": "Akure",
+      "aliases": [],
+      "country_code": "NG",
+      "state": "Ondo",
+      "geopolitical_zone": "SW",
+      "display_order": 5,
+      "selection_basis": "State capital or federal capital; national service coverage anchor",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          5.195,
+          7.25
+        ]
+      },
+      "coordinate_source_id": "simplemaps-ng",
+      "coordinate_accuracy": "city_reference_point_not_parcel_or_boundary",
+      "source_city_name": "Akure",
+      "parent_market_id": null,
+      "overlap_note": null,
+      "service_availability": "pending_operations_confirmation",
+      "publication_state": "draft",
+      "local_observation_ids": [],
+      "regional_context_observation_ids": [],
+      "supply_research_lead_ids": [
+        "dangote-ibese",
+        "lafarge-ewekoro",
+        "lafarge-sagamu"
+      ],
+      "supply_mapping_method": "Editorial regional research leads. No verified delivery routes, nearest-facility claim or availability score.",
+      "metrics": {
+        "land_price_ngn_per_m2": null,
+        "build_rate_ngn_per_m2": null,
+        "annual_rent_by_property_cohort": null,
+        "material_delivery_cost_ngn": null,
+        "material_delivery_days": null,
+        "contractor_bid_window_days": null,
+        "construction_duration_days": null,
+        "approval_duration_days": null,
+        "projected_net_yield_percent": null,
+        "flood_risk": null,
+        "soil_suitability": null,
+        "power_reliability": null,
+        "water_reliability": null,
+        "demand_index": null
+      },
+      "recommendation_status": "insufficient_local_evidence",
+      "research_tasks": [
+        "Collect property-type and neighborhood matched sale/rent comparables",
+        "Obtain current land and BOQ/build-rate evidence with units and scope",
+        "Verify supplier coverage, stock, delivered quote and validity",
+        "Collect jurisdiction-specific permit steps and observed durations",
+        "Create a project-specific tender and construction schedule",
+        "Review current site-specific flood, drainage and geotechnical evidence"
+      ],
+      "last_researched_at": "2026-09-22"
+    },
+    {
+      "id": "ng-asaba",
+      "name": "Asaba",
+      "aliases": [],
+      "country_code": "NG",
+      "state": "Delta",
+      "geopolitical_zone": "SS",
+      "display_order": 6,
+      "selection_basis": "State capital or federal capital; national service coverage anchor",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6.75,
+          6.1833
+        ]
+      },
+      "coordinate_source_id": "simplemaps-ng",
+      "coordinate_accuracy": "city_reference_point_not_parcel_or_boundary",
+      "source_city_name": "Asaba",
+      "parent_market_id": null,
+      "overlap_note": null,
+      "service_availability": "pending_operations_confirmation",
+      "publication_state": "draft",
+      "local_observation_ids": [],
+      "regional_context_observation_ids": [
+        "npc-sale-delta"
+      ],
+      "supply_research_lead_ids": [
+        "lafarge-mfamosing",
+        "dangote-okpella",
+        "bua-edo"
+      ],
+      "supply_mapping_method": "Editorial regional research leads. No verified delivery routes, nearest-facility claim or availability score.",
+      "metrics": {
+        "land_price_ngn_per_m2": null,
+        "build_rate_ngn_per_m2": null,
+        "annual_rent_by_property_cohort": null,
+        "material_delivery_cost_ngn": null,
+        "material_delivery_days": null,
+        "contractor_bid_window_days": null,
+        "construction_duration_days": null,
+        "approval_duration_days": null,
+        "projected_net_yield_percent": null,
+        "flood_risk": null,
+        "soil_suitability": null,
+        "power_reliability": null,
+        "water_reliability": null,
+        "demand_index": null
+      },
+      "recommendation_status": "insufficient_local_evidence",
+      "research_tasks": [
+        "Collect property-type and neighborhood matched sale/rent comparables",
+        "Obtain current land and BOQ/build-rate evidence with units and scope",
+        "Verify supplier coverage, stock, delivered quote and validity",
+        "Collect jurisdiction-specific permit steps and observed durations",
+        "Create a project-specific tender and construction schedule",
+        "Review current site-specific flood, drainage and geotechnical evidence"
+      ],
+      "last_researched_at": "2026-09-22"
+    },
+    {
+      "id": "ng-awka",
+      "name": "Awka",
+      "aliases": [],
+      "country_code": "NG",
+      "state": "Anambra",
+      "geopolitical_zone": "SE",
+      "display_order": 7,
+      "selection_basis": "State capital or federal capital; national service coverage anchor",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          7.0667,
+          6.2
+        ]
+      },
+      "coordinate_source_id": "simplemaps-ng",
+      "coordinate_accuracy": "city_reference_point_not_parcel_or_boundary",
+      "source_city_name": "Awka",
+      "parent_market_id": null,
+      "overlap_note": null,
+      "service_availability": "pending_operations_confirmation",
+      "publication_state": "draft",
+      "local_observation_ids": [],
+      "regional_context_observation_ids": [],
+      "supply_research_lead_ids": [
+        "lafarge-mfamosing",
+        "dangote-okpella"
+      ],
+      "supply_mapping_method": "Editorial regional research leads. No verified delivery routes, nearest-facility claim or availability score.",
+      "metrics": {
+        "land_price_ngn_per_m2": null,
+        "build_rate_ngn_per_m2": null,
+        "annual_rent_by_property_cohort": null,
+        "material_delivery_cost_ngn": null,
+        "material_delivery_days": null,
+        "contractor_bid_window_days": null,
+        "construction_duration_days": null,
+        "approval_duration_days": null,
+        "projected_net_yield_percent": null,
+        "flood_risk": null,
+        "soil_suitability": null,
+        "power_reliability": null,
+        "water_reliability": null,
+        "demand_index": null
+      },
+      "recommendation_status": "insufficient_local_evidence",
+      "research_tasks": [
+        "Collect property-type and neighborhood matched sale/rent comparables",
+        "Obtain current land and BOQ/build-rate evidence with units and scope",
+        "Verify supplier coverage, stock, delivered quote and validity",
+        "Collect jurisdiction-specific permit steps and observed durations",
+        "Create a project-specific tender and construction schedule",
+        "Review current site-specific flood, drainage and geotechnical evidence"
+      ],
+      "last_researched_at": "2026-09-22"
+    },
+    {
+      "id": "ng-bauchi",
+      "name": "Bauchi",
+      "aliases": [],
+      "country_code": "NG",
+      "state": "Bauchi",
+      "geopolitical_zone": "NE",
+      "display_order": 8,
+      "selection_basis": "State capital or federal capital; national service coverage anchor",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          9.8442,
+          10.3158
+        ]
+      },
+      "coordinate_source_id": "simplemaps-ng",
+      "coordinate_accuracy": "city_reference_point_not_parcel_or_boundary",
+      "source_city_name": "Bauchi",
+      "parent_market_id": null,
+      "overlap_note": null,
+      "service_availability": "pending_operations_confirmation",
+      "publication_state": "draft",
+      "local_observation_ids": [],
+      "regional_context_observation_ids": [],
+      "supply_research_lead_ids": [
+        "lafarge-ashaka"
+      ],
+      "supply_mapping_method": "Editorial regional research leads. No verified delivery routes, nearest-facility claim or availability score.",
+      "metrics": {
+        "land_price_ngn_per_m2": null,
+        "build_rate_ngn_per_m2": null,
+        "annual_rent_by_property_cohort": null,
+        "material_delivery_cost_ngn": null,
+        "material_delivery_days": null,
+        "contractor_bid_window_days": null,
+        "construction_duration_days": null,
+        "approval_duration_days": null,
+        "projected_net_yield_percent": null,
+        "flood_risk": null,
+        "soil_suitability": null,
+        "power_reliability": null,
+        "water_reliability": null,
+        "demand_index": null
+      },
+      "recommendation_status": "insufficient_local_evidence",
+      "research_tasks": [
+        "Collect property-type and neighborhood matched sale/rent comparables",
+        "Obtain current land and BOQ/build-rate evidence with units and scope",
+        "Verify supplier coverage, stock, delivered quote and validity",
+        "Collect jurisdiction-specific permit steps and observed durations",
+        "Create a project-specific tender and construction schedule",
+        "Review current site-specific flood, drainage and geotechnical evidence"
+      ],
+      "last_researched_at": "2026-09-22"
+    },
+    {
+      "id": "ng-benin-city",
+      "name": "Benin City",
+      "aliases": [],
+      "country_code": "NG",
+      "state": "Edo",
+      "geopolitical_zone": "SS",
+      "display_order": 9,
+      "selection_basis": "State capital or federal capital; national service coverage anchor",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          5.6145,
+          6.3176
+        ]
+      },
+      "coordinate_source_id": "simplemaps-ng",
+      "coordinate_accuracy": "city_reference_point_not_parcel_or_boundary",
+      "source_city_name": "Benin City",
+      "parent_market_id": null,
+      "overlap_note": null,
+      "service_availability": "pending_operations_confirmation",
+      "publication_state": "draft",
+      "local_observation_ids": [],
+      "regional_context_observation_ids": [
+        "npc-sale-edo"
+      ],
+      "supply_research_lead_ids": [
+        "dangote-okpella",
+        "bua-edo",
+        "lafarge-mfamosing"
+      ],
+      "supply_mapping_method": "Editorial regional research leads. No verified delivery routes, nearest-facility claim or availability score.",
+      "metrics": {
+        "land_price_ngn_per_m2": null,
+        "build_rate_ngn_per_m2": null,
+        "annual_rent_by_property_cohort": null,
+        "material_delivery_cost_ngn": null,
+        "material_delivery_days": null,
+        "contractor_bid_window_days": null,
+        "construction_duration_days": null,
+        "approval_duration_days": null,
+        "projected_net_yield_percent": null,
+        "flood_risk": null,
+        "soil_suitability": null,
+        "power_reliability": null,
+        "water_reliability": null,
+        "demand_index": null
+      },
+      "recommendation_status": "insufficient_local_evidence",
+      "research_tasks": [
+        "Collect property-type and neighborhood matched sale/rent comparables",
+        "Obtain current land and BOQ/build-rate evidence with units and scope",
+        "Verify supplier coverage, stock, delivered quote and validity",
+        "Collect jurisdiction-specific permit steps and observed durations",
+        "Create a project-specific tender and construction schedule",
+        "Review current site-specific flood, drainage and geotechnical evidence"
+      ],
+      "last_researched_at": "2026-09-22"
+    },
+    {
+      "id": "ng-birnin-kebbi",
+      "name": "Birnin Kebbi",
+      "aliases": [],
+      "country_code": "NG",
+      "state": "Kebbi",
+      "geopolitical_zone": "NW",
+      "display_order": 10,
+      "selection_basis": "State capital or federal capital; national service coverage anchor",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          4.1956,
+          12.4318
+        ]
+      },
+      "coordinate_source_id": "simplemaps-ng",
+      "coordinate_accuracy": "city_reference_point_not_parcel_or_boundary",
+      "source_city_name": "Birnin Kebbi",
+      "parent_market_id": null,
+      "overlap_note": null,
+      "service_availability": "pending_operations_confirmation",
+      "publication_state": "draft",
+      "local_observation_ids": [],
+      "regional_context_observation_ids": [],
+      "supply_research_lead_ids": [
+        "bua-sokoto"
+      ],
+      "supply_mapping_method": "Editorial regional research leads. No verified delivery routes, nearest-facility claim or availability score.",
+      "metrics": {
+        "land_price_ngn_per_m2": null,
+        "build_rate_ngn_per_m2": null,
+        "annual_rent_by_property_cohort": null,
+        "material_delivery_cost_ngn": null,
+        "material_delivery_days": null,
+        "contractor_bid_window_days": null,
+        "construction_duration_days": null,
+        "approval_duration_days": null,
+        "projected_net_yield_percent": null,
+        "flood_risk": null,
+        "soil_suitability": null,
+        "power_reliability": null,
+        "water_reliability": null,
+        "demand_index": null
+      },
+      "recommendation_status": "insufficient_local_evidence",
+      "research_tasks": [
+        "Collect property-type and neighborhood matched sale/rent comparables",
+        "Obtain current land and BOQ/build-rate evidence with units and scope",
+        "Verify supplier coverage, stock, delivered quote and validity",
+        "Collect jurisdiction-specific permit steps and observed durations",
+        "Create a project-specific tender and construction schedule",
+        "Review current site-specific flood, drainage and geotechnical evidence"
+      ],
+      "last_researched_at": "2026-09-22"
+    },
+    {
+      "id": "ng-calabar",
+      "name": "Calabar",
+      "aliases": [],
+      "country_code": "NG",
+      "state": "Cross River",
+      "geopolitical_zone": "SS",
+      "display_order": 11,
+      "selection_basis": "State capital or federal capital; national service coverage anchor",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          8.325,
+          4.95
+        ]
+      },
+      "coordinate_source_id": "simplemaps-ng",
+      "coordinate_accuracy": "city_reference_point_not_parcel_or_boundary",
+      "source_city_name": "Calabar",
+      "parent_market_id": null,
+      "overlap_note": null,
+      "service_availability": "pending_operations_confirmation",
+      "publication_state": "draft",
+      "local_observation_ids": [],
+      "regional_context_observation_ids": [],
+      "supply_research_lead_ids": [
+        "lafarge-mfamosing",
+        "dangote-okpella",
+        "bua-edo"
+      ],
+      "supply_mapping_method": "Editorial regional research leads. No verified delivery routes, nearest-facility claim or availability score.",
+      "metrics": {
+        "land_price_ngn_per_m2": null,
+        "build_rate_ngn_per_m2": null,
+        "annual_rent_by_property_cohort": null,
+        "material_delivery_cost_ngn": null,
+        "material_delivery_days": null,
+        "contractor_bid_window_days": null,
+        "construction_duration_days": null,
+        "approval_duration_days": null,
+        "projected_net_yield_percent": null,
+        "flood_risk": null,
+        "soil_suitability": null,
+        "power_reliability": null,
+        "water_reliability": null,
+        "demand_index": null
+      },
+      "recommendation_status": "insufficient_local_evidence",
+      "research_tasks": [
+        "Collect property-type and neighborhood matched sale/rent comparables",
+        "Obtain current land and BOQ/build-rate evidence with units and scope",
+        "Verify supplier coverage, stock, delivered quote and validity",
+        "Collect jurisdiction-specific permit steps and observed durations",
+        "Create a project-specific tender and construction schedule",
+        "Review current site-specific flood, drainage and geotechnical evidence"
+      ],
+      "last_researched_at": "2026-09-22"
+    },
+    {
+      "id": "ng-damaturu",
+      "name": "Damaturu",
+      "aliases": [],
+      "country_code": "NG",
+      "state": "Yobe",
+      "geopolitical_zone": "NE",
+      "display_order": 12,
+      "selection_basis": "State capital or federal capital; national service coverage anchor",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          11.9786,
+          11.7803
+        ]
+      },
+      "coordinate_source_id": "simplemaps-ng",
+      "coordinate_accuracy": "city_reference_point_not_parcel_or_boundary",
+      "source_city_name": "Damaturu",
+      "parent_market_id": null,
+      "overlap_note": null,
+      "service_availability": "pending_operations_confirmation",
+      "publication_state": "draft",
+      "local_observation_ids": [],
+      "regional_context_observation_ids": [],
+      "supply_research_lead_ids": [
+        "lafarge-ashaka"
+      ],
+      "supply_mapping_method": "Editorial regional research leads. No verified delivery routes, nearest-facility claim or availability score.",
+      "metrics": {
+        "land_price_ngn_per_m2": null,
+        "build_rate_ngn_per_m2": null,
+        "annual_rent_by_property_cohort": null,
+        "material_delivery_cost_ngn": null,
+        "material_delivery_days": null,
+        "contractor_bid_window_days": null,
+        "construction_duration_days": null,
+        "approval_duration_days": null,
+        "projected_net_yield_percent": null,
+        "flood_risk": null,
+        "soil_suitability": null,
+        "power_reliability": null,
+        "water_reliability": null,
+        "demand_index": null
+      },
+      "recommendation_status": "insufficient_local_evidence",
+      "research_tasks": [
+        "Collect property-type and neighborhood matched sale/rent comparables",
+        "Obtain current land and BOQ/build-rate evidence with units and scope",
+        "Verify supplier coverage, stock, delivered quote and validity",
+        "Collect jurisdiction-specific permit steps and observed durations",
+        "Create a project-specific tender and construction schedule",
+        "Review current site-specific flood, drainage and geotechnical evidence"
+      ],
+      "last_researched_at": "2026-09-22"
+    },
+    {
+      "id": "ng-dutse",
+      "name": "Dutse",
+      "aliases": [],
+      "country_code": "NG",
+      "state": "Jigawa",
+      "geopolitical_zone": "NW",
+      "display_order": 13,
+      "selection_basis": "State capital or federal capital; national service coverage anchor",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          9.334,
+          11.7024
+        ]
+      },
+      "coordinate_source_id": "simplemaps-ng",
+      "coordinate_accuracy": "city_reference_point_not_parcel_or_boundary",
+      "source_city_name": "Dutse",
+      "parent_market_id": null,
+      "overlap_note": null,
+      "service_availability": "pending_operations_confirmation",
+      "publication_state": "draft",
+      "local_observation_ids": [],
+      "regional_context_observation_ids": [],
+      "supply_research_lead_ids": [
+        "bua-sokoto"
+      ],
+      "supply_mapping_method": "Editorial regional research leads. No verified delivery routes, nearest-facility claim or availability score.",
+      "metrics": {
+        "land_price_ngn_per_m2": null,
+        "build_rate_ngn_per_m2": null,
+        "annual_rent_by_property_cohort": null,
+        "material_delivery_cost_ngn": null,
+        "material_delivery_days": null,
+        "contractor_bid_window_days": null,
+        "construction_duration_days": null,
+        "approval_duration_days": null,
+        "projected_net_yield_percent": null,
+        "flood_risk": null,
+        "soil_suitability": null,
+        "power_reliability": null,
+        "water_reliability": null,
+        "demand_index": null
+      },
+      "recommendation_status": "insufficient_local_evidence",
+      "research_tasks": [
+        "Collect property-type and neighborhood matched sale/rent comparables",
+        "Obtain current land and BOQ/build-rate evidence with units and scope",
+        "Verify supplier coverage, stock, delivered quote and validity",
+        "Collect jurisdiction-specific permit steps and observed durations",
+        "Create a project-specific tender and construction schedule",
+        "Review current site-specific flood, drainage and geotechnical evidence"
+      ],
+      "last_researched_at": "2026-09-22"
+    },
+    {
+      "id": "ng-enugu",
+      "name": "Enugu",
+      "aliases": [],
+      "country_code": "NG",
+      "state": "Enugu",
+      "geopolitical_zone": "SE",
+      "display_order": 14,
+      "selection_basis": "State capital or federal capital; national service coverage anchor",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          7.4942,
+          6.4403
+        ]
+      },
+      "coordinate_source_id": "simplemaps-ng",
+      "coordinate_accuracy": "city_reference_point_not_parcel_or_boundary",
+      "source_city_name": "Enugu",
+      "parent_market_id": null,
+      "overlap_note": null,
+      "service_availability": "pending_operations_confirmation",
+      "publication_state": "draft",
+      "local_observation_ids": [],
+      "regional_context_observation_ids": [
+        "npc-sale-enugu"
+      ],
+      "supply_research_lead_ids": [
+        "lafarge-mfamosing",
+        "dangote-okpella"
+      ],
+      "supply_mapping_method": "Editorial regional research leads. No verified delivery routes, nearest-facility claim or availability score.",
+      "metrics": {
+        "land_price_ngn_per_m2": null,
+        "build_rate_ngn_per_m2": null,
+        "annual_rent_by_property_cohort": null,
+        "material_delivery_cost_ngn": null,
+        "material_delivery_days": null,
+        "contractor_bid_window_days": null,
+        "construction_duration_days": null,
+        "approval_duration_days": null,
+        "projected_net_yield_percent": null,
+        "flood_risk": null,
+        "soil_suitability": null,
+        "power_reliability": null,
+        "water_reliability": null,
+        "demand_index": null
+      },
+      "recommendation_status": "insufficient_local_evidence",
+      "research_tasks": [
+        "Collect property-type and neighborhood matched sale/rent comparables",
+        "Obtain current land and BOQ/build-rate evidence with units and scope",
+        "Verify supplier coverage, stock, delivered quote and validity",
+        "Collect jurisdiction-specific permit steps and observed durations",
+        "Create a project-specific tender and construction schedule",
+        "Review current site-specific flood, drainage and geotechnical evidence"
+      ],
+      "last_researched_at": "2026-09-22"
+    },
+    {
+      "id": "ng-gombe",
+      "name": "Gombe",
+      "aliases": [],
+      "country_code": "NG",
+      "state": "Gombe",
+      "geopolitical_zone": "NE",
+      "display_order": 15,
+      "selection_basis": "State capital or federal capital; national service coverage anchor",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          11.1673,
+          10.2897
+        ]
+      },
+      "coordinate_source_id": "simplemaps-ng",
+      "coordinate_accuracy": "city_reference_point_not_parcel_or_boundary",
+      "source_city_name": "Gombe",
+      "parent_market_id": null,
+      "overlap_note": null,
+      "service_availability": "pending_operations_confirmation",
+      "publication_state": "draft",
+      "local_observation_ids": [],
+      "regional_context_observation_ids": [],
+      "supply_research_lead_ids": [
+        "lafarge-ashaka"
+      ],
+      "supply_mapping_method": "Editorial regional research leads. No verified delivery routes, nearest-facility claim or availability score.",
+      "metrics": {
+        "land_price_ngn_per_m2": null,
+        "build_rate_ngn_per_m2": null,
+        "annual_rent_by_property_cohort": null,
+        "material_delivery_cost_ngn": null,
+        "material_delivery_days": null,
+        "contractor_bid_window_days": null,
+        "construction_duration_days": null,
+        "approval_duration_days": null,
+        "projected_net_yield_percent": null,
+        "flood_risk": null,
+        "soil_suitability": null,
+        "power_reliability": null,
+        "water_reliability": null,
+        "demand_index": null
+      },
+      "recommendation_status": "insufficient_local_evidence",
+      "research_tasks": [
+        "Collect property-type and neighborhood matched sale/rent comparables",
+        "Obtain current land and BOQ/build-rate evidence with units and scope",
+        "Verify supplier coverage, stock, delivered quote and validity",
+        "Collect jurisdiction-specific permit steps and observed durations",
+        "Create a project-specific tender and construction schedule",
+        "Review current site-specific flood, drainage and geotechnical evidence"
+      ],
+      "last_researched_at": "2026-09-22"
+    },
+    {
+      "id": "ng-gusau",
+      "name": "Gusau",
+      "aliases": [],
+      "country_code": "NG",
+      "state": "Zamfara",
+      "geopolitical_zone": "NW",
+      "display_order": 16,
+      "selection_basis": "State capital or federal capital; national service coverage anchor",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6.6745,
+          12.1628
+        ]
+      },
+      "coordinate_source_id": "simplemaps-ng",
+      "coordinate_accuracy": "city_reference_point_not_parcel_or_boundary",
+      "source_city_name": "Gusau",
+      "parent_market_id": null,
+      "overlap_note": null,
+      "service_availability": "pending_operations_confirmation",
+      "publication_state": "draft",
+      "local_observation_ids": [],
+      "regional_context_observation_ids": [],
+      "supply_research_lead_ids": [
+        "bua-sokoto"
+      ],
+      "supply_mapping_method": "Editorial regional research leads. No verified delivery routes, nearest-facility claim or availability score.",
+      "metrics": {
+        "land_price_ngn_per_m2": null,
+        "build_rate_ngn_per_m2": null,
+        "annual_rent_by_property_cohort": null,
+        "material_delivery_cost_ngn": null,
+        "material_delivery_days": null,
+        "contractor_bid_window_days": null,
+        "construction_duration_days": null,
+        "approval_duration_days": null,
+        "projected_net_yield_percent": null,
+        "flood_risk": null,
+        "soil_suitability": null,
+        "power_reliability": null,
+        "water_reliability": null,
+        "demand_index": null
+      },
+      "recommendation_status": "insufficient_local_evidence",
+      "research_tasks": [
+        "Collect property-type and neighborhood matched sale/rent comparables",
+        "Obtain current land and BOQ/build-rate evidence with units and scope",
+        "Verify supplier coverage, stock, delivered quote and validity",
+        "Collect jurisdiction-specific permit steps and observed durations",
+        "Create a project-specific tender and construction schedule",
+        "Review current site-specific flood, drainage and geotechnical evidence"
+      ],
+      "last_researched_at": "2026-09-22"
+    },
+    {
+      "id": "ng-ibadan",
+      "name": "Ibadan",
+      "aliases": [],
+      "country_code": "NG",
+      "state": "Oyo",
+      "geopolitical_zone": "SW",
+      "display_order": 17,
+      "selection_basis": "State capital or federal capital; national service coverage anchor",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          3.9058,
+          7.3775
+        ]
+      },
+      "coordinate_source_id": "simplemaps-ng",
+      "coordinate_accuracy": "city_reference_point_not_parcel_or_boundary",
+      "source_city_name": "Ibadan",
+      "parent_market_id": null,
+      "overlap_note": null,
+      "service_availability": "pending_operations_confirmation",
+      "publication_state": "draft",
+      "local_observation_ids": [
+        "npc-ibadan-rent",
+        "npc-ibadan-sale"
+      ],
+      "regional_context_observation_ids": [
+        "npc-rent-oyo",
+        "npc-sale-oyo"
+      ],
+      "supply_research_lead_ids": [
+        "dangote-ibese",
+        "lafarge-ewekoro",
+        "lafarge-sagamu"
+      ],
+      "supply_mapping_method": "Editorial regional research leads. No verified delivery routes, nearest-facility claim or availability score.",
+      "metrics": {
+        "land_price_ngn_per_m2": null,
+        "build_rate_ngn_per_m2": null,
+        "annual_rent_by_property_cohort": null,
+        "material_delivery_cost_ngn": null,
+        "material_delivery_days": null,
+        "contractor_bid_window_days": null,
+        "construction_duration_days": null,
+        "approval_duration_days": null,
+        "projected_net_yield_percent": null,
+        "flood_risk": null,
+        "soil_suitability": null,
+        "power_reliability": null,
+        "water_reliability": null,
+        "demand_index": null
+      },
+      "recommendation_status": "insufficient_local_evidence",
+      "research_tasks": [
+        "Collect property-type and neighborhood matched sale/rent comparables",
+        "Obtain current land and BOQ/build-rate evidence with units and scope",
+        "Verify supplier coverage, stock, delivered quote and validity",
+        "Collect jurisdiction-specific permit steps and observed durations",
+        "Create a project-specific tender and construction schedule",
+        "Review current site-specific flood, drainage and geotechnical evidence"
+      ],
+      "last_researched_at": "2026-09-22"
+    },
+    {
+      "id": "ng-ikeja",
+      "name": "Ikeja",
+      "aliases": [],
+      "country_code": "NG",
+      "state": "Lagos",
+      "geopolitical_zone": "SW",
+      "display_order": 18,
+      "selection_basis": "State capital or federal capital; national service coverage anchor",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          3.3426,
+          6.6186
+        ]
+      },
+      "coordinate_source_id": "simplemaps-ng",
+      "coordinate_accuracy": "city_reference_point_not_parcel_or_boundary",
+      "source_city_name": "Ikeja",
+      "parent_market_id": "ng-lagos",
+      "overlap_note": "Overlapping metropolitan market labels; do not sum market-level totals.",
+      "service_availability": "pending_operations_confirmation",
+      "publication_state": "draft",
+      "local_observation_ids": [],
+      "regional_context_observation_ids": [
+        "npc-rent-lagos",
+        "npc-sale-lagos"
+      ],
+      "supply_research_lead_ids": [
+        "lafarge-oregun",
+        "dangote-ibese",
+        "lafarge-ewekoro",
+        "lafarge-sagamu"
+      ],
+      "supply_mapping_method": "Editorial regional research leads. No verified delivery routes, nearest-facility claim or availability score.",
+      "metrics": {
+        "land_price_ngn_per_m2": null,
+        "build_rate_ngn_per_m2": null,
+        "annual_rent_by_property_cohort": null,
+        "material_delivery_cost_ngn": null,
+        "material_delivery_days": null,
+        "contractor_bid_window_days": null,
+        "construction_duration_days": null,
+        "approval_duration_days": null,
+        "projected_net_yield_percent": null,
+        "flood_risk": null,
+        "soil_suitability": null,
+        "power_reliability": null,
+        "water_reliability": null,
+        "demand_index": null
+      },
+      "recommendation_status": "insufficient_local_evidence",
+      "research_tasks": [
+        "Collect property-type and neighborhood matched sale/rent comparables",
+        "Obtain current land and BOQ/build-rate evidence with units and scope",
+        "Verify supplier coverage, stock, delivered quote and validity",
+        "Collect jurisdiction-specific permit steps and observed durations",
+        "Create a project-specific tender and construction schedule",
+        "Review current site-specific flood, drainage and geotechnical evidence"
+      ],
+      "last_researched_at": "2026-09-22"
+    },
+    {
+      "id": "ng-ilorin",
+      "name": "Ilorin",
+      "aliases": [],
+      "country_code": "NG",
+      "state": "Kwara",
+      "geopolitical_zone": "NC",
+      "display_order": 19,
+      "selection_basis": "State capital or federal capital; national service coverage anchor",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          4.55,
+          8.5
+        ]
+      },
+      "coordinate_source_id": "simplemaps-ng",
+      "coordinate_accuracy": "city_reference_point_not_parcel_or_boundary",
+      "source_city_name": "Ilorin",
+      "parent_market_id": null,
+      "overlap_note": null,
+      "service_availability": "pending_operations_confirmation",
+      "publication_state": "draft",
+      "local_observation_ids": [],
+      "regional_context_observation_ids": [],
+      "supply_research_lead_ids": [
+        "dangote-obajana",
+        "dangote-gboko"
+      ],
+      "supply_mapping_method": "Editorial regional research leads. No verified delivery routes, nearest-facility claim or availability score.",
+      "metrics": {
+        "land_price_ngn_per_m2": null,
+        "build_rate_ngn_per_m2": null,
+        "annual_rent_by_property_cohort": null,
+        "material_delivery_cost_ngn": null,
+        "material_delivery_days": null,
+        "contractor_bid_window_days": null,
+        "construction_duration_days": null,
+        "approval_duration_days": null,
+        "projected_net_yield_percent": null,
+        "flood_risk": null,
+        "soil_suitability": null,
+        "power_reliability": null,
+        "water_reliability": null,
+        "demand_index": null
+      },
+      "recommendation_status": "insufficient_local_evidence",
+      "research_tasks": [
+        "Collect property-type and neighborhood matched sale/rent comparables",
+        "Obtain current land and BOQ/build-rate evidence with units and scope",
+        "Verify supplier coverage, stock, delivered quote and validity",
+        "Collect jurisdiction-specific permit steps and observed durations",
+        "Create a project-specific tender and construction schedule",
+        "Review current site-specific flood, drainage and geotechnical evidence"
+      ],
+      "last_researched_at": "2026-09-22"
+    },
+    {
+      "id": "ng-jalingo",
+      "name": "Jalingo",
+      "aliases": [],
+      "country_code": "NG",
+      "state": "Taraba",
+      "geopolitical_zone": "NE",
+      "display_order": 20,
+      "selection_basis": "State capital or federal capital; national service coverage anchor",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          11.3264,
+          8.9195
+        ]
+      },
+      "coordinate_source_id": "simplemaps-ng",
+      "coordinate_accuracy": "city_reference_point_not_parcel_or_boundary",
+      "source_city_name": "Jalingo",
+      "parent_market_id": null,
+      "overlap_note": null,
+      "service_availability": "pending_operations_confirmation",
+      "publication_state": "draft",
+      "local_observation_ids": [],
+      "regional_context_observation_ids": [],
+      "supply_research_lead_ids": [
+        "lafarge-ashaka"
+      ],
+      "supply_mapping_method": "Editorial regional research leads. No verified delivery routes, nearest-facility claim or availability score.",
+      "metrics": {
+        "land_price_ngn_per_m2": null,
+        "build_rate_ngn_per_m2": null,
+        "annual_rent_by_property_cohort": null,
+        "material_delivery_cost_ngn": null,
+        "material_delivery_days": null,
+        "contractor_bid_window_days": null,
+        "construction_duration_days": null,
+        "approval_duration_days": null,
+        "projected_net_yield_percent": null,
+        "flood_risk": null,
+        "soil_suitability": null,
+        "power_reliability": null,
+        "water_reliability": null,
+        "demand_index": null
+      },
+      "recommendation_status": "insufficient_local_evidence",
+      "research_tasks": [
+        "Collect property-type and neighborhood matched sale/rent comparables",
+        "Obtain current land and BOQ/build-rate evidence with units and scope",
+        "Verify supplier coverage, stock, delivered quote and validity",
+        "Collect jurisdiction-specific permit steps and observed durations",
+        "Create a project-specific tender and construction schedule",
+        "Review current site-specific flood, drainage and geotechnical evidence"
+      ],
+      "last_researched_at": "2026-09-22"
+    },
+    {
+      "id": "ng-jos",
+      "name": "Jos",
+      "aliases": [],
+      "country_code": "NG",
+      "state": "Plateau",
+      "geopolitical_zone": "NC",
+      "display_order": 21,
+      "selection_basis": "State capital or federal capital; national service coverage anchor",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          8.8833,
+          9.9333
+        ]
+      },
+      "coordinate_source_id": "simplemaps-ng",
+      "coordinate_accuracy": "city_reference_point_not_parcel_or_boundary",
+      "source_city_name": "Jos",
+      "parent_market_id": null,
+      "overlap_note": null,
+      "service_availability": "pending_operations_confirmation",
+      "publication_state": "draft",
+      "local_observation_ids": [],
+      "regional_context_observation_ids": [],
+      "supply_research_lead_ids": [
+        "dangote-obajana",
+        "dangote-gboko"
+      ],
+      "supply_mapping_method": "Editorial regional research leads. No verified delivery routes, nearest-facility claim or availability score.",
+      "metrics": {
+        "land_price_ngn_per_m2": null,
+        "build_rate_ngn_per_m2": null,
+        "annual_rent_by_property_cohort": null,
+        "material_delivery_cost_ngn": null,
+        "material_delivery_days": null,
+        "contractor_bid_window_days": null,
+        "construction_duration_days": null,
+        "approval_duration_days": null,
+        "projected_net_yield_percent": null,
+        "flood_risk": null,
+        "soil_suitability": null,
+        "power_reliability": null,
+        "water_reliability": null,
+        "demand_index": null
+      },
+      "recommendation_status": "insufficient_local_evidence",
+      "research_tasks": [
+        "Collect property-type and neighborhood matched sale/rent comparables",
+        "Obtain current land and BOQ/build-rate evidence with units and scope",
+        "Verify supplier coverage, stock, delivered quote and validity",
+        "Collect jurisdiction-specific permit steps and observed durations",
+        "Create a project-specific tender and construction schedule",
+        "Review current site-specific flood, drainage and geotechnical evidence"
+      ],
+      "last_researched_at": "2026-09-22"
+    },
+    {
+      "id": "ng-kaduna",
+      "name": "Kaduna",
+      "aliases": [],
+      "country_code": "NG",
+      "state": "Kaduna",
+      "geopolitical_zone": "NW",
+      "display_order": 22,
+      "selection_basis": "State capital or federal capital; national service coverage anchor",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          7.4165,
+          10.5105
+        ]
+      },
+      "coordinate_source_id": "simplemaps-ng",
+      "coordinate_accuracy": "city_reference_point_not_parcel_or_boundary",
+      "source_city_name": "Kaduna",
+      "parent_market_id": null,
+      "overlap_note": null,
+      "service_availability": "pending_operations_confirmation",
+      "publication_state": "draft",
+      "local_observation_ids": [],
+      "regional_context_observation_ids": [],
+      "supply_research_lead_ids": [
+        "bua-sokoto"
+      ],
+      "supply_mapping_method": "Editorial regional research leads. No verified delivery routes, nearest-facility claim or availability score.",
+      "metrics": {
+        "land_price_ngn_per_m2": null,
+        "build_rate_ngn_per_m2": null,
+        "annual_rent_by_property_cohort": null,
+        "material_delivery_cost_ngn": null,
+        "material_delivery_days": null,
+        "contractor_bid_window_days": null,
+        "construction_duration_days": null,
+        "approval_duration_days": null,
+        "projected_net_yield_percent": null,
+        "flood_risk": null,
+        "soil_suitability": null,
+        "power_reliability": null,
+        "water_reliability": null,
+        "demand_index": null
+      },
+      "recommendation_status": "insufficient_local_evidence",
+      "research_tasks": [
+        "Collect property-type and neighborhood matched sale/rent comparables",
+        "Obtain current land and BOQ/build-rate evidence with units and scope",
+        "Verify supplier coverage, stock, delivered quote and validity",
+        "Collect jurisdiction-specific permit steps and observed durations",
+        "Create a project-specific tender and construction schedule",
+        "Review current site-specific flood, drainage and geotechnical evidence"
+      ],
+      "last_researched_at": "2026-09-22"
+    },
+    {
+      "id": "ng-kano",
+      "name": "Kano",
+      "aliases": [],
+      "country_code": "NG",
+      "state": "Kano",
+      "geopolitical_zone": "NW",
+      "display_order": 23,
+      "selection_basis": "State capital or federal capital; national service coverage anchor",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          8.592,
+          12.0022
+        ]
+      },
+      "coordinate_source_id": "simplemaps-ng",
+      "coordinate_accuracy": "city_reference_point_not_parcel_or_boundary",
+      "source_city_name": "Kano",
+      "parent_market_id": null,
+      "overlap_note": null,
+      "service_availability": "pending_operations_confirmation",
+      "publication_state": "draft",
+      "local_observation_ids": [],
+      "regional_context_observation_ids": [],
+      "supply_research_lead_ids": [
+        "bua-sokoto"
+      ],
+      "supply_mapping_method": "Editorial regional research leads. No verified delivery routes, nearest-facility claim or availability score.",
+      "metrics": {
+        "land_price_ngn_per_m2": null,
+        "build_rate_ngn_per_m2": null,
+        "annual_rent_by_property_cohort": null,
+        "material_delivery_cost_ngn": null,
+        "material_delivery_days": null,
+        "contractor_bid_window_days": null,
+        "construction_duration_days": null,
+        "approval_duration_days": null,
+        "projected_net_yield_percent": null,
+        "flood_risk": null,
+        "soil_suitability": null,
+        "power_reliability": null,
+        "water_reliability": null,
+        "demand_index": null
+      },
+      "recommendation_status": "insufficient_local_evidence",
+      "research_tasks": [
+        "Collect property-type and neighborhood matched sale/rent comparables",
+        "Obtain current land and BOQ/build-rate evidence with units and scope",
+        "Verify supplier coverage, stock, delivered quote and validity",
+        "Collect jurisdiction-specific permit steps and observed durations",
+        "Create a project-specific tender and construction schedule",
+        "Review current site-specific flood, drainage and geotechnical evidence"
+      ],
+      "last_researched_at": "2026-09-22"
+    },
+    {
+      "id": "ng-katsina",
+      "name": "Katsina",
+      "aliases": [],
+      "country_code": "NG",
+      "state": "Katsina",
+      "geopolitical_zone": "NW",
+      "display_order": 24,
+      "selection_basis": "State capital or federal capital; national service coverage anchor",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          7.6008,
+          12.9889
+        ]
+      },
+      "coordinate_source_id": "simplemaps-ng",
+      "coordinate_accuracy": "city_reference_point_not_parcel_or_boundary",
+      "source_city_name": "Katsina",
+      "parent_market_id": null,
+      "overlap_note": null,
+      "service_availability": "pending_operations_confirmation",
+      "publication_state": "draft",
+      "local_observation_ids": [],
+      "regional_context_observation_ids": [],
+      "supply_research_lead_ids": [
+        "bua-sokoto"
+      ],
+      "supply_mapping_method": "Editorial regional research leads. No verified delivery routes, nearest-facility claim or availability score.",
+      "metrics": {
+        "land_price_ngn_per_m2": null,
+        "build_rate_ngn_per_m2": null,
+        "annual_rent_by_property_cohort": null,
+        "material_delivery_cost_ngn": null,
+        "material_delivery_days": null,
+        "contractor_bid_window_days": null,
+        "construction_duration_days": null,
+        "approval_duration_days": null,
+        "projected_net_yield_percent": null,
+        "flood_risk": null,
+        "soil_suitability": null,
+        "power_reliability": null,
+        "water_reliability": null,
+        "demand_index": null
+      },
+      "recommendation_status": "insufficient_local_evidence",
+      "research_tasks": [
+        "Collect property-type and neighborhood matched sale/rent comparables",
+        "Obtain current land and BOQ/build-rate evidence with units and scope",
+        "Verify supplier coverage, stock, delivered quote and validity",
+        "Collect jurisdiction-specific permit steps and observed durations",
+        "Create a project-specific tender and construction schedule",
+        "Review current site-specific flood, drainage and geotechnical evidence"
+      ],
+      "last_researched_at": "2026-09-22"
+    },
+    {
+      "id": "ng-lafia",
+      "name": "Lafia",
+      "aliases": [],
+      "country_code": "NG",
+      "state": "Nasarawa",
+      "geopolitical_zone": "NC",
+      "display_order": 25,
+      "selection_basis": "State capital or federal capital; national service coverage anchor",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          8.5167,
+          8.5
+        ]
+      },
+      "coordinate_source_id": "simplemaps-ng",
+      "coordinate_accuracy": "city_reference_point_not_parcel_or_boundary",
+      "source_city_name": "Lafia",
+      "parent_market_id": null,
+      "overlap_note": null,
+      "service_availability": "pending_operations_confirmation",
+      "publication_state": "draft",
+      "local_observation_ids": [],
+      "regional_context_observation_ids": [],
+      "supply_research_lead_ids": [
+        "dangote-obajana",
+        "dangote-gboko"
+      ],
+      "supply_mapping_method": "Editorial regional research leads. No verified delivery routes, nearest-facility claim or availability score.",
+      "metrics": {
+        "land_price_ngn_per_m2": null,
+        "build_rate_ngn_per_m2": null,
+        "annual_rent_by_property_cohort": null,
+        "material_delivery_cost_ngn": null,
+        "material_delivery_days": null,
+        "contractor_bid_window_days": null,
+        "construction_duration_days": null,
+        "approval_duration_days": null,
+        "projected_net_yield_percent": null,
+        "flood_risk": null,
+        "soil_suitability": null,
+        "power_reliability": null,
+        "water_reliability": null,
+        "demand_index": null
+      },
+      "recommendation_status": "insufficient_local_evidence",
+      "research_tasks": [
+        "Collect property-type and neighborhood matched sale/rent comparables",
+        "Obtain current land and BOQ/build-rate evidence with units and scope",
+        "Verify supplier coverage, stock, delivered quote and validity",
+        "Collect jurisdiction-specific permit steps and observed durations",
+        "Create a project-specific tender and construction schedule",
+        "Review current site-specific flood, drainage and geotechnical evidence"
+      ],
+      "last_researched_at": "2026-09-22"
+    },
+    {
+      "id": "ng-lokoja",
+      "name": "Lokoja",
+      "aliases": [],
+      "country_code": "NG",
+      "state": "Kogi",
+      "geopolitical_zone": "NC",
+      "display_order": 26,
+      "selection_basis": "State capital or federal capital; national service coverage anchor",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6.7442,
+          7.8019
+        ]
+      },
+      "coordinate_source_id": "simplemaps-ng",
+      "coordinate_accuracy": "city_reference_point_not_parcel_or_boundary",
+      "source_city_name": "Lokoja",
+      "parent_market_id": null,
+      "overlap_note": null,
+      "service_availability": "pending_operations_confirmation",
+      "publication_state": "draft",
+      "local_observation_ids": [],
+      "regional_context_observation_ids": [],
+      "supply_research_lead_ids": [
+        "dangote-obajana",
+        "dangote-gboko"
+      ],
+      "supply_mapping_method": "Editorial regional research leads. No verified delivery routes, nearest-facility claim or availability score.",
+      "metrics": {
+        "land_price_ngn_per_m2": null,
+        "build_rate_ngn_per_m2": null,
+        "annual_rent_by_property_cohort": null,
+        "material_delivery_cost_ngn": null,
+        "material_delivery_days": null,
+        "contractor_bid_window_days": null,
+        "construction_duration_days": null,
+        "approval_duration_days": null,
+        "projected_net_yield_percent": null,
+        "flood_risk": null,
+        "soil_suitability": null,
+        "power_reliability": null,
+        "water_reliability": null,
+        "demand_index": null
+      },
+      "recommendation_status": "insufficient_local_evidence",
+      "research_tasks": [
+        "Collect property-type and neighborhood matched sale/rent comparables",
+        "Obtain current land and BOQ/build-rate evidence with units and scope",
+        "Verify supplier coverage, stock, delivered quote and validity",
+        "Collect jurisdiction-specific permit steps and observed durations",
+        "Create a project-specific tender and construction schedule",
+        "Review current site-specific flood, drainage and geotechnical evidence"
+      ],
+      "last_researched_at": "2026-09-22"
+    },
+    {
+      "id": "ng-maiduguri",
+      "name": "Maiduguri",
+      "aliases": [],
+      "country_code": "NG",
+      "state": "Borno",
+      "geopolitical_zone": "NE",
+      "display_order": 27,
+      "selection_basis": "State capital or federal capital; national service coverage anchor",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          13.15,
+          11.8333
+        ]
+      },
+      "coordinate_source_id": "simplemaps-ng",
+      "coordinate_accuracy": "city_reference_point_not_parcel_or_boundary",
+      "source_city_name": "Maiduguri",
+      "parent_market_id": null,
+      "overlap_note": null,
+      "service_availability": "pending_operations_confirmation",
+      "publication_state": "draft",
+      "local_observation_ids": [],
+      "regional_context_observation_ids": [],
+      "supply_research_lead_ids": [
+        "lafarge-ashaka"
+      ],
+      "supply_mapping_method": "Editorial regional research leads. No verified delivery routes, nearest-facility claim or availability score.",
+      "metrics": {
+        "land_price_ngn_per_m2": null,
+        "build_rate_ngn_per_m2": null,
+        "annual_rent_by_property_cohort": null,
+        "material_delivery_cost_ngn": null,
+        "material_delivery_days": null,
+        "contractor_bid_window_days": null,
+        "construction_duration_days": null,
+        "approval_duration_days": null,
+        "projected_net_yield_percent": null,
+        "flood_risk": null,
+        "soil_suitability": null,
+        "power_reliability": null,
+        "water_reliability": null,
+        "demand_index": null
+      },
+      "recommendation_status": "insufficient_local_evidence",
+      "research_tasks": [
+        "Collect property-type and neighborhood matched sale/rent comparables",
+        "Obtain current land and BOQ/build-rate evidence with units and scope",
+        "Verify supplier coverage, stock, delivered quote and validity",
+        "Collect jurisdiction-specific permit steps and observed durations",
+        "Create a project-specific tender and construction schedule",
+        "Review current site-specific flood, drainage and geotechnical evidence"
+      ],
+      "last_researched_at": "2026-09-22"
+    },
+    {
+      "id": "ng-makurdi",
+      "name": "Makurdi",
+      "aliases": [],
+      "country_code": "NG",
+      "state": "Benue",
+      "geopolitical_zone": "NC",
+      "display_order": 28,
+      "selection_basis": "State capital or federal capital; national service coverage anchor",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          8.5361,
+          7.7306
+        ]
+      },
+      "coordinate_source_id": "simplemaps-ng",
+      "coordinate_accuracy": "city_reference_point_not_parcel_or_boundary",
+      "source_city_name": "Makurdi",
+      "parent_market_id": null,
+      "overlap_note": null,
+      "service_availability": "pending_operations_confirmation",
+      "publication_state": "draft",
+      "local_observation_ids": [],
+      "regional_context_observation_ids": [],
+      "supply_research_lead_ids": [
+        "dangote-gboko",
+        "dangote-obajana"
+      ],
+      "supply_mapping_method": "Editorial regional research leads. No verified delivery routes, nearest-facility claim or availability score.",
+      "metrics": {
+        "land_price_ngn_per_m2": null,
+        "build_rate_ngn_per_m2": null,
+        "annual_rent_by_property_cohort": null,
+        "material_delivery_cost_ngn": null,
+        "material_delivery_days": null,
+        "contractor_bid_window_days": null,
+        "construction_duration_days": null,
+        "approval_duration_days": null,
+        "projected_net_yield_percent": null,
+        "flood_risk": null,
+        "soil_suitability": null,
+        "power_reliability": null,
+        "water_reliability": null,
+        "demand_index": null
+      },
+      "recommendation_status": "insufficient_local_evidence",
+      "research_tasks": [
+        "Collect property-type and neighborhood matched sale/rent comparables",
+        "Obtain current land and BOQ/build-rate evidence with units and scope",
+        "Verify supplier coverage, stock, delivered quote and validity",
+        "Collect jurisdiction-specific permit steps and observed durations",
+        "Create a project-specific tender and construction schedule",
+        "Review current site-specific flood, drainage and geotechnical evidence"
+      ],
+      "last_researched_at": "2026-09-22"
+    },
+    {
+      "id": "ng-minna",
+      "name": "Minna",
+      "aliases": [],
+      "country_code": "NG",
+      "state": "Niger",
+      "geopolitical_zone": "NC",
+      "display_order": 29,
+      "selection_basis": "State capital or federal capital; national service coverage anchor",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6.5569,
+          9.6139
+        ]
+      },
+      "coordinate_source_id": "simplemaps-ng",
+      "coordinate_accuracy": "city_reference_point_not_parcel_or_boundary",
+      "source_city_name": "Minna",
+      "parent_market_id": null,
+      "overlap_note": null,
+      "service_availability": "pending_operations_confirmation",
+      "publication_state": "draft",
+      "local_observation_ids": [],
+      "regional_context_observation_ids": [],
+      "supply_research_lead_ids": [
+        "dangote-obajana",
+        "dangote-gboko"
+      ],
+      "supply_mapping_method": "Editorial regional research leads. No verified delivery routes, nearest-facility claim or availability score.",
+      "metrics": {
+        "land_price_ngn_per_m2": null,
+        "build_rate_ngn_per_m2": null,
+        "annual_rent_by_property_cohort": null,
+        "material_delivery_cost_ngn": null,
+        "material_delivery_days": null,
+        "contractor_bid_window_days": null,
+        "construction_duration_days": null,
+        "approval_duration_days": null,
+        "projected_net_yield_percent": null,
+        "flood_risk": null,
+        "soil_suitability": null,
+        "power_reliability": null,
+        "water_reliability": null,
+        "demand_index": null
+      },
+      "recommendation_status": "insufficient_local_evidence",
+      "research_tasks": [
+        "Collect property-type and neighborhood matched sale/rent comparables",
+        "Obtain current land and BOQ/build-rate evidence with units and scope",
+        "Verify supplier coverage, stock, delivered quote and validity",
+        "Collect jurisdiction-specific permit steps and observed durations",
+        "Create a project-specific tender and construction schedule",
+        "Review current site-specific flood, drainage and geotechnical evidence"
+      ],
+      "last_researched_at": "2026-09-22"
+    },
+    {
+      "id": "ng-osogbo",
+      "name": "Osogbo",
+      "aliases": [],
+      "country_code": "NG",
+      "state": "Osun",
+      "geopolitical_zone": "SW",
+      "display_order": 30,
+      "selection_basis": "State capital or federal capital; national service coverage anchor",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          4.5761,
+          7.7597
+        ]
+      },
+      "coordinate_source_id": "simplemaps-ng",
+      "coordinate_accuracy": "city_reference_point_not_parcel_or_boundary",
+      "source_city_name": "Osogbo",
+      "parent_market_id": null,
+      "overlap_note": null,
+      "service_availability": "pending_operations_confirmation",
+      "publication_state": "draft",
+      "local_observation_ids": [],
+      "regional_context_observation_ids": [],
+      "supply_research_lead_ids": [
+        "dangote-ibese",
+        "lafarge-ewekoro",
+        "lafarge-sagamu"
+      ],
+      "supply_mapping_method": "Editorial regional research leads. No verified delivery routes, nearest-facility claim or availability score.",
+      "metrics": {
+        "land_price_ngn_per_m2": null,
+        "build_rate_ngn_per_m2": null,
+        "annual_rent_by_property_cohort": null,
+        "material_delivery_cost_ngn": null,
+        "material_delivery_days": null,
+        "contractor_bid_window_days": null,
+        "construction_duration_days": null,
+        "approval_duration_days": null,
+        "projected_net_yield_percent": null,
+        "flood_risk": null,
+        "soil_suitability": null,
+        "power_reliability": null,
+        "water_reliability": null,
+        "demand_index": null
+      },
+      "recommendation_status": "insufficient_local_evidence",
+      "research_tasks": [
+        "Collect property-type and neighborhood matched sale/rent comparables",
+        "Obtain current land and BOQ/build-rate evidence with units and scope",
+        "Verify supplier coverage, stock, delivered quote and validity",
+        "Collect jurisdiction-specific permit steps and observed durations",
+        "Create a project-specific tender and construction schedule",
+        "Review current site-specific flood, drainage and geotechnical evidence"
+      ],
+      "last_researched_at": "2026-09-22"
+    },
+    {
+      "id": "ng-owerri",
+      "name": "Owerri",
+      "aliases": [],
+      "country_code": "NG",
+      "state": "Imo",
+      "geopolitical_zone": "SE",
+      "display_order": 31,
+      "selection_basis": "State capital or federal capital; national service coverage anchor",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          7.0333,
+          5.4833
+        ]
+      },
+      "coordinate_source_id": "simplemaps-ng",
+      "coordinate_accuracy": "city_reference_point_not_parcel_or_boundary",
+      "source_city_name": "Owerri",
+      "parent_market_id": null,
+      "overlap_note": null,
+      "service_availability": "pending_operations_confirmation",
+      "publication_state": "draft",
+      "local_observation_ids": [],
+      "regional_context_observation_ids": [],
+      "supply_research_lead_ids": [
+        "lafarge-mfamosing",
+        "dangote-okpella"
+      ],
+      "supply_mapping_method": "Editorial regional research leads. No verified delivery routes, nearest-facility claim or availability score.",
+      "metrics": {
+        "land_price_ngn_per_m2": null,
+        "build_rate_ngn_per_m2": null,
+        "annual_rent_by_property_cohort": null,
+        "material_delivery_cost_ngn": null,
+        "material_delivery_days": null,
+        "contractor_bid_window_days": null,
+        "construction_duration_days": null,
+        "approval_duration_days": null,
+        "projected_net_yield_percent": null,
+        "flood_risk": null,
+        "soil_suitability": null,
+        "power_reliability": null,
+        "water_reliability": null,
+        "demand_index": null
+      },
+      "recommendation_status": "insufficient_local_evidence",
+      "research_tasks": [
+        "Collect property-type and neighborhood matched sale/rent comparables",
+        "Obtain current land and BOQ/build-rate evidence with units and scope",
+        "Verify supplier coverage, stock, delivered quote and validity",
+        "Collect jurisdiction-specific permit steps and observed durations",
+        "Create a project-specific tender and construction schedule",
+        "Review current site-specific flood, drainage and geotechnical evidence"
+      ],
+      "last_researched_at": "2026-09-22"
+    },
+    {
+      "id": "ng-port-harcourt",
+      "name": "Port Harcourt",
+      "aliases": [],
+      "country_code": "NG",
+      "state": "Rivers",
+      "geopolitical_zone": "SS",
+      "display_order": 32,
+      "selection_basis": "State capital or federal capital; national service coverage anchor",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          7.0163,
+          4.7655
+        ]
+      },
+      "coordinate_source_id": "simplemaps-ng",
+      "coordinate_accuracy": "city_reference_point_not_parcel_or_boundary",
+      "source_city_name": "Port Harcourt",
+      "parent_market_id": null,
+      "overlap_note": null,
+      "service_availability": "pending_operations_confirmation",
+      "publication_state": "draft",
+      "local_observation_ids": [],
+      "regional_context_observation_ids": [
+        "npc-rent-rivers",
+        "npc-sale-rivers"
+      ],
+      "supply_research_lead_ids": [
+        "lafarge-trans-amadi",
+        "lafarge-mfamosing",
+        "dangote-okpella",
+        "bua-edo"
+      ],
+      "supply_mapping_method": "Editorial regional research leads. No verified delivery routes, nearest-facility claim or availability score.",
+      "metrics": {
+        "land_price_ngn_per_m2": null,
+        "build_rate_ngn_per_m2": null,
+        "annual_rent_by_property_cohort": null,
+        "material_delivery_cost_ngn": null,
+        "material_delivery_days": null,
+        "contractor_bid_window_days": null,
+        "construction_duration_days": null,
+        "approval_duration_days": null,
+        "projected_net_yield_percent": null,
+        "flood_risk": null,
+        "soil_suitability": null,
+        "power_reliability": null,
+        "water_reliability": null,
+        "demand_index": null
+      },
+      "recommendation_status": "insufficient_local_evidence",
+      "research_tasks": [
+        "Collect property-type and neighborhood matched sale/rent comparables",
+        "Obtain current land and BOQ/build-rate evidence with units and scope",
+        "Verify supplier coverage, stock, delivered quote and validity",
+        "Collect jurisdiction-specific permit steps and observed durations",
+        "Create a project-specific tender and construction schedule",
+        "Review current site-specific flood, drainage and geotechnical evidence"
+      ],
+      "last_researched_at": "2026-09-22"
+    },
+    {
+      "id": "ng-sokoto",
+      "name": "Sokoto",
+      "aliases": [],
+      "country_code": "NG",
+      "state": "Sokoto",
+      "geopolitical_zone": "NW",
+      "display_order": 33,
+      "selection_basis": "State capital or federal capital; national service coverage anchor",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          5.2339,
+          13.0622
+        ]
+      },
+      "coordinate_source_id": "simplemaps-ng",
+      "coordinate_accuracy": "city_reference_point_not_parcel_or_boundary",
+      "source_city_name": "Sokoto",
+      "parent_market_id": null,
+      "overlap_note": null,
+      "service_availability": "pending_operations_confirmation",
+      "publication_state": "draft",
+      "local_observation_ids": [],
+      "regional_context_observation_ids": [],
+      "supply_research_lead_ids": [
+        "bua-sokoto"
+      ],
+      "supply_mapping_method": "Editorial regional research leads. No verified delivery routes, nearest-facility claim or availability score.",
+      "metrics": {
+        "land_price_ngn_per_m2": null,
+        "build_rate_ngn_per_m2": null,
+        "annual_rent_by_property_cohort": null,
+        "material_delivery_cost_ngn": null,
+        "material_delivery_days": null,
+        "contractor_bid_window_days": null,
+        "construction_duration_days": null,
+        "approval_duration_days": null,
+        "projected_net_yield_percent": null,
+        "flood_risk": null,
+        "soil_suitability": null,
+        "power_reliability": null,
+        "water_reliability": null,
+        "demand_index": null
+      },
+      "recommendation_status": "insufficient_local_evidence",
+      "research_tasks": [
+        "Collect property-type and neighborhood matched sale/rent comparables",
+        "Obtain current land and BOQ/build-rate evidence with units and scope",
+        "Verify supplier coverage, stock, delivered quote and validity",
+        "Collect jurisdiction-specific permit steps and observed durations",
+        "Create a project-specific tender and construction schedule",
+        "Review current site-specific flood, drainage and geotechnical evidence"
+      ],
+      "last_researched_at": "2026-09-22"
+    },
+    {
+      "id": "ng-umuahia",
+      "name": "Umuahia",
+      "aliases": [],
+      "country_code": "NG",
+      "state": "Abia",
+      "geopolitical_zone": "SE",
+      "display_order": 34,
+      "selection_basis": "State capital or federal capital; national service coverage anchor",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          7.4833,
+          5.5333
+        ]
+      },
+      "coordinate_source_id": "simplemaps-ng",
+      "coordinate_accuracy": "city_reference_point_not_parcel_or_boundary",
+      "source_city_name": "Umuahia",
+      "parent_market_id": null,
+      "overlap_note": null,
+      "service_availability": "pending_operations_confirmation",
+      "publication_state": "draft",
+      "local_observation_ids": [],
+      "regional_context_observation_ids": [],
+      "supply_research_lead_ids": [
+        "lafarge-mfamosing",
+        "dangote-okpella"
+      ],
+      "supply_mapping_method": "Editorial regional research leads. No verified delivery routes, nearest-facility claim or availability score.",
+      "metrics": {
+        "land_price_ngn_per_m2": null,
+        "build_rate_ngn_per_m2": null,
+        "annual_rent_by_property_cohort": null,
+        "material_delivery_cost_ngn": null,
+        "material_delivery_days": null,
+        "contractor_bid_window_days": null,
+        "construction_duration_days": null,
+        "approval_duration_days": null,
+        "projected_net_yield_percent": null,
+        "flood_risk": null,
+        "soil_suitability": null,
+        "power_reliability": null,
+        "water_reliability": null,
+        "demand_index": null
+      },
+      "recommendation_status": "insufficient_local_evidence",
+      "research_tasks": [
+        "Collect property-type and neighborhood matched sale/rent comparables",
+        "Obtain current land and BOQ/build-rate evidence with units and scope",
+        "Verify supplier coverage, stock, delivered quote and validity",
+        "Collect jurisdiction-specific permit steps and observed durations",
+        "Create a project-specific tender and construction schedule",
+        "Review current site-specific flood, drainage and geotechnical evidence"
+      ],
+      "last_researched_at": "2026-09-22"
+    },
+    {
+      "id": "ng-uyo",
+      "name": "Uyo",
+      "aliases": [],
+      "country_code": "NG",
+      "state": "Akwa Ibom",
+      "geopolitical_zone": "SS",
+      "display_order": 35,
+      "selection_basis": "State capital or federal capital; national service coverage anchor",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          7.9333,
+          5.05
+        ]
+      },
+      "coordinate_source_id": "simplemaps-ng",
+      "coordinate_accuracy": "city_reference_point_not_parcel_or_boundary",
+      "source_city_name": "Uyo",
+      "parent_market_id": null,
+      "overlap_note": null,
+      "service_availability": "pending_operations_confirmation",
+      "publication_state": "draft",
+      "local_observation_ids": [],
+      "regional_context_observation_ids": [
+        "npc-sale-akwa-ibom"
+      ],
+      "supply_research_lead_ids": [
+        "lafarge-mfamosing",
+        "dangote-okpella",
+        "bua-edo"
+      ],
+      "supply_mapping_method": "Editorial regional research leads. No verified delivery routes, nearest-facility claim or availability score.",
+      "metrics": {
+        "land_price_ngn_per_m2": null,
+        "build_rate_ngn_per_m2": null,
+        "annual_rent_by_property_cohort": null,
+        "material_delivery_cost_ngn": null,
+        "material_delivery_days": null,
+        "contractor_bid_window_days": null,
+        "construction_duration_days": null,
+        "approval_duration_days": null,
+        "projected_net_yield_percent": null,
+        "flood_risk": null,
+        "soil_suitability": null,
+        "power_reliability": null,
+        "water_reliability": null,
+        "demand_index": null
+      },
+      "recommendation_status": "insufficient_local_evidence",
+      "research_tasks": [
+        "Collect property-type and neighborhood matched sale/rent comparables",
+        "Obtain current land and BOQ/build-rate evidence with units and scope",
+        "Verify supplier coverage, stock, delivered quote and validity",
+        "Collect jurisdiction-specific permit steps and observed durations",
+        "Create a project-specific tender and construction schedule",
+        "Review current site-specific flood, drainage and geotechnical evidence"
+      ],
+      "last_researched_at": "2026-09-22"
+    },
+    {
+      "id": "ng-yenagoa",
+      "name": "Yenagoa",
+      "aliases": [],
+      "country_code": "NG",
+      "state": "Bayelsa",
+      "geopolitical_zone": "SS",
+      "display_order": 36,
+      "selection_basis": "State capital or federal capital; national service coverage anchor",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6.2676,
+          4.9267
+        ]
+      },
+      "coordinate_source_id": "simplemaps-ng",
+      "coordinate_accuracy": "city_reference_point_not_parcel_or_boundary",
+      "source_city_name": "Yenagoa",
+      "parent_market_id": null,
+      "overlap_note": null,
+      "service_availability": "pending_operations_confirmation",
+      "publication_state": "draft",
+      "local_observation_ids": [],
+      "regional_context_observation_ids": [],
+      "supply_research_lead_ids": [
+        "lafarge-mfamosing",
+        "dangote-okpella",
+        "bua-edo"
+      ],
+      "supply_mapping_method": "Editorial regional research leads. No verified delivery routes, nearest-facility claim or availability score.",
+      "metrics": {
+        "land_price_ngn_per_m2": null,
+        "build_rate_ngn_per_m2": null,
+        "annual_rent_by_property_cohort": null,
+        "material_delivery_cost_ngn": null,
+        "material_delivery_days": null,
+        "contractor_bid_window_days": null,
+        "construction_duration_days": null,
+        "approval_duration_days": null,
+        "projected_net_yield_percent": null,
+        "flood_risk": null,
+        "soil_suitability": null,
+        "power_reliability": null,
+        "water_reliability": null,
+        "demand_index": null
+      },
+      "recommendation_status": "insufficient_local_evidence",
+      "research_tasks": [
+        "Collect property-type and neighborhood matched sale/rent comparables",
+        "Obtain current land and BOQ/build-rate evidence with units and scope",
+        "Verify supplier coverage, stock, delivered quote and validity",
+        "Collect jurisdiction-specific permit steps and observed durations",
+        "Create a project-specific tender and construction schedule",
+        "Review current site-specific flood, drainage and geotechnical evidence"
+      ],
+      "last_researched_at": "2026-09-22"
+    },
+    {
+      "id": "ng-yola",
+      "name": "Yola",
+      "aliases": [],
+      "country_code": "NG",
+      "state": "Adamawa",
+      "geopolitical_zone": "NE",
+      "display_order": 37,
+      "selection_basis": "State capital or federal capital; national service coverage anchor",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          12.4833,
+          9.2
+        ]
+      },
+      "coordinate_source_id": "simplemaps-ng",
+      "coordinate_accuracy": "city_reference_point_not_parcel_or_boundary",
+      "source_city_name": "Yola",
+      "parent_market_id": null,
+      "overlap_note": null,
+      "service_availability": "pending_operations_confirmation",
+      "publication_state": "draft",
+      "local_observation_ids": [],
+      "regional_context_observation_ids": [],
+      "supply_research_lead_ids": [
+        "lafarge-ashaka"
+      ],
+      "supply_mapping_method": "Editorial regional research leads. No verified delivery routes, nearest-facility claim or availability score.",
+      "metrics": {
+        "land_price_ngn_per_m2": null,
+        "build_rate_ngn_per_m2": null,
+        "annual_rent_by_property_cohort": null,
+        "material_delivery_cost_ngn": null,
+        "material_delivery_days": null,
+        "contractor_bid_window_days": null,
+        "construction_duration_days": null,
+        "approval_duration_days": null,
+        "projected_net_yield_percent": null,
+        "flood_risk": null,
+        "soil_suitability": null,
+        "power_reliability": null,
+        "water_reliability": null,
+        "demand_index": null
+      },
+      "recommendation_status": "insufficient_local_evidence",
+      "research_tasks": [
+        "Collect property-type and neighborhood matched sale/rent comparables",
+        "Obtain current land and BOQ/build-rate evidence with units and scope",
+        "Verify supplier coverage, stock, delivered quote and validity",
+        "Collect jurisdiction-specific permit steps and observed durations",
+        "Create a project-specific tender and construction schedule",
+        "Review current site-specific flood, drainage and geotechnical evidence"
+      ],
+      "last_researched_at": "2026-09-22"
+    },
+    {
+      "id": "ng-lagos",
+      "name": "Lagos",
+      "aliases": [],
+      "country_code": "NG",
+      "state": "Lagos",
+      "geopolitical_zone": "SW",
+      "display_order": 38,
+      "selection_basis": "Editorial additional property-market coverage; not a measured rank",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          3.3936,
+          6.4561
+        ]
+      },
+      "coordinate_source_id": "simplemaps-ng",
+      "coordinate_accuracy": "city_reference_point_not_parcel_or_boundary",
+      "source_city_name": "Lagos",
+      "parent_market_id": null,
+      "overlap_note": "Overlapping metropolitan market labels; do not sum market-level totals.",
+      "service_availability": "pending_operations_confirmation",
+      "publication_state": "draft",
+      "local_observation_ids": [],
+      "regional_context_observation_ids": [
+        "npc-rent-lagos",
+        "npc-sale-lagos"
+      ],
+      "supply_research_lead_ids": [
+        "lafarge-oregun",
+        "dangote-ibese",
+        "lafarge-ewekoro",
+        "lafarge-sagamu"
+      ],
+      "supply_mapping_method": "Editorial regional research leads. No verified delivery routes, nearest-facility claim or availability score.",
+      "metrics": {
+        "land_price_ngn_per_m2": null,
+        "build_rate_ngn_per_m2": null,
+        "annual_rent_by_property_cohort": null,
+        "material_delivery_cost_ngn": null,
+        "material_delivery_days": null,
+        "contractor_bid_window_days": null,
+        "construction_duration_days": null,
+        "approval_duration_days": null,
+        "projected_net_yield_percent": null,
+        "flood_risk": null,
+        "soil_suitability": null,
+        "power_reliability": null,
+        "water_reliability": null,
+        "demand_index": null
+      },
+      "recommendation_status": "insufficient_local_evidence",
+      "research_tasks": [
+        "Collect property-type and neighborhood matched sale/rent comparables",
+        "Obtain current land and BOQ/build-rate evidence with units and scope",
+        "Verify supplier coverage, stock, delivered quote and validity",
+        "Collect jurisdiction-specific permit steps and observed durations",
+        "Create a project-specific tender and construction schedule",
+        "Review current site-specific flood, drainage and geotechnical evidence"
+      ],
+      "last_researched_at": "2026-09-22"
+    },
+    {
+      "id": "ng-ikorodu",
+      "name": "Ikorodu",
+      "aliases": [],
+      "country_code": "NG",
+      "state": "Lagos",
+      "geopolitical_zone": "SW",
+      "display_order": 39,
+      "selection_basis": "Editorial additional property-market coverage; not a measured rank",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          3.5517,
+          6.6264
+        ]
+      },
+      "coordinate_source_id": "simplemaps-ng",
+      "coordinate_accuracy": "city_reference_point_not_parcel_or_boundary",
+      "source_city_name": "Ikorodu",
+      "parent_market_id": "ng-lagos",
+      "overlap_note": "Overlapping metropolitan market labels; do not sum market-level totals.",
+      "service_availability": "pending_operations_confirmation",
+      "publication_state": "draft",
+      "local_observation_ids": [],
+      "regional_context_observation_ids": [
+        "npc-rent-lagos",
+        "npc-sale-lagos"
+      ],
+      "supply_research_lead_ids": [
+        "lafarge-oregun",
+        "dangote-ibese",
+        "lafarge-ewekoro",
+        "lafarge-sagamu"
+      ],
+      "supply_mapping_method": "Editorial regional research leads. No verified delivery routes, nearest-facility claim or availability score.",
+      "metrics": {
+        "land_price_ngn_per_m2": null,
+        "build_rate_ngn_per_m2": null,
+        "annual_rent_by_property_cohort": null,
+        "material_delivery_cost_ngn": null,
+        "material_delivery_days": null,
+        "contractor_bid_window_days": null,
+        "construction_duration_days": null,
+        "approval_duration_days": null,
+        "projected_net_yield_percent": null,
+        "flood_risk": null,
+        "soil_suitability": null,
+        "power_reliability": null,
+        "water_reliability": null,
+        "demand_index": null
+      },
+      "recommendation_status": "insufficient_local_evidence",
+      "research_tasks": [
+        "Collect property-type and neighborhood matched sale/rent comparables",
+        "Obtain current land and BOQ/build-rate evidence with units and scope",
+        "Verify supplier coverage, stock, delivered quote and validity",
+        "Collect jurisdiction-specific permit steps and observed durations",
+        "Create a project-specific tender and construction schedule",
+        "Review current site-specific flood, drainage and geotechnical evidence"
+      ],
+      "last_researched_at": "2026-09-22"
+    },
+    {
+      "id": "ng-epe",
+      "name": "Epe",
+      "aliases": [],
+      "country_code": "NG",
+      "state": "Lagos",
+      "geopolitical_zone": "SW",
+      "display_order": 40,
+      "selection_basis": "Editorial additional property-market coverage; not a measured rank",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          3.9833,
+          6.5833
+        ]
+      },
+      "coordinate_source_id": "simplemaps-ng",
+      "coordinate_accuracy": "city_reference_point_not_parcel_or_boundary",
+      "source_city_name": "Epe",
+      "parent_market_id": null,
+      "overlap_note": null,
+      "service_availability": "pending_operations_confirmation",
+      "publication_state": "draft",
+      "local_observation_ids": [],
+      "regional_context_observation_ids": [
+        "npc-rent-lagos",
+        "npc-sale-lagos"
+      ],
+      "supply_research_lead_ids": [
+        "lafarge-oregun",
+        "dangote-ibese",
+        "lafarge-ewekoro",
+        "lafarge-sagamu"
+      ],
+      "supply_mapping_method": "Editorial regional research leads. No verified delivery routes, nearest-facility claim or availability score.",
+      "metrics": {
+        "land_price_ngn_per_m2": null,
+        "build_rate_ngn_per_m2": null,
+        "annual_rent_by_property_cohort": null,
+        "material_delivery_cost_ngn": null,
+        "material_delivery_days": null,
+        "contractor_bid_window_days": null,
+        "construction_duration_days": null,
+        "approval_duration_days": null,
+        "projected_net_yield_percent": null,
+        "flood_risk": null,
+        "soil_suitability": null,
+        "power_reliability": null,
+        "water_reliability": null,
+        "demand_index": null
+      },
+      "recommendation_status": "insufficient_local_evidence",
+      "research_tasks": [
+        "Collect property-type and neighborhood matched sale/rent comparables",
+        "Obtain current land and BOQ/build-rate evidence with units and scope",
+        "Verify supplier coverage, stock, delivered quote and validity",
+        "Collect jurisdiction-specific permit steps and observed durations",
+        "Create a project-specific tender and construction schedule",
+        "Review current site-specific flood, drainage and geotechnical evidence"
+      ],
+      "last_researched_at": "2026-09-22"
+    },
+    {
+      "id": "ng-sagamu",
+      "name": "Sagamu",
+      "aliases": [
+        "Shagamu"
+      ],
+      "country_code": "NG",
+      "state": "Ogun",
+      "geopolitical_zone": "SW",
+      "display_order": 41,
+      "selection_basis": "Editorial additional property-market coverage; not a measured rank",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          3.65,
+          6.8333
+        ]
+      },
+      "coordinate_source_id": "simplemaps-ng",
+      "coordinate_accuracy": "city_reference_point_not_parcel_or_boundary",
+      "source_city_name": "Shagamu",
+      "parent_market_id": null,
+      "overlap_note": null,
+      "service_availability": "pending_operations_confirmation",
+      "publication_state": "draft",
+      "local_observation_ids": [],
+      "regional_context_observation_ids": [
+        "npc-rent-ogun",
+        "npc-sale-ogun"
+      ],
+      "supply_research_lead_ids": [
+        "dangote-ibese",
+        "lafarge-ewekoro",
+        "lafarge-sagamu"
+      ],
+      "supply_mapping_method": "Editorial regional research leads. No verified delivery routes, nearest-facility claim or availability score.",
+      "metrics": {
+        "land_price_ngn_per_m2": null,
+        "build_rate_ngn_per_m2": null,
+        "annual_rent_by_property_cohort": null,
+        "material_delivery_cost_ngn": null,
+        "material_delivery_days": null,
+        "contractor_bid_window_days": null,
+        "construction_duration_days": null,
+        "approval_duration_days": null,
+        "projected_net_yield_percent": null,
+        "flood_risk": null,
+        "soil_suitability": null,
+        "power_reliability": null,
+        "water_reliability": null,
+        "demand_index": null
+      },
+      "recommendation_status": "insufficient_local_evidence",
+      "research_tasks": [
+        "Collect property-type and neighborhood matched sale/rent comparables",
+        "Obtain current land and BOQ/build-rate evidence with units and scope",
+        "Verify supplier coverage, stock, delivered quote and validity",
+        "Collect jurisdiction-specific permit steps and observed durations",
+        "Create a project-specific tender and construction schedule",
+        "Review current site-specific flood, drainage and geotechnical evidence"
+      ],
+      "last_researched_at": "2026-09-22"
+    },
+    {
+      "id": "ng-ijebu-ode",
+      "name": "Ijebu-Ode",
+      "aliases": [],
+      "country_code": "NG",
+      "state": "Ogun",
+      "geopolitical_zone": "SW",
+      "display_order": 42,
+      "selection_basis": "Editorial additional property-market coverage; not a measured rank",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          3.9191,
+          6.8249
+        ]
+      },
+      "coordinate_source_id": "simplemaps-ng",
+      "coordinate_accuracy": "city_reference_point_not_parcel_or_boundary",
+      "source_city_name": "Ijebu-Ode",
+      "parent_market_id": null,
+      "overlap_note": null,
+      "service_availability": "pending_operations_confirmation",
+      "publication_state": "draft",
+      "local_observation_ids": [],
+      "regional_context_observation_ids": [
+        "npc-rent-ogun",
+        "npc-sale-ogun"
+      ],
+      "supply_research_lead_ids": [
+        "dangote-ibese",
+        "lafarge-ewekoro",
+        "lafarge-sagamu"
+      ],
+      "supply_mapping_method": "Editorial regional research leads. No verified delivery routes, nearest-facility claim or availability score.",
+      "metrics": {
+        "land_price_ngn_per_m2": null,
+        "build_rate_ngn_per_m2": null,
+        "annual_rent_by_property_cohort": null,
+        "material_delivery_cost_ngn": null,
+        "material_delivery_days": null,
+        "contractor_bid_window_days": null,
+        "construction_duration_days": null,
+        "approval_duration_days": null,
+        "projected_net_yield_percent": null,
+        "flood_risk": null,
+        "soil_suitability": null,
+        "power_reliability": null,
+        "water_reliability": null,
+        "demand_index": null
+      },
+      "recommendation_status": "insufficient_local_evidence",
+      "research_tasks": [
+        "Collect property-type and neighborhood matched sale/rent comparables",
+        "Obtain current land and BOQ/build-rate evidence with units and scope",
+        "Verify supplier coverage, stock, delivered quote and validity",
+        "Collect jurisdiction-specific permit steps and observed durations",
+        "Create a project-specific tender and construction schedule",
+        "Review current site-specific flood, drainage and geotechnical evidence"
+      ],
+      "last_researched_at": "2026-09-22"
+    },
+    {
+      "id": "ng-ogbomoso",
+      "name": "Ogbomoso",
+      "aliases": [],
+      "country_code": "NG",
+      "state": "Oyo",
+      "geopolitical_zone": "SW",
+      "display_order": 43,
+      "selection_basis": "Editorial additional property-market coverage; not a measured rank",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          4.25,
+          8.1333
+        ]
+      },
+      "coordinate_source_id": "simplemaps-ng",
+      "coordinate_accuracy": "city_reference_point_not_parcel_or_boundary",
+      "source_city_name": "Ogbomoso",
+      "parent_market_id": null,
+      "overlap_note": null,
+      "service_availability": "pending_operations_confirmation",
+      "publication_state": "draft",
+      "local_observation_ids": [],
+      "regional_context_observation_ids": [
+        "npc-rent-oyo",
+        "npc-sale-oyo"
+      ],
+      "supply_research_lead_ids": [
+        "dangote-ibese",
+        "lafarge-ewekoro",
+        "lafarge-sagamu"
+      ],
+      "supply_mapping_method": "Editorial regional research leads. No verified delivery routes, nearest-facility claim or availability score.",
+      "metrics": {
+        "land_price_ngn_per_m2": null,
+        "build_rate_ngn_per_m2": null,
+        "annual_rent_by_property_cohort": null,
+        "material_delivery_cost_ngn": null,
+        "material_delivery_days": null,
+        "contractor_bid_window_days": null,
+        "construction_duration_days": null,
+        "approval_duration_days": null,
+        "projected_net_yield_percent": null,
+        "flood_risk": null,
+        "soil_suitability": null,
+        "power_reliability": null,
+        "water_reliability": null,
+        "demand_index": null
+      },
+      "recommendation_status": "insufficient_local_evidence",
+      "research_tasks": [
+        "Collect property-type and neighborhood matched sale/rent comparables",
+        "Obtain current land and BOQ/build-rate evidence with units and scope",
+        "Verify supplier coverage, stock, delivered quote and validity",
+        "Collect jurisdiction-specific permit steps and observed durations",
+        "Create a project-specific tender and construction schedule",
+        "Review current site-specific flood, drainage and geotechnical evidence"
+      ],
+      "last_researched_at": "2026-09-22"
+    },
+    {
+      "id": "ng-ile-ife",
+      "name": "Ile-Ife",
+      "aliases": [],
+      "country_code": "NG",
+      "state": "Osun",
+      "geopolitical_zone": "SW",
+      "display_order": 44,
+      "selection_basis": "Editorial additional property-market coverage; not a measured rank",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          4.5667,
+          7.4667
+        ]
+      },
+      "coordinate_source_id": "simplemaps-ng",
+      "coordinate_accuracy": "city_reference_point_not_parcel_or_boundary",
+      "source_city_name": "Ile-Ife",
+      "parent_market_id": null,
+      "overlap_note": null,
+      "service_availability": "pending_operations_confirmation",
+      "publication_state": "draft",
+      "local_observation_ids": [],
+      "regional_context_observation_ids": [],
+      "supply_research_lead_ids": [
+        "dangote-ibese",
+        "lafarge-ewekoro",
+        "lafarge-sagamu"
+      ],
+      "supply_mapping_method": "Editorial regional research leads. No verified delivery routes, nearest-facility claim or availability score.",
+      "metrics": {
+        "land_price_ngn_per_m2": null,
+        "build_rate_ngn_per_m2": null,
+        "annual_rent_by_property_cohort": null,
+        "material_delivery_cost_ngn": null,
+        "material_delivery_days": null,
+        "contractor_bid_window_days": null,
+        "construction_duration_days": null,
+        "approval_duration_days": null,
+        "projected_net_yield_percent": null,
+        "flood_risk": null,
+        "soil_suitability": null,
+        "power_reliability": null,
+        "water_reliability": null,
+        "demand_index": null
+      },
+      "recommendation_status": "insufficient_local_evidence",
+      "research_tasks": [
+        "Collect property-type and neighborhood matched sale/rent comparables",
+        "Obtain current land and BOQ/build-rate evidence with units and scope",
+        "Verify supplier coverage, stock, delivered quote and validity",
+        "Collect jurisdiction-specific permit steps and observed durations",
+        "Create a project-specific tender and construction schedule",
+        "Review current site-specific flood, drainage and geotechnical evidence"
+      ],
+      "last_researched_at": "2026-09-22"
+    },
+    {
+      "id": "ng-onitsha",
+      "name": "Onitsha",
+      "aliases": [],
+      "country_code": "NG",
+      "state": "Anambra",
+      "geopolitical_zone": "SE",
+      "display_order": 45,
+      "selection_basis": "Editorial additional property-market coverage; not a measured rank",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6.7833,
+          6.1667
+        ]
+      },
+      "coordinate_source_id": "simplemaps-ng",
+      "coordinate_accuracy": "city_reference_point_not_parcel_or_boundary",
+      "source_city_name": "Onitsha",
+      "parent_market_id": null,
+      "overlap_note": null,
+      "service_availability": "pending_operations_confirmation",
+      "publication_state": "draft",
+      "local_observation_ids": [],
+      "regional_context_observation_ids": [],
+      "supply_research_lead_ids": [
+        "lafarge-mfamosing",
+        "dangote-okpella"
+      ],
+      "supply_mapping_method": "Editorial regional research leads. No verified delivery routes, nearest-facility claim or availability score.",
+      "metrics": {
+        "land_price_ngn_per_m2": null,
+        "build_rate_ngn_per_m2": null,
+        "annual_rent_by_property_cohort": null,
+        "material_delivery_cost_ngn": null,
+        "material_delivery_days": null,
+        "contractor_bid_window_days": null,
+        "construction_duration_days": null,
+        "approval_duration_days": null,
+        "projected_net_yield_percent": null,
+        "flood_risk": null,
+        "soil_suitability": null,
+        "power_reliability": null,
+        "water_reliability": null,
+        "demand_index": null
+      },
+      "recommendation_status": "insufficient_local_evidence",
+      "research_tasks": [
+        "Collect property-type and neighborhood matched sale/rent comparables",
+        "Obtain current land and BOQ/build-rate evidence with units and scope",
+        "Verify supplier coverage, stock, delivered quote and validity",
+        "Collect jurisdiction-specific permit steps and observed durations",
+        "Create a project-specific tender and construction schedule",
+        "Review current site-specific flood, drainage and geotechnical evidence"
+      ],
+      "last_researched_at": "2026-09-22"
+    },
+    {
+      "id": "ng-nnewi",
+      "name": "Nnewi",
+      "aliases": [],
+      "country_code": "NG",
+      "state": "Anambra",
+      "geopolitical_zone": "SE",
+      "display_order": 46,
+      "selection_basis": "Editorial additional property-market coverage; not a measured rank",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6.9167,
+          6.0167
+        ]
+      },
+      "coordinate_source_id": "simplemaps-ng",
+      "coordinate_accuracy": "city_reference_point_not_parcel_or_boundary",
+      "source_city_name": "Nnewi",
+      "parent_market_id": null,
+      "overlap_note": null,
+      "service_availability": "pending_operations_confirmation",
+      "publication_state": "draft",
+      "local_observation_ids": [],
+      "regional_context_observation_ids": [],
+      "supply_research_lead_ids": [
+        "lafarge-mfamosing",
+        "dangote-okpella"
+      ],
+      "supply_mapping_method": "Editorial regional research leads. No verified delivery routes, nearest-facility claim or availability score.",
+      "metrics": {
+        "land_price_ngn_per_m2": null,
+        "build_rate_ngn_per_m2": null,
+        "annual_rent_by_property_cohort": null,
+        "material_delivery_cost_ngn": null,
+        "material_delivery_days": null,
+        "contractor_bid_window_days": null,
+        "construction_duration_days": null,
+        "approval_duration_days": null,
+        "projected_net_yield_percent": null,
+        "flood_risk": null,
+        "soil_suitability": null,
+        "power_reliability": null,
+        "water_reliability": null,
+        "demand_index": null
+      },
+      "recommendation_status": "insufficient_local_evidence",
+      "research_tasks": [
+        "Collect property-type and neighborhood matched sale/rent comparables",
+        "Obtain current land and BOQ/build-rate evidence with units and scope",
+        "Verify supplier coverage, stock, delivered quote and validity",
+        "Collect jurisdiction-specific permit steps and observed durations",
+        "Create a project-specific tender and construction schedule",
+        "Review current site-specific flood, drainage and geotechnical evidence"
+      ],
+      "last_researched_at": "2026-09-22"
+    },
+    {
+      "id": "ng-aba",
+      "name": "Aba",
+      "aliases": [],
+      "country_code": "NG",
+      "state": "Abia",
+      "geopolitical_zone": "SE",
+      "display_order": 47,
+      "selection_basis": "Editorial additional property-market coverage; not a measured rank",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          7.3667,
+          5.1167
+        ]
+      },
+      "coordinate_source_id": "simplemaps-ng",
+      "coordinate_accuracy": "city_reference_point_not_parcel_or_boundary",
+      "source_city_name": "Aba",
+      "parent_market_id": null,
+      "overlap_note": null,
+      "service_availability": "pending_operations_confirmation",
+      "publication_state": "draft",
+      "local_observation_ids": [],
+      "regional_context_observation_ids": [],
+      "supply_research_lead_ids": [
+        "lafarge-mfamosing",
+        "dangote-okpella"
+      ],
+      "supply_mapping_method": "Editorial regional research leads. No verified delivery routes, nearest-facility claim or availability score.",
+      "metrics": {
+        "land_price_ngn_per_m2": null,
+        "build_rate_ngn_per_m2": null,
+        "annual_rent_by_property_cohort": null,
+        "material_delivery_cost_ngn": null,
+        "material_delivery_days": null,
+        "contractor_bid_window_days": null,
+        "construction_duration_days": null,
+        "approval_duration_days": null,
+        "projected_net_yield_percent": null,
+        "flood_risk": null,
+        "soil_suitability": null,
+        "power_reliability": null,
+        "water_reliability": null,
+        "demand_index": null
+      },
+      "recommendation_status": "insufficient_local_evidence",
+      "research_tasks": [
+        "Collect property-type and neighborhood matched sale/rent comparables",
+        "Obtain current land and BOQ/build-rate evidence with units and scope",
+        "Verify supplier coverage, stock, delivered quote and validity",
+        "Collect jurisdiction-specific permit steps and observed durations",
+        "Create a project-specific tender and construction schedule",
+        "Review current site-specific flood, drainage and geotechnical evidence"
+      ],
+      "last_researched_at": "2026-09-22"
+    },
+    {
+      "id": "ng-warri",
+      "name": "Warri",
+      "aliases": [],
+      "country_code": "NG",
+      "state": "Delta",
+      "geopolitical_zone": "SS",
+      "display_order": 48,
+      "selection_basis": "Editorial additional property-market coverage; not a measured rank",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          5.75,
+          5.5167
+        ]
+      },
+      "coordinate_source_id": "simplemaps-ng",
+      "coordinate_accuracy": "city_reference_point_not_parcel_or_boundary",
+      "source_city_name": "Warri",
+      "parent_market_id": null,
+      "overlap_note": null,
+      "service_availability": "pending_operations_confirmation",
+      "publication_state": "draft",
+      "local_observation_ids": [],
+      "regional_context_observation_ids": [
+        "npc-sale-delta"
+      ],
+      "supply_research_lead_ids": [
+        "lafarge-mfamosing",
+        "dangote-okpella",
+        "bua-edo"
+      ],
+      "supply_mapping_method": "Editorial regional research leads. No verified delivery routes, nearest-facility claim or availability score.",
+      "metrics": {
+        "land_price_ngn_per_m2": null,
+        "build_rate_ngn_per_m2": null,
+        "annual_rent_by_property_cohort": null,
+        "material_delivery_cost_ngn": null,
+        "material_delivery_days": null,
+        "contractor_bid_window_days": null,
+        "construction_duration_days": null,
+        "approval_duration_days": null,
+        "projected_net_yield_percent": null,
+        "flood_risk": null,
+        "soil_suitability": null,
+        "power_reliability": null,
+        "water_reliability": null,
+        "demand_index": null
+      },
+      "recommendation_status": "insufficient_local_evidence",
+      "research_tasks": [
+        "Collect property-type and neighborhood matched sale/rent comparables",
+        "Obtain current land and BOQ/build-rate evidence with units and scope",
+        "Verify supplier coverage, stock, delivered quote and validity",
+        "Collect jurisdiction-specific permit steps and observed durations",
+        "Create a project-specific tender and construction schedule",
+        "Review current site-specific flood, drainage and geotechnical evidence"
+      ],
+      "last_researched_at": "2026-09-22"
+    },
+    {
+      "id": "ng-zaria",
+      "name": "Zaria",
+      "aliases": [],
+      "country_code": "NG",
+      "state": "Kaduna",
+      "geopolitical_zone": "NW",
+      "display_order": 49,
+      "selection_basis": "Editorial additional property-market coverage; not a measured rank",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          7.7,
+          11.0667
+        ]
+      },
+      "coordinate_source_id": "simplemaps-ng",
+      "coordinate_accuracy": "city_reference_point_not_parcel_or_boundary",
+      "source_city_name": "Zaria",
+      "parent_market_id": null,
+      "overlap_note": null,
+      "service_availability": "pending_operations_confirmation",
+      "publication_state": "draft",
+      "local_observation_ids": [],
+      "regional_context_observation_ids": [],
+      "supply_research_lead_ids": [
+        "bua-sokoto"
+      ],
+      "supply_mapping_method": "Editorial regional research leads. No verified delivery routes, nearest-facility claim or availability score.",
+      "metrics": {
+        "land_price_ngn_per_m2": null,
+        "build_rate_ngn_per_m2": null,
+        "annual_rent_by_property_cohort": null,
+        "material_delivery_cost_ngn": null,
+        "material_delivery_days": null,
+        "contractor_bid_window_days": null,
+        "construction_duration_days": null,
+        "approval_duration_days": null,
+        "projected_net_yield_percent": null,
+        "flood_risk": null,
+        "soil_suitability": null,
+        "power_reliability": null,
+        "water_reliability": null,
+        "demand_index": null
+      },
+      "recommendation_status": "insufficient_local_evidence",
+      "research_tasks": [
+        "Collect property-type and neighborhood matched sale/rent comparables",
+        "Obtain current land and BOQ/build-rate evidence with units and scope",
+        "Verify supplier coverage, stock, delivered quote and validity",
+        "Collect jurisdiction-specific permit steps and observed durations",
+        "Create a project-specific tender and construction schedule",
+        "Review current site-specific flood, drainage and geotechnical evidence"
+      ],
+      "last_researched_at": "2026-09-22"
+    },
+    {
+      "id": "ng-suleja",
+      "name": "Suleja",
+      "aliases": [],
+      "country_code": "NG",
+      "state": "Niger",
+      "geopolitical_zone": "NC",
+      "display_order": 50,
+      "selection_basis": "Editorial additional property-market coverage; not a measured rank",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          7.1794,
+          9.1806
+        ]
+      },
+      "coordinate_source_id": "simplemaps-ng",
+      "coordinate_accuracy": "city_reference_point_not_parcel_or_boundary",
+      "source_city_name": "Suleja",
+      "parent_market_id": null,
+      "overlap_note": null,
+      "service_availability": "pending_operations_confirmation",
+      "publication_state": "draft",
+      "local_observation_ids": [],
+      "regional_context_observation_ids": [],
+      "supply_research_lead_ids": [
+        "dangote-obajana",
+        "dangote-gboko"
+      ],
+      "supply_mapping_method": "Editorial regional research leads. No verified delivery routes, nearest-facility claim or availability score.",
+      "metrics": {
+        "land_price_ngn_per_m2": null,
+        "build_rate_ngn_per_m2": null,
+        "annual_rent_by_property_cohort": null,
+        "material_delivery_cost_ngn": null,
+        "material_delivery_days": null,
+        "contractor_bid_window_days": null,
+        "construction_duration_days": null,
+        "approval_duration_days": null,
+        "projected_net_yield_percent": null,
+        "flood_risk": null,
+        "soil_suitability": null,
+        "power_reliability": null,
+        "water_reliability": null,
+        "demand_index": null
+      },
+      "recommendation_status": "insufficient_local_evidence",
+      "research_tasks": [
+        "Collect property-type and neighborhood matched sale/rent comparables",
+        "Obtain current land and BOQ/build-rate evidence with units and scope",
+        "Verify supplier coverage, stock, delivered quote and validity",
+        "Collect jurisdiction-specific permit steps and observed durations",
+        "Create a project-specific tender and construction schedule",
+        "Review current site-specific flood, drainage and geotechnical evidence"
+      ],
+      "last_researched_at": "2026-09-22"
+    }
+  ],
+  "scenario_template": {
+    "id": "illustrative-residential",
+    "label": "Editable demonstration schedule; not researched city timing",
+    "status": "demo_only",
+    "tasks": [
+      {
+        "id": "brief",
+        "duration_working_days": 5,
+        "depends_on": []
+      },
+      {
+        "id": "site-investigations",
+        "duration_working_days": 10,
+        "depends_on": [
+          "brief"
+        ]
+      },
+      {
+        "id": "design",
+        "duration_working_days": 30,
+        "depends_on": [
+          "site-investigations"
+        ]
+      },
+      {
+        "id": "approvals",
+        "duration_working_days": null,
+        "depends_on": [
+          "design"
+        ]
+      },
+      {
+        "id": "tender",
+        "duration_working_days": 15,
+        "depends_on": [
+          "design"
+        ]
+      },
+      {
+        "id": "construction",
+        "duration_working_days": null,
+        "depends_on": [
+          "approvals",
+          "tender"
+        ]
+      }
+    ],
+    "can_compute_completion_date": false,
+    "missing_inputs": [
+      "jurisdiction_approval_duration",
+      "scoped_construction_duration"
+    ],
+    "financial_defaults": null
+  }
+}

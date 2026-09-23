@@ -1,0 +1,142 @@
+name: CI
+
+on:
+  push:
+    branches: [main, 'claude/**', 'release/**']
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  APP_ENV: test
+  NODE_ENV: test
+  APP_URL: http://localhost:3000
+  DATABASE_URL: postgres://simplexd_app:simplexd_app_local@127.0.0.1:5432/simplexd_test
+  MIGRATION_DATABASE_URL: postgres://simplexd_owner:simplexd_owner_local@127.0.0.1:5432/simplexd_test
+  TEST_DATABASE_URL: postgres://simplexd_app:simplexd_app_local@127.0.0.1:5432/simplexd_test
+  TEST_MIGRATION_DATABASE_URL: postgres://simplexd_owner:simplexd_owner_local@127.0.0.1:5432/simplexd_test
+  REDIS_URL: redis://127.0.0.1:6379
+  AUTH_SECRET: ci-only-secret-ci-only-secret-ci-only-secret
+  SECRETS_MASTER_KEY: dGVzdC1tYXN0ZXIta2V5LXRlc3QtbWFzdGVyLWtleS0zMg==
+  SECRETS_MASTER_KEY_ID: ci-1
+  STORAGE_PROVIDER: local-dev
+  MALWARE_SCANNER: dev
+
+jobs:
+  verify:
+    name: Typecheck, lint, test, build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgis/postgis:16-3.4
+        env:
+          POSTGRES_USER: simplexd_owner
+          POSTGRES_PASSWORD: simplexd_owner_local
+          POSTGRES_DB: simplexd_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U simplexd_owner -d simplexd_test"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+      redis:
+        image: redis:7-alpine
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd "redis-cli ping" --health-interval 5s --health-timeout 3s --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Install
+        run: pnpm install --frozen-lockfile
+      - name: Prepare database roles and extensions
+        run: |
+          PGPASSWORD=simplexd_owner_local psql -h 127.0.0.1 -U simplexd_owner -d simplexd_test -v ON_ERROR_STOP=1 <<'SQL'
+          DO $$ BEGIN
+            IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'simplexd_app') THEN
+              CREATE ROLE simplexd_app LOGIN NOSUPERUSER NOBYPASSRLS PASSWORD 'simplexd_app_local';
+            END IF;
+          END $$;
+          CREATE EXTENSION IF NOT EXISTS postgis;
+          CREATE EXTENSION IF NOT EXISTS btree_gist;
+          CREATE EXTENSION IF NOT EXISTS pgcrypto;
+          CREATE EXTENSION IF NOT EXISTS pg_trgm;
+          SQL
+      - name: Typecheck
+        run: pnpm typecheck
+      - name: Lint
+        run: pnpm lint
+      - name: Format check
+        run: pnpm format:check
+      - name: Migrate (clean database)
+        run: pnpm db:migrate
+      - name: Seed reference data and 50-market import (idempotency check runs twice)
+        run: pnpm db:seed && pnpm db:import-markets --dry-run
+      - name: Unit and integration tests
+        run: pnpm test
+      - name: Build web and worker
+        run: pnpm build
+      - name: Upload coverage summary
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: |
+            coverage
+            packages/**/coverage
+          if-no-files-found: ignore
+
+  e2e:
+    name: End-to-end and accessibility
+    runs-on: ubuntu-latest
+    needs: verify
+    timeout-minutes: 40
+    services:
+      postgres:
+        image: postgis/postgis:16-3.4
+        env:
+          POSTGRES_USER: simplexd_owner
+          POSTGRES_PASSWORD: simplexd_owner_local
+          POSTGRES_DB: simplexd_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U simplexd_owner -d simplexd_test"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+      redis:
+        image: redis:7-alpine
+        ports: ['6379:6379']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Prepare database roles and extensions
+        run: |
+          PGPASSWORD=simplexd_owner_local psql -h 127.0.0.1 -U simplexd_owner -d simplexd_test -v ON_ERROR_STOP=1 -c "DO \$\$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname='simplexd_app') THEN CREATE ROLE simplexd_app LOGIN NOSUPERUSER NOBYPASSRLS PASSWORD 'simplexd_app_local'; END IF; END \$\$; CREATE EXTENSION IF NOT EXISTS postgis; CREATE EXTENSION IF NOT EXISTS btree_gist; CREATE EXTENSION IF NOT EXISTS pgcrypto; CREATE EXTENSION IF NOT EXISTS pg_trgm;"
+      - run: pnpm db:migrate && pnpm db:seed
+      - name: Seed demo accounts (test mode only)
+        run: pnpm --filter @simplexd/web seed:demo
+      - name: Install Playwright browsers
+        run: pnpm --filter @simplexd/e2e exec playwright install --with-deps chromium
+      - name: Build web
+        run: pnpm --filter @simplexd/web build
+      - name: Run e2e and accessibility journeys
+        run: pnpm test:e2e
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report
+          path: tests/e2e/playwright-report
+          if-no-files-found: ignore

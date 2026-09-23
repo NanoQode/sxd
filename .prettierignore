@@ -1,0 +1,10 @@
+node_modules
+.next
+dist
+coverage
+pnpm-lock.yaml
+packages/db/migrations/meta
+data/seed/*.json
+docs/brief
+playwright-report
+test-results
