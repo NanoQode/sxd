@@ -79,14 +79,14 @@ Partners bill SimplexD from their workspace (`/partner/invoices`, `POST /api/v1/
 
 Finance reviews under `/admin/finance/partner-invoices`:
 
-| Step | Endpoint | Permission | Effect |
-| --- | --- | --- | --- |
-| Accept | `POST /partner-invoices/{id}/accept` | `finance.payouts.first_approve` (MFA) | `proposed → first_approved`; posts `partnerInvoiceAccepted` (`Dr 5200` materials / `Dr 5300` services, `Cr 2400`) |
-| Reject | `POST …/reject` (reason) | `finance.payouts.first_approve` | `proposed \| first_approved → rejected`; an accrual already posted is reversed |
-| Second approval | `POST …/second-approve` | `finance.payouts.second_approve`, a different person | `first_approved → approved` (or `failed → approved` with a reason); nothing posted |
-| Submit payment | `POST …/submit-payment` | `finance.reconcile` | `approved → submitted` |
-| Settle | `POST …/settle` (bank reference) | `finance.reconcile` | `submitted → settled`; posts `ownerPayoutSettled` (`Dr 2400 / Cr 1000`) |
-| Fail | `POST …/fail` (reason) | `finance.reconcile` | `submitted → failed` |
+| Step            | Endpoint                             | Permission                                           | Effect                                                                                                            |
+| --------------- | ------------------------------------ | ---------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| Accept          | `POST /partner-invoices/{id}/accept` | `finance.payouts.first_approve` (MFA)                | `proposed → first_approved`; posts `partnerInvoiceAccepted` (`Dr 5200` materials / `Dr 5300` services, `Cr 2400`) |
+| Reject          | `POST …/reject` (reason)             | `finance.payouts.first_approve`                      | `proposed \| first_approved → rejected`; an accrual already posted is reversed                                    |
+| Second approval | `POST …/second-approve`              | `finance.payouts.second_approve`, a different person | `first_approved → approved` (or `failed → approved` with a reason); nothing posted                                |
+| Submit payment  | `POST …/submit-payment`              | `finance.reconcile`                                  | `approved → submitted`                                                                                            |
+| Settle          | `POST …/settle` (bank reference)     | `finance.reconcile`                                  | `submitted → settled`; posts `ownerPayoutSettled` (`Dr 2400 / Cr 1000`)                                           |
+| Fail            | `POST …/fail` (reason)               | `finance.reconcile`                                  | `submitted → failed`                                                                                              |
 
 Nothing leaves the bank before both approvals and a recorded settlement. The partner is told at every transition (`partner_invoice.transitioned`), finance when an invoice arrives (`partner_invoice.submitted`). Owner-payout lists exclude this kind. Tests: `apps/web/src/server/finance/partner-invoices.int.test.ts`.
 

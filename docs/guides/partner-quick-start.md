@@ -13,6 +13,7 @@ Code: `apps/web/src/app/(partner)`, `apps/web/src/components/partner`, `apps/web
 | Inspector, surveyor, valuer, architect, QS; staff `inspector` role | Visits (field capture), Evidence, Reports                                |
 | Legal partner                                                      | Evidence, Reports                                                        |
 | Everyone                                                           | Home, Assignments, Assigned items, Messages, Notifications, Availability |
+| Partner accounts (any type)                                        | Invoices                                                                 |
 
 `other`-type partners see every module. The rules live in `lib/partner/nav.ts`. A contractor's awarded work arrives as an assignment, and each accepted assignment card links to that project's visits, evidence and reports.
 
@@ -39,7 +40,7 @@ The header badge shows what was verified, as recorded on the partner profile: st
   - Withdrawal asks for confirmation and is final.
   - You only ever see your own response.
 - **Purchase orders.** Acknowledge an issued order with your reference and expected delivery date.
-- **Deliveries & disputes.** See what the site recorded, line by line, and any discrepancies raised against the order.
+- **Deliveries & disputes.** See what the site recorded, line by line, and any discrepancies raised against the order. Respond to a discrepancy on the order page: your response, a proposed resolution (replace the goods, issue a credit, or dispute the finding) and evidence files you upload (linked to the delivery once the malware scan passes). Staff accept the proposal, which closes the discrepancy as resolved, credited or returned, or reject it with a reason, after which you can reply again. You are notified either way, and the thread shows every reply and decision.
 
 ## Legal and survey partners: assigned items
 
@@ -75,11 +76,11 @@ or the decision memorandum.
    Retrying never duplicates anything: visits replay on their offline id and evidence on its link key. A photo whose malware scan is still running stays "Uploaded, scan pending" and the draft is "Partly synced"; sync again later. Only an actual API refusal (a 4xx response) marks a photo or visit rejected. Network errors, 401, 408, 429 and 5xx leave everything on the device.
 
 6. **Clearing.** A draft is removed from the device only when the server has confirmed the visit and every photo is linked. A photo the server refuses keeps the draft and shows the reason until you remove that photo.
-7. **Unscheduled visits.** Staff inspectors can start one from a project ("Start a field visit"); the visit is created when you sync. Partners cannot: the server lets only staff create visits in the field, and the page says so.
+7. **Unscheduled visits.** Staff inspectors start one from a project ("Start a field visit"); the visit is created when you sync. Partners with an accepted field assignment on the project (inspector, surveyor, valuer, architect, quantity surveyor or contractor) use "Start unscheduled visit": choose the project and give a reason (required). The visit is created on the server straight away (this needs a connection), flagged **Unscheduled**, and the project manager is notified; capture then works offline exactly like a scheduled visit. Staff may reject the visit until its findings are reviewed; you are told the reason. Offline, a field draft synced with `unscheduledReason` creates the same kind of visit.
 8. **Reports.** Report drafts are kept on the device and encrypted the same way.
    - "Create on server" is idempotent on the draft's offline id.
    - "Save revision to server" skips posting when the latest server revision already matches, which covers a response that was lost.
-   - "Submit for review" names the reviewer, pre-filled with the project manager. There is no reviewer-directory API for partners, and the page says so.
+   - "Submit for review" picks the reviewer from `GET /api/v1/reviewers?projectId=…`: staff whose role carries `reports.review`, never you; the project manager is pre-selected when they can review. If nobody is available the page says so and the report stays a draft.
 
 ### Offline storage design and its limits
 
@@ -93,14 +94,19 @@ or the decision memorandum.
 
 ## Messages, notifications, availability
 
-- **Messages.** Reply in conversations you take part in. Attachments open through signed links. Starting a new conversation is not available to partners: the API needs participant ids and a linked entity, so staff open threads, and the page says so.
+- **Messages.** Reply in conversations you take part in. Attachments open through signed links. "Start a conversation" opens a thread about one of your records (an accepted assignment, an invited tender, an RFQ or a purchase order) with the SimplexD staff responsible for it (the project manager, assigned coordinators, or the person who issued the tender or order; operations managers when nobody is attached). You never enter user ids, and customers are never added unless staff add them.
 - **Notifications.** A feed of your notifications, with unread-only filter, mark read, mark all read and deep links.
 - **Availability.** Edit your weekly windows: ISO weekday (Monday = 1), `HH:mm` start and end in a chosen time zone, and optionally the appointment kinds a window serves (none ticked means any). Saving sends `PUT /api/v1/appointments/staff/{yourUserId}`; overlapping or inverted windows are caught before sending. You can add leave or a block (`POST …/time-off`) and remove it with confirmation (`DELETE …/time-off/{id}`). A period that overlaps an appointment, hold or other time off is refused with `slot_unavailable`, and the page says so. Partners can edit only their own availability (`partner.availability.manage`). The partner-profile status (set by staff) is shown alongside.
+
+## Invoices
+
+Partner accounts bill SimplexD from **Invoices**: pick a purchase order issued to you or an assignment staff marked completed, enter the amount in naira (converted to integer kobo; never above the order total including invoices already submitted), your own invoice number (unique among your invoices), an optional description and the invoice document (uploaded with the `partner_submission` purpose; the form waits for the malware scan). Finance reviews it: accepted (which records the payable), then a second approver authorises payment, then the transfer is submitted and settled against the bank statement, or rejected with a reason. Each step is notified and listed in the invoice history; a rejected invoice frees the amount so a corrected one can be submitted.
 
 ## Known gaps (API side)
 
 - **Bid attachments.** Uploaded with the `partner_submission` purpose: the file belongs to you, is scanned before use, and SimplexD evaluators can read it only after the sealed bid is opened.
-- **Discrepancies.** Suppliers can read them but not respond; only staff move them between states. The page points to Messages.
+- **Unscheduled visits on service requests.** Ad-hoc visits are started on projects only; a partner assigned to a service request without a project still needs staff to schedule the visit.
+- **Assignment invoices** need the assignment marked `completed` by staff; progress billing on active assignments is not supported.
 - **No partner-wide visit list.** Visits are gathered per project from `/api/v1/projects/{id}/site-visits` and filtered to the named inspector.
 - **Large photos.** Multipart uploads (over 64 MB) are not handled in field sync. Such a photo is refused, with the reason shown.
 
