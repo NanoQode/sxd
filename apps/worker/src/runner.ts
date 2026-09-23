@@ -37,6 +37,18 @@ export interface JobRunnerOptions {
   concurrency: number;
   pollIntervalMs: number;
   log: Logger;
+  /**
+   * Called after a failed attempt has been recorded (error tracking). Must not
+   * throw; its failures are logged and ignored so they never affect the queue.
+   */
+  onJobFailed?: (failure: JobFailure) => void | Promise<void>;
+}
+
+export interface JobFailure {
+  job: JobRow;
+  error: unknown;
+  /** `retry` when the job was rescheduled with backoff, `dead` when it moved to the dead-letter state. */
+  outcome: 'retry' | 'dead';
 }
 
 export class JobRunner {
@@ -108,9 +120,11 @@ export class JobRunner {
     const handler = this.handlers.get(job.type);
     if (!handler) {
       log.error('no handler registered');
-      await withActor(this.opts.db, systemContext(), (tx) =>
-        failJob(tx, job, new Error(`no handler for ${job.type}`), { retry: false }),
+      const error = new Error(`no handler for ${job.type}`);
+      const outcome = await withActor(this.opts.db, systemContext(), (tx) =>
+        failJob(tx, job, error, { retry: false }),
       );
+      await this.notifyFailure({ job, error, outcome }, log);
       return;
     }
     const started = Date.now();
@@ -129,6 +143,16 @@ export class JobRunner {
         failJob(tx, job, err, { retry }),
       );
       log.warn({ err, outcome, ms: Date.now() - started }, 'job failed');
+      await this.notifyFailure({ job, error: err, outcome }, log);
+    }
+  }
+
+  private async notifyFailure(failure: JobFailure, log: Logger): Promise<void> {
+    if (!this.opts.onJobFailed) return;
+    try {
+      await this.opts.onJobFailed(failure);
+    } catch (err) {
+      log.warn({ err }, 'job failure hook failed');
     }
   }
 }

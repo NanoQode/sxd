@@ -19,7 +19,10 @@
     "./projects": "./src/projects/index.ts",
     "./procurement": "./src/procurement/index.ts",
     "./tenders": "./src/tenders/index.ts",
-    "./rentals": "./src/rentals/index.ts"
+    "./rentals": "./src/rentals/index.ts",
+    "./search": "./src/search/index.ts",
+    "./purchase": "./src/purchase/index.ts",
+    "./engagements": "./src/engagements/index.ts"
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json",

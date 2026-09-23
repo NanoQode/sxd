@@ -1,8 +1,10 @@
 import { z } from 'zod';
 import {
   bounceImportSchema,
-  deliveryAttemptListQuerySchema,
-  deliveryAttemptListResponseSchema,
+  communicationsTestSendResponseSchema,
+  communicationsTestSendSchema,
+  deliveryLogQuerySchema,
+  deliveryLogResponseSchema,
   listRoutes,
   notificationDtoSchema,
   notificationFeedQuerySchema,
@@ -13,13 +15,11 @@ import {
   templateActionSchema,
   templateCreateSchema,
   templateDtoSchema,
+  samplePreviewResponseSchema,
+  samplePreviewSchema,
   templateListQuerySchema,
-  templatePreviewResponseSchema,
-  templatePreviewSchema,
   templateUpdateSchema,
   termiiWebhookAckSchema,
-  testSendResponseSchema,
-  testSendSchema,
   unreadCountResponseSchema,
   uuidSchema,
   type RouteSpec,
@@ -158,11 +158,13 @@ export const adminTemplatePreviewRoute = ensure({
   method: 'post',
   path: '/api/v1/admin/notifications/templates/preview',
   summary: 'Preview a template with sample variables',
+  description:
+    'Server-side render with catalogue sample values plus optional staff-typed overrides; never reads customer records. SMS previews report GSM-7/Unicode encoding, segments and the estimated cost at the active Termii per-segment price.',
   tags: ['admin', 'notifications'],
   operationId: 'admin.notifications.templates.preview',
   auth: 'staff',
-  request: { body: templatePreviewSchema },
-  responses: { 200: { description: 'Rendered preview', body: templatePreviewResponseSchema } },
+  request: { body: samplePreviewSchema },
+  responses: { 200: { description: 'Rendered preview', body: samplePreviewResponseSchema } },
 });
 
 export const adminTestSendRoute = ensure({
@@ -170,13 +172,13 @@ export const adminTestSendRoute = ensure({
   path: '/api/v1/admin/notifications/test-send',
   summary: 'Send an explicit test email or SMS',
   description:
-    'Requires notifications.test_send (no MFA step). Sends through the active provider to the staff-entered recipient, records a delivery attempt labelled test and returns the real provider result. Rate limited to 30 per hour per user.',
+    'Requires notifications.test_send (no MFA step). Sends through the active provider to the staff-entered recipient, records a delivery attempt labelled test and returns the real provider result (accepted/rejected with the sanitised reason) separately from later delivery status. Templates render with sample values only. Development adapters are reported as such. Rate limited to 30 per hour per user.',
   tags: ['admin', 'notifications'],
   operationId: 'admin.notifications.testSend',
   auth: 'staff',
-  request: { body: testSendSchema },
+  request: { body: communicationsTestSendSchema },
   responses: {
-    200: { description: 'Provider result', body: testSendResponseSchema },
+    200: { description: 'Provider result', body: communicationsTestSendResponseSchema },
     429: { description: 'Rate limited' },
   },
 });
@@ -186,12 +188,12 @@ export const adminDeliveriesRoute = ensure({
   path: '/api/v1/admin/notifications/deliveries',
   summary: 'Delivery log',
   description:
-    'Every delivery attempt with provider ids, real status (accepted is not delivered) and sanitised errors.',
+    'Every delivery attempt with masked recipient, provider ids, real status (accepted is not delivered), a status timeline, sanitised errors and retry eligibility. The recipient filter is an exact match (email, phone or user id).',
   tags: ['admin', 'notifications'],
   operationId: 'admin.notifications.deliveries.list',
   auth: 'staff',
-  request: { query: deliveryAttemptListQuerySchema },
-  responses: { 200: { description: 'Page', body: deliveryAttemptListResponseSchema } },
+  request: { query: deliveryLogQuerySchema },
+  responses: { 200: { description: 'Page', body: deliveryLogResponseSchema } },
 });
 
 export const adminProvidersRoute = ensure({

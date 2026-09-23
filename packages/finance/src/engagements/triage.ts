@@ -1,4 +1,4 @@
-import { and, desc, eq, isNull, or } from 'drizzle-orm';
+import { and, desc, eq, isNull, or, sql } from 'drizzle-orm';
 import {
   ApiError,
   type AssignRequest,
@@ -41,7 +41,8 @@ export async function computeSlaDueAt(
         or(eq(schema.slaPolicies.serviceId, serviceId), isNull(schema.slaPolicies.serviceId)),
       ),
     )
-    .orderBy(desc(schema.slaPolicies.serviceId))
+    // Service-specific first: DESC alone would sort the global (NULL) policy first in PostgreSQL.
+    .orderBy(sql`${schema.slaPolicies.serviceId} is null`, desc(schema.slaPolicies.updatedAt))
     .limit(1);
   if (!policy) return { dueAt: null, policyId: null, targetHours: null };
   return {

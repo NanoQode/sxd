@@ -8,6 +8,7 @@ import { registerMarketDataHandlers } from './market-data';
 import { registerIntegrationHandlers } from './integrations';
 import { registerCommercialHandlers } from './commercial';
 import { registerRentalHandlers } from './rentals';
+import { registerSearchHandlers } from './search';
 
 export function registerHandlers(runner: JobRunner): void {
   registerCommercialHandlers(runner);
@@ -19,4 +20,5 @@ export function registerHandlers(runner: JobRunner): void {
   registerMarketDataHandlers(runner);
   registerIntegrationHandlers(runner);
   registerRentalHandlers(runner);
+  registerSearchHandlers(runner);
 }

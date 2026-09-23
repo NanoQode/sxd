@@ -54,6 +54,8 @@ async function createPerson(
   await dbs.owner.insert(schema.userProfiles).values({
     userId,
     phoneE164: phone,
+    // SMS only reaches verified numbers; these fixtures completed the code check.
+    phoneVerifiedAt: new Date(),
     timeZone: overrides.timeZone ?? 'Africa/Lagos',
     marketingConsentAt: overrides.marketingConsentAt ?? null,
   });

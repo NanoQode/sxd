@@ -8,6 +8,7 @@ import {
   withActor,
   type Database,
   type OutboxRow,
+  type Transaction,
 } from '@simplexd/db';
 
 /**
@@ -68,6 +69,8 @@ const routes: Record<string, OutboxRoute> = {
   'market_data.published': () => [{ type: 'market_data.invalidate_caches', queue: 'default' }],
   'notification.requested': () => [{ type: 'notifications.deliver', queue: 'notifications' }],
   'integration.degraded': () => [{ type: 'notifications.dispatch', queue: 'notifications' }],
+  // Monitoring thresholds crossed (apps/worker/src/monitoring), at most one per key per hour.
+  'ops.alert': () => [{ type: 'notifications.dispatch', queue: 'notifications' }],
   'work_order.transitioned': () => [{ type: 'notifications.work_order', queue: 'notifications' }],
   'invitation.created': () => [{ type: 'notifications.invitation', queue: 'notifications' }],
   'setup_token.issued': () => [{ type: 'notifications.admin_setup', queue: 'notifications' }],
@@ -124,11 +127,78 @@ const routes: Record<string, OutboxRoute> = {
   'owner_statement.issued': () => [{ type: 'notifications.dispatch', queue: 'notifications' }],
   'payout.transitioned': () => [{ type: 'notifications.dispatch', queue: 'notifications' }],
   'work_order.sla_breached': () => [{ type: 'notifications.dispatch', queue: 'notifications' }],
+  // Property search and purchase representation (apps/web/src/server/search, .../purchase).
+  'shortlist.shared': () => [{ type: 'notifications.dispatch', queue: 'notifications' }],
+  'shortlist.accepted': () => [{ type: 'notifications.dispatch', queue: 'notifications' }],
+  'shortlist.outcome_recorded': () => [{ type: 'notifications.dispatch', queue: 'notifications' }],
+  'viewing.requested': () => [{ type: 'notifications.dispatch', queue: 'notifications' }],
+  'viewing.updated': () => [{ type: 'notifications.dispatch', queue: 'notifications' }],
+  'purchase_offer.updated': () => [{ type: 'notifications.dispatch', queue: 'notifications' }],
+  'purchase_item.created': () => [{ type: 'notifications.dispatch', queue: 'notifications' }],
+  'purchase_handover.ready': () => [{ type: 'notifications.dispatch', queue: 'notifications' }],
+  'purchase_handover.acknowledged': () => [
+    { type: 'notifications.dispatch', queue: 'notifications' },
+  ],
+  'purchase_closing.submitted': () => [{ type: 'notifications.dispatch', queue: 'notifications' }],
 };
 
 export function routeOutboxEvent(event: OutboxRow): ReturnType<OutboxRoute> {
   const route = routes[event.eventType];
   return route ? route(event) : [];
+}
+
+/** Event types the relay routes (tests check every target has a handler). */
+export function routedEventTypes(): string[] {
+  return Object.keys(routes);
+}
+
+/**
+ * Routes claimed outbox events into jobs inside the relay's transaction. Each
+ * event runs in its own savepoint, so a failing event (routing error or a
+ * database error while enqueueing) is counted with `markOutboxFailed` without
+ * aborting the rest of the batch. Exported for tests.
+ */
+export async function relayOutboxEvents(
+  tx: Transaction,
+  events: OutboxRow[],
+  log: Pick<Logger, 'error'>,
+  route: (event: OutboxRow) => ReturnType<OutboxRoute> = routeOutboxEvent,
+): Promise<{ published: number[]; failed: number[] }> {
+  const published: number[] = [];
+  const failed: number[] = [];
+  for (const event of events) {
+    try {
+      await tx.transaction(async (sp) => {
+        for (const target of route(event)) {
+          await enqueueJob(sp, {
+            type: target.type,
+            queue: target.queue ?? 'default',
+            payload: {
+              event: {
+                id: event.id,
+                type: event.eventType,
+                aggregateType: event.aggregateType,
+                aggregateId: event.aggregateId,
+                payload: event.payload,
+              },
+              ...(target.payload ?? {}),
+            },
+            organizationId: event.organizationId,
+            actorUserId: event.actorUserId,
+            correlationId: event.correlationId,
+            dedupeKey: `outbox:${event.id}:${target.type}${target.dedupeSuffix ?? ''}`,
+          });
+        }
+      });
+      published.push(event.id);
+    } catch (err) {
+      await markOutboxFailed(tx, event.id, err);
+      failed.push(event.id);
+      log.error({ err, outboxId: event.id }, 'outbox routing failed');
+    }
+  }
+  await markOutboxPublished(tx, published);
+  return { published, failed };
 }
 
 export function runOutboxRelay(opts: {
@@ -144,36 +214,7 @@ export function runOutboxRelay(opts: {
     try {
       const processed = await withActor(opts.db, systemContext('outbox-relay'), async (tx) => {
         const events = await claimOutboxBatch(tx, opts.batch ?? 50);
-        const done: number[] = [];
-        for (const event of events) {
-          try {
-            for (const target of routeOutboxEvent(event)) {
-              await enqueueJob(tx, {
-                type: target.type,
-                queue: target.queue ?? 'default',
-                payload: {
-                  event: {
-                    id: event.id,
-                    type: event.eventType,
-                    aggregateType: event.aggregateType,
-                    aggregateId: event.aggregateId,
-                    payload: event.payload,
-                  },
-                  ...(target.payload ?? {}),
-                },
-                organizationId: event.organizationId,
-                actorUserId: event.actorUserId,
-                correlationId: event.correlationId,
-                dedupeKey: `outbox:${event.id}:${target.type}${target.dedupeSuffix ?? ''}`,
-              });
-            }
-            done.push(event.id);
-          } catch (err) {
-            await markOutboxFailed(tx, event.id, err);
-            opts.log.error({ err, outboxId: event.id }, 'outbox routing failed');
-          }
-        }
-        await markOutboxPublished(tx, done);
+        await relayOutboxEvents(tx, events, opts.log);
         return events.length;
       });
       timer = setTimeout(() => void loop(), processed > 0 ? 0 : opts.intervalMs);

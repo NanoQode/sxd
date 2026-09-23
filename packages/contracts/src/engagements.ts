@@ -52,6 +52,9 @@ export const feeBasisSchema = z.object({
   basisDescription: z.string().trim().max(1000).optional(),
   /** Basis amount the percentage applies to (e.g. agreed purchase price), integer kobo. */
   basisAmountKobo: koboStringSchema.optional(),
+  /** What the basis amount is: the agreed purchase price or an explicit cap agreed with the customer. */
+  basisKind: z.enum(['agreed_purchase_price', 'agreed_cap']).optional(),
+  /** File on the service request holding the customer-signed scope (required for percentage fees). */
   signedScopeFileId: uuidSchema.optional(),
 });
 export type FeeBasis = z.infer<typeof feeBasisSchema>;
@@ -129,10 +132,17 @@ export const quoteCreateSchema = z
     lines: z.array(quoteLineInputSchema).min(1).max(100).optional(),
     ...quoteVersionBase,
   })
-  .refine((v) => Boolean(v.templateId) || (v.lines && v.lines.length > 0), {
-    message: 'provide a templateId or at least one line',
-    path: ['lines'],
-  });
+  .refine(
+    (v) =>
+      Boolean(v.templateId) ||
+      (v.lines && v.lines.length > 0) ||
+      // Percentage fees derive their single line from the agreed basis on the server.
+      Boolean(v.feeBasis?.percentageBps && v.feeBasis.basisAmountKobo),
+    {
+      message: 'provide a templateId, at least one line, or a percentage fee basis',
+      path: ['lines'],
+    },
+  );
 export type QuoteCreate = z.infer<typeof quoteCreateSchema>;
 
 export const quoteVersionCreateSchema = z.object({

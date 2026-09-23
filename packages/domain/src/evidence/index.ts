@@ -184,3 +184,22 @@ export function isFresh(input: FreshnessInput, asOf: Date): boolean {
   const ageDays = (asOf.getTime() - new Date(input.observedAt).getTime()) / 86_400_000;
   return ageDays <= input.maxAgeDays;
 }
+
+/**
+ * The freshness data type (`freshness_policies.data_type`) that governs an
+ * observation metric, or null when no policy applies. Shared by the public
+ * read model and the worker's stale-evidence sweep so both judge alike.
+ */
+export function freshnessDataTypeFor(metric: string): string | null {
+  const m = metric.toLowerCase();
+  if (m.includes('material') || m.includes('delivery') || m.includes('lead_time'))
+    return 'material_quote';
+  if (m.includes('rent') || m.includes('yield')) return 'rent_observation';
+  if (m.includes('build_rate') || m.includes('boq') || m.includes('construction'))
+    return 'build_rate';
+  if (m.includes('sale') || m.includes('price') || m.includes('cost')) return 'sale_observation';
+  if (m.includes('approval') || m.includes('permit')) return 'observed_permit_performance';
+  if (m.includes('flood') || m.includes('risk') || m.includes('soil') || m.includes('suitab'))
+    return 'official_risk_layer';
+  return null;
+}

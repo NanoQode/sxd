@@ -1,5 +1,6 @@
 import { and, eq, isNull, lt, lte, sql } from 'drizzle-orm';
 import { schema, systemContext, withActor } from '@simplexd/db';
+import { monitoringSnapshot } from '../monitoring/alerts';
 import type { JobRunner } from '../runner';
 
 /**
@@ -90,16 +91,21 @@ export function registerMaintenanceHandlers(runner: JobRunner): void {
     if (keys > 0 || buckets > 0) log.info({ keys, buckets }, 'expired idempotency keys purged');
   });
 
-  runner.register('monitoring.snapshot', async ({ db, log }) => {
-    // Jobs are privileged-only under row-level security, so read as the system actor.
-    const depth = await withActor(db, systemContext(), (tx) =>
-      tx.execute<{ status: string; n: string }>(
-        sql`select status, count(*)::text as n from jobs group by status`,
-      ),
+  runner.register('monitoring.snapshot', async ({ db, log, job }) => {
+    // Jobs, outbox and provider logs are privileged-only under row-level security, so
+    // read as the system actor. Crossed thresholds raise `ops.alert` (see ../monitoring).
+    const snapshot = await withActor(db, systemContext(job.correlationId ?? 'monitoring'), (tx) =>
+      monitoringSnapshot(tx, { correlationId: job.correlationId }),
     );
     log.info(
-      { jobs: Object.fromEntries(depth.rows.map((r) => [r.status, Number(r.n)])) },
+      {
+        metrics: snapshot.metrics,
+        alerts: snapshot.alerts.map((a) => a.key),
+        suppressed: snapshot.suppressed,
+      },
       'queue snapshot',
     );
+    if (snapshot.raised.length > 0)
+      log.warn({ raised: snapshot.raised }, 'operational alerts raised');
   });
 }

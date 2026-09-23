@@ -44,6 +44,12 @@ export interface ResolvedRecipient {
   userId: string | null;
   email: string | null;
   phoneE164: string | null;
+  /**
+   * True only when `phoneE164` is the user's profile number and that number
+   * was confirmed with a one-time code (`user_profiles.phone_verified_at`).
+   * Numbers typed into public forms are never verified; SMS skips them.
+   */
+  phoneVerified: boolean;
   name: string;
   timeZone: string;
   locale: string;
@@ -82,6 +88,12 @@ export interface NotificationRequest {
   label?: 'test' | null;
   /** Skip the recipient's preference matrix (explicit test sends). Suppressions still apply. */
   ignorePreferences?: boolean;
+  /**
+   * SMS normally goes only to verified numbers. Set for the verification code
+   * itself (the message is what verifies the number) and for explicit staff
+   * test sends to a number the operator typed. Suppressions still apply.
+   */
+  allowUnverifiedPhone?: boolean;
 }
 
 export interface PipelineLogger {

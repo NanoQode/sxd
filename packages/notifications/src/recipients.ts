@@ -15,6 +15,8 @@ function normalizePhone(value: string | null | undefined): string | null {
  * name, profiles supply phone, time zone, locale and marketing consent.
  * Explicit spec values win over stored ones (e.g. a lead's phone entered on
  * a form). Duplicate users are merged; specs without any address are dropped.
+ * `phoneVerified` is true only for a profile number confirmed by a one-time
+ * code; the SMS policy skips every other number.
  */
 export async function resolveRecipients(
   tx: DbExecutor,
@@ -51,10 +53,16 @@ export async function resolveRecipients(
     if (!user && !email && !phoneE164) continue;
     const key = user ? `user:${user.id}` : `addr:${email ?? phoneE164}`;
     const existing = out.get(key);
+    const resolvedPhone = existing?.phoneE164 ?? phoneE164;
+    // Verified only when the number is the profile number confirmed by a code.
+    const phoneVerified = Boolean(
+      resolvedPhone && profile?.phoneE164 === resolvedPhone && profile.phoneVerifiedAt,
+    );
     const resolved: ResolvedRecipient = {
       userId: user?.id ?? null,
       email: existing?.email ?? email,
-      phoneE164: existing?.phoneE164 ?? phoneE164,
+      phoneE164: resolvedPhone,
+      phoneVerified,
       name: spec.name?.trim() || user?.name || existing?.name || email || 'there',
       timeZone: spec.timeZone ?? profile?.timeZone ?? existing?.timeZone ?? DEFAULT_TIME_ZONE,
       locale: (spec.locale ?? profile?.locale ?? existing?.locale ?? 'en').split('-')[0] ?? 'en',

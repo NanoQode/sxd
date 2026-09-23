@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, inArray, lt, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, isNull, lt, or, sql } from 'drizzle-orm';
 import {
   ApiError,
   type QuoteAccept,
@@ -27,6 +27,7 @@ import { createInvoiceRecord, issueInvoiceTx } from '../invoices';
 import { isUniqueViolation } from '../journal';
 import { computeTotals, iso, loadTaxTreatment, type LineInput } from '../money';
 import type { FinanceRuntime } from '../runtime';
+import { assertPercentageRule } from './fee-basis';
 import { loadServiceRequestForUpdate, transitionEngagement } from './transitions';
 
 type QuoteRow = typeof schema.quotes.$inferSelect;
@@ -43,6 +44,7 @@ interface StoredFeeBasis {
   percentageBps?: number;
   basisDescription?: string;
   basisAmountKobo?: string;
+  basisKind?: 'agreed_purchase_price' | 'agreed_cap';
   signedScopeFileId?: string;
   billing: QuoteBillingTerms;
 }
@@ -150,14 +152,28 @@ function feeBasisFor(input: QuoteVersionCreate | QuoteCreate): StoredFeeBasis {
   return { ...(input.feeBasis ?? {}), billing };
 }
 
-/** Percentage-based fees: the lines are derived from the agreed basis amount, never typed as totals. */
+/**
+ * Percentage-based fees: the single line is derived from the agreed basis
+ * amount, never typed as totals (see ./fee-basis.ts for the §2 rule enforced
+ * at issue and acceptance).
+ */
 function linesFromFeeBasis(input: QuoteCreate | QuoteVersionCreate): LineInput[] | null {
   const fb = input.feeBasis;
-  if (!fb?.percentageBps || !fb.basisAmountKobo) return null;
+  if (!fb?.percentageBps) return null;
+  if (!fb.basisAmountKobo || !/^\d+$/.test(fb.basisAmountKobo) || BigInt(fb.basisAmountKobo) <= 0n) {
+    throw new ApiError(
+      'validation_failed',
+      'a percentage fee needs the agreed basis amount it applies to (the agreed purchase price or an explicit cap)',
+      { details: [{ path: 'feeBasis.basisAmountKobo', message: 'required for a percentage fee' }] },
+    );
+  }
   const amount = bpsOf(BigInt(fb.basisAmountKobo), fb.percentageBps);
+  const basisLabel =
+    fb.basisDescription ??
+    (fb.basisKind === 'agreed_cap' ? 'the agreed cap' : 'the agreed purchase price');
   return [
     {
-      description: `${(fb.percentageBps / 100).toFixed(2)}% of ${fb.basisDescription ?? 'the agreed basis'}`,
+      description: `${(fb.percentageBps / 100).toFixed(2)}% of ${basisLabel}`,
       quantity: '1',
       unitAmountKobo: amount.toString(),
     },
@@ -243,7 +259,8 @@ export async function createQuote(
     }
     let lines: LineInput[] | null = linesFromFeeBasis(input);
     let scope: Pick<QuoteCreate, 'scopeMarkdown' | 'exclusions'> = input;
-    if (!lines && input.templateId) {
+    if (input.templateId) {
+      // The template must be active and apply to this service (or to every service).
       const [template] = await tx
         .select()
         .from(schema.quoteTemplates)
@@ -251,20 +268,30 @@ export async function createQuote(
           and(
             eq(schema.quoteTemplates.id, input.templateId),
             eq(schema.quoteTemplates.active, true),
+            or(
+              isNull(schema.quoteTemplates.serviceId),
+              eq(schema.quoteTemplates.serviceId, sr.serviceId),
+            ),
           ),
         );
-      if (!template) throw new ApiError('not_found', 'quote template not found');
-      lines = template.lines.map((l) => ({
-        description: l.description,
-        quantity: l.quantity,
-        unitAmountKobo: l.unitAmountKobo,
-        ...(l.taxRateBps !== undefined ? { taxRateBps: l.taxRateBps } : {}),
-        ...(l.accountCode ? { accountCode: l.accountCode } : {}),
-      }));
-      scope = {
-        scopeMarkdown: input.scopeMarkdown ?? template.scopeMarkdown ?? undefined,
-        exclusions: input.exclusions ?? template.exclusions ?? undefined,
-      };
+      if (!template)
+        throw new ApiError('not_found', 'no active quote template for this service with that id');
+      // Lines edited after starting from the template win; the template id is
+      // then provenance only (recorded on the audit entry). The quote version
+      // stores its own copy, so later template edits never change it.
+      if (!lines && !(input.lines && input.lines.length > 0)) {
+        lines = template.lines.map((l) => ({
+          description: l.description,
+          quantity: l.quantity,
+          unitAmountKobo: l.unitAmountKobo,
+          ...(l.taxRateBps !== undefined ? { taxRateBps: l.taxRateBps } : {}),
+          ...(l.accountCode ? { accountCode: l.accountCode } : {}),
+        }));
+        scope = {
+          scopeMarkdown: input.scopeMarkdown ?? template.scopeMarkdown ?? undefined,
+          exclusions: input.exclusions ?? template.exclusions ?? undefined,
+        };
+      }
     }
     if (!lines) lines = input.lines ?? [];
     const [quote] = await tx
@@ -344,6 +371,8 @@ export async function issueQuote(
       );
     }
     const version = await currentVersionOf(tx, quote);
+    // §2: a percentage fee needs an agreed basis amount and the signed scope before issue.
+    await assertPercentageRule(tx, sr, version, 'issue');
     const now = rt.now();
     const validUntil = input.validUntil
       ? new Date(input.validUntil)
@@ -452,6 +481,9 @@ export async function acceptQuote(
         },
       );
     }
+    // §2 again at acceptance (the signed-scope file is read with elevated rights:
+    // staff may have uploaded it without an organisation on the file row).
+    await elevated(tx, fa, () => assertPercentageRule(tx, sr, version, 'accept'));
     const now = rt.now();
     if (quote.status !== 'issued') {
       throw new ApiError(
@@ -496,12 +528,17 @@ export async function acceptQuote(
       actorKind: 'customer',
       patch: stored.percentageBps
         ? {
+            // The agreed basis travels with the request: invoices for the
+            // percentage fee are computed from this amount only.
             feeBasis: {
               percentageBps: stored.percentageBps,
               ...(stored.basisDescription ? { basisDescription: stored.basisDescription } : {}),
+              ...(stored.basisAmountKobo ? { basisAmountKobo: stored.basisAmountKobo } : {}),
+              ...(stored.basisKind ? { basisKind: stored.basisKind } : {}),
               ...(stored.signedScopeFileId ? { signedScopeFileId: stored.signedScopeFileId } : {}),
+              quoteVersionId: version.id,
               agreedAt: now.toISOString(),
-            },
+            } as NonNullable<typeof sr.feeBasis>,
           }
         : {},
       metadata: {

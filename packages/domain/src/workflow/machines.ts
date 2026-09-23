@@ -613,11 +613,12 @@ export const listingMachine = defineMachine<ListingState>({
   terminal: ['archived'],
   transitions: [
     {
-      from: ['draft', 'rejected'],
+      from: ['draft', 'rejected', 'published'],
       to: 'in_moderation',
       by: ['customer', 'staff'],
       permission: 'org.listings.manage',
-      effect: 'Owner authority and content are checked before publication.',
+      effect:
+        'Owner authority and content are checked before publication; a published listing stays live on its approved revision while changes are reviewed.',
     },
     { from: 'in_moderation', to: 'published', by: ['staff'], permission: 'content.publish' },
     {
@@ -626,6 +627,14 @@ export const listingMachine = defineMachine<ListingState>({
       by: ['staff'],
       permission: 'content.publish',
       reasonRequired: true,
+    },
+    {
+      from: 'in_moderation',
+      to: 'draft',
+      by: ['staff'],
+      permission: 'content.publish',
+      reasonRequired: true,
+      effect: 'Changes requested; the owner edits and resubmits.',
     },
     { from: 'published', to: 'paused', by: ['customer', 'staff'] },
     {
@@ -647,7 +656,7 @@ export const listingMachine = defineMachine<ListingState>({
       effect: 'Re-confirmed availability triggers moderation.',
     },
     {
-      from: ['published', 'paused', 'expired'],
+      from: ['published', 'paused', 'expired', 'in_moderation'],
       to: 'withdrawn',
       by: ['customer', 'staff'],
       reasonRequired: true,
@@ -656,6 +665,77 @@ export const listingMachine = defineMachine<ListingState>({
       from: ['draft', 'withdrawn', 'expired', 'rejected'],
       to: 'archived',
       by: ['customer', 'staff', 'system'],
+    },
+    {
+      from: ['published', 'paused', 'in_moderation'],
+      to: 'archived',
+      by: ['customer', 'staff'],
+      effect: 'A documented sale or lease outcome closes the listing.',
+    },
+  ],
+});
+
+export const LISTING_OFFER_STATES = [
+  'draft',
+  'submitted',
+  'countered',
+  'accepted',
+  'rejected',
+  'withdrawn',
+  'expired',
+] as const;
+export type ListingOfferState = (typeof LISTING_OFFER_STATES)[number];
+
+/**
+ * Offers on a published listing. The buyer's organisation owns the offer and
+ * the listing owner's organisation is the counterparty. `submitted` means the
+ * buyer's figure awaits the owner; `countered` means the owner's figure awaits
+ * the buyer. Every step appends to the offer's negotiation log.
+ */
+export const listingOfferMachine = defineMachine<ListingOfferState>({
+  name: 'listing_offer',
+  initial: 'submitted',
+  states: LISTING_OFFER_STATES,
+  terminal: ['accepted', 'rejected', 'withdrawn', 'expired'],
+  transitions: [
+    {
+      from: 'submitted',
+      to: 'countered',
+      by: ['customer'],
+      permission: 'org.listings.manage',
+      effect: 'The owner proposes a different amount.',
+    },
+    {
+      from: 'countered',
+      to: 'submitted',
+      by: ['customer'],
+      permission: 'org.requests.create',
+      effect: 'The buyer answers the counter-offer with a new amount.',
+    },
+    {
+      from: ['submitted', 'countered'],
+      to: 'accepted',
+      by: ['customer'],
+      effect: 'The party whose turn it is accepts the latest amount.',
+    },
+    {
+      from: ['submitted', 'countered'],
+      to: 'rejected',
+      by: ['customer'],
+      permission: 'org.listings.manage',
+      reasonRequired: true,
+    },
+    {
+      from: ['submitted', 'countered'],
+      to: 'withdrawn',
+      by: ['customer'],
+      permission: 'org.requests.create',
+    },
+    {
+      from: ['submitted', 'countered'],
+      to: 'expired',
+      by: ['system'],
+      effect: 'The validity date passed without a decision.',
     },
   ],
 });

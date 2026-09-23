@@ -17,6 +17,7 @@ export * from './reconciliation-exceptions';
 export * from './engagements/transitions';
 export * from './engagements/triage';
 export * from './engagements/quotes';
+export * from './engagements/fee-basis';
 export * from './invoices';
 export * from './settlement';
 export * from './payment-attempts';

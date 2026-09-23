@@ -148,6 +148,7 @@ async function dispatchChannel(
             smsSettings,
             estimatedCostKobo: estimated?.estimatedCostKobo ?? 0,
             ignorePreferences: request.ignorePreferences,
+            allowUnverifiedPhone: request.allowUnverifiedPhone,
           });
       const attemptId =
         prior?.id ??
@@ -175,6 +176,23 @@ async function dispatchChannel(
           now,
         }));
       if (!attemptId) return { kind: 'deduplicated' as const, prior: null };
+      if (prior) {
+        // Re-sending a queued row (provider retry, admin retry claim): record what is used now.
+        await tx
+          .update(schema.deliveryAttempts)
+          .set({
+            templateVersion: template?.row.version ?? null,
+            subject:
+              rendered?.channel === 'email'
+                ? rendered.subject
+                : rendered?.channel === 'in_app'
+                  ? rendered.title
+                  : null,
+            segments: estimated?.segments ?? null,
+            estimatedCostKobo: estimated ? BigInt(estimated.estimatedCostKobo) : null,
+          })
+          .where(eq(schema.deliveryAttempts.id, prior.id));
+      }
 
       if (failure || decision.action === 'suppress' || decision.action === 'digest') {
         const status: 'failed' | 'suppressed' = failure ? 'failed' : 'suppressed';

@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { createMigrationDb } from '../client';
-import { importMarketSeed, seedReferenceData } from '../seed';
+import { importMarketSeed, seedConfigurationDefaults, seedReferenceData } from '../seed';
 import { seedContentPages } from '../seed/content';
 import { loadEnv } from './_env';
 
@@ -20,6 +20,10 @@ const { db, pool } = createMigrationDb();
 try {
   await seedReferenceData(db);
   console.log('Reference data seeded.');
+  const config = await seedConfigurationDefaults(db);
+  console.log(
+    `Configuration defaults seeded (${config.reportTemplatesInserted} report templates, ${config.documentRequirementsInserted} document requirements inserted; existing ones untouched).`,
+  );
   const pages = await seedContentPages(db);
   console.log(`Content pages seeded (${pages} inserted; existing pages untouched).`);
   if (fs.existsSync(seedPath)) {

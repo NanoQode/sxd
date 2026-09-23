@@ -476,6 +476,8 @@ export async function testSend(
       dedupeScope: `test:${randomUUID()}`,
       label: 'test',
       ignorePreferences: true,
+      // The operator typed this number for an explicit test; it is not a customer's profile number.
+      allowUnverifiedPhone: true,
       relatedEntity: { type: 'test_send', id: null },
       correlationId: actor.correlationId ?? null,
     },

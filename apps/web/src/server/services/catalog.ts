@@ -1,8 +1,9 @@
 import 'server-only';
 import { cache } from 'react';
-import { and, asc, eq, inArray, ne } from 'drizzle-orm';
+import { and, asc, eq, inArray, ne, sql } from 'drizzle-orm';
 import type { PublishedContent } from '@simplexd/contracts';
 import { anonymousContext, getDb, schema, withActor } from '@simplexd/db';
+import { formatDateLabel } from '@simplexd/ui/format';
 import { cached } from '@/lib/cache';
 import { renderMarkdown } from '@/lib/markdown';
 import { getPublishedContent } from '@/server/content/public';
@@ -11,6 +12,12 @@ import {
   type PackagePublication,
   type PriceBasis,
 } from '@/components/public/price-anchor';
+import {
+  effectiveAnchor,
+  lagosToday,
+  parseAnchorSnapshot,
+  type AnchorValues,
+} from '@/lib/services/price-anchors';
 
 /**
  * Public service catalogue: the eight core services with their editable price
@@ -37,6 +44,8 @@ export interface ServicePackageView {
   publicationState: PackagePublication;
   /** Presentation label; null when the package must not be shown. */
   priceLabel: string | null;
+  /** Set when a published change takes effect later than today (Africa/Lagos). */
+  upcomingEffectiveFrom: string | null;
 }
 
 export type ServiceAvailabilityMode = 'request' | 'inquiry_only';
@@ -81,6 +90,10 @@ interface RawCatalog {
     Omit<typeof schema.servicePackages.$inferSelect, 'amountKobo'> & { amountKobo: string | null }
   >;
   flags: Record<string, boolean>;
+  /** Published revision values per package, oldest first (never drafts or proposals). */
+  publishedRevisions: Record<string, AnchorValues[]>;
+  /** Business date the effective anchors were resolved for. */
+  today: string;
 }
 
 async function loadRaw(): Promise<RawCatalog> {
@@ -112,6 +125,33 @@ async function loadRaw(): Promise<RawCatalog> {
             .select({ key: schema.featureFlags.key, enabled: schema.featureFlags.enabled })
             .from(schema.featureFlags)
             .where(inArray(schema.featureFlags.key, flagKeys));
+    // Only `published` revision snapshots are read: they let a change published with a
+    // future effective date keep showing the anchor in force today.
+    const publishedIds = packages
+      .filter((p) => p.publicationState === 'published')
+      .map((p) => p.id);
+    const revisionRows =
+      publishedIds.length === 0
+        ? []
+        : await tx
+            .select({
+              packageId: schema.servicePackageRevisions.packageId,
+              snapshot: schema.servicePackageRevisions.snapshot,
+            })
+            .from(schema.servicePackageRevisions)
+            .where(
+              and(
+                inArray(schema.servicePackageRevisions.packageId, publishedIds),
+                sql`${schema.servicePackageRevisions.snapshot}->>'event' = 'published'`,
+              ),
+            )
+            .orderBy(asc(schema.servicePackageRevisions.version));
+    const publishedRevisions: Record<string, AnchorValues[]> = {};
+    for (const r of revisionRows) {
+      const snap = parseAnchorSnapshot(r.snapshot);
+      if (!snap || snap.event !== 'published') continue;
+      (publishedRevisions[r.packageId] ??= []).push(snap.values);
+    }
     return {
       services,
       packages: packages.map((p) => ({
@@ -119,6 +159,8 @@ async function loadRaw(): Promise<RawCatalog> {
         amountKobo: p.amountKobo === null ? null : p.amountKobo.toString(),
       })),
       flags: Object.fromEntries(flagRows.map((f) => [f.key, f.enabled])),
+      publishedRevisions,
+      today: lagosToday(),
     };
   });
 }
@@ -126,14 +168,14 @@ async function loadRaw(): Promise<RawCatalog> {
 function toPackageView(
   p: RawCatalog['packages'][number],
   isPublishedService: boolean,
+  publishedRevisions: AnchorValues[],
+  today: string,
 ): ServicePackageView {
-  const publicationState = p.publicationState as PackagePublication;
-  return {
-    id: p.id,
-    slug: p.slug,
+  const state = p.publicationState as PackagePublication;
+  const live: AnchorValues = {
     name: p.name,
     description: p.description,
-    scopeHtml: p.scopeMarkdown ? renderMarkdown(p.scopeMarkdown) : null,
+    scopeMarkdown: p.scopeMarkdown,
     priceBasis: p.priceBasis as PriceBasis,
     amountKobo: p.amountKobo,
     percentageBps: p.percentageBps,
@@ -142,15 +184,41 @@ function toPackageView(
     exclusions: p.exclusions,
     effectiveFrom: p.effectiveFrom,
     effectiveTo: p.effectiveTo,
-    publicationState,
-    priceLabel: isPublishedService
-      ? priceAnchorLabel({
-          priceBasis: p.priceBasis as PriceBasis,
-          amountKobo: p.amountKobo,
-          percentageBps: p.percentageBps,
-          publicationState,
-        })
-      : null,
+  };
+  // Only published values in force today are exposed; an anchor under review
+  // shows its review label and none of its unreviewed figures or wording.
+  const effective = effectiveAnchor(live, state, publishedRevisions, today);
+  const v = effective.values;
+  const priceBasis = (v?.priceBasis ?? p.priceBasis) as PriceBasis;
+  let priceLabel: string | null = null;
+  if (isPublishedService) {
+    priceLabel =
+      state === 'published' && !v
+        ? `Published price takes effect on ${effective.upcomingFrom ? formatDateLabel(effective.upcomingFrom) : 'a later date'}`
+        : priceAnchorLabel({
+            priceBasis,
+            amountKobo: v?.amountKobo ?? null,
+            percentageBps: v?.percentageBps ?? null,
+            publicationState: state,
+          });
+  }
+  return {
+    id: p.id,
+    slug: p.slug,
+    name: v?.name ?? p.name,
+    description: v?.description ?? null,
+    scopeHtml: v?.scopeMarkdown ? renderMarkdown(v.scopeMarkdown) : null,
+    priceBasis,
+    amountKobo: v?.amountKobo ?? null,
+    percentageBps: v?.percentageBps ?? null,
+    currency: v?.currency ?? p.currency,
+    minimumScope: v?.minimumScope ?? null,
+    exclusions: v?.exclusions ?? null,
+    effectiveFrom: v?.effectiveFrom ?? null,
+    effectiveTo: v?.effectiveTo ?? null,
+    publicationState: state,
+    priceLabel,
+    upcomingEffectiveFrom: effective.upcomingFrom,
   };
 }
 
@@ -172,7 +240,9 @@ async function buildCatalog(): Promise<ServiceCatalog> {
     const isPublished = s.publicationState === 'published';
     const packages = raw.packages
       .filter((p) => p.serviceId === s.id)
-      .map((p) => toPackageView(p, isPublished));
+      .map((p) =>
+        toPackageView(p, isPublished, raw.publishedRevisions[p.id] ?? [], raw.today),
+      );
     const primaryPackage =
       packages.find((p) => p.publicationState === 'published') ?? packages[0] ?? null;
     let cms: PublishedContent | null = null;
@@ -221,7 +291,7 @@ async function buildCatalog(): Promise<ServiceCatalog> {
 
 /** Cached for 60 seconds; per-request deduplicated. */
 export const listServiceCatalog = cache(async (): Promise<ServiceCatalog> => {
-  return cached('services:catalog:v1', 60, buildCatalog);
+  return cached('services:catalog:v2', 60, buildCatalog);
 });
 
 export async function getServiceBySlug(slug: string): Promise<ServiceCatalogItem | null> {

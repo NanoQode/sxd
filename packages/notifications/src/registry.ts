@@ -4,6 +4,8 @@ import { schema, systemContext, withActor, type DbExecutor } from '@simplexd/db'
 import { dispatchRequest } from './dispatch';
 import { resolveEnv, type PipelineEnv } from './env';
 import { organizationMemberSpecs, staffWithRoles } from './recipients';
+import { resolveOpsAlert } from './ops-alerts';
+import { searchPurchaseResolvers } from './search-purchase';
 import type {
   Db,
   DispatchResult,
@@ -576,7 +578,10 @@ const resolvers: Record<string, EventResolver> = {
   ...rentalResolvers,
   ...financeResolvers,
   ...commercialResolvers,
+  ...searchPurchaseResolvers,
   'notification.requested': requestedNotification,
+  // Monitoring thresholds (apps/worker/src/monitoring); staff roles named on the event.
+  'ops.alert': resolveOpsAlert,
 
   'lead.created': async ({ tx, event, payload, env, scope }) => {
     const leadId = str(payload['leadId']) ?? event.aggregateId;
@@ -1194,4 +1199,30 @@ export async function dispatchOutboxEvent(
     outcomes,
     retryable: outcomes.some((o) => o.retryable),
   };
+}
+
+/**
+ * Resolves an outbox event to its notification requests without sending
+ * anything. Used by the admin retry of a failed delivery attempt, which
+ * re-renders the same message for one recipient × channel under a new scope.
+ */
+export async function resolveOutboxEventRequests(
+  db: Db,
+  event: OutboxEventLike,
+  options: PipelineOptions = {},
+): Promise<NotificationRequest[]> {
+  const env = resolveEnv(options);
+  const resolver = resolvers[event.type];
+  if (!resolver) return [];
+  const payload =
+    event.payload && typeof event.payload === 'object'
+      ? (event.payload as Record<string, unknown>)
+      : {};
+  const scope = `outbox:${event.id}`;
+  const requests = await withActor(
+    db,
+    systemContext(event.correlationId ?? 'notifications'),
+    (tx) => resolver({ tx, event, payload, env, scope }),
+  );
+  return requests.map((r) => ({ organizationId: event.organizationId ?? null, ...r }));
 }

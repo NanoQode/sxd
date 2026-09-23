@@ -24,9 +24,20 @@ import {
   revisionState,
   validateNamedReviewer,
 } from '@simplexd/domain/projects';
+import {
+  checkReportContent,
+  isServiceRequestReportKind,
+  sectionsFromFindings,
+} from '@simplexd/domain/engagements';
 import { availableTransitions, reportMachine } from '@simplexd/domain/workflow';
 import { recordAudit } from '@/lib/audit';
 import type { RequestIdentity } from '@/lib/auth/session';
+import {
+  REQUEST_READ_CHECKS,
+  isRequestCustomer,
+  requireServiceRequest,
+} from '@/server/engagements/access';
+import { nextRevisionFindings } from '@/server/engagements/snapshot';
 import {
   PROJECT_READ_CHECKS,
   isCustomerOf,
@@ -56,6 +67,64 @@ const DRAFT_CHECKS: AccessCheck[] = [
   { staff: 'reports.draft' },
   { partner: 'partner.reports.draft' },
 ];
+
+/** Reports under a service request are drafted by staff only (partners draft project reports). */
+export const REQUEST_DRAFT_CHECKS: AccessCheck[] = [{ staff: 'reports.draft' }];
+
+/**
+ * Where a report lives. Project reports are authorised through the project;
+ * reports written directly under a service request (decision memoranda,
+ * virtual inspection reports) through the request. Both share every review
+ * and release rule below.
+ */
+export interface ReportScope {
+  organizationId: string;
+  projectId: string | null;
+  serviceRequestId: string | null;
+  /** The caller is an organisation-side user of the owning organisation. */
+  customer: boolean;
+  customerContactUserId: string | null;
+}
+
+function projectScope(identity: RequestIdentity, access: ProjectAccess): ReportScope {
+  return {
+    organizationId: access.project.organizationId,
+    projectId: access.project.id,
+    serviceRequestId: access.project.serviceRequestId,
+    customer: isCustomerOf(identity, access),
+    customerContactUserId: access.project.customerContactUserId,
+  };
+}
+
+/** Content checks for kinds with section, scope and wording rules (see domain/engagements). */
+function assertReportContent(r: ReportRow, rev: RevisionRow | undefined, stage: string): void {
+  if (!rev) throw invalidTransition(`add a revision before the report is ${stage}`);
+  const problems = checkReportContent({
+    kind: r.kind,
+    bodyMarkdown: rev.bodyMarkdown,
+    summary: rev.summary,
+    scopeLimitations: rev.scopeLimitations,
+    sections: sectionsFromFindings(rev.findings),
+  });
+  if (problems.length > 0) {
+    throw new ApiError('validation_failed', problems[0]!.message, {
+      details: problems.map((p) => ({ path: p.section ?? p.code, message: p.message, code: p.code })),
+    });
+  }
+}
+
+async function currentRevision(tx: Transaction, r: ReportRow): Promise<RevisionRow | undefined> {
+  const [rev] = await tx
+    .select()
+    .from(schema.reportRevisions)
+    .where(
+      and(
+        eq(schema.reportRevisions.reportId, r.id),
+        eq(schema.reportRevisions.version, r.currentVersion),
+      ),
+    );
+  return rev;
+}
 
 async function userName(tx: Transaction, id: string | null): Promise<string | null> {
   if (!id) return null;
@@ -116,13 +185,13 @@ function toRevisionDto(r: ReportRow, rev: RevisionRow): ReportRevisionDto {
   };
 }
 
-async function toDetail(
+/** Report detail as the caller may see it (customers: the released revision only). */
+export async function reportDetailFor(
   tx: Transaction,
-  identity: RequestIdentity,
   r: ReportRow,
-  access: ProjectAccess,
+  scope: ReportScope,
 ): Promise<ReportDetailDto> {
-  const customer = isCustomerOf(identity, access);
+  const customer = scope.customer;
   const revisions = await tx
     .select()
     .from(schema.reportRevisions)
@@ -147,18 +216,89 @@ async function toDetail(
   };
 }
 
+function toDetail(
+  tx: Transaction,
+  _identity: RequestIdentity,
+  r: ReportRow,
+  scope: ReportScope,
+): Promise<ReportDetailDto> {
+  return reportDetailFor(tx, r, scope);
+}
+
+/**
+ * Staff checks that stand in for the project checks on a service-request
+ * report: project read → request read, draft stays draft, review/release
+ * stay as they are. Partner checks do not apply to request reports.
+ */
+function requestChecksFor(checks: AccessCheck[]): AccessCheck[] {
+  const out: AccessCheck[] = [];
+  for (const c of checks) {
+    if (c.staff === 'projects.read_all') out.push({ staff: 'service_requests.read_all' });
+    else if (c.staff || c.org) out.push({ ...(c.staff ? { staff: c.staff } : {}), ...(c.org ? { org: c.org } : {}) });
+  }
+  return out;
+}
+
+/**
+ * Loads a report with the caller's row-level security and authorises it
+ * through its project or, for reports written under a service request,
+ * through the request. Reports the caller cannot reach answer "not found".
+ */
+export async function loadReportScoped(
+  tx: Transaction,
+  identity: RequestIdentity,
+  id: string,
+  checks: AccessCheck[],
+): Promise<{ r: ReportRow; scope: ReportScope }> {
+  const [r] = await tx.select().from(schema.reports).where(eq(schema.reports.id, id));
+  if (!r) throw notFound('report');
+  if (r.projectId) {
+    const access = await requireProject(tx, identity, r.projectId, checks, {
+      createdBy: r.createdBy,
+    });
+    return { r, scope: projectScope(identity, access) };
+  }
+  if (r.serviceRequestId) {
+    const access = await requireServiceRequest(
+      tx,
+      identity,
+      r.serviceRequestId,
+      requestChecksFor(checks),
+      // Author and named reviewer are attached to the report itself.
+      { createdBy: r.createdBy, extraAssigneeIds: [r.createdBy, r.namedReviewerUserId] },
+    );
+    return {
+      r,
+      scope: {
+        organizationId: r.organizationId,
+        projectId: null,
+        serviceRequestId: r.serviceRequestId,
+        customer: isRequestCustomer(identity, access),
+        customerContactUserId: access.sr.requestedByUserId,
+      },
+    };
+  }
+  throw notFound('report');
+}
+
 async function loadReport(
   tx: Transaction,
   identity: RequestIdentity,
   id: string,
   checks: AccessCheck[],
 ) {
-  const [r] = await tx.select().from(schema.reports).where(eq(schema.reports.id, id));
-  if (!r || !r.projectId) throw notFound('report');
-  const access = await requireProject(tx, identity, r.projectId, checks, {
-    createdBy: r.createdBy,
-  });
-  return { r, access };
+  const { r, scope } = await loadReportScoped(tx, identity, id, checks);
+  return { r, access: scope };
+}
+
+export async function insertReportRevision(
+  tx: Transaction,
+  reportId: string,
+  version: number,
+  input: ReportRevisionInput,
+  createdBy: string,
+): Promise<RevisionRow> {
+  return insertRevision(tx, reportId, version, input, createdBy);
 }
 
 async function insertRevision(
@@ -202,7 +342,10 @@ export async function createReport(
       if (existing) {
         if (existing.createdBy !== actorId)
           throw new ApiError('conflict', 'this offline id was already used by another user');
-        return { ...(await toDetail(tx, identity, existing, access)), idempotentReplay: true };
+        return {
+          ...(await toDetail(tx, identity, existing, projectScope(identity, access))),
+          idempotentReplay: true,
+        };
       }
     }
     if (input.siteVisitId) {
@@ -242,18 +385,25 @@ export async function createReport(
       },
       correlationId: options.correlationId,
     });
-    return { ...(await toDetail(tx, identity, row!, access)), idempotentReplay: false };
+    return {
+      ...(await toDetail(tx, identity, row!, projectScope(identity, access))),
+      idempotentReplay: false,
+    };
   });
 }
+
+/** Read checks for a report on either scope (customers: `org.reports.view` on released reports). */
+export const REPORT_READ_CHECKS: AccessCheck[] = [
+  ...PROJECT_READ_CHECKS,
+  ...REQUEST_READ_CHECKS.filter((c) => c.staff),
+  { org: 'org.reports.view' },
+];
 
 export async function getReport(identity: RequestIdentity, id: string): Promise<ReportDetailDto> {
   userIdOf(identity);
   return withActor(getDb(), ctxFor(identity), async (tx) => {
-    const { r, access } = await loadReport(tx, identity, id, [
-      ...PROJECT_READ_CHECKS,
-      { org: 'org.reports.view' },
-    ]);
-    if (isCustomerOf(identity, access) && !r.customerVisible) throw notFound('report');
+    const { r, access } = await loadReport(tx, identity, id, REPORT_READ_CHECKS);
+    if (access.customer && !r.customerVisible) throw notFound('report');
     return toDetail(tx, identity, r, access);
   });
 }
@@ -318,6 +468,17 @@ export async function addReportRevision(
     }
     const version = r.currentVersion + 1;
     const { expectedVersion: _v, ...revisionInput } = input;
+    if (!r.projectId && r.serviceRequestId && isServiceRequestReportKind(r.kind)) {
+      // Request reports carry their template outline forward and re-capture
+      // the engagement item snapshot, so each version is self-contained.
+      const previous = await currentRevision(tx, r);
+      revisionInput.findings = (await nextRevisionFindings(
+        tx,
+        r.serviceRequestId,
+        previous?.findings ?? null,
+        revisionInput.findings ?? null,
+      )) as ReportRevisionInput['findings'];
+    }
     await insertRevision(tx, r.id, version, revisionInput, actorId);
     const [updated] = await tx
       .update(schema.reports)
@@ -331,7 +492,7 @@ export async function addReportRevision(
         : 'report.revision_added',
       entityType: 'report',
       entityId: id,
-      organizationId: access.project.organizationId,
+      organizationId: access.organizationId,
       before: { currentVersion: r.currentVersion, status: r.status },
       after: {
         currentVersion: version,
@@ -375,6 +536,7 @@ export async function submitReport(
     assertVersion(r.version, input.expectedVersion);
     if (r.currentVersion === 0)
       throw invalidTransition('add a revision before submitting the report for review');
+    assertReportContent(r, await currentRevision(tx, r), 'submitted for review');
     const named = validateNamedReviewer({
       authorUserId: r.createdBy,
       reviewerUserId: input.namedReviewerUserId,
@@ -409,7 +571,7 @@ export async function submitReport(
       action: 'report.submitted_for_review',
       entityType: 'report',
       entityId: id,
-      organizationId: access.project.organizationId,
+      organizationId: access.organizationId,
       before: { status: r.status },
       after: {
         status: 'in_review',
@@ -422,9 +584,14 @@ export async function submitReport(
       eventType: 'project.report.review_requested',
       aggregateType: 'report',
       aggregateId: id,
-      organizationId: access.project.organizationId,
+      organizationId: access.organizationId,
       actorUserId: actorId,
-      payload: { projectId: r.projectId, reportId: id, reviewerUserId: input.namedReviewerUserId },
+      payload: {
+        projectId: r.projectId,
+        serviceRequestId: r.serviceRequestId,
+        reportId: id,
+        reviewerUserId: input.namedReviewerUserId,
+      },
       correlationId: options.correlationId ?? null,
     });
     return toDetail(tx, identity, updated, access);
@@ -476,7 +643,7 @@ export async function reviewReport(
       action: `report.review_${input.decision}`,
       entityType: 'report',
       entityId: id,
-      organizationId: access.project.organizationId,
+      organizationId: access.organizationId,
       before: { status: r.status, namedReviewerUserId: r.namedReviewerUserId },
       after: { status: to, reviewerUserId: actorId, version: r.currentVersion },
       reason: input.note ?? null,
@@ -486,10 +653,11 @@ export async function reviewReport(
       eventType: 'project.report.reviewed',
       aggregateType: 'report',
       aggregateId: id,
-      organizationId: access.project.organizationId,
+      organizationId: access.organizationId,
       actorUserId: actorId,
       payload: {
         projectId: r.projectId,
+        serviceRequestId: r.serviceRequestId,
         reportId: id,
         decision: input.decision,
         authorUserId: r.createdBy,
@@ -520,6 +688,14 @@ export async function releaseReport(
     const t = reportTransition(r.status, 'released', 'staff');
     if (!t.ok)
       throw invalidTransition(t.message ?? 'cannot release', { code: t.code, from: r.status });
+    // A release always carries a named professional reviewer who is not the author,
+    // and the approved revision must still meet the content rules for its kind.
+    const reviewer = validateNamedReviewer({
+      authorUserId: r.createdBy,
+      reviewerUserId: r.namedReviewerUserId,
+    });
+    if (!reviewer.ok) throw invalidTransition(reviewer.reason);
+    assertReportContent(r, await currentRevision(tx, r), 'released');
     const [updated] = await tx
       .update(schema.reports)
       .set({
@@ -537,9 +713,14 @@ export async function releaseReport(
       action: 'report.released',
       entityType: 'report',
       entityId: id,
-      organizationId: access.project.organizationId,
+      organizationId: access.organizationId,
       before: { status: r.status, releasedVersion: r.releasedVersion },
-      after: { status: 'released', releasedVersion: r.currentVersion, releasedBy: actorId },
+      after: {
+        status: 'released',
+        releasedVersion: r.currentVersion,
+        releasedBy: actorId,
+        namedReviewerUserId: r.namedReviewerUserId,
+      },
       reason: input.note ?? null,
       correlationId: options.correlationId,
     });
@@ -547,13 +728,14 @@ export async function releaseReport(
       eventType: 'project.report.released',
       aggregateType: 'report',
       aggregateId: id,
-      organizationId: access.project.organizationId,
+      organizationId: access.organizationId,
       actorUserId: actorId,
       payload: {
         projectId: r.projectId,
+        serviceRequestId: r.serviceRequestId,
         reportId: id,
         releasedVersion: r.currentVersion,
-        customerContactUserId: access.project.customerContactUserId,
+        customerContactUserId: access.customerContactUserId,
       },
       correlationId: options.correlationId ?? null,
     });
@@ -568,11 +750,8 @@ export async function listReportEvidence(
 ): Promise<{ items: EvidenceDto[] }> {
   const actorId = userIdOf(identity);
   return withActor(getDb(), ctxFor(identity), async (tx) => {
-    const { r, access } = await loadReport(tx, identity, id, [
-      ...PROJECT_READ_CHECKS,
-      { org: 'org.reports.view' },
-    ]);
-    const customer = isCustomerOf(identity, access);
+    const { r, access } = await loadReport(tx, identity, id, REPORT_READ_CHECKS);
+    const customer = access.customer;
     if (customer && !r.customerVisible) throw notFound('report');
     const rows = await tx
       .select({ e: schema.evidence, f: schema.fileObjects })

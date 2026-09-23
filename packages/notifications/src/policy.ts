@@ -16,6 +16,8 @@ import type { NotificationCategory, NotificationChannel, ResolvedRecipient } fro
  *
  * - suppressions (bounce, complaint, STOP, invalid address) block a channel
  *   for every category, including security;
+ * - SMS goes only to verified numbers (`phone_unverified` otherwise), except
+ *   the verification code itself and explicit staff test sends;
  * - security messages otherwise always send: no preference, quiet hours or
  *   digest applies;
  * - the preference matrix (channel × category) decides the rest; marketing
@@ -168,6 +170,8 @@ export interface EvaluatePolicyInput {
   smsSettings?: TermiiSettings | null;
   estimatedCostKobo?: number;
   ignorePreferences?: boolean;
+  /** Verification codes and staff test sends may go to a number not yet verified. */
+  allowUnverifiedPhone?: boolean;
 }
 
 export function evaluateChannelPolicy(input: EvaluatePolicyInput): PolicyDecision {
@@ -182,6 +186,10 @@ export function evaluateChannelPolicy(input: EvaluatePolicyInput): PolicyDecisio
     if (!address) return { action: 'suppress', reason: 'no_address' };
     const suppressed = facts.suppressions.get(`${channel}:${address}`);
     if (suppressed) return { action: 'suppress', reason: `suppressed:${suppressed}` };
+    // SMS only reaches numbers confirmed with a one-time code (portal settings).
+    if (channel === 'sms' && !recipient.phoneVerified && !input.allowUnverifiedPhone) {
+      return { action: 'suppress', reason: 'phone_unverified' };
+    }
   } else if (!recipient.userId) {
     return { action: 'suppress', reason: 'no_user' };
   }

@@ -150,6 +150,12 @@ export interface QuoteTemplateOption {
   id: string;
   name: string;
   lineCount: number;
+  /** Copied into the quote form when staff start from the template (then editable). */
+  lines: Array<{ description: string; quantity: string; unitAmountKobo: string }>;
+  scopeMarkdown: string | null;
+  exclusions: string | null;
+  /** True when the template applies to every service rather than this one. */
+  global: boolean;
 }
 
 export interface LinkedAppointment {
@@ -293,6 +299,9 @@ export async function getStaffRequestView(
         id: schema.quoteTemplates.id,
         name: schema.quoteTemplates.name,
         lines: schema.quoteTemplates.lines,
+        scopeMarkdown: schema.quoteTemplates.scopeMarkdown,
+        exclusions: schema.quoteTemplates.exclusions,
+        serviceId: schema.quoteTemplates.serviceId,
       })
       .from(schema.quoteTemplates)
       .where(
@@ -339,6 +348,14 @@ export async function getStaffRequestView(
         id: t.id,
         name: t.name,
         lineCount: Array.isArray(t.lines) ? (t.lines as unknown[]).length : 0,
+        lines: (Array.isArray(t.lines) ? t.lines : []).map((l) => ({
+          description: l.description,
+          quantity: l.quantity,
+          unitAmountKobo: l.unitAmountKobo,
+        })),
+        scopeMarkdown: t.scopeMarkdown,
+        exclusions: t.exclusions,
+        global: t.serviceId === null,
       })),
       taxTreatments,
     };

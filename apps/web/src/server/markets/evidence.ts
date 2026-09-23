@@ -1,5 +1,5 @@
 import type { EvidenceBadge } from '@simplexd/contracts';
-import { isFresh } from '@simplexd/domain/evidence';
+import { freshnessDataTypeFor, isFresh } from '@simplexd/domain/evidence';
 import {
   DEFAULT_FRESHNESS_DAYS,
   type GeographicLevel,
@@ -43,20 +43,12 @@ export function isFirstPartyMethod(method: string | null | undefined): boolean {
   return m.startsWith('first_party') || FIRST_PARTY_METHODS.has(m);
 }
 
-/** The freshness data type (freshness_policies.data_type) that governs an observation metric. */
-export function freshnessDataTypeFor(metric: string): string | null {
-  const m = metric.toLowerCase();
-  if (m.includes('material') || m.includes('delivery') || m.includes('lead_time'))
-    return 'material_quote';
-  if (m.includes('rent') || m.includes('yield')) return 'rent_observation';
-  if (m.includes('build_rate') || m.includes('boq') || m.includes('construction'))
-    return 'build_rate';
-  if (m.includes('sale') || m.includes('price') || m.includes('cost')) return 'sale_observation';
-  if (m.includes('approval') || m.includes('permit')) return 'observed_permit_performance';
-  if (m.includes('flood') || m.includes('risk') || m.includes('soil') || m.includes('suitab'))
-    return 'official_risk_layer';
-  return null;
-}
+/**
+ * The freshness data type (freshness_policies.data_type) that governs an
+ * observation metric. Lives in the domain package so the worker's
+ * stale-evidence sweep applies the same mapping.
+ */
+export { freshnessDataTypeFor };
 
 /**
  * The window to judge an observation metric by: the configured freshness

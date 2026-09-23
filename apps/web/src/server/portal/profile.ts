@@ -36,7 +36,8 @@ export async function updatePhone(
       .update(schema.userProfiles)
       .set({
         phoneE164,
-        // A changed number is unverified until an OTP flow (Wave 3) confirms it.
+        // A changed number is unverified until its owner confirms a one-time code
+        // (phone-verification.ts); SMS notifications skip unverified numbers.
         ...(current?.phoneE164 !== phoneE164 ? { phoneVerifiedAt: null } : {}),
       })
       .where(eq(schema.userProfiles.userId, userId));
