@@ -156,9 +156,14 @@ describe('tender opportunities on the market detail', () => {
       linkedThrough: 'project',
       href: `/admin/tenders/${lagosTender.id}`,
     });
+    const [storedTender] = await dbs.owner
+      .select({ deadline: schema.tenders.submissionDeadlineAt })
+      .from(schema.tenders)
+      .where(eq(schema.tenders.id, lagosTender.id));
     expect(staffLagos?.tenderOpportunities.items[0]?.submissionDeadlineAt).toBe(
-      lagosTender.timeline.submissionDeadlineAt,
+      storedTender!.deadline!.toISOString(),
     );
+    expect(staffLagos?.tenderOpportunities.items[0]?.displayTimeZone).toBe('Africa/Lagos');
 
     // Property link: the Ikeja tender reaches Ikeja, not Lagos.
     const staffIkeja = await getMarketBySlug('ng-ikeja', admin);

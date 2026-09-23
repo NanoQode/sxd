@@ -37,8 +37,9 @@ import {
   type DraftStoreState,
 } from '@/lib/partner/offline/use-draft-store';
 import { putBytes } from '@/lib/partner/upload';
-import { DualTime, LoadingBlock, NotAvailable, RequestFailed } from '../common';
+import { DualTime, LoadingBlock, RequestFailed } from '../common';
 import { FieldCapture } from './field-capture';
+import { StartUnscheduledVisit } from './start-unscheduled';
 import { syncStateLabel, syncStateTone } from './sync-state';
 
 type DraftsState = DraftStoreState & {
@@ -271,7 +272,8 @@ export function VisitsList() {
       .filter((v) => v.inspectorUserId === p.userId)
       .map((v) => ({ ...v, projectName: pr.name }));
   });
-  // Creating a visit in the field is a staff inspector capability on the server.
+  // Staff inspectors create field visits through the offline sync; assigned
+  // partners start an unscheduled visit on the server (reason required).
   const canStartFieldVisit = p.isStaffInspector;
 
   if (inline) {
@@ -353,7 +355,17 @@ export function VisitsList() {
                   {
                     key: 'scheduled',
                     header: 'Scheduled',
-                    cell: (v) => <DualTime iso={v.scheduledAt} zone={p.timeZone} />,
+                    cell: (v) =>
+                      v.unscheduled ? (
+                        <span>
+                          <Badge tone="warning">Unscheduled</Badge>
+                          <span className="block text-xs text-fg-muted">
+                            started <DualTime iso={v.startedAt} zone={p.timeZone} />
+                          </span>
+                        </span>
+                      ) : (
+                        <DualTime iso={v.scheduledAt} zone={p.timeZone} />
+                      ),
                   },
                   {
                     key: 'status',
@@ -420,10 +432,7 @@ export function VisitsList() {
                   </ul>
                 </div>
               ) : (
-                <NotAvailable
-                  title="Start an unscheduled visit"
-                  reason="the server lets only staff inspectors create a visit from the field. Ask your SimplexD contact to schedule the visit for you; it then appears above and works offline."
-                />
+                <StartUnscheduledVisit projects={projectList} online={online} />
               )}
             </>
           )}

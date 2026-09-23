@@ -23,6 +23,7 @@ import {
 import { errorMessage } from '@/lib/api/client-fetch';
 import { partnerFetch } from '@/lib/partner/api';
 import { usePartner } from '@/lib/partner/context';
+import { waitForScan } from '@/lib/partner/scan-wait';
 import { openSignedDownload, uploadFile } from '@/lib/partner/upload';
 import { LoadingBlock, RequestFailed } from '../common';
 
@@ -147,7 +148,19 @@ function DiscrepancyThread({
         setUploadProblem(res.file.statusReason ?? 'the file was rejected');
         return;
       }
-      setFiles((f) => [...f, { id: res.file.id, name: file.name, pending: res.outcome !== 'clean' }]);
+      setFiles((f) => [...f, { id: res.file.id, name: file.name, pending: true }]);
+      // The server links a file only once the malware scan passed; wait for it here.
+      const scan = await waitForScan(res.file.id);
+      if (scan.status === 'clean') {
+        setFiles((f) => f.map((x) => (x.id === res.file.id ? { ...x, pending: false } : x)));
+      } else if (scan.status === 'scanning') {
+        setUploadProblem(
+          `${file.name} is still being scanned; try sending again in a moment or remove it.`,
+        );
+      } else {
+        setFiles((f) => f.filter((x) => x.id !== res.file.id));
+        setUploadProblem(`${file.name} was refused: ${scan.reason ?? scan.status}`);
+      }
     } catch (err) {
       setUploadProblem(errorMessage(err));
     } finally {

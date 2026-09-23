@@ -1,7 +1,9 @@
 # Cutover runbook: replacing the current simplexd.co website
 
-The live site is never switched automatically. This runbook is executed by the owner
-and the operations team once the launch inputs are in place.
+The live simplexd.co site is never switched automatically: no deployment, script, job or
+admin action changes DNS or replaces the current website. This runbook is executed by the
+owner and the operations team, step by step, once the launch inputs are in place, and the
+reconciliation below must be signed off before the DNS change.
 
 ## Preconditions
 
@@ -20,14 +22,29 @@ and the operations team once the launch inputs are in place.
 
 ## Content inventory and migration
 
-1. Crawl the current site (`docs/operations/site-inventory.csv` template: URL, title,
-   type, owner-approved?, image rights?, target path, redirect?).
-2. Migrate only authorised content with image rights; keep metadata (titles, descriptions).
-3. Record the reconciliation: for every crawled URL either a same-path page, a redirect, or
-   an explicit "retired" decision.
-4. Marketing statistics, testimonials, partner badges and project claims are not carried
+1. Crawl the current site into `docs/operations/site-inventory.csv` (template with three
+   example rows to delete). One row per URL with the columns
+   `source_url,status_code,title,content_type,decision,target_url,image_rights,owner,notes`;
+   `decision` is one of:
+   - `migrate`: the content is recreated in the CMS at `target_url` (same path when blank);
+   - `redirect`: the URL is retired and `source_url` redirects to `target_url` (app path or
+     https URL), status 301 unless `status_code` says 302/308;
+   - `drop`: the URL is retired without a replacement and answers 404 after cutover.
+2. Migrate only authorised content with image rights (`image_rights=yes`); keep metadata
+   (titles, descriptions) in each page's SEO fields. Images go through Admin → Content →
+   editor → "Insert or upload media" and need a second content editor's approval with alt
+   text and a rights confirmation before they have a public URL (`docs/workflows/cms.md`).
+3. Load the redirect rows: Admin → Content → Redirects → Bulk import, paste the inventory
+   CSV as is (only `decision=redirect` rows are imported), preview, then import. Rows that
+   would shadow a live page or point at another redirect are reported and skipped.
+4. Reconcile: `pnpm --filter @simplexd/web reconcile:inventory` (add
+   `--check-live https://<temporary-hostname>` once the new deployment is reachable) reports,
+   per row, whether the target exists in the CMS/catalogue, whether the redirect is configured
+   and matches, and what the deployment answers. It is read-only and exits 1 while any row is a
+   gap; keep the `--json` output with the sign-off.
+5. Marketing statistics, testimonials, partner badges and project claims are not carried
    over without owner evidence and publication rights.
-5. Analytics identifiers are configured only when authorised and compatible with the
+6. Analytics identifiers are configured only when authorised and compatible with the
    consent banner.
 
 ## Cutover steps

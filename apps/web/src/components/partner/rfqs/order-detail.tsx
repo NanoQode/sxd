@@ -24,7 +24,8 @@ import {
 import { errorMessage } from '@/lib/api/client-fetch';
 import { partnerFetch, withQuery } from '@/lib/partner/api';
 import { usePartner } from '@/lib/partner/context';
-import { DetailList, DualTime, LoadingBlock, NotAvailable, RequestFailed } from '../common';
+import { DetailList, DualTime, LoadingBlock, RequestFailed } from '../common';
+import { DeliveryDiscrepancyThreads } from './discrepancy-thread';
 
 export function OrderDetailView({ orderId }: { orderId: string }) {
   const p = usePartner();
@@ -229,7 +230,8 @@ export function OrderDetailView({ orderId }: { orderId: string }) {
           <CardTitle>Deliveries and discrepancies</CardTitle>
           <p className="text-xs text-fg-muted">
             Recorded by the receiving site team. A discrepancy is a dispute about quantity, damage
-            or specification.
+            or specification: respond to it here with a proposed resolution and evidence; staff
+            accept or reject the proposal and you are notified either way.
           </p>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -266,44 +268,13 @@ export function OrderDetailView({ orderId }: { orderId: string }) {
                     })}
                   </ul>
                   {d.note ? <p className="mt-2 text-fg-muted">{d.note}</p> : null}
+                  {d.discrepancies.length > 0 ? (
+                    <DeliveryDiscrepancyThreads deliveryId={d.id} order={o} />
+                  ) : null}
                 </li>
               ))}
             </ul>
           )}
-          {disputes.length > 0 ? (
-            <div>
-              <h3 className="font-medium">Discrepancies raised against you</h3>
-              <ul className="mt-2 space-y-2">
-                {disputes.map((x) => (
-                  <li
-                    key={x.id}
-                    className="rounded-md border border-warning/50 bg-warning-soft/40 p-3 text-sm"
-                  >
-                    <p className="flex flex-wrap items-center gap-2">
-                      <Badge tone="warning">{humanize(x.kind)}</Badge>
-                      <StatusBadge status={x.status} />
-                      {x.quantity ? <span>Quantity {x.quantity}</span> : null}
-                    </p>
-                    <p className="mt-1">{x.description}</p>
-                    {x.resolution ? (
-                      <p className="mt-1 text-fg-muted">Resolution: {x.resolution}</p>
-                    ) : null}
-                  </li>
-                ))}
-              </ul>
-              <NotAvailable
-                title="Respond to a discrepancy here"
-                reason="the API only lets staff move a discrepancy between states. Reply through Messages so your response is on record; staff update the status."
-              >
-                <Link
-                  href="/partner/messages"
-                  className="mt-2 inline-block text-sm text-primary underline"
-                >
-                  Open messages
-                </Link>
-              </NotAvailable>
-            </div>
-          ) : null}
           {deliveries.data && deliveries.data.items.length > 0 && disputes.length === 0 ? (
             <Alert tone="success" title="No discrepancies">
               Nothing has been disputed on this order.

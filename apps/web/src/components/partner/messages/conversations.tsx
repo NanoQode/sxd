@@ -23,7 +23,8 @@ import { errorMessage } from '@/lib/api/client-fetch';
 import { partnerFetch, withQuery } from '@/lib/partner/api';
 import { usePartner } from '@/lib/partner/context';
 import { openSignedDownload } from '@/lib/partner/upload';
-import { DualTime, LoadingBlock, NotAvailable, RequestFailed } from '../common';
+import { DualTime, LoadingBlock, RequestFailed } from '../common';
+import { StartConversation } from './start-conversation';
 
 export function ConversationsList() {
   const p = usePartner();
@@ -41,29 +42,28 @@ export function ConversationsList() {
         title="Messages"
         description="Conversations you take part in. Staff-only internal notes are never included in your view."
         actions={
-          <div
-            role="radiogroup"
-            aria-label="Conversation status"
-            className="inline-flex rounded-md border border-border p-0.5"
-          >
-            {(['open', 'closed', 'all'] as const).map((s) => (
-              <button
-                key={s}
-                type="button"
-                role="radio"
-                aria-checked={status === s}
-                onClick={() => setStatus(s)}
-                className={`sx-transition sx-touch rounded px-3 text-sm ${status === s ? 'bg-primary-soft text-primary' : 'text-fg-muted hover:text-fg'}`}
-              >
-                {humanize(s)}
-              </button>
-            ))}
+          <div className="flex flex-wrap items-center gap-2">
+            <div
+              role="radiogroup"
+              aria-label="Conversation status"
+              className="inline-flex rounded-md border border-border p-0.5"
+            >
+              {(['open', 'closed', 'all'] as const).map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  role="radio"
+                  aria-checked={status === s}
+                  onClick={() => setStatus(s)}
+                  className={`sx-transition sx-touch rounded px-3 text-sm ${status === s ? 'bg-primary-soft text-primary' : 'text-fg-muted hover:text-fg'}`}
+                >
+                  {humanize(s)}
+                </button>
+              ))}
+            </div>
+            {p.isPartner ? <StartConversation /> : null}
           </div>
         }
-      />
-      <NotAvailable
-        title="Start a new conversation"
-        reason="the API requires naming the participants' user ids and a linked entity you can access; staff open partner conversations from the project. Reply inside an existing thread instead."
       />
       {list.isPending ? (
         <LoadingBlock label="Loading conversations" />
@@ -72,7 +72,11 @@ export function ConversationsList() {
       ) : list.data.items.length === 0 ? (
         <EmptyState
           title="No conversations"
-          description="A conversation opens when staff add you to a project or request thread."
+          description={
+            p.isPartner
+              ? 'Start one about an assignment, tender, RFQ or order; staff can also add you to a thread.'
+              : 'A conversation opens when staff add you to a project or request thread.'
+          }
         />
       ) : (
         <DataTable

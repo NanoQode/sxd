@@ -5,7 +5,7 @@ import { RefreshCw, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
-import type { ProjectDto, ReportDetailDto } from '@simplexd/contracts';
+import type { ReportDetailDto, ReviewerDto } from '@simplexd/contracts';
 import {
   Alert,
   Badge,
@@ -28,7 +28,7 @@ import {
   useToast,
 } from '@simplexd/ui';
 import { errorMessage } from '@/lib/api/client-fetch';
-import { partnerFetch } from '@/lib/partner/api';
+import { partnerFetch, withQuery } from '@/lib/partner/api';
 import { usePartner } from '@/lib/partner/context';
 import { OfflineError, syncReportDraft } from '@/lib/partner/offline/sync';
 import { newOfflineClientId, type ReportDraft } from '@/lib/partner/offline/types';
@@ -38,7 +38,7 @@ import {
   useOnline,
 } from '@/lib/partner/offline/use-draft-store';
 import { putBytes } from '@/lib/partner/upload';
-import { DualTime, LoadingBlock, NotAvailable, RequestFailed } from '../common';
+import { DualTime, LoadingBlock, RequestFailed } from '../common';
 import { syncStateLabel, syncStateTone } from '../visits/sync-state';
 
 const KINDS = [
@@ -80,12 +80,19 @@ export function ReportEditor({ target, projectId }: { target: string; projectId:
     queryFn: () => partnerFetch<ReportDetailDto>(`/api/v1/reports/${serverReportId}`),
     enabled: serverReportId !== null,
   });
-  const project = useQuery({
-    queryKey: ['partner', 'project', draft?.projectId ?? projectId],
-    queryFn: () => partnerFetch<ProjectDto>(`/api/v1/projects/${draft?.projectId ?? projectId}`),
-    enabled: Boolean(draft?.projectId ?? projectId) && online,
+  const reviewers = useQuery({
+    queryKey: ['partner', 'reviewers', draft?.projectId ?? projectId],
+    queryFn: () =>
+      partnerFetch<{ items: ReviewerDto[] }>(
+        withQuery('/api/v1/reviewers', { projectId: draft?.projectId ?? projectId }),
+      ),
+    enabled: serverReportId !== null && online,
   });
-  const reviewer = reviewerInput ?? project.data?.pmUserId ?? '';
+  const reviewerOptions = reviewers.data?.items ?? [];
+  // Default: the project manager when they can review, else the first eligible reviewer.
+  const defaultReviewer =
+    reviewerOptions.find((r) => r.isProjectManager)?.id ?? reviewerOptions[0]?.id ?? '';
+  const reviewer = reviewerInput ?? defaultReviewer;
 
   useEffect(() => {
     if (!store || !ready || draft) return;
@@ -443,22 +450,38 @@ export function ReportEditor({ target, projectId }: { target: string; projectId:
             {report.data.status === 'draft' || report.data.status === 'changes_requested' ? (
               <div className="grid gap-3 sm:grid-cols-3">
                 <Field
-                  label="Reviewer user id"
+                  label="Reviewer"
                   htmlFor="report-reviewer"
                   className="sm:col-span-2"
                   hint={
-                    project.data?.pmUserId
-                      ? 'Pre-filled with the project manager.'
-                      : 'No project manager is set; ask staff for the reviewer id.'
+                    reviewers.isError
+                      ? `Could not load the reviewer list: ${errorMessage(reviewers.error)}`
+                      : reviewerOptions.some((r) => r.isProjectManager)
+                        ? 'Pre-selected: the project manager. Only staff who may review reports are listed.'
+                        : 'Staff who may review reports; the project manager is listed first when they can.'
                   }
                 >
                   {({ id, describedBy }) => (
-                    <Input
+                    <NativeSelect
                       id={id}
                       aria-describedby={describedBy}
                       value={reviewer}
+                      disabled={reviewers.isPending || reviewerOptions.length === 0}
                       onChange={(e) => setReviewerInput(e.target.value)}
-                    />
+                    >
+                      {reviewers.isPending ? (
+                        <option value="">Loading reviewers…</option>
+                      ) : reviewerOptions.length === 0 ? (
+                        <option value="">No eligible reviewer is available</option>
+                      ) : (
+                        reviewerOptions.map((r) => (
+                          <option key={r.id} value={r.id}>
+                            {r.name} · {humanize(r.role)}
+                            {r.isProjectManager ? ' (project manager)' : ''}
+                          </option>
+                        ))
+                      )}
+                    </NativeSelect>
                   )}
                 </Field>
                 <div className="flex items-end">
@@ -485,12 +508,13 @@ export function ReportEditor({ target, projectId }: { target: string; projectId:
                 ) : null}
               </p>
             )}
-            {!project.data?.pmUserId &&
+            {reviewers.isSuccess &&
+            reviewerOptions.length === 0 &&
             (report.data.status === 'draft' || report.data.status === 'changes_requested') ? (
-              <NotAvailable
-                title="Reviewer picker"
-                reason="there is no API listing staff reviewers for partners; the id must be supplied by staff."
-              />
+              <Alert tone="warning" title="No reviewer available">
+                No staff member other than you currently holds review authority. Ask your SimplexD
+                contact; the report stays a draft until a reviewer is named.
+              </Alert>
             ) : null}
             <p className="text-xs text-fg-muted">
               {report.data.revisions.length} revision{report.data.revisions.length === 1 ? '' : 's'}{' '}

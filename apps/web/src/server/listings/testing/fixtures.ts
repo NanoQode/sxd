@@ -81,7 +81,12 @@ export async function createListingFixture(): Promise<ListingFixture> {
   const stateName = `Listing State ${s}`;
   const [state] = await o
     .insert(schema.states)
-    .values({ countryCode: 'NG', name: stateName, code: `LS${s.slice(-4)}`, geopoliticalZone: 'SW' })
+    .values({
+      countryCode: 'NG',
+      name: stateName,
+      code: `LS${s.slice(-4)}`,
+      geopoliticalZone: 'SW',
+    })
     .returning({ id: schema.states.id });
   const marketSlug = `listing-market-${s}`;
   const [market] = await o
@@ -132,7 +137,9 @@ export async function createListingFixture(): Promise<ListingFixture> {
       await o.delete(schema.listings).where(eq(schema.listings.organizationId, org));
       await o.delete(schema.engagementItems).where(eq(schema.engagementItems.organizationId, org));
       await o.delete(schema.leads).where(eq(schema.leads.organizationId, org));
-      await o.delete(schema.ownerAuthorities).where(eq(schema.ownerAuthorities.organizationId, org));
+      await o
+        .delete(schema.ownerAuthorities)
+        .where(eq(schema.ownerAuthorities.organizationId, org));
       await o
         .delete(schema.fileDownloadLog)
         .where(
@@ -228,7 +235,8 @@ export async function insertVerifiedAuthority(
       status,
       verifiedBy: status === 'verified' ? f.ops : null,
       verifiedAt: status === 'verified' ? new Date(Date.now() - 60_000) : null,
-      expiresAt: opts.expiresAt === undefined ? new Date(Date.now() + 30 * 86_400_000) : opts.expiresAt,
+      expiresAt:
+        opts.expiresAt === undefined ? new Date(Date.now() + 30 * 86_400_000) : opts.expiresAt,
     })
     .returning({ id: schema.ownerAuthorities.id });
   return row!.id;
