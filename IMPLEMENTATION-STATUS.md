@@ -88,6 +88,8 @@ each milestone.
 - Granular permissions, role matrix with the brief's explicit exclusions, resource relationships (assignments, grants, memberships, tenants, partners), MFA gating for sensitive permissions, impersonation restrictions, separation of duties (own work, second approver). **implemented** — `packages/domain/src/authz`, 15 tests.
 - Row-level security on 100+ organisation-scoped tables enforced for the runtime role; default deny without context; append-only audit/journal tables. **implemented** — 12 tests.
 - Admin navigation and tools. **outstanding** (Waves 1–4)
+- Service setup (`/admin/services`): price anchors as append-only revisions published by a different pricing manager with MFA (public site reads published values in force today only), quotation templates with quote prefill, report templates (one active per kind, seeded defaults), document requirements (customer "Documents we need", public "What you'll need", sensitive items never public), SLA policy editor. Portfolio analytics (`/admin/analytics`) derived from records with reconciling CSV exports. **implemented** — `apps/web/src/server/admin/configuration`, `apps/web/src/server/admin/analytics`, 17 integration + 9 unit tests; see `docs/workflows/admin-configuration.md`.
+- Support escalation: tickets are `support_ticket` conversations; no priority/escalation model exists (documented gap, no schema added).
 - Support impersonation flow with reason, banner, expiry. **outstanding** (flag exists; Wave 2)
 
 ### §12 Payment gateway and accounting
