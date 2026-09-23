@@ -17,7 +17,7 @@ export function applyTestEnv(): void {
   process.env.DATABASE_URL = TEST_DATABASE_URL;
   process.env.MIGRATION_DATABASE_URL = TEST_MIGRATION_DATABASE_URL;
   process.env.AUTH_SECRET ??= 'test-secret-test-secret-test-secret-test-secret';
-  process.env.SECRETS_MASTER_KEY ??= 'dGVzdC1tYXN0ZXIta2V5LXRlc3QtbWFzdGVyLWtleS0zMg==';
+  process.env.SECRETS_MASTER_KEY ??= 'dGVzdC1tYXN0ZXIta2V5LXRlc3QtbWFzdGVyLWtleS0=';
   process.env.SECRETS_MASTER_KEY_ID ??= 'test-1';
   process.env.APP_URL ??= 'http://localhost:3000';
   process.env.STORAGE_PROVIDER ??= 'local-dev';

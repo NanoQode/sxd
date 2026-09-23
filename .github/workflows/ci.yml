@@ -19,7 +19,7 @@ env:
   TEST_MIGRATION_DATABASE_URL: postgres://simplexd_owner:simplexd_owner_local@127.0.0.1:5432/simplexd_test
   REDIS_URL: redis://127.0.0.1:6379
   AUTH_SECRET: ci-only-secret-ci-only-secret-ci-only-secret
-  SECRETS_MASTER_KEY: dGVzdC1tYXN0ZXIta2V5LXRlc3QtbWFzdGVyLWtleS0zMg==
+  SECRETS_MASTER_KEY: dGVzdC1tYXN0ZXIta2V5LXRlc3QtbWFzdGVyLWtleS0=
   SECRETS_MASTER_KEY_ID: ci-1
   STORAGE_PROVIDER: local-dev
   MALWARE_SCANNER: dev

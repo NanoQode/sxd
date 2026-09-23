@@ -5,7 +5,7 @@ import { appendOutbox, enqueueJob, getDb, schema, withActor, type DbExecutor } f
 import { bidMachine, evaluateTransition, tenderMachine } from '@simplexd/domain/workflow';
 import { recordAudit } from '@/lib/audit';
 import type { RequestIdentity } from '@/lib/auth/session';
-import { decodeCursor, encodeCursor } from '@/server/portal/elevate';
+import { decodeCursor, demote, elevate, encodeCursor } from '@/server/portal/elevate';
 import {
   assertVersion,
   ctxFor,
@@ -307,10 +307,32 @@ export async function getAward(
       if (!outcome) throw new ApiError('not_found', 'award not found');
       return outcome;
     }
+    if (access.role === 'customer') {
+      // Row-level security shows customers an award only once published, but hides every bid
+      // row; the winning bid's partner and currency are read elevated after that check.
+      const [visible] = await tx
+        .select({ id: schema.awards.id, publishedAt: schema.awards.publishedAt })
+        .from(schema.awards)
+        .where(eq(schema.awards.tenderId, tenderId));
+      if (!visible || !visible.publishedAt) throw new ApiError('not_found', 'award not found');
+      const ctx = ctxFor(identity, options);
+      await elevate(tx, ctx);
+      try {
+        const found = await awardWithBid(tx, tender);
+        if (!found) throw new ApiError('not_found', 'award not found');
+        return toAwardDto(
+          found.award,
+          tender,
+          found.bid.partnerUserId,
+          found.partnerName,
+          found.currency,
+        );
+      } finally {
+        await demote(tx, ctx);
+      }
+    }
     const found = await awardWithBid(tx, tender);
     if (!found) throw new ApiError('not_found', 'award not found');
-    if (access.role === 'customer' && !found.award.publishedAt)
-      throw new ApiError('not_found', 'award not found');
     return toAwardDto(
       found.award,
       tender,

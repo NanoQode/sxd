@@ -93,6 +93,26 @@ const routes: Record<string, OutboxRoute> = {
   'project.status_changed': () => [{ type: 'notifications.dispatch', queue: 'notifications' }],
   'task.assigned': () => [{ type: 'notifications.dispatch', queue: 'notifications' }],
   'message.posted': () => [{ type: 'notifications.dispatch', queue: 'notifications' }],
+  // Tendering and procurement (services enqueue publish/award jobs directly; these are notifications).
+  'tender.invitation.sent': () => [{ type: 'notifications.dispatch', queue: 'notifications' }],
+  'tender.revised': () => [{ type: 'notifications.dispatch', queue: 'notifications' }],
+  'tender.question.asked': () => [{ type: 'notifications.dispatch', queue: 'notifications' }],
+  'tender.question.answered': () => [{ type: 'notifications.dispatch', queue: 'notifications' }],
+  'tender.closed': () => [{ type: 'notifications.dispatch', queue: 'notifications' }],
+  'tender.bids_opened': () => [{ type: 'notifications.dispatch', queue: 'notifications' }],
+  'tender.cancelled': () => [{ type: 'notifications.dispatch', queue: 'notifications' }],
+  'tender.award.published': () => [{ type: 'notifications.dispatch', queue: 'notifications' }],
+  'tender.award.responded': () => [{ type: 'notifications.dispatch', queue: 'notifications' }],
+  'bid.submitted': () => [{ type: 'notifications.dispatch', queue: 'notifications' }],
+  'rfq.issued': () => [{ type: 'notifications.dispatch', queue: 'notifications' }],
+  'rfq.response.submitted': () => [{ type: 'notifications.dispatch', queue: 'notifications' }],
+  'purchase_order.issued': () => [{ type: 'notifications.dispatch', queue: 'notifications' }],
+  'purchase_order.cancelled': () => [{ type: 'notifications.dispatch', queue: 'notifications' }],
+  'delivery.recorded': () => [{ type: 'notifications.dispatch', queue: 'notifications' }],
+  'delivery.discrepancy.opened': () => [{ type: 'notifications.dispatch', queue: 'notifications' }],
+  'delivery.discrepancy.supplier_notified': () => [
+    { type: 'notifications.dispatch', queue: 'notifications' },
+  ],
 };
 
 export function routeOutboxEvent(event: OutboxRow): ReturnType<OutboxRoute> {

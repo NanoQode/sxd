@@ -284,7 +284,9 @@ function paystackKeyGuard(
   environment: IntegrationEnvironment,
   secrets: Record<string, string | undefined>,
 ): void {
-  if (provider !== 'paystack' || isDevelopmentAdapter(provider, adapter)) return;
+  // Enforced for every adapter: even a development configuration must not hold a live key.
+  if (provider !== 'paystack') return;
+  void adapter;
   const secretKey = secrets.secretKey;
   if (secretKey) {
     const detected = detectKeyEnvironment(secretKey);

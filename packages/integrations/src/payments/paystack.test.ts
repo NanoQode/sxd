@@ -4,7 +4,7 @@ import { fakeFetch, fixtureJson, fixtureText } from './fixtures.test-helpers';
 import { PAYSTACK_BASE_URL, PaystackPaymentProvider } from './paystack';
 import { computeWebhookSignature } from './signature';
 
-const SECRET = 'sk_test_0123456789abcdef0123456789abcdef';
+const SECRET = 'sk_test_fixture_e5';
 
 function provider(
   fetch: ReturnType<typeof fakeFetch>,
