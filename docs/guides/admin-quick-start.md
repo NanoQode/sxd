@@ -65,6 +65,24 @@ first. Filter by status, priority, project manager, text or _Overdue only_.
    release refuse a missing scope-and-limitations statement, an empty required section and, for
    memoranda, guarantee wording. _Export_ on a released report opens the print-ready version; the
    export is audited.
+10. **Shortlist and viewings** (property search and purchase representation): _New shortlist_,
+    then add published listings (facts are read from the published revision) or external
+    references (source reference required; enter the asking price only as the source stated it).
+    _Share with the customer_ lets them compare, rate and request viewings; confirm, reschedule,
+    complete or cancel viewings here (external properties go through a booked _viewing_
+    appointment). _Record outcome_ documents the search as a report that another reviewer
+    releases; an accepted shortlist is shown with who accepted it.
+11. **Purchase representation**: _Draft percentage-basis quote_ records the percentage, the
+    agreed purchase price or cap and the customer-signed scope file (upload it in _Documents_
+    first) — issuing or accepting a percentage fee without them is refused, and the invoice is
+    computed from the basis only. Offers: draft for the buyer with the customer's instruction,
+    record the seller's counter/acceptance/rejection; the negotiation log is append-only.
+    Conditions, closing tasks and handover documents: satisfy, waive or fail with a reason;
+    attach the handed-over files and wait for the customer's acknowledgement. Link the
+    customer's due-diligence request (closing waits for its red flags and released memorandum;
+    only `service_requests.override` can waive it, with a reason). _Prepare closing pack_ is
+    enabled once every blocker is cleared and drafts the closing pack report for review and
+    release by someone else.
 
 ## Customers and properties
 

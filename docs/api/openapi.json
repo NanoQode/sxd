@@ -135818,7 +135818,7 @@
       "post": {
         "operationId": "partnerInvoices.secondApprove",
         "summary": "Second approval by a different approver",
-        "description": "finance.payouts.second_approve; first_approved → approved. Nothing is posted; the transfer may now be submitted.",
+        "description": "finance.payouts.second_approve; first_approved → approved (or failed → approved with a reason). Nothing is posted; the transfer may now be submitted.",
         "tags": [
           "Partner invoices"
         ],
@@ -135839,6 +135839,25 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "reason": {
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 2000
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "Invoice",
@@ -196953,11 +196972,13 @@
                         "format": "uuid",
                         "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
                       },
-                      "notes": {}
+                      "notes": {
+                        "type": "string",
+                        "maxLength": 2000
+                      }
                     },
                     "required": [
-                      "listingId",
-                      "notes"
+                      "listingId"
                     ],
                     "additionalProperties": false
                   },
@@ -196978,12 +196999,14 @@
                         "type": "string",
                         "pattern": "^[1-9]\\d*$"
                       },
-                      "notes": {}
+                      "notes": {
+                        "type": "string",
+                        "maxLength": 2000
+                      }
                     },
                     "required": [
                       "externalReference",
-                      "title",
-                      "notes"
+                      "title"
                     ],
                     "additionalProperties": false
                   }
@@ -198639,11 +198662,13 @@
                     "format": "date-time",
                     "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
                   },
-                  "note": {}
+                  "note": {
+                    "type": "string",
+                    "maxLength": 2000
+                  }
                 },
                 "required": [
-                  "expectedUpdatedAt",
-                  "note"
+                  "expectedUpdatedAt"
                 ],
                 "additionalProperties": false
               }
@@ -200077,11 +200102,11 @@
                     "format": "uuid",
                     "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
                   },
-                  "preferredTimes": {}
+                  "preferredTimes": {
+                    "type": "string",
+                    "maxLength": 500
+                  }
                 },
-                "required": [
-                  "preferredTimes"
-                ],
                 "additionalProperties": false
               }
             }
@@ -202124,12 +202149,14 @@
                       }
                     ]
                   },
-                  "note": {}
+                  "note": {
+                    "type": "string",
+                    "maxLength": 2000
+                  }
                 },
                 "required": [
                   "amountKobo",
-                  "conditions",
-                  "note"
+                  "conditions"
                 ],
                 "additionalProperties": false
               }
@@ -203082,7 +203109,10 @@
                     "type": "string",
                     "pattern": "^[1-9]\\d*$"
                   },
-                  "note": {},
+                  "note": {
+                    "type": "string",
+                    "maxLength": 2000
+                  },
                   "expiresAt": {
                     "anyOf": [
                       {
@@ -203103,7 +203133,6 @@
                 },
                 "required": [
                   "action",
-                  "note",
                   "expectedEntries"
                 ],
                 "additionalProperties": false
@@ -203424,8 +203453,14 @@
                     "minLength": 3,
                     "maxLength": 300
                   },
-                  "detail": {},
-                  "reference": {},
+                  "detail": {
+                    "type": "string",
+                    "maxLength": 4000
+                  },
+                  "reference": {
+                    "type": "string",
+                    "maxLength": 300
+                  },
                   "dueAt": {
                     "anyOf": [
                       {
@@ -203461,8 +203496,6 @@
                 "required": [
                   "kind",
                   "title",
-                  "detail",
-                  "reference",
                   "visibility",
                   "fileIds"
                 ],
@@ -203698,7 +203731,10 @@
                       "cancelled"
                     ]
                   },
-                  "reason": {},
+                  "reason": {
+                    "type": "string",
+                    "maxLength": 2000
+                  },
                   "title": {
                     "type": "string",
                     "minLength": 3,
@@ -203754,7 +203790,6 @@
                   }
                 },
                 "required": [
-                  "reason",
                   "expectedVersion"
                 ],
                 "additionalProperties": false
@@ -204641,11 +204676,13 @@
                     "minimum": 1,
                     "maximum": 9007199254740991
                   },
-                  "note": {}
+                  "note": {
+                    "type": "string",
+                    "maxLength": 2000
+                  }
                 },
                 "required": [
-                  "expectedVersion",
-                  "note"
+                  "expectedVersion"
                 ],
                 "additionalProperties": false
               }

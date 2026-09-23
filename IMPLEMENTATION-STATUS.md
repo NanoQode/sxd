@@ -36,7 +36,7 @@ each milestone.
 
 - Eight services seeded with deliverables and completion evidence (`packages/db/src/seed/reference.ts`). **implemented**
 - Editable price anchors (monitoring 150,000; diligence 100,000; architecture 250,000; management 75,000/month; virtual inspection 50,000; purchase support 1.5% = 150 bps; search 80,000; land by quotation) stored with basis, minimum scope, exclusions, effective date and `in_review` publication state requiring business review. **implemented**
-- Purchase-support invoices require an agreed percentage basis and signed scope (`service_requests.fee_basis`, enforced in Wave 2 quote logic). **partial** (schema and rule defined; quote enforcement lands in Wave 2)
+- Purchase-support invoices require an agreed percentage basis and signed scope: a percentage-basis quote is refused at issue and acceptance without `feeBasis.basisAmountKobo` and a clean `signedScopeFileId` attached to the request; the fee line and the invoice are derived from the basis only (`packages/finance/src/engagements/fee-basis.ts`, `percentage-fee.test.ts`). **implemented**
 - No marketing statistics, testimonials, partner badges or project claims are carried over; brand assets flagged as unapproved (`settings.brand.assets_approved=false`). **implemented**
 - Map coverage and service availability are separate fields (`markets.service_availability`, `service_coverage`). **implemented**
 
@@ -74,6 +74,8 @@ each milestone.
 ### §8 Eight core service modules
 
 - Shared engagement state machine with permissions, reasons and billing effects. **implemented (domain)**; workflows and UI: **outstanding** (Wave 2).
+- Property search: saved searches with idempotent alerts (worker job `search.saved_search_alerts`), staff-built shortlists from published listings or external references, honest side-by-side comparison, ratings/feedback, viewings (listing-backed or via booked viewing appointments) with post-viewing feedback, completion by customer acceptance or a `search_outcome` report. **implemented** — `apps/web/src/server/search`, portal tab `?tab=search`, `/portal/searches`, admin panel; 10 integration tests; see `docs/workflows/property-search-and-purchase.md`.
+- Purchase representation: offers with a strict state machine and append-only negotiation log, conditions (accepted offer terms become tracked conditions), diligence dependency check on the linked due-diligence request (red flags, released memo; override waiver), closing checklist, document handover acknowledged by the customer, closing readiness and a `closing_pack` report released by a different reviewer; §2 percentage-fee rule enforced at quote issue/acceptance. **implemented** — `apps/web/src/server/purchase`, portal tab `?tab=purchase`, admin panel; 7 integration + 3 finance tests. Gaps: delivered/completed transitions do not yet verify a released closing pack; listing-offer views should exclude purchase-representation offers.
 
 ### §9 Service expansions
 

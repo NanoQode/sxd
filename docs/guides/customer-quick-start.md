@@ -60,6 +60,22 @@ finance staff and are marked settled only when the provider confirms them.
   button; for a virtual inspection the live meeting link appears while the conference is ready.
 - **Documents** (`/portal/documents`): files you uploaded and files released to you. Downloads use
   short-lived links, and files that failed the malware scan are never offered.
+- **Search tab** on a property-search or purchase request (`?tab=search`): the shortlist your
+  project manager shared, compared side by side (price, area, tenure, title disclosure,
+  verification scope, location precision — only what the listing disclosed or the source stated,
+  never an estimate). Rate each entry, mark it preferred or not for you, request a viewing of a
+  listed property (external properties: book a _viewing_ appointment on the request and record
+  it), leave feedback after the viewing, and — as owner or approver — accept the shortlist. The
+  search outcome the team records appears once a reviewer releases it. _Saved searches and alerts_
+  (`/portal/searches`) keep your own criteria and announce a newly published match once, in-app
+  and by email.
+- **Purchase tab** on a purchase-representation request (`?tab=purchase`): draft an offer on a
+  shortlisted property (an owner or approver submits it, revises it after a counter, accepts the
+  counter or withdraws; every step is in the negotiation log), the conditions of the purchase,
+  whether your due-diligence request is clear, the closing checklist, the documents handed over
+  (acknowledge receipt of each), the agreed fee basis and the closing pack once released. The
+  purchase-support fee is only ever the agreed percentage of the agreed purchase price or cap
+  named in the quote you accepted, with the scope you signed on file.
 
 ## 5. Appointments and messages
 
