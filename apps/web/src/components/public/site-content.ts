@@ -40,7 +40,11 @@ export interface SiteBanner {
   dismissible: boolean;
 }
 
-function withinWindow(startsAt: string | null | undefined, endsAt: string | null | undefined, now: Date) {
+function withinWindow(
+  startsAt: string | null | undefined,
+  endsAt: string | null | undefined,
+  now: Date,
+) {
   const t = now.getTime();
   if (startsAt && new Date(startsAt).getTime() > t) return false;
   if (endsAt && new Date(endsAt).getTime() <= t) return false;
@@ -93,7 +97,10 @@ export const DEFAULT_NAVIGATION: SiteNavigation = {
   fromCms: [],
 };
 
-function slotOf(page: PublishedContent, explicit: NavigationSlot | undefined): NavigationSlot | null {
+function slotOf(
+  page: PublishedContent,
+  explicit: NavigationSlot | undefined,
+): NavigationSlot | null {
   if (explicit) return explicit;
   for (const slot of NAVIGATION_SLOTS) {
     if (page.slug === slot || page.slug === `navigation-${slot}`) return slot;

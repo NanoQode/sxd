@@ -29,6 +29,8 @@ import { RequestReportsPanel } from '@/components/engagements/request-reports-pa
 import { StaffItemManager } from '@/components/engagements/staff-item-manager';
 import { DefinitionList } from '../../_components/bits';
 import { QuotesPanel } from './_components/quotes-panel';
+import { PurchaseAdminPanel } from './_components/purchase-admin-panel';
+import { SearchAdminPanel } from './_components/search-admin-panel';
 import { TransitionsPanel } from './_components/transitions-panel';
 import { TriagePanel } from './_components/triage-panel';
 
@@ -291,6 +293,22 @@ export default async function ServiceRequestDetailPage({
               />
             )}
           </Section>
+
+          {r.serviceSlug.startsWith('property-search') || r.serviceSlug.startsWith('purchase-support') ? (
+            <SearchAdminPanel identity={identity} requestId={r.id} canManage={permissions.triage} />
+          ) : null}
+
+          {r.serviceSlug.startsWith('purchase-support') ? (
+            <PurchaseAdminPanel
+              identity={identity}
+              requestId={r.id}
+              requestVersion={r.version}
+              canManage={permissions.triage}
+              canQuote={permissions.quote}
+              canOverride={permissions.override}
+              closed={['completed', 'cancelled', 'rejected'].includes(r.status)}
+            />
+          ) : null}
 
           <Section
             title="Documents"

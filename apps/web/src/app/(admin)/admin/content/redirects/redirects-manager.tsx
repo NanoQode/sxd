@@ -90,8 +90,8 @@ function CsvImport({ onImported }: { onImported: () => void }) {
       <CardHeader>
         <CardTitle>Bulk import (CSV)</CardTitle>
         <CardDescription>
-          Columns <code className="font-mono text-xs">path,target,status</code> (status 301, 302
-          or 308; default 301). The site inventory&apos;s{' '}
+          Columns <code className="font-mono text-xs">path,target,status</code> (status 301, 302 or
+          308; default 301). The site inventory&apos;s{' '}
           <code className="font-mono text-xs">source_url,target_url,decision</code> columns are
           accepted too: only rows whose decision is <em>redirect</em> are imported. Preview first;
           nothing is written until you confirm.
@@ -164,8 +164,8 @@ function CsvImport({ onImported }: { onImported: () => void }) {
         {preview && summary ? (
           <div className="space-y-3">
             <p className="text-sm text-fg-muted" role="status">
-              {preview.dryRun ? 'Dry run: nothing was written.' : 'Import applied.'}{' '}
-              {summary.total} row{summary.total === 1 ? '' : 's'}:{' '}
+              {preview.dryRun ? 'Dry run: nothing was written.' : 'Import applied.'} {summary.total}{' '}
+              row{summary.total === 1 ? '' : 's'}:{' '}
               {preview.dryRun ? `${summary.create} to create` : `${summary.created} created`},{' '}
               {summary.unchanged} unchanged, {summary.skip} skipped, {summary.error} with errors.
             </p>

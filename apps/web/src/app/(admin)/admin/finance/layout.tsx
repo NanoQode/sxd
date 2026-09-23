@@ -17,6 +17,7 @@ const NAV = [
   { href: '/admin/finance/accounts', label: 'Chart of accounts' },
   { href: '/admin/finance/journals', label: 'Journals' },
   { href: '/admin/finance/payouts', label: 'Payouts' },
+  { href: '/admin/finance/partner-invoices', label: 'Partner invoices' },
 ];
 
 /**

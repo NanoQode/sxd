@@ -17,6 +17,7 @@ import {
   type MetricKey,
   type Priorities,
 } from '@simplexd/contracts';
+import { RESUME_INTENTS } from './resume-intents';
 
 /**
  * URL state for the location explorer. Every filter, the selected market, the
@@ -45,14 +46,11 @@ export const FLOOD_PREFERENCES = ['any', 'low_only', 'exclude_high', 'unknown_ok
 export const TEAM_PREFERENCES = ['any', 'available_only', 'available_or_on_request'] as const;
 export const MODES = ['evidence', 'assumption'] as const;
 export const VIEWS = ['map', 'list'] as const;
-/** Account-gated actions a visitor can resume after signing in (see account-gate.ts). */
-export const RESUME_INTENTS = ['save', 'share', 'verify', 'service', 'report'] as const;
 export const METRIC_KEYS = metricKeySchema.options;
 
 export type Zone = (typeof ZONES)[number];
 export type ExplorerMode = (typeof MODES)[number];
 export type ExplorerView = (typeof VIEWS)[number];
-export type ResumeIntent = (typeof RESUME_INTENTS)[number];
 export type AmenityPreference = (typeof AMENITY_PREFERENCES)[number];
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;

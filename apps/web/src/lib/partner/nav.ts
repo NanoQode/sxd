@@ -26,6 +26,7 @@ export type PartnerModule =
   | 'reports'
   | 'messages'
   | 'notifications'
+  | 'invoices'
   | 'availability';
 
 const TENDER_TYPES = new Set(['contractor', 'architect', 'quantity_surveyor', 'other']);
@@ -63,6 +64,8 @@ export function partnerModules(p: NavIdentity): Set<PartnerModule> {
     out.add('evidence');
     out.add('reports');
   }
+  // Partners bill awarded orders and completed assignments (`partner.invoices.submit`).
+  if (p.isPartner) out.add('invoices');
   out.add('availability');
   return out;
 }

@@ -76,6 +76,12 @@ file's **derivatives** may be referenced by public pages. Only clean images with
 approval requires alt text and a rights confirmation and is recorded in `media_assets`
 (`approved_for_public`, `approved_by`) for the CMS media picker.
 
+Public delivery exists only for purpose `content_media`: `GET /media/{mediaAssetId}` streams the
+`web` (or `?variant=thumb`) WebP derivative when the file is clean, promoted and approved on
+both the file and the asset, with nosniff, a sandboxing CSP and a one-day public cache
+(`docs/workflows/cms.md` §3). Approving an `org_document` or evidence image still never makes
+it reachable through that route.
+
 ## 5. Development storage route
 
 `apps/web/src/app/api/v1/dev/storage/[op]/route.ts` serves the local-dev adapter's signed URLs:

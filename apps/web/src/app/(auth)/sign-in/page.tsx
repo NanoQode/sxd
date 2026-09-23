@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@simplexd/ui';
 import { getSession } from '@/lib/auth/session';
-import { resumeIntentFromNext, resumeMessage } from '@/lib/explorer/account-gate';
+import { resumeIntentFromNext, resumeMessage } from '@/lib/explorer/resume-intents';
 import { SignInForm } from './sign-in-form';
 
 export const metadata: Metadata = { title: 'Sign in' };

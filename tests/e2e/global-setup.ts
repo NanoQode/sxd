@@ -9,7 +9,8 @@ import { request, type FullConfig } from '@playwright/test';
  */
 
 export const DEMO_PASSWORD = 'DemoPassword-2026!';
-export const AUTH_DIR = path.join(import.meta.dirname, '.auth');
+/** Override with E2E_AUTH_DIR when running against a second server so stored sessions do not collide. */
+export const AUTH_DIR = process.env.E2E_AUTH_DIR ?? path.join(import.meta.dirname, '.auth');
 export const ROLES = {
   owner: 'owner@demo.simplexd.local',
   otherOwner: 'other-owner@demo.simplexd.local',

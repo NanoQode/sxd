@@ -22,47 +22,15 @@ import { JsonLd, placeJsonLd } from '@/components/public/json-ld';
 import { ZONE_NAMES } from '@/components/public/market-card';
 import { ObservationTable } from '@/components/public/observation-table';
 import { Prose } from '@/components/public/section';
-import { locationIsIncomplete } from '@/components/public/site-content';
-import {
-  absoluteUrl,
-  excerpt,
-  loadLocationIntro,
-  loadMarket,
-  publicMetadata,
-  siteUrl,
-} from '../../_lib/site-data';
+import { absoluteUrl, loadLocationIntro, loadMarket, siteUrl } from '../../_lib/site-data';
+import { locationMetadata } from './metadata';
 
 type Params = Promise<{ slug: string }>;
 
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
   const { slug } = await params;
   const [result, intro] = await Promise.all([loadMarket(slug), loadLocationIntro(slug)]);
-  if (result.status === 'missing')
-    return { title: 'Location not found', robots: { index: false, follow: false } };
-  if (result.status === 'unavailable') {
-    return publicMetadata({
-      title: 'Location data not available yet',
-      description: 'Location data is not available yet.',
-      path: `/locations/${slug}`,
-      noindex: true,
-    });
-  }
-  const m = result.market;
-  const incomplete = locationIsIncomplete({
-    localObservations: m.evidence.localObservations,
-    regionalContextObservations: m.evidence.regionalContextObservations,
-    profileMarkdown: m.profileMarkdown,
-    hasIntro: Boolean(intro),
-  });
-  return publicMetadata({
-    title: intro?.seo?.title ?? `${m.name}, ${m.stateName}${m.isFederalCapital ? '' : ' State'}`,
-    description:
-      intro?.seo?.description ??
-      (intro ? excerpt(intro) : null) ??
-      `${m.name} property market evidence: ${m.evidence.localObservations} local observation${m.evidence.localObservations === 1 ? '' : 's'}, ${m.evidence.regionalContextObservations} statewide context figures, service availability ${humanize(m.serviceAvailability).toLowerCase()}, and what is still missing.`,
-    path: `/locations/${m.slug}`,
-    noindex: incomplete || Boolean(intro?.seo?.noindex),
-  });
+  return locationMetadata({ slug, result, intro });
 }
 
 type SupplierLead = MarketDetailDto['supplierLeads'][number];

@@ -28,7 +28,8 @@ reconciliation below must be signed off before the DNS change.
    `decision` is one of:
    - `migrate`: the content is recreated in the CMS at `target_url` (same path when blank);
    - `redirect`: the URL is retired and `source_url` redirects to `target_url` (app path or
-     https URL), status 301 unless `status_code` says 302/308;
+     https URL); imported as 301 (`status_code` is the crawled status of the old URL; change a
+     row to 302/308 in the redirects table if ever needed);
    - `drop`: the URL is retired without a replacement and answers 404 after cutover.
 2. Migrate only authorised content with image rights (`image_rights=yes`); keep metadata
    (titles, descriptions) in each page's SEO fields. Images go through Admin → Content →
@@ -57,8 +58,9 @@ reconciliation below must be signed off before the DNS change.
    sign-in, portal home, admin overview, health endpoint, robots/sitemap.
 5. Switch DNS to the new server (Caddy obtains the certificate automatically once the
    record resolves). Keep the old hosting running.
-6. Re-run the smoke checklist on the real domain; check the redirect map with the
-   inventory (`curl -I` on every mapped URL).
+6. Re-run the smoke checklist on the real domain; re-run the reconciliation against it
+   (`pnpm --filter @simplexd/web reconcile:inventory --check-live https://simplexd.co`) so
+   every `redirect` row answers its configured 301/302/308 and every `migrate` row answers 200.
 7. Watch logs, health and queue depth for the first hours; confirm webhooks (Paystack,
    Termii delivery reports, Google push) reach the new domain.
 

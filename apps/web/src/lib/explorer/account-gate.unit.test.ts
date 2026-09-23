@@ -4,16 +4,18 @@ import {
   buildResumeHref,
   buildSignInHref,
   decideScenarioAction,
-  isResumeIntent,
-  resumeIntentFromNext,
-  resumeMessage,
   type GatedAction,
 } from './account-gate';
 import { loadDraft, memoryStorage, saveDraft } from './draft-storage';
+import {
+  RESUME_INTENTS,
+  isResumeIntent,
+  resumeIntentFromNext,
+  resumeMessage,
+} from './resume-intents';
 import { DEFAULT_ASSUMPTIONS } from './scenario-form';
 import {
   DEFAULT_FILTERS,
-  RESUME_INTENTS,
   explorerParsers,
   filtersFromParams,
   paramsFromFilters,

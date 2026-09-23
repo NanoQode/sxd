@@ -40,6 +40,8 @@ import { listFilesForEntity } from '@/server/files/queries';
 import { getServiceRequestDetail } from '@/server/requests/queries';
 import { intakeLabel } from '@/server/requests/services';
 import { RequestActions } from './request-actions';
+import { PurchaseTab } from './purchase-tab';
+import { SearchTab } from './search-tab';
 
 export const metadata: Metadata = { title: 'Request' };
 export const dynamic = 'force-dynamic';
@@ -52,6 +54,8 @@ const TABS = [
   'team',
   'documents',
   'appointments',
+  'search',
+  'purchase',
 ] as const;
 
 export default async function RequestDetailPage({
@@ -101,6 +105,11 @@ export default async function RequestDetailPage({
     ? workspace.summary.openCustomerQueries + workspace.summary.openDocumentRequests
     : 0;
   const closed = ['completed', 'cancelled', 'rejected'].includes(detail.status);
+  // Property search and purchase representation workspaces (brief §8).
+  const hasSearch =
+    detail.serviceSlug.startsWith('property-search') ||
+    detail.serviceSlug.startsWith('purchase-support');
+  const hasPurchase = detail.serviceSlug.startsWith('purchase-support');
   const conversationId =
     tab === 'overview'
       ? ((
@@ -162,6 +171,8 @@ export default async function RequestDetailPage({
           { value: 'team', label: 'Team' },
           { value: 'documents', label: 'Documents' },
           { value: 'appointments', label: 'Appointments' },
+          ...(hasSearch ? [{ value: 'search', label: 'Search' }] : []),
+          ...(hasPurchase ? [{ value: 'purchase', label: 'Purchase' }] : []),
         ]}
       />
 
@@ -496,6 +507,14 @@ export default async function RequestDetailPage({
 
       {tab === 'appointments' ? (
         <AppointmentsTab identity={identity} requestId={id} zone={zone} />
+      ) : null}
+
+      {tab === 'search' && hasSearch ? (
+        <SearchTab identity={identity} requestId={id} caps={caps} zone={zone} closed={closed} />
+      ) : null}
+
+      {tab === 'purchase' && hasPurchase ? (
+        <PurchaseTab identity={identity} requestId={id} caps={caps} zone={zone} closed={closed} />
       ) : null}
     </div>
   );

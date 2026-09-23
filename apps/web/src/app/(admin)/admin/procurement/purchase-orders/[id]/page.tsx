@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { discrepancyKindSchema } from '@simplexd/contracts';
+import { discrepancyKindSchema, type DiscrepancyThreadDto } from '@simplexd/contracts';
 import {
   Badge,
   DataTable,
@@ -13,12 +13,14 @@ import {
 import { requireSignedIn } from '@/lib/auth/session';
 import { attempt } from '@/lib/admin/server/context';
 import { purchaseOrderWorkspace } from '@/lib/admin/server/procurement';
+import { listDiscrepancyThreads } from '@/server/procurement/discrepancy-responses';
 import { ApiAction } from '@/components/admin/api-action';
 import { FormDialog } from '@/components/admin/form-dialog';
 import { LoadError } from '@/components/admin/load-error';
 import { Money } from '@/components/admin/money';
 import { Section } from '@/components/admin/section';
 import { DefinitionList } from '../../../_components/bits';
+import { DiscrepancyDecisions } from './_components/discrepancy-decisions';
 import { RecordDelivery } from './_components/record-delivery';
 
 export const metadata: Metadata = { title: 'Purchase order' };
@@ -41,6 +43,13 @@ export default async function PurchaseOrderPage({ params }: { params: Promise<{ 
     return <LoadError code={loaded.code} message={loaded.message} what="This purchase order" />;
   }
   const { po, deliveries, canManage, organizationName } = loaded.value;
+  // Supplier responses and staff decisions per discrepancy (one read per disputed delivery).
+  const threads = new Map<string, DiscrepancyThreadDto>();
+  for (const d of deliveries.filter((x) => x.discrepancies.length > 0)) {
+    const loadedThreads = await attempt(() => listDiscrepancyThreads(identity, d.id));
+    if (loadedThreads.ok)
+      for (const t of loadedThreads.value.items) threads.set(t.discrepancy.id, t);
+  }
   const progress = new Map(po.deliveryProgress.lines.map((l) => [l.lineId, l]));
   const outstanding = Object.fromEntries(
     po.deliveryProgress.lines.map((l) => [l.lineId, l.outstanding]),
@@ -224,7 +233,7 @@ export default async function PurchaseOrderPage({ params }: { params: Promise<{ 
       </div>
       <Section
         title={`Deliveries (${deliveries.length})`}
-        description="Accept a delivery once counted and checked. Discrepancies move open → supplier notified → resolved, credited or returned, each with a resolution note."
+        description="Accept a delivery once counted and checked. Discrepancies move open → supplier notified → resolved, credited or returned, each with a resolution note. Suppliers reply from their workspace with a proposal (replace, credit or dispute) and evidence; accept or reject it here."
       >
         {deliveries.length === 0 ? <p className="text-fg-muted">Nothing delivered yet.</p> : null}
         <ul className="space-y-3">
@@ -321,6 +330,13 @@ export default async function PurchaseOrderPage({ params }: { params: Promise<{ 
                       </Badge>
                       <p className="text-fg-muted">{x.description}</p>
                       {x.resolution ? <p>Resolution: {x.resolution}</p> : null}
+                      {threads.get(x.id) ? (
+                        <DiscrepancyDecisions
+                          thread={threads.get(x.id)!}
+                          deliveryId={d.id}
+                          canManage={canManage}
+                        />
+                      ) : null}
                       {canManage && DISCREPANCY_NEXT[x.status] ? (
                         <span className="mt-1 flex flex-wrap gap-1">
                           {DISCREPANCY_NEXT[x.status]!.map((to) =>

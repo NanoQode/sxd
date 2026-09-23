@@ -90,6 +90,11 @@ test.describe('dark theme and reduced motion', () => {
 });
 
 test.describe('location explorer', () => {
+  // Saving a scenario needs an account (brief §5; `core.anonymous_scenarios`
+  // is off by default), so this journey runs as the demo customer. The
+  // anonymous gate itself is covered by scenario-1.spec.ts.
+  test.use({ storageState: storageStateFor('owner') });
+
   test('filter, compare, save a scenario and restore it after reload', async ({ page }) => {
     await page.goto('/explore?view=list&q=Lagos');
     const results = page.getByTestId('results-list');

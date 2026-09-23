@@ -76,9 +76,15 @@ export async function VisitsTab({
                   <span className="font-medium">
                     {v.scheduledAt ? formatDateTimeLabel(v.scheduledAt) : 'Unscheduled'}
                   </span>{' '}
+                  {v.unscheduled ? <Badge tone="warning">Unscheduled</Badge> : null}{' '}
                   <span className="text-xs text-fg-muted">
                     inspector {v.inspectorName ?? v.inspectorUserId ?? '—'}
                   </span>
+                  {v.unscheduledReason ? (
+                    <span className="block text-xs text-fg-muted">
+                      Inspector&apos;s reason: {v.unscheduledReason}
+                    </span>
+                  ) : null}
                 </div>
                 <span className="flex flex-wrap gap-2">
                   <StatusBadge
@@ -149,7 +155,29 @@ export async function VisitsTab({
                     You submitted this visit; another staff member must review it.
                   </span>
                 ) : null}
-                {['scheduled', 'in_progress'].includes(v.status) && shell.permissions.manage ? (
+                {v.unscheduled &&
+                ['in_progress', 'submitted'].includes(v.status) &&
+                shell.permissions.manage &&
+                v.inspectorUserId !== me ? (
+                  <ApiAction
+                    path={`/api/v1/site-visits/${v.id}/reject`}
+                    label="Reject visit"
+                    variant="ghost"
+                    reasonKey="reason"
+                    confirm={{
+                      title: 'Reject this unscheduled visit?',
+                      description:
+                        'The visit is cancelled and the inspector is told why. Possible until its findings are reviewed.',
+                      requireReason: true,
+                      confirmLabel: 'Reject visit',
+                      tone: 'danger',
+                    }}
+                    successMessage="Visit rejected"
+                  />
+                ) : null}
+                {!v.unscheduled &&
+                ['scheduled', 'in_progress'].includes(v.status) &&
+                shell.permissions.manage ? (
                   <ApiAction
                     path={`/api/v1/site-visits/${v.id}/cancel`}
                     label="Cancel"

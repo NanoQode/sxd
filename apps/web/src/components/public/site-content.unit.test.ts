@@ -115,7 +115,11 @@ describe('navigation', () => {
         kind: 'navigation',
         fields: { items: [{ label: 'Bad', href: 'javascript:alert(1)' }] },
       }),
-      page({ slug: 'no-slot', kind: 'navigation', fields: { items: [{ label: 'A', href: '/a' }] } }),
+      page({
+        slug: 'no-slot',
+        kind: 'navigation',
+        fields: { items: [{ label: 'A', href: '/a' }] },
+      }),
     ]);
     expect(nav.primary).toEqual([
       { label: 'Explore', href: '/explore' },

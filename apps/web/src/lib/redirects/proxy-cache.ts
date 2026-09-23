@@ -155,7 +155,11 @@ export function reportRedirectHit(
 }
 
 /** The snapshot currently held (diagnostics and tests). */
-export function currentRedirectSnapshot(): { version: string; size: number; fetchedAt: number } | null {
+export function currentRedirectSnapshot(): {
+  version: string;
+  size: number;
+  fetchedAt: number;
+} | null {
   return snapshot
     ? { version: snapshot.version, size: snapshot.table.size, fetchedAt: snapshot.fetchedAt }
     : null;

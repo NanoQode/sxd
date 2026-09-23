@@ -149,36 +149,49 @@ try {
           }
           const kind = await livePageKind(tx, targetPath);
           report.targetExists = kind;
-          if (!kind) gap(`target ${targetPath} is not a live page (not published or no such route)`);
+          if (!kind)
+            gap(`target ${targetPath} is not a live page (not published or no such route)`);
           if (targetPath !== sourcePath) {
-            if (!existing || !existing.active) gap(`no active redirect from ${sourcePath} to ${targetPath}`);
+            if (!existing || !existing.active)
+              gap(`no active redirect from ${sourcePath} to ${targetPath}`);
             else if (existing.toPath !== targetPath)
               gap(`redirect from ${sourcePath} points at ${existing.toPath}, not ${targetPath}`);
           } else if (existing?.active) {
-            gap(`an active redirect exists from ${sourcePath} although the page is migrated at the same path`);
+            gap(
+              `an active redirect exists from ${sourcePath} although the page is migrated at the same path`,
+            );
           }
           if ((row.image_rights ?? '').trim().toLowerCase() !== 'yes')
-            warn(`image_rights is "${row.image_rights || 'blank'}": migrate text only until rights are confirmed`);
+            warn(
+              `image_rights is "${row.image_rights || 'blank'}": migrate text only until rights are confirmed`,
+            );
           if (liveBase && report.liveStatus !== null && report.liveStatus !== 200)
             gap(`${liveBase}${sourcePath} answers ${report.liveStatus}, expected 200`);
           break;
         }
         case 'redirect': {
           const raw = row.target_url?.trim() ?? '';
-          const targetPath = raw.startsWith('/') || /^https?:\/\//i.test(raw) ? (raw.startsWith('/') ? toSitePath(raw) : raw) : null;
+          const targetPath =
+            raw.startsWith('/') || /^https?:\/\//i.test(raw)
+              ? raw.startsWith('/')
+                ? toSitePath(raw)
+                : raw
+              : null;
           report.targetPath = targetPath;
           if (!targetPath) {
             gap('target_url is required for a redirect');
             break;
           }
-          if (!existing) gap(`no redirect configured from ${sourcePath} (import the inventory in Admin → Content → Redirects)`);
+          if (!existing)
+            gap(
+              `no redirect configured from ${sourcePath} (import the inventory in Admin → Content → Redirects)`,
+            );
           else {
             if (!existing.active) gap(`redirect from ${sourcePath} is inactive`);
             if (existing.toPath !== targetPath)
-              gap(`redirect from ${sourcePath} points at ${existing.toPath}, inventory says ${targetPath}`);
-            const wanted = Number(row.status_code);
-            if ([301, 302, 308].includes(wanted) && existing.statusCode !== wanted)
-              warn(`redirect status is ${existing.statusCode}, inventory recorded ${wanted}`);
+              gap(
+                `redirect from ${sourcePath} points at ${existing.toPath}, inventory says ${targetPath}`,
+              );
           }
           if (targetPath.startsWith('/')) {
             const kind = await livePageKind(tx, targetPath);
@@ -187,12 +200,17 @@ try {
           } else {
             report.targetExists = 'external';
           }
-          if (liveBase && report.liveStatus !== null && ![301, 302, 307, 308].includes(report.liveStatus))
+          if (
+            liveBase &&
+            report.liveStatus !== null &&
+            ![301, 302, 307, 308].includes(report.liveStatus)
+          )
             gap(`${liveBase}${sourcePath} answers ${report.liveStatus}, expected a redirect`);
           break;
         }
         case 'drop': {
-          if (existing?.active) warn(`an active redirect exists from ${sourcePath}; the inventory says drop`);
+          if (existing?.active)
+            warn(`an active redirect exists from ${sourcePath}; the inventory says drop`);
           const kind = await livePageKind(tx, sourcePath);
           if (kind) warn(`${sourcePath} still resolves to a live ${kind}; it will not 404`);
           if (liveBase && report.liveStatus !== null && report.liveStatus !== 404)
@@ -216,11 +234,19 @@ if (json) {
 } else {
   console.log(`Inventory: ${csvPath} (${reports.length} rows)`);
   for (const r of reports) {
-    const marker = r.status === 'ok' ? 'OK  ' : r.status === 'gap' ? 'GAP ' : r.status === 'warn' ? 'WARN' : 'SKIP';
+    const marker =
+      r.status === 'ok'
+        ? 'OK  '
+        : r.status === 'gap'
+          ? 'GAP '
+          : r.status === 'warn'
+            ? 'WARN'
+            : 'SKIP';
     const redirect = r.redirect
       ? `redirect → ${r.redirect.toPath} (${r.redirect.statusCode}${r.redirect.active ? '' : ', inactive'})`
       : 'no redirect';
-    const live = r.liveStatus === null ? '' : ` · live ${r.liveStatus === -1 ? 'unreachable' : r.liveStatus}`;
+    const live =
+      r.liveStatus === null ? '' : ` · live ${r.liveStatus === -1 ? 'unreachable' : r.liveStatus}`;
     console.log(
       `${marker} line ${r.line} ${r.decision.padEnd(8)} ${r.sourcePath ?? r.sourceUrl} → ${r.targetPath ?? '—'} [${r.targetExists ?? '—'}] · ${redirect}${live}`,
     );

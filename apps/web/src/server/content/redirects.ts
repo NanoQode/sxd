@@ -250,7 +250,12 @@ export async function recordRedirectHit(path: string): Promise<boolean> {
 
 const FROM_COLUMNS = ['path', 'from_path', 'from', 'source_url', 'source', 'old_url', 'old'];
 const TO_COLUMNS = ['target', 'to_path', 'to', 'target_url', 'new_url', 'new'];
-const STATUS_COLUMNS = ['status', 'status_code', 'code'];
+/**
+ * Redirect status columns. The inventory's `status_code` is the crawled HTTP
+ * status of the old URL, not the redirect status, so it only counts for plain
+ * `path,target,status_code` files (no `decision` column).
+ */
+const STATUS_COLUMNS = ['status', 'redirect_status', 'code'];
 const ALLOWED_STATUS = new Set([301, 302, 308]);
 const MAX_IMPORT_ROWS = 2000;
 
@@ -281,7 +286,10 @@ function parseImportCsv(csv: string): ParsedImportRow[] {
       relax_column_count: true,
     }) as Record<string, string>[];
   } catch (err) {
-    throw new ApiError('validation_failed', `the CSV could not be parsed: ${(err as Error).message}`);
+    throw new ApiError(
+      'validation_failed',
+      `the CSV could not be parsed: ${(err as Error).message}`,
+    );
   }
   if (records.length === 0) throw new ApiError('validation_failed', 'the CSV has no data rows');
   if (records.length > MAX_IMPORT_ROWS)
@@ -293,12 +301,13 @@ function parseImportCsv(csv: string): ParsedImportRow[] {
       'the CSV needs a path (or source_url) column and a target (or target_url) column',
     );
   }
+  const inventory = 'decision' in first;
   return records.map((row, i) => ({
     line: i + 2,
     rawFrom: pick(row, FROM_COLUMNS) ?? '',
     rawTo: pick(row, TO_COLUMNS) ?? '',
-    rawStatus: pick(row, STATUS_COLUMNS),
-    decision: pick(row, ['decision']),
+    rawStatus: pick(row, inventory ? STATUS_COLUMNS : [...STATUS_COLUMNS, 'status_code']),
+    decision: inventory ? pick(row, ['decision']) : undefined,
   }));
 }
 
@@ -346,7 +355,7 @@ export async function importRedirects(
         statusCode = Number(row.rawStatus ?? 301) || 301,
       ) => out.push({ line: row.line, fromPath, toPath, statusCode, outcome, reason });
 
-      if (row.decision && row.decision.toLowerCase() !== 'redirect') {
+      if (row.decision !== undefined && row.decision.toLowerCase() !== 'redirect') {
         report('skip', `inventory decision is "${row.decision}", not redirect`);
         continue;
       }

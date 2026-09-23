@@ -1,16 +1,34 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useCallback, useMemo, useSyncExternalStore } from 'react';
 import { Info, Megaphone, TriangleAlert, X } from 'lucide-react';
 import { cn } from '@simplexd/ui';
 import type { SiteBanner } from './site-content';
 
 const STORAGE_KEY = 'sx_banners_dismissed';
+const CHANGE_EVENT = 'sx:banners-dismissed';
 
-function readDismissed(): string[] {
+/** localStorage as an external store: the raw value is the snapshot (stable primitive). */
+function subscribe(onChange: () => void): () => void {
+  window.addEventListener('storage', onChange);
+  window.addEventListener(CHANGE_EVENT, onChange);
+  return () => {
+    window.removeEventListener('storage', onChange);
+    window.removeEventListener(CHANGE_EVENT, onChange);
+  };
+}
+
+function readRaw(): string | null {
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
+    return window.localStorage.getItem(STORAGE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function parseDismissed(raw: string | null): string[] {
+  try {
     const parsed = raw ? (JSON.parse(raw) as unknown) : [];
     return Array.isArray(parsed) ? parsed.filter((v): v is string => typeof v === 'string') : [];
   } catch {
@@ -25,6 +43,7 @@ function writeDismissed(ids: string[]): void {
   } catch {
     /* storage unavailable (private mode); the banner simply shows again next visit */
   }
+  window.dispatchEvent(new Event(CHANGE_EVENT));
 }
 
 const tones = {
@@ -37,21 +56,18 @@ const tones = {
  * Site-wide announcement banners from published `banner` pages. Rendered on
  * the server with the sanitised content; dismissal is remembered per visitor
  * in localStorage keyed by publication, so a republished banner reappears.
- * Until hydration every banner is visible, which is the honest default.
+ * The server snapshot is "nothing dismissed", so every banner is visible
+ * until hydration, which is the honest default.
  */
 export function SiteBanners({ banners }: { banners: SiteBanner[] }) {
-  const [dismissed, setDismissed] = useState<string[] | null>(null);
-  useEffect(() => {
-    setDismissed(readDismissed());
-  }, []);
-  const visible = banners.filter((b) => !dismissed || !dismissed.includes(b.id));
+  const raw = useSyncExternalStore(subscribe, readRaw, () => null);
+  const dismissed = useMemo(() => parseDismissed(raw), [raw]);
+  const dismiss = useCallback(
+    (id: string) => writeDismissed([...parseDismissed(readRaw()), id]),
+    [],
+  );
+  const visible = banners.filter((b) => !dismissed.includes(b.id));
   if (visible.length === 0) return null;
-
-  const dismiss = (id: string) => {
-    const next = [...(dismissed ?? readDismissed()), id];
-    setDismissed(next);
-    writeDismissed(next);
-  };
 
   return (
     <div role="region" aria-label="Announcements" className="border-b border-border">

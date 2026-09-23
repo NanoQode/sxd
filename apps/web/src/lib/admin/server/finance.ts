@@ -1,5 +1,5 @@
 import 'server-only';
-import { and, asc, count, desc, eq, gte, inArray, lte, sql } from 'drizzle-orm';
+import { and, asc, count, desc, eq, gte, inArray, lte, ne, sql } from 'drizzle-orm';
 import type {
   BankTransferReceiptDto,
   CreditNoteDto,
@@ -452,7 +452,13 @@ export async function listPayouts(
     const rows = await tx
       .select()
       .from(schema.payouts)
-      .where(status ? eq(schema.payouts.status, status as never) : undefined)
+      // Partner invoices are reviewed under Finance → Partner invoices, not as owner payouts.
+      .where(
+        and(
+          ne(schema.payouts.kind, 'partner_invoice'),
+          status ? eq(schema.payouts.status, status as never) : undefined,
+        ),
+      )
       .orderBy(desc(schema.payouts.createdAt))
       .limit(limit);
     const names = await userNames(

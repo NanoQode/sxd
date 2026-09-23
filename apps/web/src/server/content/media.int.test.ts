@@ -44,7 +44,11 @@ const ids = {
 };
 
 const editor = () =>
-  staffIdentity({ userId: ids.editor, email: `${ids.editor}@example.test`, roles: ['content_editor'] });
+  staffIdentity({
+    userId: ids.editor,
+    email: `${ids.editor}@example.test`,
+    roles: ['content_editor'],
+  });
 const approver = () =>
   staffIdentity({
     userId: ids.approver,
@@ -52,10 +56,16 @@ const approver = () =>
     roles: ['content_editor'],
   });
 const customer = () =>
-  customerIdentity({ userId: ids.customer, email: `${ids.customer}@example.test`, organizationId: ids.org });
+  customerIdentity({
+    userId: ids.customer,
+    email: `${ids.customer}@example.test`,
+    organizationId: ids.org,
+  });
 
 async function pngBytes(): Promise<Buffer> {
-  return sharp({ create: { width: 48, height: 32, channels: 3, background: { r: 10, g: 120, b: 90 } } })
+  return sharp({
+    create: { width: 48, height: 32, channels: 3, background: { r: 10, g: 120, b: 90 } },
+  })
     .png()
     .toBuffer();
 }
@@ -79,7 +89,10 @@ async function cleanImage(identity: RequestIdentity, purpose: FilePurpose, name 
   return intent.fileId;
 }
 
-function get(id: string, init: { query?: string; headers?: Record<string, string>; method?: string } = {}) {
+function get(
+  id: string,
+  init: { query?: string; headers?: Record<string, string>; method?: string } = {},
+) {
   return publicMedia(
     new Request(`http://localhost:3000/media/${id}${init.query ?? ''}`, {
       method: init.method ?? 'GET',
@@ -105,15 +118,13 @@ beforeAll(async () => {
     scanner: new DevMalwareScanner({ appEnv: 'test' }),
     log: pino({ level: 'silent' }),
   };
-  await dbs.owner
-    .insert(schema.user)
-    .values(
-      [ids.editor, ids.approver, ids.customer].map((id) => ({
-        id,
-        name: id,
-        email: `${id}@example.test`,
-      })),
-    );
+  await dbs.owner.insert(schema.user).values(
+    [ids.editor, ids.approver, ids.customer].map((id) => ({
+      id,
+      name: id,
+      email: `${id}@example.test`,
+    })),
+  );
   await dbs.owner.insert(schema.staffRoles).values([
     { userId: ids.editor, role: 'content_editor' },
     { userId: ids.approver, role: 'content_editor' },
@@ -167,7 +178,11 @@ describe('public media route', () => {
     });
     // The uploader cannot approve their own image.
     await expect(
-      setPublicApproval(editor(), fileId, { approved: true, altText: 'Hero', rightsConfirmed: true }),
+      setPublicApproval(editor(), fileId, {
+        approved: true,
+        altText: 'Hero',
+        rightsConfirmed: true,
+      }),
     ).rejects.toMatchObject({ code: 'forbidden' });
 
     const approved = await setPublicApproval(approver(), fileId, {
@@ -209,8 +224,12 @@ describe('public media route', () => {
     const res = await get(assetId);
     expect(res.status).toBe(200);
     expect(res.headers.get('content-type')).toBe('image/webp');
-    expect(res.headers.get('content-disposition')).toMatch(/^inline; filename="site plan\.web\.webp"/);
-    expect(res.headers.get('cache-control')).toBe('public, max-age=86400, stale-while-revalidate=604800');
+    expect(res.headers.get('content-disposition')).toMatch(
+      /^inline; filename="site plan\.web\.webp"/,
+    );
+    expect(res.headers.get('cache-control')).toBe(
+      'public, max-age=86400, stale-while-revalidate=604800',
+    );
     expect(res.headers.get('x-content-type-options')).toBe('nosniff');
     expect(res.headers.get('content-security-policy')).toBe("default-src 'none'; sandbox");
     const etag = res.headers.get('etag')!;
@@ -220,7 +239,10 @@ describe('public media route', () => {
     // RIFF....WEBP magic: the bytes really are the derivative, never the PNG original.
     expect(body.subarray(0, 4).toString('ascii')).toBe('RIFF');
     expect(body.subarray(8, 12).toString('ascii')).toBe('WEBP');
-    const [file] = await dbs.owner.select().from(schema.fileObjects).where(eq(schema.fileObjects.id, fileId));
+    const [file] = await dbs.owner
+      .select()
+      .from(schema.fileObjects)
+      .where(eq(schema.fileObjects.id, fileId));
     expect(body.length).not.toBe(file!.sizeBytes);
 
     const cached = await get(assetId, { headers: { 'if-none-match': etag } });

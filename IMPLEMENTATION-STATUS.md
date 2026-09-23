@@ -135,7 +135,17 @@ each milestone.
 
 ### §20 CMS, search, migration and SEO
 
-**outstanding** (Wave 1 for CMS; Wave 5 for migration/redirects).
+**in progress.** CMS workflow (draft/review/publish/schedule, revisions, rollback, preview links,
+separation of duties) is implemented; every editable kind now renders publicly: banners
+(dismissible announcement strip), navigation slots (header, mobile drawer, footer columns), goal
+paths (homepage cards), location intros (`/locations/{slug}`), contact and policies
+(`docs/workflows/cms.md`). Content media: upload from the editor (purpose `content_media`),
+second-editor approval, public delivery at `/media/{assetId}` (derivatives only). Redirects:
+proxy-served with the configured 301/302/308 from an in-memory snapshot, CSV bulk import with
+dry run, `docs/operations/site-inventory.csv` template and the read-only
+`reconcile:inventory` script; the live site is never switched automatically
+(`docs/operations/cutover.md`). Sitemap/robots/noindex covered by tests. Outstanding: the crawl
+of the current site itself and the owner's migrate/redirect/drop decisions.
 
 ### §21 Acceptance scenarios
 

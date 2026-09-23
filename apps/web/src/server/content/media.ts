@@ -93,7 +93,9 @@ export async function resolvePublicMedia(
  * approval by someone other than the uploader. Private purposes are never
  * listed here.
  */
-export async function listContentMedia(identity: RequestIdentity): Promise<ContentMediaListResponse> {
+export async function listContentMedia(
+  identity: RequestIdentity,
+): Promise<ContentMediaListResponse> {
   return withActor(getDb(), identity.ctx, async (tx) => {
     const approvedRows = await tx
       .select({ m: schema.mediaAssets, f: schema.fileObjects })
@@ -132,7 +134,14 @@ export async function listContentMedia(identity: RequestIdentity): Promise<Conte
         and(
           eq(schema.fileObjects.purpose, 'content_media'),
           eq(schema.fileObjects.isPublicApproved, false),
-          inArray(schema.fileObjects.status, ['uploaded', 'scanning', 'clean', 'scan_failed', 'rejected', 'infected']),
+          inArray(schema.fileObjects.status, [
+            'uploaded',
+            'scanning',
+            'clean',
+            'scan_failed',
+            'rejected',
+            'infected',
+          ]),
           isNull(schema.fileObjects.deletedAt),
         ),
       )

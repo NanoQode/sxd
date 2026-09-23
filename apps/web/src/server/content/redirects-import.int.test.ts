@@ -25,7 +25,9 @@ const admin = () =>
 
 beforeAll(async () => {
   dbs = connectTestDatabases();
-  await dbs.owner.insert(schema.user).values({ id: userId, name: 'Admin', email: `${userId}@example.test` });
+  await dbs.owner
+    .insert(schema.user)
+    .values({ id: userId, name: 'Admin', email: `${userId}@example.test` });
   await dbs.owner.insert(schema.staffRoles).values({ userId, role: 'content_editor' });
 });
 
@@ -35,16 +37,37 @@ afterAll(async () => {
 
 describe('creation guards', () => {
   it('refuses reserved prefixes and paths that are live pages', async () => {
-    for (const fromPath of ['/api/v1/markets', '/admin/content', '/portal', '/media/x', '/_next/static']) {
+    for (const fromPath of [
+      '/api/v1/markets',
+      '/admin/content',
+      '/portal',
+      '/media/x',
+      '/_next/static',
+    ]) {
       await expect(
-        createRedirect(admin(), { fromPath, toPath: '/about', statusCode: 301, active: true }, { correlationId: 'c' }),
+        createRedirect(
+          admin(),
+          { fromPath, toPath: '/about', statusCode: 301, active: true },
+          { correlationId: 'c' },
+        ),
       ).rejects.toMatchObject({ code: 'validation_failed' });
     }
     await expect(
-      createRedirect(admin(), { fromPath: '/about', toPath: '/contact', statusCode: 301, active: true }, { correlationId: 'c' }),
-    ).rejects.toMatchObject({ code: 'validation_failed', message: expect.stringContaining('existing page') });
+      createRedirect(
+        admin(),
+        { fromPath: '/about', toPath: '/contact', statusCode: 301, active: true },
+        { correlationId: 'c' },
+      ),
+    ).rejects.toMatchObject({
+      code: 'validation_failed',
+      message: expect.stringContaining('existing page'),
+    });
     await expect(
-      createRedirect(admin(), { fromPath: '/policies/privacy', toPath: '/', statusCode: 301, active: true }, { correlationId: 'c' }),
+      createRedirect(
+        admin(),
+        { fromPath: '/policies/privacy', toPath: '/', statusCode: 301, active: true },
+        { correlationId: 'c' },
+      ),
     ).rejects.toMatchObject({ code: 'validation_failed' });
   });
 });
@@ -67,7 +90,6 @@ describe('csv import', () => {
       `/about,/contact,301`, // live page
       `/admin/old-${sfx},/about,301`, // reserved
       `${existingFrom},/pricing,301`, // unchanged
-      `${existingFrom},/other,301`, // conflicts with an existing row
       `/chain-${sfx},${existingFrom},301`, // chain
       `/no-target-${sfx},,301`,
       `/external-${sfx},https://old.example.test/archive,301`,
@@ -76,26 +98,41 @@ describe('csv import', () => {
     const preview = await importRedirects(admin(), { csv, dryRun: true }, { correlationId: 'c' });
     expect(preview.dryRun).toBe(true);
     expect(preview.summary).toEqual({
-      total: 12,
+      total: 11,
       create: 4,
       created: 0,
       unchanged: 1,
       skip: 0,
-      error: 7,
+      error: 6,
     });
     const byLine = Object.fromEntries(preview.rows.map((r) => [r.line, r]));
     expect(byLine[2]).toMatchObject({ outcome: 'create', fromPath: `/services/monitoring-${sfx}` });
-    expect(byLine[3]).toMatchObject({ outcome: 'create', fromPath: `/old-form-${sfx}`, statusCode: 308 });
+    expect(byLine[3]).toMatchObject({
+      outcome: 'create',
+      fromPath: `/old-form-${sfx}`,
+      statusCode: 308,
+    });
     expect(byLine[4]).toMatchObject({ outcome: 'create', statusCode: 302 });
     expect(byLine[5]).toMatchObject({ outcome: 'error', reason: 'duplicate of line 2' });
     expect(byLine[6]).toMatchObject({ outcome: 'error', reason: 'status must be 301, 302 or 308' });
     expect(byLine[7]!.reason).toContain('existing page');
     expect(byLine[8]!.reason).toContain('cannot be redirected');
     expect(byLine[9]).toMatchObject({ outcome: 'unchanged' });
-    expect(byLine[10]!.reason).toContain('already exists');
-    expect(byLine[11]!.reason).toContain('itself redirected');
-    expect(byLine[12]).toMatchObject({ outcome: 'error' });
-    expect(byLine[13]).toMatchObject({ outcome: 'create', toPath: 'https://old.example.test/archive' });
+    expect(byLine[10]!.reason).toContain('itself redirected');
+    expect(byLine[11]).toMatchObject({ outcome: 'error' });
+    expect(byLine[12]).toMatchObject({
+      outcome: 'create',
+      toPath: 'https://old.example.test/archive',
+    });
+
+    // An existing source with a different target is a conflict, never a silent overwrite.
+    const conflict = await importRedirects(
+      admin(),
+      { csv: `path,target,status\n${existingFrom},/other,301`, dryRun: true },
+      { correlationId: 'c' },
+    );
+    expect(conflict.rows[0]).toMatchObject({ outcome: 'error' });
+    expect(conflict.rows[0]!.reason).toContain('already exists');
     // Nothing was written by the dry run.
     const none = await dbs.owner
       .select()
@@ -105,12 +142,18 @@ describe('csv import', () => {
 
     const applied = await importRedirects(admin(), { csv, dryRun: false }, { correlationId: 'c' });
     expect(applied.summary.created).toBe(4);
-    expect(applied.summary.error).toBe(7);
+    expect(applied.summary.error).toBe(6);
     const [temp] = await dbs.owner
       .select()
       .from(schema.redirects)
       .where(eq(schema.redirects.fromPath, `/temp-${sfx}`));
-    expect(temp).toMatchObject({ toPath: '/explore', statusCode: 302, active: true, note: 'CSV import', createdBy: userId });
+    expect(temp).toMatchObject({
+      toPath: '/explore',
+      statusCode: 302,
+      active: true,
+      note: 'CSV import',
+      createdBy: userId,
+    });
     const audit = await dbs.owner
       .select()
       .from(schema.auditEvents)
@@ -132,7 +175,19 @@ describe('csv import', () => {
     ].join('\n');
     const result = await importRedirects(admin(), { csv, dryRun: true }, { correlationId: 'c' });
     expect(result.rows.map((r) => r.outcome)).toEqual(['skip', 'create', 'skip']);
-    expect(result.rows[1]).toMatchObject({ fromPath: `/inv-redirect-${sfx}`, toPath: '/services/due-diligence', statusCode: 301 });
+    // The inventory's status_code is the crawled status of the old URL, not the redirect status.
+    expect(result.rows[1]).toMatchObject({
+      fromPath: `/inv-redirect-${sfx}`,
+      toPath: '/services/due-diligence',
+      statusCode: 301,
+    });
+    // A plain file may still use status_code for the redirect status.
+    const plain = await importRedirects(
+      admin(),
+      { csv: `path,target,status_code\n/plain-${sfx},/about,308`, dryRun: true },
+      { correlationId: 'c' },
+    );
+    expect(plain.rows[0]).toMatchObject({ outcome: 'create', statusCode: 308 });
   });
 
   it('rejects CSVs without the required columns or with no rows', async () => {
@@ -140,7 +195,11 @@ describe('csv import', () => {
       importRedirects(admin(), { csv: 'a,b\n1,2', dryRun: true }, { correlationId: 'c' }),
     ).rejects.toMatchObject({ code: 'validation_failed' });
     await expect(
-      importRedirects(admin(), { csv: 'path,target,status\n', dryRun: true }, { correlationId: 'c' }),
+      importRedirects(
+        admin(),
+        { csv: 'path,target,status\n', dryRun: true },
+        { correlationId: 'c' },
+      ),
     ).rejects.toMatchObject({ code: 'validation_failed' });
   });
 });
@@ -149,15 +208,26 @@ describe('proxy endpoints', () => {
   it('exposes active redirects only and counts hits for active sources', async () => {
     const active = `/snap-active-${sfx}`;
     const inactive = `/snap-inactive-${sfx}`;
-    await createRedirect(admin(), { fromPath: active, toPath: '/about', statusCode: 302, active: true }, { correlationId: 'c' });
-    await createRedirect(admin(), { fromPath: inactive, toPath: '/about', statusCode: 301, active: false }, { correlationId: 'c' });
+    await createRedirect(
+      admin(),
+      { fromPath: active, toPath: '/about', statusCode: 302, active: true },
+      { correlationId: 'c' },
+    );
+    await createRedirect(
+      admin(),
+      { fromPath: inactive, toPath: '/about', statusCode: 301, active: false },
+      { correlationId: 'c' },
+    );
 
     const snapshot = await getRedirectSnapshot();
     expect(snapshot.items).toContainEqual({ from: active, to: '/about', status: 302 });
     expect(snapshot.items.some((i) => i.from === inactive)).toBe(false);
     expect(snapshot.items.every((i) => !('id' in i) && !('note' in i))).toBe(true);
 
-    const routeRes = await snapshotRoute(new Request('http://localhost:3000/api/v1/redirects/snapshot'), {} as never);
+    const routeRes = await snapshotRoute(
+      new Request('http://localhost:3000/api/v1/redirects/snapshot'),
+      {} as never,
+    );
     expect(routeRes.status).toBe(200);
     const body = (await routeRes.json()) as { items: Array<{ from: string }> };
     expect(body.items.some((i) => i.from === active)).toBe(true);
@@ -174,7 +244,10 @@ describe('proxy endpoints', () => {
       {} as never,
     );
     expect(await hitRes.json()).toEqual({ counted: true });
-    const [row] = await dbs.owner.select().from(schema.redirects).where(eq(schema.redirects.fromPath, active));
+    const [row] = await dbs.owner
+      .select()
+      .from(schema.redirects)
+      .where(eq(schema.redirects.fromPath, active));
     expect(row!.hitCount).toBe(2);
   });
 });

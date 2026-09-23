@@ -76,6 +76,19 @@ pnpm test:e2e             # Playwright against a running/built web app
 Integration tests truncate tables in `simplexd_test`; never point `TEST_DATABASE_URL` at a
 database you care about.
 
+Playwright (`tests/e2e`) signs the demo roles in once (`global-setup.ts`; sign-in is rate
+limited to ten attempts a minute) and runs every spec at desktop width and at 360 px. It expects
+the demo seed with `core.anonymous_scenarios` off (the seed default): `scenario-1.spec.ts`
+asserts that an anonymous visitor is sent to sign-in when saving a scenario. To run the specs
+against a second server (for example `next dev` on another port) without stopping the first:
+
+```bash
+E2E_NO_SERVER=1 E2E_BASE_URL=http://localhost:3457 APP_URL=http://localhost:3457 \
+E2E_AUTH_DIR=/tmp/e2e-auth pnpm --filter @simplexd/e2e test
+```
+
+`E2E_AUTH_DIR` keeps that run's stored sessions apart from `tests/e2e/.auth`.
+
 ## Schema changes
 
 1. Edit `packages/db/src/schema/*.ts`.

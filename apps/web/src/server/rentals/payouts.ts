@@ -1,5 +1,5 @@
 import 'server-only';
-import { and, desc, eq, inArray, lt, or } from 'drizzle-orm';
+import { and, desc, eq, inArray, lt, ne, or } from 'drizzle-orm';
 import { ApiError, type Page, type PayoutDto, type PayoutPropose } from '@simplexd/contracts';
 import {
   appendOutbox,
@@ -455,6 +455,8 @@ export async function listPayouts(
       .where(
         and(
           orgId ? eq(schema.payouts.organizationId, orgId) : undefined,
+          // Partner invoices (kind partner_invoice) have their own list and review flow.
+          ne(schema.payouts.kind, 'partner_invoice'),
           query.status ? eq(schema.payouts.status, query.status) : undefined,
           cursor
             ? or(

@@ -1,4 +1,5 @@
 export * from './types';
+export * from './resume-intents';
 export * from './url-state';
 export * from './account-gate';
 export * from './filters';

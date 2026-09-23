@@ -55,7 +55,10 @@ export const contentPublicRoutes = [
     auth: 'public',
     request: { body: redirectHitSchema },
     responses: {
-      200: { description: 'Whether an active redirect was counted', body: z.object({ counted: z.boolean() }) },
+      200: {
+        description: 'Whether an active redirect was counted',
+        body: z.object({ counted: z.boolean() }),
+      },
       429: { description: 'Rate limited' },
     },
   }),

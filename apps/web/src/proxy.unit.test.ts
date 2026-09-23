@@ -214,7 +214,9 @@ describe('cross-site request guard', () => {
       false,
     );
     expect(
-      blocked(await proxy(request('/api/v1/webhooks/paystack', { method: 'POST', headers: cross }))),
+      blocked(
+        await proxy(request('/api/v1/webhooks/paystack', { method: 'POST', headers: cross })),
+      ),
     ).toBe(false);
     expect(
       blocked(await proxy(request('/api/v1/webhooks/termii', { method: 'POST', headers: cross }))),
@@ -268,9 +270,7 @@ describe('migrated-site redirects', () => {
     stubAppFetch(table);
     const permanent = await proxy(request('/services/monitoring'));
     expect(permanent.status).toBe(301);
-    expect(permanent.headers.get('location')).toBe(
-      `${ORIGIN}/services/construction-monitoring`,
-    );
+    expect(permanent.headers.get('location')).toBe(`${ORIGIN}/services/construction-monitoring`);
     expect(permanent.headers.get('cache-control')).toBe('public, max-age=300');
 
     const temporary = await proxy(request('/promo'));

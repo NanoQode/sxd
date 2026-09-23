@@ -7,7 +7,9 @@ import { describe, expect, it, vi } from 'vitest';
  */
 
 vi.mock('@/lib/env', () => ({ env: () => ({ APP_URL: 'https://simplexd.test/' }) }));
-vi.mock('@/lib/logger', () => ({ logger: () => ({ warn: () => undefined, info: () => undefined }) }));
+vi.mock('@/lib/logger', () => ({
+  logger: () => ({ warn: () => undefined, info: () => undefined }),
+}));
 
 const markets = {
   items: [
@@ -52,8 +54,19 @@ describe('sitemap', () => {
     // Planned services, drafts of other kinds and private surfaces never appear.
     expect(urls).not.toContain('https://simplexd.test/services/facility-management');
     expect(urls.some((u) => u.includes('should-not-appear'))).toBe(false);
-    for (const surface of ['/portal', '/admin', '/partner', '/tenant', '/preview', '/api', '/setup'])
-      expect(urls.some((u) => u.startsWith(`https://simplexd.test${surface}`)), surface).toBe(false);
+    for (const surface of [
+      '/portal',
+      '/admin',
+      '/partner',
+      '/tenant',
+      '/preview',
+      '/api',
+      '/setup',
+    ])
+      expect(
+        urls.some((u) => u.startsWith(`https://simplexd.test${surface}`)),
+        surface,
+      ).toBe(false);
     expect(new Set(urls).size).toBe(urls.length);
     const lagos = (await sitemap()).find((e) => e.url.endsWith('/locations/lagos'));
     expect(lagos?.lastModified).toBe('2026-09-01T00:00:00.000Z');
@@ -77,13 +90,36 @@ describe('robots', () => {
     const disallow = rules.flatMap((r) =>
       Array.isArray(r.disallow) ? r.disallow : r.disallow ? [r.disallow] : [],
     );
-    for (const surface of ['/portal', '/admin', '/partner', '/tenant', '/preview', '/api', '/setup'])
+    for (const surface of [
+      '/portal',
+      '/admin',
+      '/partner',
+      '/tenant',
+      '/preview',
+      '/api',
+      '/setup',
+    ])
       expect(disallow, surface).toContain(surface);
     expect(rules[0]?.allow).toBe('/');
     expect(result.sitemap).toBe('https://simplexd.test/sitemap.xml');
     expect(result.host).toBe('https://simplexd.test');
   });
 });
+
+vi.mock('@/app/(public)/_lib/site-data', () => ({
+  publicMetadata: (input: {
+    noindex?: boolean;
+    title: string;
+    description: string;
+    path: string;
+  }) => ({
+    title: input.title,
+    description: input.description,
+    alternates: { canonical: input.path },
+    ...(input.noindex ? { robots: { index: false, follow: false } } : {}),
+  }),
+  excerpt: (page: { bodyMarkdown: string }) => page.bodyMarkdown,
+}));
 
 describe('location page indexability', () => {
   const market = {
@@ -94,51 +130,58 @@ describe('location page indexability', () => {
     serviceAvailability: 'pending_operations_confirmation',
     profileMarkdown: null,
     evidence: { localObservations: 0, regionalContextObservations: 0 },
-  };
-  const siteData = {
-    loadMarket: vi.fn(),
-    loadLocationIntro: vi.fn(async () => null),
-    publicMetadata: (input: { noindex?: boolean; title: string; path: string }) => ({
-      title: input.title,
-      alternates: { canonical: input.path },
-      ...(input.noindex ? { robots: { index: false, follow: false } } : {}),
-    }),
-    excerpt: () => 'x',
-    absoluteUrl: (p: string) => `https://simplexd.test${p}`,
-    siteUrl: () => 'https://simplexd.test',
-  };
-  vi.doMock('@/app/(public)/_lib/site-data', () => siteData);
+  } as never;
+  const intro = {
+    slug: 'location-intro-ibadan',
+    kind: 'location_intro',
+    title: 'Ibadan',
+    bodyHtml: '<p>Intro</p>',
+    bodyMarkdown: 'A growing university city.',
+    fields: {},
+    seo: { title: 'Ibadan property market' },
+    publishedAt: null,
+  } as never;
 
   it('is noindex without evidence, profile or intro, and indexable once a CMS intro is published', async () => {
-    const { generateMetadata } = await import('./(public)/locations/[slug]/page');
-    const params = Promise.resolve({ slug: 'ibadan' });
-    siteData.loadMarket.mockResolvedValue({ status: 'ok', market });
-    const incomplete = await generateMetadata({ params });
-    expect(incomplete.robots).toEqual({ index: false, follow: false });
-
-    siteData.loadLocationIntro.mockResolvedValueOnce({
-      slug: 'location-intro-ibadan',
-      kind: 'location_intro',
-      title: 'Ibadan',
-      bodyHtml: '<p>Intro</p>',
-      bodyMarkdown: 'Intro',
-      fields: {},
-      seo: null,
-      publishedAt: null,
-    } as never);
-    const withIntro = await generateMetadata({ params });
-    expect(withIntro.robots).toBeUndefined();
-
-    siteData.loadMarket.mockResolvedValue({
-      status: 'ok',
-      market: { ...market, evidence: { localObservations: 2, regionalContextObservations: 0 } },
+    const { locationMetadata } = await import('./(public)/locations/[slug]/metadata');
+    const incomplete = locationMetadata({
+      slug: 'ibadan',
+      result: { status: 'ok', market },
+      intro: null,
     });
-    const withEvidence = await generateMetadata({ params });
-    expect(withEvidence.robots).toBeUndefined();
+    expect(incomplete.robots).toEqual({ index: false, follow: false });
+    expect(incomplete.alternates?.canonical).toBe('/locations/ibadan');
 
-    siteData.loadMarket.mockResolvedValue({ status: 'missing' });
-    expect((await generateMetadata({ params })).robots).toEqual({ index: false, follow: false });
-    siteData.loadMarket.mockResolvedValue({ status: 'unavailable' });
-    expect((await generateMetadata({ params })).robots).toEqual({ index: false, follow: false });
+    const withIntro = locationMetadata({ slug: 'ibadan', result: { status: 'ok', market }, intro });
+    expect(withIntro.robots).toBeUndefined();
+    expect(withIntro.title).toBe('Ibadan property market');
+    expect(withIntro.description).toBe('A growing university city.');
+
+    const withEvidence = locationMetadata({
+      slug: 'ibadan',
+      result: {
+        status: 'ok',
+        market: {
+          ...(market as object),
+          evidence: { localObservations: 2, regionalContextObservations: 0 },
+        } as never,
+      },
+      intro: null,
+    });
+    expect(withEvidence.robots).toBeUndefined();
+    expect(withEvidence.title).toBe('Ibadan, Oyo State');
+
+    expect(
+      locationMetadata({ slug: 'x', result: { status: 'missing' }, intro: null }).robots,
+    ).toEqual({
+      index: false,
+      follow: false,
+    });
+    expect(
+      locationMetadata({ slug: 'x', result: { status: 'unavailable' }, intro: null }).robots,
+    ).toEqual({
+      index: false,
+      follow: false,
+    });
   });
 });

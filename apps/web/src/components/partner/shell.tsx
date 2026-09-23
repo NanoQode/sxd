@@ -14,6 +14,7 @@ import {
   LogOut,
   MessageSquare,
   Package,
+  ReceiptText,
   WifiOff,
 } from 'lucide-react';
 import Link from 'next/link';
@@ -61,6 +62,7 @@ const NAV: NavItem[] = [
   { href: '/partner/reports', label: 'Reports', icon: FileText, module: 'reports' },
   { href: '/partner/messages', label: 'Messages', icon: MessageSquare, module: 'messages' },
   { href: '/partner/notifications', label: 'Notifications', icon: Bell, module: 'notifications' },
+  { href: '/partner/invoices', label: 'Invoices', icon: ReceiptText, module: 'invoices' },
   {
     href: '/partner/availability',
     label: 'Availability',

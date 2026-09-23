@@ -46,22 +46,38 @@ export function MediaPicker({
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      setData(await apiFetch<ContentMediaListResponse>('/api/v1/admin/content/media'));
-    } catch (err) {
-      setError(errorMessage(err));
-      setData((prev) => prev ?? { items: [], pending: [] });
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  /** Fetches the listing; state changes happen in the promise callbacks, never synchronously. */
+  const fetchListing = useCallback(
+    (signal?: AbortSignal) =>
+      apiFetch<ContentMediaListResponse>('/api/v1/admin/content/media', { signal }).then(
+        (res) => {
+          if (signal?.aborted) return;
+          setData(res);
+          setError(null);
+          setLoading(false);
+        },
+        (err: unknown) => {
+          if (signal?.aborted) return;
+          setError(errorMessage(err));
+          setData((prev) => prev ?? { items: [], pending: [] });
+          setLoading(false);
+        },
+      ),
+    [],
+  );
 
+  // Load whenever the dialog opens (and abort if it closes mid-flight).
   useEffect(() => {
-    if (open) void load();
-  }, [open, load]);
+    if (!open) return;
+    const controller = new AbortController();
+    void fetchListing(controller.signal);
+    return () => controller.abort();
+  }, [open, fetchListing]);
+
+  const load = useCallback(() => {
+    setLoading(true);
+    void fetchListing();
+  }, [fetchListing]);
 
   const pending = data?.pending ?? [];
   const items = data?.items ?? [];
@@ -93,7 +109,7 @@ export function MediaPicker({
               hint="JPEG, PNG, WebP or HEIC up to 25 MB. Scanned before it can be approved; someone other than you must approve it."
               refreshOnSettle={false}
               compact
-              onUploaded={() => void load()}
+              onUploaded={() => load()}
             />
           </section>
 
@@ -102,7 +118,7 @@ export function MediaPicker({
               <h3 id="media-pending-heading" className="text-sm font-semibold">
                 Awaiting approval ({pending.length})
               </h3>
-              <Button variant="ghost" size="sm" onClick={() => void load()} loading={loading}>
+              <Button variant="ghost" size="sm" onClick={() => load()} loading={loading}>
                 Refresh
               </Button>
             </div>
@@ -117,7 +133,7 @@ export function MediaPicker({
                     ownUpload={p.ownerUserId === currentUserId}
                     onChanged={() => {
                       toast({ title: 'Approved for public use', tone: 'success' });
-                      void load();
+                      load();
                     }}
                   />
                 ))}
@@ -176,7 +192,9 @@ export function MediaPicker({
   );
 }
 
-function statusTone(status: ContentMediaPendingDto['status']): 'neutral' | 'info' | 'warning' | 'danger' {
+function statusTone(
+  status: ContentMediaPendingDto['status'],
+): 'neutral' | 'info' | 'warning' | 'danger' {
   switch (status) {
     case 'clean':
       return 'info';
