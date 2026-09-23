@@ -206,6 +206,61 @@ describe('notification pipeline', () => {
     expect(inviteMail?.text).toContain('/tenant/invitations/accept?token=abc');
   });
 
+  it('notifies invited partners of tenders and the invoice addressee and organisation of payments', async () => {
+    const partner = await createPerson();
+    const invited = await dispatchOutboxEvent(dbs.app, {
+      id: 616161,
+      type: 'tender.invitation.sent',
+      aggregateType: 'tender',
+      aggregateId: '00000000-0000-4000-8000-000000000061',
+      payload: {
+        tenderId: '00000000-0000-4000-8000-000000000061',
+        recipientUserIds: [partner.userId],
+      },
+    });
+    expect(invited.handled).toBe(true);
+    expect(mail.outbox.find((m) => m.to[0]?.email === partner.email)?.subject).toBe(
+      'Invitation to tender',
+    );
+
+    const owner = await createPerson();
+    const orgId = `org_${uniqueSuffix()}`;
+    await dbs.owner
+      .insert(schema.organization)
+      .values({ id: orgId, name: 'Owner org', slug: orgId, createdAt: new Date() });
+    await dbs.owner.insert(schema.member).values({
+      id: `mem_${uniqueSuffix()}`,
+      organizationId: orgId,
+      userId: owner.userId,
+      role: 'owner',
+      createdAt: new Date(),
+    });
+    const [invoice] = await dbs.owner
+      .insert(schema.invoices)
+      .values({
+        organizationId: orgId,
+        number: `INV-TEST-${uniqueSuffix()}`,
+        kind: 'service',
+        status: 'paid',
+        subtotalKobo: 100000n,
+        totalKobo: 100000n,
+        amountPaidKobo: 100000n,
+      })
+      .returning({ id: schema.invoices.id });
+    const paid = await dispatchOutboxEvent(dbs.app, {
+      id: 616162,
+      type: 'invoice.paid',
+      aggregateType: 'invoice',
+      aggregateId: invoice!.id,
+      organizationId: orgId,
+      payload: { invoiceId: invoice!.id },
+    });
+    expect(paid.handled).toBe(true);
+    const ownerMail = mail.outbox.find((m) => m.to[0]?.email === owner.email);
+    expect(ownerMail?.subject).toBe('Invoice paid');
+    expect(ownerMail?.text).toContain(`/portal/invoices/${invoice!.id}`);
+  });
+
   it('ignores unknown event types without failing', async () => {
     const result = await dispatchOutboxEvent(dbs.app, {
       id: 1,

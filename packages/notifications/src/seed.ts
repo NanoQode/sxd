@@ -15,23 +15,23 @@ export const extraNotificationTemplates: Array<{
   bodyText: string;
   variables: string[];
 }> = [
-  // Rentals and maintenance.
+  // Generic activity updates (rentals, maintenance, finance, tenders, procurement).
   {
-    key: 'rental_update',
+    key: 'activity_update',
     channel: 'in_app',
     subject: '{{title}}',
     bodyText: '{{message}}',
     variables: ['title', 'message'],
   },
   {
-    key: 'rental_update',
+    key: 'activity_update',
     channel: 'email',
     subject: '{{title}}',
     bodyText: '{{message}}\n\nView: {{linkUrl}}\n\nSimplexD',
     variables: ['title', 'message', 'linkUrl'],
   },
   {
-    key: 'rental_update',
+    key: 'activity_update',
     channel: 'sms',
     bodyText: 'SimplexD: {{title}}. {{linkUrl}}',
     variables: ['title', 'linkUrl'],

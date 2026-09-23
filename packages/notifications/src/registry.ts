@@ -132,24 +132,29 @@ async function customerRecipients(
 }
 
 /**
- * Rentals and maintenance events. Services put the affected user ids in
- * `recipientUserIds`; staff-facing events (payouts, SLA breaches) go to the
- * roles that act on them. Messages carry no amounts beyond what the recipient
- * can already see in their own portal.
+ * Generic activity notification for events whose services name the affected
+ * users in `recipientUserIds`; staff-facing events add the roles that act on
+ * them. Messages carry no amounts beyond what the recipient can already see
+ * in their own portal.
  */
-function rentalUpdate(opts: {
+function activityUpdate(opts: {
   title: (p: Record<string, unknown>) => string;
   message: (p: Record<string, unknown>) => string;
   link: (p: Record<string, unknown>, event: OutboxEventLike) => string;
   channels?: NotificationChannel[];
   category?: NotificationCategory;
   staffRoles?: Array<(typeof schema.staffRoleEnum.enumValues)[number]>;
+  /** Also notify the customer organisation named on the event. */
+  organizationMembers?: boolean;
   entityType: string;
 }): EventResolver {
   return async ({ tx, event, payload, env, scope }) => {
     const recipients: RecipientSpec[] = strings(payload['recipientUserIds']).map((userId) => ({
       userId,
     }));
+    if (opts.organizationMembers && event.organizationId) {
+      recipients.push(...(await customerRecipients(tx, event.organizationId, [])));
+    }
     if (opts.staffRoles) recipients.push(...(await staffWithRoles(tx, opts.staffRoles)));
     const seen = new Set<string>();
     const unique = recipients.filter((r) => {
@@ -162,7 +167,7 @@ function rentalUpdate(opts: {
     const linkPath = opts.link(payload, event);
     return [
       {
-        templateKey: 'rental_update',
+        templateKey: 'activity_update',
         category: opts.category ?? 'transactional',
         channels: opts.channels ?? EMAIL_APP,
         recipients: unique,
@@ -209,19 +214,19 @@ const rentalResolvers: Record<string, EventResolver> = {
       },
     ];
   },
-  'lease.transitioned': rentalUpdate({
+  'lease.transitioned': activityUpdate({
     entityType: 'lease',
     title: (p) => `Lease ${statusLabel(str(p['to']))}`,
     message: (p) => `Your lease is now ${statusLabel(str(p['to']))}.`,
     link: (p, e) => `/tenant/lease/${str(p['leaseId']) ?? e.aggregateId}`,
   }),
-  'lease.renewed': rentalUpdate({
+  'lease.renewed': activityUpdate({
     entityType: 'lease',
     title: () => 'Lease renewed',
     message: () => 'A renewal of your lease has been recorded. Review the new term and schedule.',
     link: (p, e) => `/tenant/lease/${str(p['renewalLeaseId']) ?? e.aggregateId}`,
   }),
-  'rent.invoice_issued': rentalUpdate({
+  'rent.invoice_issued': activityUpdate({
     entityType: 'lease',
     title: () => 'Rent invoice issued',
     message: () =>
@@ -229,7 +234,7 @@ const rentalResolvers: Record<string, EventResolver> = {
     link: () => '/tenant/balances',
     channels: ALL,
   }),
-  'rent.overdue': rentalUpdate({
+  'rent.overdue': activityUpdate({
     entityType: 'lease',
     title: () => 'Rent overdue',
     message: () =>
@@ -237,19 +242,19 @@ const rentalResolvers: Record<string, EventResolver> = {
     link: () => '/tenant/balances',
     channels: ALL,
   }),
-  'tenant.notice': rentalUpdate({
+  'tenant.notice': activityUpdate({
     entityType: 'lease',
     title: (p) => str(p['title']) ?? 'Notice from your property manager',
     message: (p) => str(p['body']) ?? 'Open your tenant page to read the notice.',
     link: () => '/tenant/notices',
   }),
-  'owner_statement.issued': rentalUpdate({
+  'owner_statement.issued': activityUpdate({
     entityType: 'owner_statement',
     title: () => 'Owner statement issued',
     message: () => 'Your property statement for the period is ready to review.',
     link: (p, e) => `/portal/properties/statements/${str(p['statementId']) ?? e.aggregateId}`,
   }),
-  'payout.transitioned': rentalUpdate({
+  'payout.transitioned': activityUpdate({
     entityType: 'payout',
     title: (p) => `Owner payout ${statusLabel(str(p['to']))}`,
     message: (p) =>
@@ -258,7 +263,7 @@ const rentalResolvers: Record<string, EventResolver> = {
     channels: ['in_app'],
     staffRoles: ['finance'],
   }),
-  'work_order.sla_breached': rentalUpdate({
+  'work_order.sla_breached': activityUpdate({
     entityType: 'work_order',
     title: (p) => `Work order SLA breached (${statusLabel(str(p['priority']))} priority)`,
     message: (p) =>
@@ -268,8 +273,309 @@ const rentalResolvers: Record<string, EventResolver> = {
   }),
 };
 
+/**
+ * Finance events: the customer organisation's members and the invoice's
+ * addressee (a tenant paying rent is not a member) hear about their invoice;
+ * events finance must act on also go to finance staff.
+ */
+function invoiceUpdate(opts: {
+  title: (p: Record<string, unknown>) => string;
+  message: (p: Record<string, unknown>) => string;
+  staffRoles?: Array<(typeof schema.staffRoleEnum.enumValues)[number]>;
+  notifyCustomer?: boolean;
+  channels?: NotificationChannel[];
+}): EventResolver {
+  return async ({ tx, event, payload, env, scope }) => {
+    const invoiceId = str(payload['invoiceId']);
+    const [invoice] = invoiceId
+      ? await tx.select().from(schema.invoices).where(eq(schema.invoices.id, invoiceId))
+      : [];
+    const requests: NotificationRequest[] = [];
+    const customerLink = invoice
+      ? invoice.isRentOnBehalfOfOwner
+        ? '/tenant/balances'
+        : `/portal/invoices/${invoice.id}`
+      : '/portal/invoices';
+    if (opts.notifyCustomer !== false) {
+      const organizationId = invoice?.organizationId ?? event.organizationId ?? null;
+      const recipients = invoice?.isRentOnBehalfOfOwner
+        ? invoice.customerUserId
+          ? [{ userId: invoice.customerUserId }]
+          : []
+        : await customerRecipients(tx, organizationId, [invoice?.customerUserId]);
+      if (recipients.length > 0) {
+        requests.push({
+          templateKey: 'activity_update',
+          category: 'transactional',
+          channels: opts.channels ?? EMAIL_APP,
+          recipients,
+          variables: {
+            title: opts.title(payload),
+            message: opts.message(payload),
+            linkUrl: `${env.appUrl}${customerLink}`,
+          },
+          dedupeScope: `${scope}:customer`,
+          inApp: { linkPath: customerLink },
+          relatedEntity: { type: 'invoice', id: invoice?.id ?? null },
+          organizationId,
+          correlationId: event.correlationId ?? null,
+        });
+      }
+    }
+    if (opts.staffRoles) {
+      const staff = await staffWithRoles(tx, opts.staffRoles);
+      const staffLink = invoice ? `/admin/finance/invoices/${invoice.id}` : '/admin/finance';
+      if (staff.length > 0) {
+        requests.push({
+          templateKey: 'activity_update',
+          category: 'transactional',
+          channels: ['in_app'],
+          recipients: staff,
+          variables: {
+            title: opts.title(payload),
+            message: opts.message(payload),
+            linkUrl: `${env.appUrl}${staffLink}`,
+          },
+          dedupeScope: `${scope}:staff`,
+          inApp: { linkPath: staffLink },
+          relatedEntity: { type: 'invoice', id: invoice?.id ?? null },
+          organizationId: invoice?.organizationId ?? event.organizationId ?? null,
+          correlationId: event.correlationId ?? null,
+        });
+      }
+    }
+    return requests;
+  };
+}
+
+const quoteLink = (p: Record<string, unknown>) =>
+  str(p['serviceRequestId'])
+    ? `/portal/requests/${str(p['serviceRequestId'])}`
+    : `/portal/requests`;
+
+const financeResolvers: Record<string, EventResolver> = {
+  'quote.accepted': activityUpdate({
+    entityType: 'quote',
+    title: () => 'Quote accepted',
+    message: () => 'A quote was accepted. The next step (invoice or scheduling) is under way.',
+    link: (p) =>
+      str(p['serviceRequestId'])
+        ? `/admin/service-requests/${str(p['serviceRequestId'])}`
+        : '/admin/service-requests',
+    channels: ['in_app'],
+    staffRoles: ['operations_manager', 'project_manager'],
+  }),
+  'quote.expired': activityUpdate({
+    entityType: 'quote',
+    organizationMembers: true,
+    title: () => 'Quote expired',
+    message: () =>
+      'A quote passed its validity date without acceptance. Ask for a new one if you still need the service.',
+    link: quoteLink,
+    staffRoles: ['operations_manager'],
+  }),
+  'invoice.paid': invoiceUpdate({
+    title: () => 'Invoice paid',
+    message: () =>
+      'Your payment was verified and applied. The receipt is available with the invoice.',
+  }),
+  'invoice.partially_paid': invoiceUpdate({
+    title: () => 'Part payment received',
+    message: () => 'A payment was verified and applied; a balance remains on the invoice.',
+  }),
+  'invoice.voided': invoiceUpdate({
+    title: (p) => `Invoice ${str(p['number']) ?? ''} voided`.replace('  ', ' '),
+    message: (p) =>
+      `The invoice was voided${str(p['reason']) ? `: ${str(p['reason'])}` : ''}. Nothing is owed on it.`,
+  }),
+  'payment.reversed': invoiceUpdate({
+    title: () => 'Payment reversed',
+    message: () =>
+      'The payment provider reported a reversal, so the payment no longer counts towards the invoice. SimplexD finance will contact you.',
+    staffRoles: ['finance'],
+  }),
+  'bank_transfer.declared': invoiceUpdate({
+    title: () => 'Bank transfer to confirm',
+    message: () => 'A customer declared a bank transfer. Confirm it against the bank statement.',
+    notifyCustomer: false,
+    staffRoles: ['finance'],
+  }),
+  'bank_transfer.rejected': invoiceUpdate({
+    title: () => 'Bank transfer not confirmed',
+    message: (p) =>
+      `The declared transfer could not be matched to a payment${str(p['note']) ? `: ${str(p['note'])}` : ''}.`,
+  }),
+  'refund.requested': invoiceUpdate({
+    title: () => 'Refund requested',
+    message: () => 'A refund was requested and needs approval by a different finance user.',
+    notifyCustomer: false,
+    staffRoles: ['finance'],
+  }),
+  'refund.settled': invoiceUpdate({
+    title: () => 'Refund completed',
+    message: () =>
+      'The payment provider confirmed the refund. It may take a few days to reach your account.',
+  }),
+  'refund.failed': invoiceUpdate({
+    title: () => 'Refund failed',
+    message: () =>
+      'The refund could not be completed by the payment provider. SimplexD finance is following up.',
+    staffRoles: ['finance'],
+  }),
+  'credit_note.issued': invoiceUpdate({
+    title: () => 'Credit note issued',
+    message: () => 'A credit note was issued against your invoice and reduces the amount owed.',
+  }),
+  'chargeback.opened': invoiceUpdate({
+    title: () => 'Chargeback opened',
+    message: () =>
+      'The card issuer opened a dispute on a payment. Evidence is due by the provider deadline.',
+    notifyCustomer: false,
+    staffRoles: ['finance'],
+  }),
+  'integration.degraded': activityUpdate({
+    entityType: 'integration',
+    title: (p) => `${str(p['provider']) ?? 'An integration'} needs attention`,
+    message: (p) =>
+      `The scheduled health check failed${str(p['message']) ? `: ${str(p['message'])}` : ''}. Open Integrations to test and fix it.`,
+    link: (p) =>
+      str(p['provider']) ? `/admin/integrations/${str(p['provider'])}` : '/admin/integrations',
+    channels: ['in_app'],
+    staffRoles: ['super_admin'],
+  }),
+};
+
+const tenderLink = (p: Record<string, unknown>, e: OutboxEventLike) =>
+  `/partner/tenders/${str(p['tenderId']) ?? e.aggregateId}`;
+const tenderAdminLink = (p: Record<string, unknown>, e: OutboxEventLike) =>
+  `/admin/tenders/${str(p['tenderId']) ?? e.aggregateId}`;
+const rfqPartnerLink = (p: Record<string, unknown>, e: OutboxEventLike) =>
+  `/partner/rfqs/${str(p['rfqId']) ?? e.aggregateId}`;
+const poPartnerLink = (p: Record<string, unknown>, e: OutboxEventLike) =>
+  `/partner/orders/${str(p['purchaseOrderId']) ?? e.aggregateId}`;
+
+const commercialResolvers: Record<string, EventResolver> = {
+  'tender.invitation.sent': activityUpdate({
+    entityType: 'tender',
+    title: () => 'Invitation to tender',
+    message: () =>
+      'You have been invited to bid. Review the scope, timeline and submission deadline.',
+    link: tenderLink,
+  }),
+  'tender.revised': activityUpdate({
+    entityType: 'tender',
+    title: () => 'Tender updated',
+    message: () =>
+      'An addendum was issued for a tender you were invited to. Check what changed before you submit.',
+    link: tenderLink,
+  }),
+  'tender.question.asked': activityUpdate({
+    entityType: 'tender',
+    title: () => 'New tender question',
+    message: () =>
+      'A bidder asked a clarification question. Answer and publish it to all invitees.',
+    link: tenderAdminLink,
+    channels: ['in_app'],
+    staffRoles: ['operations_manager'],
+  }),
+  'tender.question.answered': activityUpdate({
+    entityType: 'tender',
+    title: () => 'Clarification published',
+    message: () => 'A clarification was published for a tender you were invited to.',
+    link: tenderLink,
+  }),
+  'tender.closed': activityUpdate({
+    entityType: 'tender',
+    title: () => 'Tender closed',
+    message: () => 'The submission deadline passed. Bids can now be opened for evaluation.',
+    link: tenderAdminLink,
+    channels: ['in_app'],
+    staffRoles: ['operations_manager'],
+  }),
+  'tender.bids_opened': activityUpdate({
+    entityType: 'tender',
+    title: () => 'Sealed bids opened',
+    message: () => 'The sealed bids were opened for evaluation. Every read is logged.',
+    link: tenderAdminLink,
+    channels: ['in_app'],
+    staffRoles: ['operations_manager'],
+  }),
+  'tender.cancelled': activityUpdate({
+    entityType: 'tender',
+    title: () => 'Tender cancelled',
+    message: () =>
+      'A tender you were invited to was cancelled. No further submissions are accepted.',
+    link: tenderLink,
+  }),
+  'tender.award.published': activityUpdate({
+    entityType: 'tender',
+    title: () => 'Tender result published',
+    message: () => 'The result of a tender you bid on was published. Open it to see your outcome.',
+    link: tenderLink,
+  }),
+  'tender.award.responded': activityUpdate({
+    entityType: 'tender',
+    title: (p) =>
+      `Award ${str(p['decision']) === 'declined' ? 'declined' : 'accepted'} by the contractor`,
+    message: () => 'The winning contractor responded to the award.',
+    link: tenderAdminLink,
+    channels: ['in_app'],
+    staffRoles: ['operations_manager'],
+  }),
+  'bid.submitted': activityUpdate({
+    entityType: 'bid',
+    title: () => 'Bid received',
+    message: () => 'A sealed bid was submitted. Its contents stay sealed until the tender closes.',
+    link: tenderAdminLink,
+    channels: ['in_app'],
+    staffRoles: ['operations_manager'],
+  }),
+  'rfq.issued': activityUpdate({
+    entityType: 'rfq',
+    title: () => 'Request for quotation',
+    message: () => 'You have been asked to quote for materials. Respond before the deadline.',
+    link: rfqPartnerLink,
+  }),
+  'rfq.response.submitted': activityUpdate({
+    entityType: 'rfq',
+    title: () => 'Quotation received',
+    message: () => 'A supplier responded to a request for quotation.',
+    link: (p, e) => `/admin/procurement/rfqs/${str(p['rfqId']) ?? e.aggregateId}`,
+    channels: ['in_app'],
+    staffRoles: ['operations_manager'],
+  }),
+  'purchase_order.issued': activityUpdate({
+    entityType: 'purchase_order',
+    title: () => 'Purchase order issued',
+    message: () =>
+      'A purchase order was issued to you. Acknowledge it and confirm the delivery date.',
+    link: poPartnerLink,
+  }),
+  'purchase_order.cancelled': activityUpdate({
+    entityType: 'purchase_order',
+    title: () => 'Purchase order cancelled',
+    message: () => 'A purchase order you received was cancelled.',
+    link: poPartnerLink,
+  }),
+  'delivery.recorded': activityUpdate({
+    entityType: 'purchase_order',
+    title: () => 'Delivery recorded',
+    message: () => 'A delivery against your purchase order was recorded.',
+    link: poPartnerLink,
+  }),
+  'delivery.discrepancy.opened': activityUpdate({
+    entityType: 'purchase_order',
+    title: () => 'Delivery discrepancy',
+    message: () =>
+      'A discrepancy was recorded on a delivery (quantity, damage or specification). Please review it.',
+    link: poPartnerLink,
+  }),
+};
+
 const resolvers: Record<string, EventResolver> = {
   ...rentalResolvers,
+  ...financeResolvers,
+  ...commercialResolvers,
   'notification.requested': requestedNotification,
 
   'lead.created': async ({ tx, event, payload, env, scope }) => {
