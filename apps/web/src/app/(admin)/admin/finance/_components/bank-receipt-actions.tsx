@@ -1,5 +1,6 @@
 'use client';
 
+import { DIALOG_MAX_H } from '@/lib/admin/dialog';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import {
@@ -93,6 +94,7 @@ export function BankReceiptActions({
       </Button>
       <Dialog open={mode !== null} onOpenChange={(v) => !busy && !v && setMode(null)}>
         <DialogContent
+          className={DIALOG_MAX_H}
           title={
             mode === 'confirm'
               ? `Confirm transfer for ${invoiceNumber ?? 'invoice'}`

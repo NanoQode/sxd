@@ -1,5 +1,6 @@
 'use client';
 
+import { DIALOG_MAX_H } from '@/lib/admin/dialog';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { workOrderPrioritySchema, type WorkOrderDto } from '@simplexd/contracts';
@@ -74,6 +75,7 @@ export function WorkOrderCreateDialog({
       </Button>
       <Dialog open={open} onOpenChange={(v) => !busy && setOpen(v)}>
         <DialogContent
+          className={DIALOG_MAX_H}
           title="New work order"
           description="Triage, assignment, approval of the estimate, evidence and verification follow on the work order page."
         >

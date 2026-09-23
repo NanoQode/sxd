@@ -1,5 +1,6 @@
 'use client';
 
+import { DIALOG_MAX_H } from '@/lib/admin/dialog';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import {
@@ -79,6 +80,7 @@ export function IssueRfq({
       </Button>
       <Dialog open={open} onOpenChange={(v) => !busy && setOpen(v)}>
         <DialogContent
+          className={DIALOG_MAX_H}
           title={mode === 'issue' ? 'Issue the RFQ' : 'Invite suppliers'}
           description={
             mode === 'issue'

@@ -1,5 +1,6 @@
 'use client';
 
+import { DIALOG_MAX_H } from '@/lib/admin/dialog';
 import { Plus, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
@@ -148,6 +149,7 @@ export function TenderForm({
       </Button>
       <Dialog open={open} onOpenChange={(v) => !busy && setOpen(v)}>
         <DialogContent
+          className={DIALOG_MAX_H}
           title={tender ? `Edit draft ${tender.reference}` : 'New tender (draft)'}
           description="Drafts are invisible to partners until published. After publication, changes are revisions with a reason."
           size="lg"

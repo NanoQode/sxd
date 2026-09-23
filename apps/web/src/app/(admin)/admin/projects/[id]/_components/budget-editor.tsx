@@ -1,5 +1,6 @@
 'use client';
 
+import { DIALOG_MAX_H } from '@/lib/admin/dialog';
 import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
 import type { BoqItemDto } from '@simplexd/contracts';
@@ -353,6 +354,7 @@ export function NewBudgetVersion({ projectId, hasArea }: { projectId: string; ha
       </Button>
       <Dialog open={open} onOpenChange={(v) => !busy && setOpen(v)}>
         <DialogContent
+          className={DIALOG_MAX_H}
           title="New budget version"
           description="Amounts are whole naira; the server computes item amounts and totals."
           size="lg"

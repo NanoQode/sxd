@@ -1,5 +1,6 @@
 'use client';
 
+import { DIALOG_MAX_H } from '@/lib/admin/dialog';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import type { PurchaseOrderLineDto } from '@simplexd/contracts';
@@ -72,6 +73,7 @@ export function RecordDelivery({
       </Button>
       <Dialog open={open} onOpenChange={(v) => !busy && setOpen(v)}>
         <DialogContent
+          className={DIALOG_MAX_H}
           title="Record a delivery"
           description="Quantities default to what is outstanding; change them to what was counted."
         >

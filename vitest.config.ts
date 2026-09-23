@@ -13,7 +13,8 @@ export default defineConfig({
       'packages/db',
       'packages/finance',
       'packages/notifications',
-      'apps/web',
+      'apps/web/vitest.unit.config.ts',
+      'apps/web/vitest.integration.config.ts',
       'apps/worker',
     ],
     coverage: {

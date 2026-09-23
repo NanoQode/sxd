@@ -1,5 +1,6 @@
 'use client';
 
+import { DIALOG_MAX_H } from '@/lib/admin/dialog';
 import { useState, type ReactNode } from 'react';
 import { Alert, Button, Dialog, DialogContent, DialogFooter, Field, Textarea } from '@simplexd/ui';
 import { errorMessage } from '@/lib/admin/client';
@@ -113,6 +114,7 @@ export function BulkActionBar({
       </Button>
       <Dialog open={Boolean(active)} onOpenChange={(v) => !v && close()}>
         <DialogContent
+          className={DIALOG_MAX_H}
           title={active ? `${active.label}: preview` : 'Preview'}
           description={active?.description}
           size="lg"

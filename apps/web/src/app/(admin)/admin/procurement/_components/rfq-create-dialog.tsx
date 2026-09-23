@@ -1,5 +1,6 @@
 'use client';
 
+import { DIALOG_MAX_H } from '@/lib/admin/dialog';
 import { Plus, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
@@ -97,6 +98,7 @@ export function RfqCreateDialog({
       <Button onClick={() => setOpen(true)}>New RFQ</Button>
       <Dialog open={open} onOpenChange={(v) => !busy && setOpen(v)}>
         <DialogContent
+          className={DIALOG_MAX_H}
           title="New request for quotation"
           description="Created as a draft; issue it with a deadline and invited suppliers from the RFQ page."
           size="lg"

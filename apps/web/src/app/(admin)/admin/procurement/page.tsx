@@ -63,6 +63,8 @@ export default async function ProcurementPage({
   const tabHref = (t: Tab) => (t === 'rfqs' ? '/admin/procurement' : `/admin/procurement?tab=${t}`);
 
   let body: ReactNode = null;
+  /** Creation is offered only when the module answered (a disabled flag hides it). */
+  let canCreate = false;
   if (tab === 'rfqs') {
     const status = rfqStatusSchema.safeParse(raw.status).success
       ? (raw.status as RfqListQuery['status'])
@@ -75,6 +77,7 @@ export default async function ProcurementPage({
         limit: 50,
       }),
     );
+    canCreate = res.ok && can(identity, 'procurement.manage');
     body = !res.ok ? (
       <LoadError code={res.code} message={res.message} what="Procurement" />
     ) : (
@@ -412,11 +415,7 @@ export default async function ProcurementPage({
       <PageHeader
         title="Procurement"
         description="Requests for quotation, delivered-cost comparisons in normalised units, purchase orders, deliveries and discrepancies. An unknown unit conversion stays unknown; it is never estimated."
-        actions={
-          can(identity, 'procurement.manage') && tab === 'rfqs' ? (
-            <RfqCreateDialog organizations={organizations} />
-          ) : undefined
-        }
+        actions={canCreate ? <RfqCreateDialog organizations={organizations} /> : undefined}
       />
       <TabNav label="Procurement views">
         <TabLink href={tabHref('rfqs')} active={tab === 'rfqs'}>

@@ -1,5 +1,6 @@
 'use client';
 
+import { DIALOG_MAX_H } from '@/lib/admin/dialog';
 import { useRouter } from 'next/navigation';
 import { useState, type ReactNode } from 'react';
 import {
@@ -163,7 +164,7 @@ export function FormDialog({
       </Button>
       {disabled && disabledReason ? <span className="sr-only">{disabledReason}</span> : null}
       <Dialog open={open} onOpenChange={(v) => !busy && setOpen(v)}>
-        <DialogContent title={title} description={description} size="lg">
+        <DialogContent className={DIALOG_MAX_H} title={title} description={description} size="lg">
           <div className="grid gap-3 sm:grid-cols-2">
             {error ? (
               <div className="sm:col-span-2">

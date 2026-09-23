@@ -1,5 +1,6 @@
 'use client';
 
+import { DIALOG_MAX_H } from '@/lib/admin/dialog';
 import { DateTime } from 'luxon';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
@@ -116,6 +117,7 @@ export function AppointmentActions({
       </a>
       <Dialog open={open} onOpenChange={(v) => !busy && setOpen(v)}>
         <DialogContent
+          className={DIALOG_MAX_H}
           title="Reschedule"
           description="Pick a new slot with the same kind and organiser. The old time is released only when the new one is booked."
           size="lg"

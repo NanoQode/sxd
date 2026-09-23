@@ -1,5 +1,6 @@
 'use client';
 
+import { DIALOG_MAX_H } from '@/lib/admin/dialog';
 import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
 import type { QuoteDto, QuoteLineInput } from '@simplexd/contracts';
@@ -322,6 +323,7 @@ export function QuotesPanel({
 
       <Dialog open={open} onOpenChange={(v) => !busy && setOpen(v)}>
         <DialogContent
+          className={DIALOG_MAX_H}
           title={target ? `New version of quote v${target.currentVersion}` : 'Draft a quote'}
           description="Amounts are whole naira; the server recomputes every line, tax and total from what it stores."
           size="lg"

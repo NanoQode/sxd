@@ -1,5 +1,6 @@
 'use client';
 
+import { DIALOG_MAX_H } from '@/lib/admin/dialog';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import type { RfqItemDto } from '@simplexd/contracts';
@@ -118,6 +119,7 @@ export function RecordResponse({
       </Button>
       <Dialog open={open} onOpenChange={(v) => !busy && setOpen(v)}>
         <DialogContent
+          className={DIALOG_MAX_H}
           title="Record a supplier response"
           description="Prices are per the supplier's unit. A different unit needs the supplier's declared conversion (1 supplier unit = factor × RFQ unit)."
           size="lg"

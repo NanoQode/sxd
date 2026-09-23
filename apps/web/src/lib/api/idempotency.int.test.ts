@@ -1,3 +1,4 @@
+import { eq } from 'drizzle-orm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { idempotencyKeyHeader } from '@simplexd/contracts';
 import { closeDb, schema } from '@simplexd/db';
@@ -50,8 +51,11 @@ describe('withIdempotency', () => {
   });
 
   afterAll(async () => {
-    await dbs.owner.delete(schema.idempotencyKeys);
-    await dbs.owner.delete(schema.user);
+    // Remove only this suite's rows: other suites share the test database.
+    await dbs.owner
+      .delete(schema.idempotencyKeys)
+      .where(eq(schema.idempotencyKeys.requesterId, userId));
+    await dbs.owner.delete(schema.user).where(eq(schema.user.id, userId));
     await dbs.close();
     await closeDb();
   });

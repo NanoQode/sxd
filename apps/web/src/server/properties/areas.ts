@@ -44,7 +44,17 @@ export function toDeclaredAreaDto(
 ): DeclaredAreaDto | null {
   if (declaredValue === null || declaredUnit === null) {
     // Legacy rows may carry only a square-metre figure; present it honestly as declared in m².
-    return m2 === null ? null : { declaredValue: m2, declaredUnit: 'm2', m2 };
+    return m2 === null ? null : { declaredValue: trimDecimal(m2), declaredUnit: 'm2', m2 };
   }
-  return { declaredValue, declaredUnit, m2 };
+  return { declaredValue: trimDecimal(declaredValue), declaredUnit, m2 };
+}
+
+/**
+ * Numeric columns come back padded to their scale ("1.500"); the declared
+ * figure is shown as the person entered it ("1.5") without changing its value.
+ */
+export function trimDecimal(value: string): string {
+  if (!value.includes('.')) return value;
+  const trimmed = value.replace(/0+$/, '').replace(/\.$/, '');
+  return trimmed === '' || trimmed === '-' ? '0' : trimmed;
 }

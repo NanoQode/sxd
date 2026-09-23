@@ -1,5 +1,6 @@
 'use client';
 
+import { DIALOG_MAX_H } from '@/lib/admin/dialog';
 import { Plus, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
@@ -125,6 +126,7 @@ export function InvoiceCreateDialog({
       <Button onClick={() => setOpen(true)}>New invoice</Button>
       <Dialog open={open} onOpenChange={(v) => !busy && setOpen(v)}>
         <DialogContent
+          className={DIALOG_MAX_H}
           title="New invoice"
           description="Manual invoice for a milestone, management fee or other agreed charge. Quote acceptance creates service invoices automatically."
           size="lg"

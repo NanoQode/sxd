@@ -1,5 +1,6 @@
 'use client';
 
+import { DIALOG_MAX_H } from '@/lib/admin/dialog';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { projectKindSchema, type ProjectDto } from '@simplexd/contracts';
@@ -73,6 +74,7 @@ export function CreateProjectDialog({
       <Button onClick={() => setOpen(true)}>New project</Button>
       <Dialog open={open} onOpenChange={(v) => !busy && setOpen(v)}>
         <DialogContent
+          className={DIALOG_MAX_H}
           title="Create a project"
           description={
             prefill.serviceRequestId

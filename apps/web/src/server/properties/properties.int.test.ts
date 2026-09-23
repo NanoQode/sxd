@@ -9,7 +9,6 @@ import {
   insertFile,
   insertProperty,
   opsIdentity,
-  runtimeCanInsertProperties,
   supportIdentity,
   type Fixture,
 } from '@/server/assignments/testing/fixtures';
@@ -30,16 +29,9 @@ import {
 import { createUnit, listUnits } from './units';
 
 let f: Fixture;
-let canInsert = false;
 
 beforeAll(async () => {
   f = await createFixture();
-  canInsert = await runtimeCanInsertProperties(f.dbs, f.orgA, f.ownerA);
-  if (!canInsert) {
-    console.warn(
-      'properties: the 0001 WITH CHECK policy rejects every INSERT through the runtime role; createProperty test skipped until packages/db splits the policy (read can_access_property / write org_match).',
-    );
-  }
 });
 
 afterAll(async () => {
@@ -48,7 +40,7 @@ afterAll(async () => {
 });
 
 describe('properties', () => {
-  it.skipIf(() => !canInsert)('creates a property for the customer organisation', async () => {
+  it('creates a property for the customer organisation', async () => {
     const created = await createProperty(customerIdentity(f, 'A'), {
       name: 'Lekki plot',
       kind: 'land',
@@ -104,7 +96,7 @@ describe('properties', () => {
     });
     const read = await getProperty(owner, id);
     expect(read.location).toEqual({ lon: 3.47, lat: 6.43 });
-    expect(read.landArea).toEqual({ declaredValue: '1.500', declaredUnit: 'acre', m2: '6070.28' });
+    expect(read.landArea).toEqual({ declaredValue: '1.5', declaredUnit: 'acre', m2: '6070.28' });
     expect(read.preciseLocationPublic).toBe(false);
 
     const updated = await updateProperty(owner, id, {
@@ -116,7 +108,7 @@ describe('properties', () => {
     expect(updated.version).toBe(2);
     expect(updated.titleStatus).toBe('documents_received');
     // A plot has no fixed size: the declared value is kept and no m² is invented.
-    expect(updated.landArea).toEqual({ declaredValue: '2.000', declaredUnit: 'plot', m2: null });
+    expect(updated.landArea).toEqual({ declaredValue: '2', declaredUnit: 'plot', m2: null });
     expect(updated.floorAreaM2).toBe('120.50');
 
     await expect(
@@ -237,7 +229,7 @@ describe('properties', () => {
     });
     expect(parcel.boundary?.type).toBe('Polygon');
     expect(parcel.boundary?.coordinates[0]).toHaveLength(5);
-    expect(parcel.area).toEqual({ declaredValue: '600.000', declaredUnit: 'm2', m2: '600.00' });
+    expect(parcel.area).toEqual({ declaredValue: '600', declaredUnit: 'm2', m2: '600.00' });
     expect((await listParcels(ownerA, id)).map((p) => p.reference)).toEqual(['P1']);
     await expect(createParcel(customerIdentity(f, 'B'), id, { reference: 'P2' })).rejects.toSatisfy(
       (e) => errorCode(e) === 'not_found',

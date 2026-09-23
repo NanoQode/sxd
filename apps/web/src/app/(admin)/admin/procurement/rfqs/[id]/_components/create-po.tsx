@@ -1,5 +1,6 @@
 'use client';
 
+import { DIALOG_MAX_H } from '@/lib/admin/dialog';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import type { PurchaseOrderDetail } from '@simplexd/contracts';
@@ -83,6 +84,7 @@ export function CreatePurchaseOrder({
       </Button>
       <Dialog open={open} onOpenChange={(v) => !busy && setOpen(v)}>
         <DialogContent
+          className={DIALOG_MAX_H}
           title={`Purchase order from ${supplierLabel}`}
           description="Created as a draft; issue it from the order page."
         >

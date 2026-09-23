@@ -1,5 +1,6 @@
 'use client';
 
+import { DIALOG_MAX_H } from '@/lib/admin/dialog';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import {
@@ -78,6 +79,7 @@ export function SupportEscalation({
       </Button>
       <Dialog open={open} onOpenChange={(v) => !busy && setOpen(v)}>
         <DialogContent
+          className={DIALOG_MAX_H}
           title="Open a support ticket"
           description="Creates a support-ticket conversation with the selected members. You are added as a participant."
         >

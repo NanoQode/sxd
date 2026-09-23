@@ -1,5 +1,6 @@
 'use client';
 
+import { DIALOG_MAX_H } from '@/lib/admin/dialog';
 import { Bookmark, X } from 'lucide-react';
 import { useState } from 'react';
 import { Button, Dialog, DialogContent, DialogFooter, Field, Input } from '@simplexd/ui';
@@ -58,6 +59,7 @@ export function SavedViewsBar({ tableKey }: { tableKey: string }) {
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent
+          className={DIALOG_MAX_H}
           title="Save view"
           description="Names the current filters so you can reopen them from this bar."
         >

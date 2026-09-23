@@ -1,36 +1,10 @@
-import path from 'node:path';
 import { defineConfig } from 'vitest/config';
 
+// Running `vitest` inside apps/web runs both projects; the repository root
+// lists the two project files directly so `--project web-unit` and
+// `--project web-integration` work from the root too.
 export default defineConfig({
-  resolve: {
-    alias: {
-      '@': path.resolve(import.meta.dirname, 'src'),
-      'server-only': path.resolve(import.meta.dirname, 'src/testing/server-only-stub.ts'),
-    },
-  },
   test: {
-    projects: [
-      {
-        extends: true,
-        test: {
-          name: 'web-unit',
-          environment: 'node',
-          include: ['src/**/*.unit.test.ts'],
-        },
-      },
-      {
-        extends: true,
-        test: {
-          name: 'web-integration',
-          environment: 'node',
-          include: ['src/**/*.int.test.ts'],
-          globalSetup: ['../../packages/db/src/testing/global-setup.ts'],
-          setupFiles: ['./src/testing/setup-env.ts'],
-          fileParallelism: false,
-          testTimeout: 30_000,
-          hookTimeout: 60_000,
-        },
-      },
-    ],
+    projects: ['./vitest.unit.config.ts', './vitest.integration.config.ts'],
   },
 });

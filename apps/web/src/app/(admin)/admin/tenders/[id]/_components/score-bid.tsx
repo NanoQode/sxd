@@ -1,5 +1,6 @@
 'use client';
 
+import { DIALOG_MAX_H } from '@/lib/admin/dialog';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import {
@@ -74,6 +75,7 @@ export function ScoreBid({
       </Button>
       <Dialog open={open} onOpenChange={(v) => !busy && setOpen(v)}>
         <DialogContent
+          className={DIALOG_MAX_H}
           title={`Score ${label}`}
           description="Each criterion 0–100. The weighted score uses the tender's published weights."
         >

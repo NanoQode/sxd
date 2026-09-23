@@ -1,5 +1,4 @@
-import { eq } from 'drizzle-orm';
-import { schema, withActor, type Database } from '@simplexd/db';
+import { schema, type Database } from '@simplexd/db';
 import {
   connectTestDatabases,
   resetDatabase,
@@ -243,26 +242,6 @@ export async function insertProperty(
     })
     .returning({ id: schema.properties.id });
   return row!.id;
-}
-
-/** True when the runtime role can insert a property (the 0001 policy currently forbids it). */
-export async function runtimeCanInsertProperties(
-  dbs: TestDatabases,
-  organizationId: string,
-  userId: string,
-): Promise<boolean> {
-  try {
-    const rows = await withActor(dbs.app, { userId, organizationId, staff: false }, (tx) =>
-      tx
-        .insert(schema.properties)
-        .values({ organizationId, name: 'probe', kind: 'land' })
-        .returning({ id: schema.properties.id }),
-    );
-    await dbs.owner.delete(schema.properties).where(eq(schema.properties.id, rows[0]!.id));
-    return true;
-  } catch {
-    return false;
-  }
 }
 
 /** Matches an ApiError or AuthorizationError by code. */
