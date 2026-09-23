@@ -171,8 +171,7 @@ export async function updateSavedSearch(
         alertsEnabled,
         // Turning alerts on starts from now; changing criteria also restarts
         // the watermark so earlier listings are not announced retroactively.
-        lastRunAt:
-          alertsEnabled && (!row.alertsEnabled || input.criteria) ? now : row.lastRunAt,
+        lastRunAt: alertsEnabled && (!row.alertsEnabled || input.criteria) ? now : row.lastRunAt,
         updatedAt: now,
       })
       .where(eq(schema.savedSearches.id, id))

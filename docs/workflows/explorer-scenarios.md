@@ -44,9 +44,10 @@ context's `requireAccount(action)` applies it and performs the side effects.
    - `verify`: the verification request form opens (it saves the scenario when sent).
    - `report`: the comparison dialog opens; "Generate dated comparison report" saves and
      snapshots.
-   Cancelling any dialog drops the intent. A reload never repeats it (the URL no longer carries
-   `resume`); an anonymous visitor arriving with `resume` (abandoned sign-in) just sees the
-   restored state.
+
+Cancelling any dialog drops the intent. A reload never repeats it (the URL no longer carries
+`resume`); an anonymous visitor arriving with `resume` (an abandoned sign-in) just sees the
+restored state.
 
 The hint under the scenario actions states the rule for the current flag state. Sign-in and
 sign-up links from the explorer carry `next` so the state is never lost.

@@ -16,7 +16,11 @@ import {
 import type { RequestIdentity } from '@/lib/auth/session';
 import { koboToNaira } from '@/lib/portal/format';
 import { capabilityNote, type CustomerCapabilities } from '@/lib/portal/server/permissions';
-import { AcknowledgeHandoverButton, OfferActions, OfferComposer } from '@/components/portal/search-purchase';
+import {
+  AcknowledgeHandoverButton,
+  OfferActions,
+  OfferComposer,
+} from '@/components/portal/search-purchase';
 import { getPurchaseWorkspace } from '@/server/purchase/closing';
 import { getSearchWorkspace } from '@/server/search/shortlists';
 
@@ -47,7 +51,9 @@ function ItemList({
             <StatusBadge status={i.status} />
           </div>
           {i.detail ? <p className="mt-1 text-sm text-fg-muted">{i.detail}</p> : null}
-          {i.dueAt ? <p className="text-xs text-fg-muted">Due {formatDateTimeLabel(i.dueAt, zone)}</p> : null}
+          {i.dueAt ? (
+            <p className="text-xs text-fg-muted">Due {formatDateTimeLabel(i.dueAt, zone)}</p>
+          ) : null}
           {i.resolutionNote && i.status !== 'satisfied' ? (
             <p className="text-xs text-fg-muted">
               {humanize(i.status)}: {i.resolutionNote}
@@ -87,7 +93,9 @@ export async function PurchaseTab({
     getSearchWorkspace(identity, requestId),
   ]);
   const entries = search.shortlists.flatMap((s) => s.items.filter((i) => i.status !== 'removed'));
-  const live = ws.offers.some((o) => ['draft', 'submitted', 'countered', 'accepted'].includes(o.status));
+  const live = ws.offers.some((o) =>
+    ['draft', 'submitted', 'countered', 'accepted'].includes(o.status),
+  );
   const commitReason = capabilityNote(caps, 'Committing the organisation to an offer');
   return (
     <section aria-label="Purchase representation" className="space-y-6">
@@ -97,12 +105,15 @@ export async function PurchaseTab({
             <div>
               <CardTitle>Offers and negotiation</CardTitle>
               <CardDescription>
-                Every step is recorded in an append-only log. Your representative records the seller&apos;s
-                responses; only an owner or approver commits the organisation.
+                Every step is recorded in an append-only log. Your representative records the
+                seller&apos;s responses; only an owner or approver commits the organisation.
               </CardDescription>
             </div>
             {!closed && !live && caps.can('org.requests.create') ? (
-              <OfferComposer serviceRequestId={requestId} entries={entries.map((e) => ({ id: e.id, title: e.title }))} />
+              <OfferComposer
+                serviceRequestId={requestId}
+                entries={entries.map((e) => ({ id: e.id, title: e.title }))}
+              />
             ) : null}
           </div>
         </CardHeader>
@@ -120,7 +131,9 @@ export async function PurchaseTab({
                     <p className="font-medium">{o.subjectTitle}</p>
                     <p className="text-sm text-fg-muted">
                       {koboToNaira(o.amountKobo, { whole: true })}
-                      {o.expiresAt ? ` · valid until ${formatDateTimeLabel(o.expiresAt, zone)}` : ''}
+                      {o.expiresAt
+                        ? ` · valid until ${formatDateTimeLabel(o.expiresAt, zone)}`
+                        : ''}
                     </p>
                   </div>
                   <StatusBadge status={o.status} />
@@ -142,7 +155,11 @@ export async function PurchaseTab({
                   ))}
                 </ol>
                 {!closed ? (
-                  <OfferActions offer={o} canCommit={caps.acceptQuotes} cannotCommitReason={commitReason} />
+                  <OfferActions
+                    offer={o}
+                    canCommit={caps.acceptQuotes}
+                    cannotCommitReason={commitReason}
+                  />
                 ) : null}
               </div>
             ))
@@ -154,7 +171,9 @@ export async function PurchaseTab({
         <Card>
           <CardHeader>
             <CardTitle>Conditions</CardTitle>
-            <CardDescription>Terms the purchase depends on; each is satisfied or waived with a reason.</CardDescription>
+            <CardDescription>
+              Terms the purchase depends on; each is satisfied or waived with a reason.
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <ItemList items={ws.conditions} empty="No conditions recorded yet." zone={zone} />
@@ -163,13 +182,18 @@ export async function PurchaseTab({
         <Card>
           <CardHeader>
             <CardTitle>Diligence dependency</CardTitle>
-            <CardDescription>Closing waits for your due-diligence request to be clear.</CardDescription>
+            <CardDescription>
+              Closing waits for your due-diligence request to be clear.
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
             {ws.diligence.request ? (
               <p>
                 Linked request:{' '}
-                <Link href={`/portal/requests/${ws.diligence.request.id}`} className="text-primary underline">
+                <Link
+                  href={`/portal/requests/${ws.diligence.request.id}`}
+                  className="text-primary underline"
+                >
                   {ws.diligence.request.reference}
                 </Link>{' '}
                 ({humanize(ws.diligence.request.status)})
@@ -204,15 +228,21 @@ export async function PurchaseTab({
           <CardHeader>
             <CardTitle>Document handover</CardTitle>
             <CardDescription>
-              Acknowledge each document once you have received and checked it. Files open from the Documents tab.
+              Acknowledge each document once you have received and checked it. Files open from the
+              Documents tab.
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <ItemList items={ws.handoverDocuments} empty="No documents handed over yet." zone={zone}>
+            <ItemList
+              items={ws.handoverDocuments}
+              empty="No documents handed over yet."
+              zone={zone}
+            >
               {(i) =>
                 i.acknowledged ? (
                   <p className="text-xs text-fg-muted">
-                    Receipt acknowledged {i.resolvedAt ? formatDateTimeLabel(i.resolvedAt, zone) : ''}
+                    Receipt acknowledged{' '}
+                    {i.resolvedAt ? formatDateTimeLabel(i.resolvedAt, zone) : ''}
                     {i.resolvedByName ? ` by ${i.resolvedByName}` : ''}.
                   </p>
                 ) : ['open', 'in_progress'].includes(i.status) && !closed ? (
@@ -222,7 +252,11 @@ export async function PurchaseTab({
                     <AcknowledgeHandoverButton
                       itemId={i.id}
                       expectedVersion={i.version}
-                      disabledReason={caps.viewDocuments ? undefined : capabilityNote(caps, 'Acknowledging documents')}
+                      disabledReason={
+                        caps.viewDocuments
+                          ? undefined
+                          : capabilityNote(caps, 'Acknowledging documents')
+                      }
                     />
                   )
                 ) : null
@@ -236,8 +270,8 @@ export async function PurchaseTab({
         <CardHeader>
           <CardTitle>Fee basis and closing</CardTitle>
           <CardDescription>
-            Purchase representation is charged on an agreed percentage basis with a signed scope; the closing pack is
-            released by a reviewer once every item above is resolved.
+            Purchase representation is charged on an agreed percentage basis with a signed scope;
+            the closing pack is released by a reviewer once every item above is resolved.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3 text-sm">
@@ -245,14 +279,19 @@ export async function PurchaseTab({
             <p>
               Agreed fee: {((ws.feeBasis.percentageBps ?? 0) / 100).toFixed(2)}% of{' '}
               {ws.feeBasis.basisDescription ?? 'the agreed basis'}
-              {ws.feeBasis.basisAmountKobo ? ` (${koboToNaira(ws.feeBasis.basisAmountKobo, { whole: true })})` : ''} ={' '}
-              <strong>{ws.feeBasis.feeKobo ? koboToNaira(ws.feeBasis.feeKobo, { whole: true }) : '—'}</strong>, agreed{' '}
-              {formatDateTimeLabel(ws.feeBasis.agreedAt, zone)}.
+              {ws.feeBasis.basisAmountKobo
+                ? ` (${koboToNaira(ws.feeBasis.basisAmountKobo, { whole: true })})`
+                : ''}{' '}
+              ={' '}
+              <strong>
+                {ws.feeBasis.feeKobo ? koboToNaira(ws.feeBasis.feeKobo, { whole: true }) : '—'}
+              </strong>
+              , agreed {formatDateTimeLabel(ws.feeBasis.agreedAt, zone)}.
             </p>
           ) : (
             <p className="text-fg-muted">
-              No fee basis agreed yet: it is fixed when you accept the percentage quote that names the agreed purchase
-              price (or cap) and references the scope you signed.
+              No fee basis agreed yet: it is fixed when you accept the percentage quote that names
+              the agreed purchase price (or cap) and references the scope you signed.
             </p>
           )}
           {ws.readiness.blockers.length > 0 ? (

@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { ApiError, uuidSchema, purchaseOfferActionSchema } from '@simplexd/contracts';
 import { getIdentity } from '@/lib/auth/session';
-import { json, params, parseJson, parseQuery, route } from '@/lib/api/respond';
+import { json, params, parseJson, route } from '@/lib/api/respond';
 import '@/lib/api/registry/search-purchase';
 import { applyPurchaseOfferAction } from '@/server/purchase/offers';
 
@@ -20,7 +20,10 @@ export const POST = route<{ params: Promise<{ id: string }> }>(async (req, ctx) 
   const identity = await identityOrThrow();
   const { id } = await params(ctx, idParams);
   const body = await parseJson(req, purchaseOfferActionSchema);
-  return json(await applyPurchaseOfferAction(identity, id, body, { correlationId: ctx.correlationId }), {
-    correlationId: ctx.correlationId,
-  });
+  return json(
+    await applyPurchaseOfferAction(identity, id, body, { correlationId: ctx.correlationId }),
+    {
+      correlationId: ctx.correlationId,
+    },
+  );
 });

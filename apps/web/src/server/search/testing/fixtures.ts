@@ -159,7 +159,12 @@ export async function createSearchFixture(): Promise<SearchFixture> {
     .onConflictDoNothing({ target: schema.countries.code });
   const [state] = await o
     .insert(schema.states)
-    .values({ countryCode: 'NG', name: `Test State ${s}`, code: `TS${s.slice(-4)}`, geopoliticalZone: 'SW' })
+    .values({
+      countryCode: 'NG',
+      name: `Test State ${s}`,
+      code: `TS${s.slice(-4)}`,
+      geopoliticalZone: 'SW',
+    })
     .returning({ id: schema.states.id });
   const markets = await o
     .insert(schema.markets)
@@ -310,7 +315,13 @@ export async function insertListing(f: SearchFixture, spec: ListingSpec): Promis
 /** A clean, scanned file row attached to a request (owner role). */
 export async function insertCleanFile(
   f: SearchFixture,
-  input: { ownerUserId: string; organizationId: string | null; entityId: string; name?: string; purpose?: string },
+  input: {
+    ownerUserId: string;
+    organizationId: string | null;
+    entityId: string;
+    name?: string;
+    purpose?: string;
+  },
 ): Promise<string> {
   const content = `${input.name ?? 'file'}-${randomUUID()}`;
   const [row] = await f.dbs.owner
@@ -362,60 +373,129 @@ export async function cleanupSearchFixture(f: SearchFixture): Promise<void> {
   const orgs = [f.orgA, f.orgB, f.sellerOrg];
   const srs = [f.searchA, f.purchaseA, f.diligenceA, f.searchB];
   const reports = (
-    await o.select({ id: schema.reports.id }).from(schema.reports).where(inArray(schema.reports.organizationId, orgs))
+    await o
+      .select({ id: schema.reports.id })
+      .from(schema.reports)
+      .where(inArray(schema.reports.organizationId, orgs))
   ).map((r) => r.id);
-  await attempt(() => o.delete(schema.jobs).where(like(schema.jobs.dedupeKey, `saved-search-alert:%`)));
   await attempt(() =>
-    o.delete(schema.notes).where(or(inArray(schema.notes.organizationId, orgs), inArray(schema.notes.entityId, srs))),
+    o.delete(schema.jobs).where(like(schema.jobs.dedupeKey, `saved-search-alert:%`)),
   );
-  await attempt(() => o.delete(schema.engagementItems).where(inArray(schema.engagementItems.serviceRequestId, srs)));
+  await attempt(() =>
+    o
+      .delete(schema.notes)
+      .where(or(inArray(schema.notes.organizationId, orgs), inArray(schema.notes.entityId, srs))),
+  );
+  await attempt(() =>
+    o.delete(schema.engagementItems).where(inArray(schema.engagementItems.serviceRequestId, srs)),
+  );
   if (reports.length > 0) {
-    await attempt(() => o.delete(schema.reportRevisions).where(inArray(schema.reportRevisions.reportId, reports)));
+    await attempt(() =>
+      o.delete(schema.reportRevisions).where(inArray(schema.reportRevisions.reportId, reports)),
+    );
     await attempt(() => o.delete(schema.reports).where(inArray(schema.reports.id, reports)));
   }
   await attempt(() => o.delete(schema.offers).where(inArray(schema.offers.organizationId, orgs)));
-  await attempt(() => o.delete(schema.viewings).where(inArray(schema.viewings.organizationId, orgs)));
-  await attempt(() => o.delete(schema.shortlists).where(inArray(schema.shortlists.organizationId, orgs)));
-  await attempt(() => o.delete(schema.savedSearches).where(inArray(schema.savedSearches.userId, f.userIds)));
-  await attempt(() => o.delete(schema.appointments).where(inArray(schema.appointments.organizationId, orgs)));
+  await attempt(() =>
+    o.delete(schema.viewings).where(inArray(schema.viewings.organizationId, orgs)),
+  );
+  await attempt(() =>
+    o.delete(schema.shortlists).where(inArray(schema.shortlists.organizationId, orgs)),
+  );
+  await attempt(() =>
+    o.delete(schema.savedSearches).where(inArray(schema.savedSearches.userId, f.userIds)),
+  );
+  await attempt(() =>
+    o.delete(schema.appointments).where(inArray(schema.appointments.organizationId, orgs)),
+  );
   if (f.listingIds.length > 0) {
-    await attempt(() => o.delete(schema.listingRevisions).where(inArray(schema.listingRevisions.listingId, f.listingIds)));
+    await attempt(() =>
+      o
+        .delete(schema.listingRevisions)
+        .where(inArray(schema.listingRevisions.listingId, f.listingIds)),
+    );
     await attempt(() => o.delete(schema.listings).where(inArray(schema.listings.id, f.listingIds)));
   }
   if (f.propertyIds.length > 0)
-    await attempt(() => o.delete(schema.properties).where(inArray(schema.properties.id, f.propertyIds)));
+    await attempt(() =>
+      o.delete(schema.properties).where(inArray(schema.properties.id, f.propertyIds)),
+    );
   if (f.fileIds.length > 0) {
-    await attempt(() => o.delete(schema.fileAccessGrants).where(inArray(schema.fileAccessGrants.fileId, f.fileIds)));
-    await attempt(() => o.delete(schema.fileObjects).where(inArray(schema.fileObjects.id, f.fileIds)));
+    await attempt(() =>
+      o.delete(schema.fileAccessGrants).where(inArray(schema.fileAccessGrants.fileId, f.fileIds)),
+    );
+    await attempt(() =>
+      o.delete(schema.fileObjects).where(inArray(schema.fileObjects.id, f.fileIds)),
+    );
   }
   const quotes = (
-    await o.select({ id: schema.quotes.id }).from(schema.quotes).where(inArray(schema.quotes.serviceRequestId, srs))
+    await o
+      .select({ id: schema.quotes.id })
+      .from(schema.quotes)
+      .where(inArray(schema.quotes.serviceRequestId, srs))
   ).map((q) => q.id);
   if (quotes.length > 0) {
     const versions = (
-      await o.select({ id: schema.quoteVersions.id }).from(schema.quoteVersions).where(inArray(schema.quoteVersions.quoteId, quotes))
+      await o
+        .select({ id: schema.quoteVersions.id })
+        .from(schema.quoteVersions)
+        .where(inArray(schema.quoteVersions.quoteId, quotes))
     ).map((v) => v.id);
     if (versions.length > 0) {
-      await attempt(() => o.delete(schema.acceptances).where(inArray(schema.acceptances.quoteVersionId, versions)));
-      await attempt(() => o.delete(schema.quoteVersions).where(inArray(schema.quoteVersions.id, versions)));
+      await attempt(() =>
+        o.delete(schema.acceptances).where(inArray(schema.acceptances.quoteVersionId, versions)),
+      );
+      await attempt(() =>
+        o.delete(schema.quoteVersions).where(inArray(schema.quoteVersions.id, versions)),
+      );
     }
     await attempt(() => o.delete(schema.quotes).where(inArray(schema.quotes.id, quotes)));
   }
-  await attempt(() => o.delete(schema.engagementTransitions).where(inArray(schema.engagementTransitions.serviceRequestId, srs)));
-  await attempt(() => o.delete(schema.assignments).where(inArray(schema.assignments.serviceRequestId, srs)));
-  await attempt(() => o.delete(schema.outboxEvents).where(inArray(schema.outboxEvents.organizationId, orgs)));
-  await attempt(() => o.delete(schema.auditEvents).where(inArray(schema.auditEvents.organizationId, orgs)));
-  await attempt(() => o.delete(schema.auditEvents).where(inArray(schema.auditEvents.actorUserId, f.userIds)));
-  await attempt(() => o.delete(schema.serviceRequests).where(inArray(schema.serviceRequests.id, srs)));
   await attempt(() =>
-    o.delete(schema.servicePackages).where(inArray(schema.servicePackages.serviceId, [f.searchServiceId, f.purchaseServiceId, f.diligenceServiceId])),
+    o
+      .delete(schema.engagementTransitions)
+      .where(inArray(schema.engagementTransitions.serviceRequestId, srs)),
   );
   await attempt(() =>
-    o.delete(schema.services).where(inArray(schema.services.id, [f.searchServiceId, f.purchaseServiceId, f.diligenceServiceId])),
+    o.delete(schema.assignments).where(inArray(schema.assignments.serviceRequestId, srs)),
   );
-  await attempt(() => o.delete(schema.markets).where(inArray(schema.markets.id, [f.marketId, f.otherMarketId])));
+  await attempt(() =>
+    o.delete(schema.outboxEvents).where(inArray(schema.outboxEvents.organizationId, orgs)),
+  );
+  await attempt(() =>
+    o.delete(schema.auditEvents).where(inArray(schema.auditEvents.organizationId, orgs)),
+  );
+  await attempt(() =>
+    o.delete(schema.auditEvents).where(inArray(schema.auditEvents.actorUserId, f.userIds)),
+  );
+  await attempt(() =>
+    o.delete(schema.serviceRequests).where(inArray(schema.serviceRequests.id, srs)),
+  );
+  await attempt(() =>
+    o
+      .delete(schema.servicePackages)
+      .where(
+        inArray(schema.servicePackages.serviceId, [
+          f.searchServiceId,
+          f.purchaseServiceId,
+          f.diligenceServiceId,
+        ]),
+      ),
+  );
+  await attempt(() =>
+    o
+      .delete(schema.services)
+      .where(
+        inArray(schema.services.id, [f.searchServiceId, f.purchaseServiceId, f.diligenceServiceId]),
+      ),
+  );
+  await attempt(() =>
+    o.delete(schema.markets).where(inArray(schema.markets.id, [f.marketId, f.otherMarketId])),
+  );
   await attempt(() => o.delete(schema.states).where(eq(schema.states.id, f.stateId)));
-  await attempt(() => o.delete(schema.staffRoles).where(inArray(schema.staffRoles.userId, f.userIds)));
+  await attempt(() =>
+    o.delete(schema.staffRoles).where(inArray(schema.staffRoles.userId, f.userIds)),
+  );
   await attempt(() => o.delete(schema.member).where(inArray(schema.member.organizationId, orgs)));
   await attempt(() => o.delete(schema.organization).where(inArray(schema.organization.id, orgs)));
   await attempt(() => o.delete(schema.user).where(and(inArray(schema.user.id, f.userIds))));

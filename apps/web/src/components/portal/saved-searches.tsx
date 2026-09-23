@@ -35,7 +35,15 @@ import { ErrorState } from './error-state';
  */
 
 const KINDS = ['sale', 'lease', 'short_stay'] as const;
-const PROPERTY_KINDS = ['land', 'residential', 'commercial', 'industrial', 'mixed_use', 'student_housing', 'short_stay'] as const;
+const PROPERTY_KINDS = [
+  'land',
+  'residential',
+  'commercial',
+  'industrial',
+  'mixed_use',
+  'student_housing',
+  'short_stay',
+] as const;
 const CHECKS = [
   { value: 'owner_authority', label: 'Owner authority reviewed' },
   { value: 'title_document_sighted', label: 'Title document sighted' },
@@ -87,7 +95,9 @@ export function SavedSearchesManager({
   const [checks, setChecks] = useState<string[]>([]);
   const [keywords, setKeywords] = useState('');
   const [alerts, setAlerts] = useState(true);
-  const [matches, setMatches] = useState<Record<string, SavedSearchMatchesDto | 'loading' | undefined>>({});
+  const [matches, setMatches] = useState<
+    Record<string, SavedSearchMatchesDto | 'loading' | undefined>
+  >({});
 
   const toggle = (list: string[], set: (v: string[]) => void, value: string) =>
     set(list.includes(value) ? list.filter((v) => v !== value) : [...list, value]);
@@ -161,7 +171,9 @@ export function SavedSearchesManager({
   async function showMatches(s: SavedSearchDto) {
     setMatches((m) => ({ ...m, [s.id]: 'loading' }));
     try {
-      const result = await portalFetch<SavedSearchMatchesDto>(`/api/v1/saved-searches/${s.id}/matches`);
+      const result = await portalFetch<SavedSearchMatchesDto>(
+        `/api/v1/saved-searches/${s.id}/matches`,
+      );
       setMatches((m) => ({ ...m, [s.id]: result }));
     } catch (err) {
       toast({ title: describeError(err).message, tone: 'danger' });
@@ -179,11 +191,18 @@ export function SavedSearchesManager({
         `${c.minPriceKobo ? koboToNaira(c.minPriceKobo, { whole: true }) : '₦0'} – ${c.maxPriceKobo ? koboToNaira(c.maxPriceKobo, { whole: true }) : 'any'}`,
       );
     if (c.minAreaM2 || c.maxAreaM2) parts.push(`${c.minAreaM2 ?? 0}–${c.maxAreaM2 ?? '∞'} m²`);
-    if (c.marketIds.length) parts.push(c.marketIds.map((id) => markets.find((m) => m.id === id)?.name ?? 'market').join(', '));
-    if (c.stateIds.length) parts.push(c.stateIds.map((id) => states.find((m) => m.id === id)?.name ?? 'state').join(', '));
+    if (c.marketIds.length)
+      parts.push(
+        c.marketIds.map((id) => markets.find((m) => m.id === id)?.name ?? 'market').join(', '),
+      );
+    if (c.stateIds.length)
+      parts.push(
+        c.stateIds.map((id) => states.find((m) => m.id === id)?.name ?? 'state').join(', '),
+      );
     if (c.requireTenureDisclosed) parts.push('tenure disclosed');
     if (c.requireTitleDisclosure) parts.push('title disclosure');
-    if (c.requiredVerificationChecks.length) parts.push(`verified: ${c.requiredVerificationChecks.map(humanize).join(', ')}`);
+    if (c.requiredVerificationChecks.length)
+      parts.push(`verified: ${c.requiredVerificationChecks.map(humanize).join(', ')}`);
     if (c.keywords) parts.push(`“${c.keywords}”`);
     return parts.join(' · ');
   };
@@ -218,23 +237,34 @@ export function SavedSearchesManager({
                     <CardTitle>{s.name}</CardTitle>
                     <CardDescription>{describe(s)}</CardDescription>
                   </div>
-                  <Badge tone={s.alertsEnabled ? 'success' : 'neutral'}>{s.alertsEnabled ? 'Alerts on' : 'Alerts off'}</Badge>
+                  <Badge tone={s.alertsEnabled ? 'success' : 'neutral'}>
+                    {s.alertsEnabled ? 'Alerts on' : 'Alerts off'}
+                  </Badge>
                 </div>
               </CardHeader>
               <CardContent className="space-y-3 text-sm">
                 <p className="text-xs text-fg-muted">
                   Saved {formatDateTimeLabel(s.createdAt, zone)}
-                  {s.alertsEnabled && s.lastRunAt ? ` · alerts checked ${formatDateTimeLabel(s.lastRunAt, zone)}` : ''}
+                  {s.alertsEnabled && s.lastRunAt
+                    ? ` · alerts checked ${formatDateTimeLabel(s.lastRunAt, zone)}`
+                    : ''}
                 </p>
                 <div className="flex flex-wrap items-center gap-3">
                   {canManage ? (
                     <Switch
                       checked={s.alertsEnabled}
                       label="Alerts"
-                      onCheckedChange={(v) => void patch(s, { alertsEnabled: v }, v ? 'Alerts enabled' : 'Alerts paused')}
+                      onCheckedChange={(v) =>
+                        void patch(s, { alertsEnabled: v }, v ? 'Alerts enabled' : 'Alerts paused')
+                      }
                     />
                   ) : null}
-                  <Button size="sm" variant="secondary" onClick={() => void showMatches(s)} loading={m === 'loading'}>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => void showMatches(s)}
+                    loading={m === 'loading'}
+                  >
                     Show current matches
                   </Button>
                   {canManage ? (
@@ -245,16 +275,27 @@ export function SavedSearchesManager({
                 </div>
                 {m && m !== 'loading' ? (
                   m.items.length === 0 ? (
-                    <p className="text-fg-muted">No published listing matches today ({m.evaluated} evaluated).</p>
+                    <p className="text-fg-muted">
+                      No published listing matches today ({m.evaluated} evaluated).
+                    </p>
                   ) : (
                     <ul className="divide-y divide-border rounded-md border border-border">
                       {m.items.map((l) => (
-                        <li key={l.id} className="flex flex-wrap items-center justify-between gap-2 p-2">
-                          <a href={`/properties/${l.slug}`} className="font-medium text-primary underline">
+                        <li
+                          key={l.id}
+                          className="flex flex-wrap items-center justify-between gap-2 p-2"
+                        >
+                          <a
+                            href={`/properties/${l.slug}`}
+                            className="font-medium text-primary underline"
+                          >
                             {l.title}
                           </a>
                           <span className="text-xs text-fg-muted">
-                            {humanize(l.kind)} · {l.priceKobo ? koboToNaira(l.priceKobo, { whole: true }) : 'price not disclosed'}
+                            {humanize(l.kind)} ·{' '}
+                            {l.priceKobo
+                              ? koboToNaira(l.priceKobo, { whole: true })
+                              : 'price not disclosed'}
                             {l.areaM2 ? ` · ${l.areaM2} m²` : ''}
                             {l.marketName ? ` · ${l.marketName}` : ''}
                           </span>
@@ -270,18 +311,40 @@ export function SavedSearchesManager({
       )}
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent title="New saved search" size="md" description="Leave a field empty when it does not matter. A listing that does not disclose its price or area never matches a price or area bound.">
+        <DialogContent
+          title="New saved search"
+          size="md"
+          description="Leave a field empty when it does not matter. A listing that does not disclose its price or area never matches a price or area bound."
+        >
           <div className="space-y-3">
-            {error ? <ErrorState title="Could not save" message={error.message} correlationId={error.correlationId} /> : null}
+            {error ? (
+              <ErrorState
+                title="Could not save"
+                message={error.message}
+                correlationId={error.correlationId}
+              />
+            ) : null}
             <Field label="Name" required>
-              {({ id }) => <Input id={id} maxLength={120} value={name} onChange={(e) => setName(e.target.value)} />}
+              {({ id }) => (
+                <Input
+                  id={id}
+                  maxLength={120}
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                />
+              )}
             </Field>
             <fieldset className="space-y-1">
               <legend className="text-sm font-medium">Listing type</legend>
               <div className="flex flex-wrap gap-3">
                 {KINDS.map((k) => (
                   <label key={k} className="flex items-center gap-1 text-sm">
-                    <input type="checkbox" checked={kinds.includes(k)} onChange={() => toggle(kinds, setKinds, k)} /> {humanize(k)}
+                    <input
+                      type="checkbox"
+                      checked={kinds.includes(k)}
+                      onChange={() => toggle(kinds, setKinds, k)}
+                    />{' '}
+                    {humanize(k)}
                   </label>
                 ))}
               </div>
@@ -291,20 +354,69 @@ export function SavedSearchesManager({
               <div className="flex flex-wrap gap-3">
                 {PROPERTY_KINDS.map((k) => (
                   <label key={k} className="flex items-center gap-1 text-sm">
-                    <input type="checkbox" checked={propertyKinds.includes(k)} onChange={() => toggle(propertyKinds, setPropertyKinds, k)} /> {humanize(k)}
+                    <input
+                      type="checkbox"
+                      checked={propertyKinds.includes(k)}
+                      onChange={() => toggle(propertyKinds, setPropertyKinds, k)}
+                    />{' '}
+                    {humanize(k)}
                   </label>
                 ))}
               </div>
             </fieldset>
             <div className="grid gap-3 sm:grid-cols-2">
-              <Field label="Minimum price (₦)">{({ id }) => <Input id={id} inputMode="numeric" value={minPrice} onChange={(e) => setMinPrice(e.target.value)} />}</Field>
-              <Field label="Maximum price (₦)">{({ id }) => <Input id={id} inputMode="numeric" value={maxPrice} onChange={(e) => setMaxPrice(e.target.value)} />}</Field>
-              <Field label="Minimum area (m²)">{({ id }) => <Input id={id} inputMode="decimal" value={minArea} onChange={(e) => setMinArea(e.target.value)} />}</Field>
-              <Field label="Maximum area (m²)">{({ id }) => <Input id={id} inputMode="decimal" value={maxArea} onChange={(e) => setMaxArea(e.target.value)} />}</Field>
+              <Field label="Minimum price (₦)">
+                {({ id }) => (
+                  <Input
+                    id={id}
+                    inputMode="numeric"
+                    value={minPrice}
+                    onChange={(e) => setMinPrice(e.target.value)}
+                  />
+                )}
+              </Field>
+              <Field label="Maximum price (₦)">
+                {({ id }) => (
+                  <Input
+                    id={id}
+                    inputMode="numeric"
+                    value={maxPrice}
+                    onChange={(e) => setMaxPrice(e.target.value)}
+                  />
+                )}
+              </Field>
+              <Field label="Minimum area (m²)">
+                {({ id }) => (
+                  <Input
+                    id={id}
+                    inputMode="decimal"
+                    value={minArea}
+                    onChange={(e) => setMinArea(e.target.value)}
+                  />
+                )}
+              </Field>
+              <Field label="Maximum area (m²)">
+                {({ id }) => (
+                  <Input
+                    id={id}
+                    inputMode="decimal"
+                    value={maxArea}
+                    onChange={(e) => setMaxArea(e.target.value)}
+                  />
+                )}
+              </Field>
             </div>
-            <Field label="Markets" hint="Hold Ctrl/Cmd to choose several. A listing matches when its market or its state is chosen.">
+            <Field
+              label="Markets"
+              hint="Hold Ctrl/Cmd to choose several. A listing matches when its market or its state is chosen."
+            >
               {({ id }) => (
-                <NativeSelect id={id} multiple value={marketIds} onChange={(e) => setMarketIds([...e.target.selectedOptions].map((o) => o.value))}>
+                <NativeSelect
+                  id={id}
+                  multiple
+                  value={marketIds}
+                  onChange={(e) => setMarketIds([...e.target.selectedOptions].map((o) => o.value))}
+                >
                   {markets.map((m) => (
                     <option key={m.id} value={m.id}>
                       {m.name}
@@ -315,7 +427,12 @@ export function SavedSearchesManager({
             </Field>
             <Field label="States">
               {({ id }) => (
-                <NativeSelect id={id} multiple value={stateIds} onChange={(e) => setStateIds([...e.target.selectedOptions].map((o) => o.value))}>
+                <NativeSelect
+                  id={id}
+                  multiple
+                  value={stateIds}
+                  onChange={(e) => setStateIds([...e.target.selectedOptions].map((o) => o.value))}
+                >
                   {states.map((m) => (
                     <option key={m.id} value={m.id}>
                       {m.name}
@@ -333,20 +450,40 @@ export function SavedSearchesManager({
               <div className="flex flex-wrap gap-3">
                 {CHECKS.map((c) => (
                   <label key={c.value} className="flex items-center gap-1 text-sm">
-                    <input type="checkbox" checked={checks.includes(c.value)} onChange={() => toggle(checks, setChecks, c.value)} /> {c.label}
+                    <input
+                      type="checkbox"
+                      checked={checks.includes(c.value)}
+                      onChange={() => toggle(checks, setChecks, c.value)}
+                    />{' '}
+                    {c.label}
                   </label>
                 ))}
               </div>
             </fieldset>
             <Field label="Keywords" hint="All words must appear in the listing title.">
-              {({ id }) => <Input id={id} maxLength={120} value={keywords} onChange={(e) => setKeywords(e.target.value)} />}
+              {({ id }) => (
+                <Input
+                  id={id}
+                  maxLength={120}
+                  value={keywords}
+                  onChange={(e) => setKeywords(e.target.value)}
+                />
+              )}
             </Field>
-            <Switch checked={alerts} onCheckedChange={setAlerts} label="Alert me when a matching listing is published" />
+            <Switch
+              checked={alerts}
+              onCheckedChange={setAlerts}
+              label="Alert me when a matching listing is published"
+            />
             <DialogFooter>
               <Button variant="ghost" onClick={() => setOpen(false)} disabled={busy}>
                 Cancel
               </Button>
-              <Button onClick={() => void create()} loading={busy} disabled={name.trim().length < 2}>
+              <Button
+                onClick={() => void create()}
+                loading={busy}
+                disabled={name.trim().length < 2}
+              >
                 Save search
               </Button>
             </DialogFooter>

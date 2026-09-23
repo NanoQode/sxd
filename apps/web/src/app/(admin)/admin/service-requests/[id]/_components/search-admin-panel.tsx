@@ -103,8 +103,21 @@ function ShortlistControls({
           successMessage="Outcome recorded"
           extraBody={{ expectedUpdatedAt: shortlist.updatedAt }}
           fields={[
-            { name: 'outcome', label: 'Outcome', type: 'select', required: true, options: OUTCOME_OPTIONS, wide: true },
-            { name: 'summary', label: 'Summary for the customer', type: 'textarea', required: true, wide: true },
+            {
+              name: 'outcome',
+              label: 'Outcome',
+              type: 'select',
+              required: true,
+              options: OUTCOME_OPTIONS,
+              wide: true,
+            },
+            {
+              name: 'summary',
+              label: 'Summary for the customer',
+              type: 'textarea',
+              required: true,
+              wide: true,
+            },
           ]}
         />
       )}
@@ -122,7 +135,9 @@ export async function SearchAdminPanel({
   canManage: boolean;
 }) {
   const ws = await attempt(() => getSearchWorkspace(identity, requestId));
-  const listings = ws.ok ? await searchPublishedListings(identity, { limit: 50 }).catch(() => []) : [];
+  const listings = ws.ok
+    ? await searchPublishedListings(identity, { limit: 50 }).catch(() => [])
+    : [];
   return (
     <Section
       id="property-search"
@@ -155,7 +170,9 @@ export async function SearchAdminPanel({
                     <p className="font-medium">{s.name}</p>
                     <p className="text-xs text-fg-muted">
                       {s.items.length} entries · updated {formatDateTimeLabel(s.updatedAt)}
-                      {s.acceptance ? ` · accepted by ${s.acceptance.acceptedByName ?? 'the customer'}` : ''}
+                      {s.acceptance
+                        ? ` · accepted by ${s.acceptance.acceptedByName ?? 'the customer'}`
+                        : ''}
                     </p>
                   </div>
                   <StatusBadge status={s.status} />
@@ -177,8 +194,12 @@ export async function SearchAdminPanel({
                         <li key={i.id} className="flex flex-wrap items-center gap-2">
                           <span className="font-medium">{i.title}</span>
                           <StatusBadge status={i.status} />
-                          {i.customerRating ? <Badge tone="info">Rated {i.customerRating}/5</Badge> : null}
-                          {i.customerFeedback ? <span className="text-fg-muted">“{i.customerFeedback}”</span> : null}
+                          {i.customerRating ? (
+                            <Badge tone="info">Rated {i.customerRating}/5</Badge>
+                          ) : null}
+                          {i.customerFeedback ? (
+                            <span className="text-fg-muted">“{i.customerFeedback}”</span>
+                          ) : null}
                           {s.status === 'draft' || s.status === 'shared' ? (
                             <FormDialog
                               trigger="Edit"
@@ -189,21 +210,54 @@ export async function SearchAdminPanel({
                               size="sm"
                               variant="ghost"
                               fields={[
-                                { name: 'notes', label: 'Note for the customer', type: 'textarea', defaultValue: i.notes ?? '', wide: true },
+                                {
+                                  name: 'notes',
+                                  label: 'Note for the customer',
+                                  type: 'textarea',
+                                  defaultValue: i.notes ?? '',
+                                  wide: true,
+                                },
                                 {
                                   name: 'status',
                                   label: 'Status',
                                   type: 'select',
                                   defaultValue: i.status,
-                                  options: ['candidate', 'preferred', 'viewing_requested', 'viewed', 'rejected', 'removed'].map((v) => ({ value: v, label: humanize(v) })),
+                                  options: [
+                                    'candidate',
+                                    'preferred',
+                                    'viewing_requested',
+                                    'viewed',
+                                    'rejected',
+                                    'removed',
+                                  ].map((v) => ({ value: v, label: humanize(v) })),
                                 },
-                                { name: 'sortOrder', label: 'Order', type: 'number', defaultValue: i.sortOrder },
+                                {
+                                  name: 'sortOrder',
+                                  label: 'Order',
+                                  type: 'number',
+                                  defaultValue: i.sortOrder,
+                                },
                                 ...(i.listingId
                                   ? []
                                   : [
-                                      { name: 'title', label: 'Title', defaultValue: i.title, wide: true },
-                                      { name: 'externalReference', label: 'Source reference', defaultValue: i.externalReference ?? '', wide: true },
-                                      { name: 'priceKobo', label: 'Asking price (₦)', type: 'naira' as const, hint: 'Leave blank when not disclosed.' },
+                                      {
+                                        name: 'title',
+                                        label: 'Title',
+                                        defaultValue: i.title,
+                                        wide: true,
+                                      },
+                                      {
+                                        name: 'externalReference',
+                                        label: 'Source reference',
+                                        defaultValue: i.externalReference ?? '',
+                                        wide: true,
+                                      },
+                                      {
+                                        name: 'priceKobo',
+                                        label: 'Asking price (₦)',
+                                        type: 'naira' as const,
+                                        hint: 'Leave blank when not disclosed.',
+                                      },
                                     ]),
                               ]}
                             />
@@ -221,8 +275,12 @@ export async function SearchAdminPanel({
             <p className="font-medium">Viewings</p>
             {ws.value.viewings.length === 0 ? (
               <p className="text-fg-muted">
-                No viewings yet. External properties are viewed through a booked viewing appointment (
-                <Link href={`/admin/appointments/book?serviceRequestId=${requestId}`} className="underline">
+                No viewings yet. External properties are viewed through a booked viewing appointment
+                (
+                <Link
+                  href={`/admin/appointments/book?serviceRequestId=${requestId}`}
+                  className="underline"
+                >
                   book one
                 </Link>
                 ) which the customer or you then record as a viewing.
@@ -230,14 +288,19 @@ export async function SearchAdminPanel({
             ) : (
               <ul className="space-y-2">
                 {ws.value.viewings.map((v) => (
-                  <li key={v.id} className="flex flex-wrap items-center gap-2 rounded-md border border-border p-2">
+                  <li
+                    key={v.id}
+                    className="flex flex-wrap items-center gap-2 rounded-md border border-border p-2"
+                  >
                     <span className="font-medium">{v.title}</span>
                     <StatusBadge status={v.status} />
                     <span className="text-xs text-fg-muted">
                       {v.scheduledAt ? formatDateTimeLabel(v.scheduledAt) : 'unscheduled'}
                       {v.requestedByName ? ` · requested by ${v.requestedByName}` : ''}
                     </span>
-                    {v.feedback ? <span className="text-xs text-fg-muted">Customer: “{v.feedback}”</span> : null}
+                    {v.feedback ? (
+                      <span className="text-xs text-fg-muted">Customer: “{v.feedback}”</span>
+                    ) : null}
                     {canManage && (v.status === 'requested' || v.status === 'confirmed') ? (
                       <>
                         <FormDialog
@@ -247,9 +310,18 @@ export async function SearchAdminPanel({
                           method="PATCH"
                           size="sm"
                           submitLabel="Save"
-                          extraBody={{ expectedUpdatedAt: v.updatedAt, ...(v.status === 'requested' ? { status: 'confirmed' } : {}) }}
+                          extraBody={{
+                            expectedUpdatedAt: v.updatedAt,
+                            ...(v.status === 'requested' ? { status: 'confirmed' } : {}),
+                          }}
                           fields={[
-                            { name: 'scheduledAt', label: 'Scheduled at', type: 'datetime', required: true, wide: true },
+                            {
+                              name: 'scheduledAt',
+                              label: 'Scheduled at',
+                              type: 'datetime',
+                              required: true,
+                              wide: true,
+                            },
                             ...(ws.value.unlinkedViewingAppointments.length > 0
                               ? [
                                   {
@@ -288,7 +360,11 @@ export async function SearchAdminPanel({
                           method="PATCH"
                           body={{ status: 'cancelled', expectedUpdatedAt: v.updatedAt }}
                           label="Cancel"
-                          confirm={{ title: 'Cancel this viewing', confirmLabel: 'Cancel viewing', tone: 'danger' }}
+                          confirm={{
+                            title: 'Cancel this viewing',
+                            confirmLabel: 'Cancel viewing',
+                            tone: 'danger',
+                          }}
                         />
                       </>
                     ) : null}

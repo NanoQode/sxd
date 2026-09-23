@@ -124,7 +124,16 @@ function tallies(items: ItemRow[]) {
 async function loadOutcomes(
   tx: Transaction,
   serviceRequestId: string,
-): Promise<Map<string, { report: typeof schema.reports.$inferSelect; findings: Record<string, unknown>; summary: string | null }>> {
+): Promise<
+  Map<
+    string,
+    {
+      report: typeof schema.reports.$inferSelect;
+      findings: Record<string, unknown>;
+      summary: string | null;
+    }
+  >
+> {
   const reports = await tx
     .select()
     .from(schema.reports)
@@ -137,12 +146,19 @@ async function loadOutcomes(
     .orderBy(desc(schema.reports.createdAt));
   const out = new Map<
     string,
-    { report: typeof schema.reports.$inferSelect; findings: Record<string, unknown>; summary: string | null }
+    {
+      report: typeof schema.reports.$inferSelect;
+      findings: Record<string, unknown>;
+      summary: string | null;
+    }
   >();
   for (const report of reports) {
     const version = report.releasedVersion ?? report.currentVersion;
     const [rev] = await tx
-      .select({ findings: schema.reportRevisions.findings, summary: schema.reportRevisions.summary })
+      .select({
+        findings: schema.reportRevisions.findings,
+        summary: schema.reportRevisions.summary,
+      })
       .from(schema.reportRevisions)
       .where(
         and(
@@ -154,7 +170,8 @@ async function loadOutcomes(
       rev?.findings && typeof rev.findings === 'object'
         ? (rev.findings as Record<string, unknown>)
         : {};
-    const shortlistId = typeof findings['shortlistId'] === 'string' ? findings['shortlistId'] : null;
+    const shortlistId =
+      typeof findings['shortlistId'] === 'string' ? findings['shortlistId'] : null;
     if (shortlistId && !out.has(shortlistId)) {
       out.set(shortlistId, { report, findings, summary: rev?.summary ?? null });
     }
@@ -186,7 +203,11 @@ function itemDto(item: ItemRow, listing: ListingFactsRow | null): ShortlistItemD
     status: normalizeItemStatus(item.status),
     sortOrder: item.sortOrder,
     comparison: comparisonFor(
-      { listingId: item.listingId, externalReference: item.externalReference, priceKobo: item.priceKobo },
+      {
+        listingId: item.listingId,
+        externalReference: item.externalReference,
+        priceKobo: item.priceKobo,
+      },
       listing,
     ),
     createdAt: item.createdAt.toISOString(),
@@ -356,7 +377,10 @@ export async function updateShortlist(
     assertUpdatedAt(row.updatedAt, input.expectedUpdatedAt);
     const current = normalizeShortlistStatus(row.status);
     if (isShortlistFrozen(current)) {
-      throw new ApiError('invalid_transition', `the shortlist is ${current} and can no longer change`);
+      throw new ApiError(
+        'invalid_transition',
+        `the shortlist is ${current} and can no longer change`,
+      );
     }
     const nextStatus = input.status ?? current;
     if (nextStatus === 'shared') {
@@ -365,7 +389,10 @@ export async function updateShortlist(
         .from(schema.shortlistItems)
         .where(eq(schema.shortlistItems.shortlistId, id));
       if (count.length === 0) {
-        throw new ApiError('validation_failed', 'add at least one entry before sharing the shortlist');
+        throw new ApiError(
+          'validation_failed',
+          'add at least one entry before sharing the shortlist',
+        );
       }
     }
     const [updated] = await tx
@@ -410,10 +437,17 @@ export async function addShortlistItem(
     requireStaffManage(identity, ws);
     assertRequestOpen(ws);
     if (isShortlistFrozen(row.status)) {
-      throw new ApiError('invalid_transition', `the shortlist is ${row.status}; entries are frozen`);
+      throw new ApiError(
+        'invalid_transition',
+        `the shortlist is ${row.status}; entries are frozen`,
+      );
     }
     const existing = await tx
-      .select({ id: schema.shortlistItems.id, listingId: schema.shortlistItems.listingId, sortOrder: schema.shortlistItems.sortOrder })
+      .select({
+        id: schema.shortlistItems.id,
+        listingId: schema.shortlistItems.listingId,
+        sortOrder: schema.shortlistItems.sortOrder,
+      })
       .from(schema.shortlistItems)
       .where(eq(schema.shortlistItems.shortlistId, shortlistId));
     const sortOrder = existing.reduce((m, i) => Math.max(m, i.sortOrder), -1) + 1;
@@ -430,7 +464,10 @@ export async function addShortlistItem(
         });
       }
       if (listing.organizationId === ws.access.sr.organizationId) {
-        throw new ApiError('validation_failed', "the customer's own listing cannot be shortlisted for them");
+        throw new ApiError(
+          'validation_failed',
+          "the customer's own listing cannot be shortlisted for them",
+        );
       }
       values = {
         shortlistId,
@@ -490,9 +527,17 @@ export async function updateShortlistItem(
     requireStaffManage(identity, ws);
     assertRequestOpen(ws);
     if (isShortlistFrozen(row.status)) {
-      throw new ApiError('invalid_transition', `the shortlist is ${row.status}; entries are frozen`);
+      throw new ApiError(
+        'invalid_transition',
+        `the shortlist is ${row.status}; entries are frozen`,
+      );
     }
-    if (item.listingId && (input.title !== undefined || input.priceKobo !== undefined || input.externalReference !== undefined)) {
+    if (
+      item.listingId &&
+      (input.title !== undefined ||
+        input.priceKobo !== undefined ||
+        input.externalReference !== undefined)
+    ) {
       throw new ApiError(
         'validation_failed',
         'a listing-backed entry takes its title and price from the published listing',
@@ -554,13 +599,16 @@ export async function giveShortlistFeedback(
     if (status !== 'shared') {
       throw new ApiError(
         'invalid_transition',
-        status === 'draft' ? 'shortlist not found' : `the shortlist is ${status}; feedback is closed`,
+        status === 'draft'
+          ? 'shortlist not found'
+          : `the shortlist is ${status}; feedback is closed`,
       );
     }
     const nextStatus =
       input.preference === undefined
         ? item.status
-        : input.preference === 'candidate' && (item.status === 'preferred' || item.status === 'rejected')
+        : input.preference === 'candidate' &&
+            (item.status === 'preferred' || item.status === 'rejected')
           ? 'candidate'
           : input.preference === 'candidate'
             ? item.status
@@ -677,7 +725,10 @@ export async function recordShortlistOutcome(
     assertUpdatedAt(row.updatedAt, input.expectedUpdatedAt);
     const status = normalizeShortlistStatus(row.status);
     if (status === 'outcome_recorded') {
-      throw new ApiError('invalid_transition', 'the outcome of this shortlist was already recorded');
+      throw new ApiError(
+        'invalid_transition',
+        'the outcome of this shortlist was already recorded',
+      );
     }
     const items = await tx
       .select()

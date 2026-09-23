@@ -416,7 +416,9 @@ export function closingReadiness(input: ClosingInput): ClosingReadiness {
       itemIds: openTasks.map((t) => t.id),
     });
   }
-  const live = input.handoverDocuments.filter((d) => d.status !== 'cancelled' && d.status !== 'waived');
+  const live = input.handoverDocuments.filter(
+    (d) => d.status !== 'cancelled' && d.status !== 'waived',
+  );
   const noFiles = live.filter((d) => (d.fileCount ?? 0) === 0);
   if (noFiles.length > 0) {
     blockers.push({

@@ -40,16 +40,24 @@ async function purchaseRequest(): Promise<string> {
     .update(schema.serviceRequests)
     .set({ serviceId: purchaseServiceId, title: 'Represent me on Plot 5' })
     .where(eq(schema.serviceRequests.id, sr.id));
-  await triageServiceRequest(rt, staffActor({ userId: t.opsUser, roles: ['operations_manager'] }), sr.id, {
-    assignedPmUserId: t.opsUser,
-    priority: 3,
-    expectedVersion: 1,
-  });
+  await triageServiceRequest(
+    rt,
+    staffActor({ userId: t.opsUser, roles: ['operations_manager'] }),
+    sr.id,
+    {
+      assignedPmUserId: t.opsUser,
+      priority: 3,
+      expectedVersion: 1,
+    },
+  );
   requestIds.push(sr.id);
   return sr.id;
 }
 
-async function signedScope(serviceRequestId: string, status: 'clean' | 'scanning' = 'clean'): Promise<string> {
+async function signedScope(
+  serviceRequestId: string,
+  status: 'clean' | 'scanning' = 'clean',
+): Promise<string> {
   const content = randomUUID();
   const [row] = await dbs.owner
     .insert(schema.fileObjects)
@@ -103,7 +111,12 @@ beforeAll(async () => {
   });
   await dbs.owner
     .insert(schema.slaPolicies)
-    .values({ serviceId: purchaseServiceId, stage: 'triage', targetHours: 24, businessHoursOnly: false });
+    .values({
+      serviceId: purchaseServiceId,
+      stage: 'triage',
+      targetHours: 24,
+      businessHoursOnly: false,
+    });
 });
 
 afterAll(async () => {
@@ -117,8 +130,12 @@ afterAll(async () => {
   };
   if (fileIds.length > 0)
     await attempt(() => o.delete(schema.fileObjects).where(eq(schema.fileObjects.id, fileIds[0]!)));
-  await attempt(() => o.delete(schema.servicePackages).where(eq(schema.servicePackages.serviceId, purchaseServiceId)));
-  await attempt(() => o.delete(schema.slaPolicies).where(eq(schema.slaPolicies.serviceId, purchaseServiceId)));
+  await attempt(() =>
+    o.delete(schema.servicePackages).where(eq(schema.servicePackages.serviceId, purchaseServiceId)),
+  );
+  await attempt(() =>
+    o.delete(schema.slaPolicies).where(eq(schema.slaPolicies.serviceId, purchaseServiceId)),
+  );
   await dbs.close();
 });
 
@@ -155,7 +172,11 @@ describe('percentage-basis purchase-support fees', () => {
     });
     const unsigned = await addQuoteVersion(rt, ops, typed.id, {
       lines: [{ description: 'ignored', quantity: '1', unitAmountKobo: '1' }],
-      feeBasis: { percentageBps: 150, basisAmountKobo: '4600000000', basisKind: 'agreed_purchase_price' },
+      feeBasis: {
+        percentageBps: 150,
+        basisAmountKobo: '4600000000',
+        basisKind: 'agreed_purchase_price',
+      },
       currency: 'NGN',
       depositBps: 10_000,
       requiresPayment: true,

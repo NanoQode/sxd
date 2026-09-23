@@ -441,11 +441,13 @@ export function ExplorerProvider({
   const draftRestoredRef = useRef(false);
   const initialParamsRef = useRef(params);
   useEffect(() => {
-    if (draftRestoredRef.current) return;
-    draftRestoredRef.current = true;
     // localStorage is an external system; restore after mount so server and
-    // client render the same first frame.
+    // client render the same first frame. The once-only guard sits inside the
+    // timer so React's development double-mount (which clears the first timer
+    // in its cleanup) still restores exactly once.
     const timer = window.setTimeout(() => {
+      if (draftRestoredRef.current) return;
+      draftRestoredRef.current = true;
       const initial = initialParamsRef.current;
       setLastScenarioId(loadLastScenarioId());
       if (initial.resume) {

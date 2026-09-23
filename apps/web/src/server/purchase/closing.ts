@@ -145,7 +145,9 @@ async function toItemDtos(
               status: schema.fileObjects.status,
             })
             .from(schema.fileObjects)
-            .where(and(inArray(schema.fileObjects.id, fileIds), isNull(schema.fileObjects.deletedAt)))
+            .where(
+              and(inArray(schema.fileObjects.id, fileIds), isNull(schema.fileObjects.deletedAt)),
+            )
         ).map((f) => [f.id, f]),
   );
   const userIds = [...new Set(rows.map((r) => r.resolvedBy).filter((v): v is string => !!v))];
@@ -188,8 +190,12 @@ async function loadPurchaseItem(
   identity: RequestIdentity,
   id: string,
 ): Promise<{ row: ItemRow; ws: WorkspaceAccess }> {
-  const [row] = await tx.select().from(schema.engagementItems).where(eq(schema.engagementItems.id, id));
-  if (!row || !(PURCHASE_ITEM_KINDS as readonly string[]).includes(row.kind)) throw notFound('item');
+  const [row] = await tx
+    .select()
+    .from(schema.engagementItems)
+    .where(eq(schema.engagementItems.id, id));
+  if (!row || !(PURCHASE_ITEM_KINDS as readonly string[]).includes(row.kind))
+    throw notFound('item');
   const ws = await requireWorkspace(tx, identity, row.serviceRequestId);
   if (ws.viewer === 'customer' && row.visibility !== 'customer' && row.visibility !== 'all') {
     throw notFound('item');
@@ -400,9 +406,12 @@ export async function acknowledgeHandover(
         version: row.version + 1,
         updatedAt: now,
       })
-      .where(and(eq(schema.engagementItems.id, id), eq(schema.engagementItems.version, row.version)))
+      .where(
+        and(eq(schema.engagementItems.id, id), eq(schema.engagementItems.version, row.version)),
+      )
       .returning();
-    if (!updated) throw new ApiError('version_conflict', 'this document changed; reload and try again');
+    if (!updated)
+      throw new ApiError('version_conflict', 'this document changed; reload and try again');
     await recordAudit(tx, identity, {
       action: 'purchase_handover.acknowledged',
       entityType: 'engagement_item',
@@ -596,14 +605,22 @@ export async function linkDiligence(
       .where(eq(schema.serviceRequests.id, input.diligenceRequestId));
     if (!dd) throw notFound('due-diligence request');
     if (dd.organizationId !== ws.access.sr.organizationId) {
-      throw new ApiError('validation_failed', 'the diligence request must belong to the same customer', {
-        details: [{ path: 'diligenceRequestId', message: 'different organisation' }],
-      });
+      throw new ApiError(
+        'validation_failed',
+        'the diligence request must belong to the same customer',
+        {
+          details: [{ path: 'diligenceRequestId', message: 'different organisation' }],
+        },
+      );
     }
     if (dd.key !== 'due_diligence') {
-      throw new ApiError('validation_failed', 'the linked request must be a due-diligence request', {
-        details: [{ path: 'diligenceRequestId', message: 'not a due-diligence request' }],
-      });
+      throw new ApiError(
+        'validation_failed',
+        'the linked request must be a due-diligence request',
+        {
+          details: [{ path: 'diligenceRequestId', message: 'not a due-diligence request' }],
+        },
+      );
     }
     const items = await itemsOf(tx, ws);
     const existing = items.find((i) => isDiligenceLink(i) && i.status !== 'cancelled');
@@ -673,7 +690,8 @@ export async function waiveDiligence(
       organizationId: ws.access.sr.organizationId,
       assigneeUserIds: ws.access.staffAssigneeIds,
     });
-    if (!decision.allowed) throw forbidden('waiving the diligence dependency needs service_requests.override');
+    if (!decision.allowed)
+      throw forbidden('waiving the diligence dependency needs service_requests.override');
     const items = await itemsOf(tx, ws);
     const existing = items.find((i) => isDiligenceLink(i) && i.status !== 'cancelled');
     const now = new Date();
@@ -695,7 +713,8 @@ export async function waiveDiligence(
         serviceRequestId,
         kind: 'condition',
         title: 'Due diligence dependency waived',
-        detail: 'Closing proceeds without a linked due-diligence request (see the recorded reason).',
+        detail:
+          'Closing proceeds without a linked due-diligence request (see the recorded reason).',
         status: 'waived',
         resolvedAt: now,
         resolvedBy: actorId,
@@ -766,7 +785,11 @@ async function readinessOf(
   identity: RequestIdentity,
   ws: WorkspaceAccess,
   items: ItemRow[],
-): Promise<{ readiness: ClosingReadiness; diligence: DiligenceFacts; acceptedOfferId: string | null }> {
+): Promise<{
+  readiness: ClosingReadiness;
+  diligence: DiligenceFacts;
+  acceptedOfferId: string | null;
+}> {
   const accepted = await acceptedOfferOf(tx, ws.access.sr.id);
   const diligence = await diligenceFacts(tx, identity, ws, items);
   const members = await memberIds(tx, ws.access.sr.organizationId);
@@ -783,10 +806,7 @@ async function readinessOf(
   return { readiness, diligence, acceptedOfferId: accepted?.id ?? null };
 }
 
-async function closingRecords(
-  tx: Transaction,
-  ws: WorkspaceAccess,
-): Promise<ClosingRecordDto[]> {
+async function closingRecords(tx: Transaction, ws: WorkspaceAccess): Promise<ClosingRecordDto[]> {
   const reports = await tx
     .select()
     .from(schema.reports)
@@ -802,20 +822,31 @@ async function closingRecords(
   for (const report of reports) {
     const version = report.releasedVersion ?? report.currentVersion;
     const [rev] = await tx
-      .select({ findings: schema.reportRevisions.findings, summary: schema.reportRevisions.summary })
+      .select({
+        findings: schema.reportRevisions.findings,
+        summary: schema.reportRevisions.summary,
+      })
       .from(schema.reportRevisions)
       .where(
-        and(eq(schema.reportRevisions.reportId, report.id), eq(schema.reportRevisions.version, version)),
+        and(
+          eq(schema.reportRevisions.reportId, report.id),
+          eq(schema.reportRevisions.version, version),
+        ),
       );
     const findings =
-      rev?.findings && typeof rev.findings === 'object' ? (rev.findings as Record<string, unknown>) : {};
+      rev?.findings && typeof rev.findings === 'object'
+        ? (rev.findings as Record<string, unknown>)
+        : {};
     const closing = (findings['closing'] ?? {}) as Record<string, unknown>;
     const docs = Array.isArray(closing['handedOverDocuments'])
       ? (closing['handedOverDocuments'] as Array<{ id: string; title: string }>)
       : [];
     const byId = report.status === 'released' ? report.releasedBy : report.createdBy;
     const [by] = byId
-      ? await tx.select({ name: schema.user.name }).from(schema.user).where(eq(schema.user.id, byId))
+      ? await tx
+          .select({ name: schema.user.name })
+          .from(schema.user)
+          .where(eq(schema.user.id, byId))
       : [];
     out.push({
       reportId: report.id,
@@ -825,7 +856,8 @@ async function closingRecords(
       byName: by?.name ?? null,
       note: rev?.summary ?? null,
       handedOverDocuments: docs,
-      acceptedOfferId: typeof closing['acceptedOfferId'] === 'string' ? closing['acceptedOfferId'] : null,
+      acceptedOfferId:
+        typeof closing['acceptedOfferId'] === 'string' ? closing['acceptedOfferId'] : null,
       feeBasis: closing['feeBasis'] ?? null,
     });
   }
@@ -848,9 +880,13 @@ export async function getPurchaseWorkspace(
       serviceRequestVersion: ws.access.sr.version,
       engagementStatus: ws.access.sr.status,
       offers: await listOffersForRequest(tx, ws),
-      conditions: items.filter((i) => i.kind === 'condition' && !isDiligenceLink(i)).map((i) => byId.get(i.id)!),
+      conditions: items
+        .filter((i) => i.kind === 'condition' && !isDiligenceLink(i))
+        .map((i) => byId.get(i.id)!),
       closingTasks: items.filter((i) => i.kind === 'closing_task').map((i) => byId.get(i.id)!),
-      handoverDocuments: items.filter((i) => i.kind === 'handover_document').map((i) => byId.get(i.id)!),
+      handoverDocuments: items
+        .filter((i) => i.kind === 'handover_document')
+        .map((i) => byId.get(i.id)!),
       diligence: diligenceDto(diligence, ws, await diligenceCandidates(tx, ws)),
       readiness,
       feeBasis: feeBasisDto(ws.access.sr),
@@ -900,9 +936,13 @@ export async function prepareClosingPack(
     const items = await itemsOf(tx, ws);
     const { readiness, diligence, acceptedOfferId } = await readinessOf(tx, identity, ws, items);
     if (!readiness.ready) {
-      throw new ApiError('insufficient_evidence', 'closing is blocked until every item below is resolved', {
-        details: readiness.blockers,
-      });
+      throw new ApiError(
+        'insufficient_evidence',
+        'closing is blocked until every item below is resolved',
+        {
+          details: readiness.blockers,
+        },
+      );
     }
     const existing = await tx
       .select({ id: schema.reports.id, status: schema.reports.status })
@@ -978,7 +1018,9 @@ export async function prepareClosingPack(
       title: `Closing pack — ${ws.access.sr.reference}`,
       referenceItems: true,
       initialRevision: {
-        summary: input.note ?? `Closing pack for ${ws.access.sr.reference}: accepted offer, cleared conditions, completed checklist, acknowledged handover and agreed fee basis.`,
+        summary:
+          input.note ??
+          `Closing pack for ${ws.access.sr.reference}: accepted offer, cleared conditions, completed checklist, acknowledged handover and agreed fee basis.`,
         bodyMarkdown: body,
         findings: {
           closing: {

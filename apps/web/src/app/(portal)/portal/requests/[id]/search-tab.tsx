@@ -45,7 +45,10 @@ const ROWS: Array<{ key: keyof ShortlistComparisonDto; label: string }> = [
   { key: 'availability', label: 'Availability' },
 ];
 
-const SOURCE_LABEL = { listing: 'from the published listing', shortlist_entry: 'as stated by the source' };
+const SOURCE_LABEL = {
+  listing: 'from the published listing',
+  shortlist_entry: 'as stated by the source',
+};
 
 function cellText(item: ShortlistItemDto, key: keyof ShortlistComparisonDto): string {
   const v = item.comparison[key];
@@ -94,7 +97,10 @@ export function ComparisonTable({ items }: { items: ShortlistItemDto[] }) {
         <tbody>
           {ROWS.map((row) => (
             <tr key={row.key} className="border-t border-border">
-              <th scope="row" className="px-2 py-2 text-left align-top text-xs font-medium text-fg-muted">
+              <th
+                scope="row"
+                className="px-2 py-2 text-left align-top text-xs font-medium text-fg-muted"
+              >
                 {row.label}
               </th>
               {live.map((i) => {
@@ -111,7 +117,10 @@ export function ComparisonTable({ items }: { items: ShortlistItemDto[] }) {
             </tr>
           ))}
           <tr className="border-t border-border">
-            <th scope="row" className="px-2 py-2 text-left align-top text-xs font-medium text-fg-muted">
+            <th
+              scope="row"
+              className="px-2 py-2 text-left align-top text-xs font-medium text-fg-muted"
+            >
               Source reference
             </th>
             {live.map((i) => (
@@ -140,7 +149,8 @@ function ShortlistCard({
   zone: string;
   closed: boolean;
 }) {
-  const frozen = shortlist.status === 'accepted' || shortlist.status === 'outcome_recorded' || closed;
+  const frozen =
+    shortlist.status === 'accepted' || shortlist.status === 'outcome_recorded' || closed;
   const live = shortlist.items.filter((i) => i.status !== 'removed');
   return (
     <Card>
@@ -160,7 +170,10 @@ function ShortlistCard({
         {shortlist.acceptance ? (
           <Alert tone="success" title="Shortlist accepted">
             Accepted {formatDateTimeLabel(shortlist.acceptance.acceptedAt, zone)}
-            {shortlist.acceptance.acceptedByName ? ` by ${shortlist.acceptance.acceptedByName}` : ''}.
+            {shortlist.acceptance.acceptedByName
+              ? ` by ${shortlist.acceptance.acceptedByName}`
+              : ''}
+            .
           </Alert>
         ) : null}
         {shortlist.status === 'outcome_recorded' ? (
@@ -168,14 +181,18 @@ function ShortlistCard({
             <Alert tone="info" title={`Search outcome: ${humanize(shortlist.outcome.outcome)}`}>
               {shortlist.outcome.summary}{' '}
               {shortlist.outcome.reportId ? (
-                <Link href={`/portal/reports/${shortlist.outcome.reportId}`} className="font-medium underline">
+                <Link
+                  href={`/portal/reports/${shortlist.outcome.reportId}`}
+                  className="font-medium underline"
+                >
                   Read the outcome report
                 </Link>
               ) : null}
             </Alert>
           ) : (
             <Alert tone="info" title="Search outcome recorded">
-              The team documented the outcome of this search. The summary appears here once a reviewer releases it.
+              The team documented the outcome of this search. The summary appears here once a
+              reviewer releases it.
             </Alert>
           )
         ) : null}
@@ -203,7 +220,9 @@ function ShortlistCard({
                         serviceRequestId={serviceRequestId}
                         shortlistItemId={i.id}
                         disabledReason={
-                          caps.manageAppointments ? undefined : capabilityNote(caps, 'Requesting a viewing')
+                          caps.manageAppointments
+                            ? undefined
+                            : capabilityNote(caps, 'Requesting a viewing')
                         }
                       />
                     )
@@ -270,7 +289,14 @@ export async function SearchTab({
         />
       ) : (
         ws.shortlists.map((s) => (
-          <ShortlistCard key={s.id} shortlist={s} serviceRequestId={requestId} caps={caps} zone={zone} closed={closed} />
+          <ShortlistCard
+            key={s.id}
+            shortlist={s}
+            serviceRequestId={requestId}
+            caps={caps}
+            zone={zone}
+            closed={closed}
+          />
         ))
       )}
       <Card>
@@ -282,7 +308,10 @@ export async function SearchTab({
         </CardHeader>
         <CardContent className="space-y-3">
           {!closed && caps.manageAppointments ? (
-            <LinkViewingAppointment serviceRequestId={requestId} appointments={ws.unlinkedViewingAppointments} />
+            <LinkViewingAppointment
+              serviceRequestId={requestId}
+              appointments={ws.unlinkedViewingAppointments}
+            />
           ) : null}
           {ws.viewings.length === 0 ? (
             <p className="text-sm text-fg-muted">No viewings yet.</p>
@@ -295,11 +324,16 @@ export async function SearchTab({
                     <StatusBadge status={v.status} />
                   </div>
                   <p className="text-xs text-fg-muted">
-                    {v.scheduledAt ? formatDateTimeLabel(v.scheduledAt, zone) : 'Time to be confirmed'}
+                    {v.scheduledAt
+                      ? formatDateTimeLabel(v.scheduledAt, zone)
+                      : 'Time to be confirmed'}
                     {v.appointmentId ? (
                       <>
                         {' · '}
-                        <Link href={`/portal/appointments/${v.appointmentId}`} className="underline">
+                        <Link
+                          href={`/portal/appointments/${v.appointmentId}`}
+                          className="underline"
+                        >
                           appointment
                         </Link>
                       </>
@@ -307,7 +341,11 @@ export async function SearchTab({
                   </p>
                   {v.status === 'completed' && !closed && caps.can('org.comment') ? (
                     <div className="mt-2">
-                      <ViewingFeedbackForm viewingId={v.id} expectedUpdatedAt={v.updatedAt} existing={v.feedback} />
+                      <ViewingFeedbackForm
+                        viewingId={v.id}
+                        expectedUpdatedAt={v.updatedAt}
+                        existing={v.feedback}
+                      />
                     </div>
                   ) : v.feedback ? (
                     <p className="mt-1 text-xs text-fg-muted">“{v.feedback}”</p>

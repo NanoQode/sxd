@@ -11,13 +11,12 @@ import { isoDateTimeSchema, uuidSchema } from './common';
 
 const positiveKobo = z.string().regex(/^[1-9]\d*$/, 'positive integer kobo as a string');
 const nonNegativeKobo = z.string().regex(/^\d+$/, 'non-negative integer kobo as a string');
+/** Optional free text; an empty or blank string counts as absent. */
 const optionalText = (max: number) =>
-  z
-    .string()
-    .trim()
-    .max(max)
-    .optional()
-    .transform((v) => (v && v.length > 0 ? v : undefined));
+  z.preprocess(
+    (v) => (typeof v === 'string' && v.trim().length === 0 ? undefined : v),
+    z.string().trim().max(max).optional(),
+  );
 
 /** Opaque optimistic-concurrency token: the record's `updatedAt` as the caller loaded it. */
 const expectedUpdatedAtSchema = isoDateTimeSchema;

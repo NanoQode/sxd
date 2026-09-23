@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { ApiError, uuidSchema, shortlistCreateSchema } from '@simplexd/contracts';
 import { getIdentity } from '@/lib/auth/session';
-import { json, params, parseJson, parseQuery, route } from '@/lib/api/respond';
+import { json, params, parseJson, route } from '@/lib/api/respond';
 import '@/lib/api/registry/search-purchase';
 import { createShortlist } from '@/server/search/shortlists';
 

@@ -1,7 +1,7 @@
 import { z } from 'zod';
-import { ApiError, uuidSchema,  } from '@simplexd/contracts';
+import { ApiError, uuidSchema } from '@simplexd/contracts';
 import { getIdentity } from '@/lib/auth/session';
-import { json, params, parseJson, parseQuery, route } from '@/lib/api/respond';
+import { json, params, route } from '@/lib/api/respond';
 import '@/lib/api/registry/search-purchase';
 import { getSavedSearchMatches } from '@/server/search/saved-searches';
 

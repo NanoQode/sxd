@@ -310,16 +310,28 @@ export async function updatePurchaseOffer(
     const viewer = requireCustomerOrStaff(identity, ws, 'org.requests.create');
     assertRequestOpen(ws);
     if (row.status !== 'draft') {
-      throw new ApiError('invalid_transition', `a ${row.status} offer is not edited; revise it through the negotiation`);
+      throw new ApiError(
+        'invalid_transition',
+        `a ${row.status} offer is not edited; revise it through the negotiation`,
+      );
     }
     if (log.length !== input.expectedEntries) {
-      throw new ApiError('version_conflict', 'the offer changed since you loaded it; reload and try again', {
-        details: { currentEntries: log.length },
-      });
+      throw new ApiError(
+        'version_conflict',
+        'the offer changed since you loaded it; reload and try again',
+        {
+          details: { currentEntries: log.length },
+        },
+      );
     }
     const amountKobo = input.amountKobo ? BigInt(input.amountKobo) : row.amountKobo;
     const conditions = input.conditions ?? conditionsOf(row.conditions);
-    const expiresAt = input.expiresAt === undefined ? row.expiresAt : input.expiresAt ? new Date(input.expiresAt) : null;
+    const expiresAt =
+      input.expiresAt === undefined
+        ? row.expiresAt
+        : input.expiresAt
+          ? new Date(input.expiresAt)
+          : null;
     const next = appendNegotiationEntry(log, {
       at: new Date().toISOString(),
       byUserId: actorId,
@@ -376,9 +388,13 @@ export async function applyPurchaseOfferAction(
     }
     assertRequestOpen(ws);
     if (log.length !== input.expectedEntries) {
-      throw new ApiError('version_conflict', 'the offer changed since you loaded it; reload and try again', {
-        details: { currentEntries: log.length },
-      });
+      throw new ApiError(
+        'version_conflict',
+        'the offer changed since you loaded it; reload and try again',
+        {
+          details: { currentEntries: log.length },
+        },
+      );
     }
     const amount = input.amountKobo ? BigInt(input.amountKobo) : null;
     const check = checkOfferAction({
@@ -390,13 +406,20 @@ export async function applyPurchaseOfferAction(
     });
     if (!check.ok) {
       const code =
-        check.code === 'actor_not_allowed' ? 'forbidden' : check.code === 'invalid_transition' ? 'invalid_transition' : 'validation_failed';
+        check.code === 'actor_not_allowed'
+          ? 'forbidden'
+          : check.code === 'invalid_transition'
+            ? 'invalid_transition'
+            : 'validation_failed';
       throw new ApiError(code, check.message ?? 'invalid offer action', {
         details: { code: check.code, from: row.status, action: input.action },
       });
     }
     if (input.action === 'submit' && row.expiresAt && row.expiresAt < new Date()) {
-      throw new ApiError('validation_failed', 'the offer expiry has passed; set a new expiry before submitting');
+      throw new ApiError(
+        'validation_failed',
+        'the offer expiry has passed; set a new expiry before submitting',
+      );
     }
     const now = new Date();
     const to = check.to;
@@ -420,7 +443,8 @@ export async function applyPurchaseOfferAction(
     if (to) {
       patch.status = to;
       if (amount) patch.amountKobo = amount;
-      if (input.expiresAt !== undefined) patch.expiresAt = input.expiresAt ? new Date(input.expiresAt) : null;
+      if (input.expiresAt !== undefined)
+        patch.expiresAt = input.expiresAt ? new Date(input.expiresAt) : null;
       if (TERMINAL.includes(to)) patch.decidedAt = now;
     }
     const [updated] = await tx
@@ -429,7 +453,10 @@ export async function applyPurchaseOfferAction(
       .where(and(eq(schema.offers.id, id), eq(schema.offers.status, row.status)))
       .returning();
     if (!updated) {
-      throw new ApiError('version_conflict', 'the offer changed since you loaded it; reload and try again');
+      throw new ApiError(
+        'version_conflict',
+        'the offer changed since you loaded it; reload and try again',
+      );
     }
     await recordAudit(tx, identity, {
       action: `purchase_offer.${input.action}`,
@@ -437,7 +464,11 @@ export async function applyPurchaseOfferAction(
       entityId: id,
       organizationId: row.organizationId,
       before: { status: row.status, amountKobo: row.amountKobo.toString(), entries: log.length },
-      after: { status: updated.status, amountKobo: updated.amountKobo.toString(), entries: next.length },
+      after: {
+        status: updated.status,
+        amountKobo: updated.amountKobo.toString(),
+        entries: next.length,
+      },
       reason: input.note ?? null,
       correlationId: options.correlationId,
     });
@@ -466,7 +497,12 @@ export async function applyPurchaseOfferAction(
           entityType: 'engagement_item',
           entityId: item!.id,
           organizationId: row.organizationId,
-          after: { serviceRequestId: row.serviceRequestId, kind: 'condition', title: term, offerId: id },
+          after: {
+            serviceRequestId: row.serviceRequestId,
+            kind: 'condition',
+            title: term,
+            offerId: id,
+          },
           correlationId: options.correlationId,
         });
       }
@@ -517,9 +553,13 @@ export async function acceptedOfferOf(
   const [row] = await tx
     .select()
     .from(schema.offers)
-    .where(and(eq(schema.offers.serviceRequestId, serviceRequestId), eq(schema.offers.status, 'accepted')))
+    .where(
+      and(
+        eq(schema.offers.serviceRequestId, serviceRequestId),
+        eq(schema.offers.status, 'accepted'),
+      ),
+    )
     .orderBy(asc(schema.offers.decidedAt))
     .limit(1);
   return row ?? null;
 }
-

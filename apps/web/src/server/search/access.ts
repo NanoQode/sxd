@@ -47,12 +47,7 @@ export async function requireWorkspace(
   identity: RequestIdentity,
   serviceRequestId: string,
 ): Promise<WorkspaceAccess> {
-  const access = await requireServiceRequest(
-    tx,
-    identity,
-    serviceRequestId,
-    WORKSPACE_READ_CHECKS,
-  );
+  const access = await requireServiceRequest(tx, identity, serviceRequestId, WORKSPACE_READ_CHECKS);
   const viewer: WorkspaceViewer | null =
     identity.actor.staffRoles.length > 0
       ? 'staff'

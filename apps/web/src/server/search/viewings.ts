@@ -81,7 +81,9 @@ async function toDtos(
   const listings = new Map(
     (await loadPublishedListings({ listingIds, includeHidden: true })).map((l) => [l.id, l]),
   );
-  const userIds = [...new Set(rows.map((r) => r.requestedByUserId).filter((v): v is string => !!v))];
+  const userIds = [
+    ...new Set(rows.map((r) => r.requestedByUserId).filter((v): v is string => !!v)),
+  ];
   const names = new Map(
     userIds.length === 0
       ? []
@@ -260,7 +262,8 @@ export async function requestViewing(
         .select({ id: schema.viewings.id })
         .from(schema.viewings)
         .where(eq(schema.viewings.appointmentId, appt.id));
-      if (linked.length > 0) throw new ApiError('conflict', 'this appointment is already linked to a viewing');
+      if (linked.length > 0)
+        throw new ApiError('conflict', 'this appointment is already linked to a viewing');
       title = appt.topic ?? 'Viewing appointment';
       values = {
         organizationId: sr.organizationId,
@@ -275,7 +278,9 @@ export async function requestViewing(
       await tx
         .update(schema.shortlistItems)
         .set({ status: 'viewing_requested' })
-        .where(and(eq(schema.shortlistItems.id, itemId), eq(schema.shortlistItems.status, 'candidate')));
+        .where(
+          and(eq(schema.shortlistItems.id, itemId), eq(schema.shortlistItems.status, 'candidate')),
+        );
     }
     await recordAudit(tx, identity, {
       action: 'viewing.requested',
@@ -324,13 +329,27 @@ export async function updateViewing(
     assertUpdatedAt(row.updatedAt, input.expectedUpdatedAt);
     const nextStatus = input.status ?? row.status;
     if (nextStatus !== row.status && !TRANSITIONS[row.status]?.includes(nextStatus)) {
-      throw new ApiError('invalid_transition', `a ${row.status} viewing cannot become ${nextStatus}`);
+      throw new ApiError(
+        'invalid_transition',
+        `a ${row.status} viewing cannot become ${nextStatus}`,
+      );
     }
-    if (!OPEN.includes(row.status) && (input.scheduledAt !== undefined || input.appointmentId !== undefined)) {
-      throw new ApiError('invalid_transition', `a ${row.status} viewing can no longer be rescheduled`);
+    if (
+      !OPEN.includes(row.status) &&
+      (input.scheduledAt !== undefined || input.appointmentId !== undefined)
+    ) {
+      throw new ApiError(
+        'invalid_transition',
+        `a ${row.status} viewing can no longer be rescheduled`,
+      );
     }
     let appointmentId = row.appointmentId;
-    let scheduledAt = input.scheduledAt === undefined ? row.scheduledAt : input.scheduledAt ? new Date(input.scheduledAt) : null;
+    let scheduledAt =
+      input.scheduledAt === undefined
+        ? row.scheduledAt
+        : input.scheduledAt
+          ? new Date(input.scheduledAt)
+          : null;
     if (input.appointmentId !== undefined) {
       if (input.appointmentId === null) appointmentId = null;
       else {
@@ -417,7 +436,10 @@ export async function giveViewingFeedback(
       row.status === 'completed' ||
       (row.status === 'confirmed' && row.scheduledAt !== null && row.scheduledAt < new Date());
     if (!happened) {
-      throw new ApiError('invalid_transition', 'feedback can be given once the viewing has taken place');
+      throw new ApiError(
+        'invalid_transition',
+        'feedback can be given once the viewing has taken place',
+      );
     }
     const [updated] = await tx
       .update(schema.viewings)

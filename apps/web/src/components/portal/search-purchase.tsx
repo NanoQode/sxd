@@ -53,7 +53,11 @@ function useAction() {
 
 function InlineError({ error }: { error: Err }) {
   return error ? (
-    <ErrorState title="Could not save" message={error.message} correlationId={error.correlationId} />
+    <ErrorState
+      title="Could not save"
+      message={error.message}
+      correlationId={error.correlationId}
+    />
   ) : null;
 }
 
@@ -118,7 +122,11 @@ export function ShortlistFeedback({
             <InlineError error={error} />
             <Field label="Rating" hint="1 = not for us, 5 = strong candidate">
               {({ id }) => (
-                <NativeSelect id={id} value={nextRating} onChange={(e) => setNextRating(e.target.value)}>
+                <NativeSelect
+                  id={id}
+                  value={nextRating}
+                  onChange={(e) => setNextRating(e.target.value)}
+                >
                   <option value="">No rating</option>
                   {[1, 2, 3, 4, 5].map((n) => (
                     <option key={n} value={String(n)}>
@@ -143,7 +151,13 @@ export function ShortlistFeedback({
             </Field>
             <Field label="Feedback for the team">
               {({ id }) => (
-                <Textarea id={id} rows={3} maxLength={2000} value={text} onChange={(e) => setText(e.target.value)} />
+                <Textarea
+                  id={id}
+                  rows={3}
+                  maxLength={2000}
+                  value={text}
+                  onChange={(e) => setText(e.target.value)}
+                />
               )}
             </Field>
             <DialogFooter>
@@ -190,11 +204,22 @@ export function RequestViewingButton({
         Request a viewing
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent title="Request a viewing" size="sm" description="The team confirms a time with the seller and books it.">
+        <DialogContent
+          title="Request a viewing"
+          size="sm"
+          description="The team confirms a time with the seller and books it."
+        >
           <div className="space-y-3">
             <InlineError error={error} />
             <Field label="Preferred times" hint="Optional: days or times that suit you.">
-              {({ id }) => <Input id={id} maxLength={500} value={times} onChange={(e) => setTimes(e.target.value)} />}
+              {({ id }) => (
+                <Input
+                  id={id}
+                  maxLength={500}
+                  value={times}
+                  onChange={(e) => setTimes(e.target.value)}
+                />
+              )}
             </Field>
             <DialogFooter>
               <Button variant="ghost" onClick={() => setOpen(false)} disabled={busy}>
@@ -224,14 +249,22 @@ export function LinkViewingAppointment({
   return (
     <div className="space-y-2 rounded-md border border-border p-3">
       <p className="text-sm">
-        You booked {appointments.length === 1 ? 'a viewing appointment' : `${appointments.length} viewing appointments`} that
+        You booked{' '}
+        {appointments.length === 1
+          ? 'a viewing appointment'
+          : `${appointments.length} viewing appointments`}{' '}
+        that
         {appointments.length === 1 ? ' is' : ' are'} not yet recorded as a viewing.
       </p>
       <InlineError error={error} />
       <div className="flex flex-wrap items-end gap-2">
         <Field label="Appointment">
           {({ id }) => (
-            <NativeSelect id={id} value={appointmentId} onChange={(e) => setAppointmentId(e.target.value)}>
+            <NativeSelect
+              id={id}
+              value={appointmentId}
+              onChange={(e) => setAppointmentId(e.target.value)}
+            >
               {appointments.map((a) => (
                 <option key={a.id} value={a.id}>
                   {new Date(a.startsAt).toLocaleString()} ({humanize(a.status)})
@@ -300,7 +333,15 @@ export function AcceptShortlistButton({
           <div className="space-y-3">
             <InlineError error={error} />
             <Field label="Note for the team" hint="Optional">
-              {({ id }) => <Textarea id={id} rows={3} maxLength={2000} value={note} onChange={(e) => setNote(e.target.value)} />}
+              {({ id }) => (
+                <Textarea
+                  id={id}
+                  rows={3}
+                  maxLength={2000}
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                />
+              )}
             </Field>
             <DialogFooter>
               <Button variant="ghost" onClick={() => setOpen(false)} disabled={busy}>
@@ -343,7 +384,15 @@ export function ViewingFeedbackForm({
     <div className="space-y-2">
       <InlineError error={error} />
       <Field label="How was the viewing?">
-        {({ id }) => <Textarea id={id} rows={2} maxLength={4000} value={text} onChange={(e) => setText(e.target.value)} />}
+        {({ id }) => (
+          <Textarea
+            id={id}
+            rows={2}
+            maxLength={4000}
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+          />
+        )}
       </Field>
       <Button
         size="sm"
@@ -405,7 +454,11 @@ export function OfferComposer({
   const [note, setNote] = useState('');
   if (disabledReason) return <p className="text-sm text-fg-muted">{disabledReason}</p>;
   if (entries.length === 0) {
-    return <p className="text-sm text-fg-muted">An offer is drafted on a shortlisted property; ask the team to shortlist one first.</p>;
+    return (
+      <p className="text-sm text-fg-muted">
+        An offer is drafted on a shortlisted property; ask the team to shortlist one first.
+      </p>
+    );
   }
   async function submit() {
     const kobo = nairaToKobo(amount);
@@ -436,7 +489,11 @@ export function OfferComposer({
         Draft an offer
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent title="Draft an offer" description="A draft is not sent anywhere until you submit it." size="md">
+        <DialogContent
+          title="Draft an offer"
+          description="A draft is not sent anywhere until you submit it."
+          size="md"
+        >
           <div className="space-y-3">
             <InlineError error={error} />
             <Field label="Property">
@@ -451,13 +508,37 @@ export function OfferComposer({
               )}
             </Field>
             <Field label="Offer amount (₦)" required>
-              {({ id }) => <Input id={id} inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} />}
+              {({ id }) => (
+                <Input
+                  id={id}
+                  inputMode="decimal"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                />
+              )}
             </Field>
-            <Field label="Terms" hint="One per line, e.g. “Subject to survey”. Accepted terms become tracked conditions.">
-              {({ id }) => <Textarea id={id} rows={3} value={terms} onChange={(e) => setTerms(e.target.value)} />}
+            <Field
+              label="Terms"
+              hint="One per line, e.g. “Subject to survey”. Accepted terms become tracked conditions."
+            >
+              {({ id }) => (
+                <Textarea
+                  id={id}
+                  rows={3}
+                  value={terms}
+                  onChange={(e) => setTerms(e.target.value)}
+                />
+              )}
             </Field>
             <Field label="Note" hint="Optional; recorded in the negotiation log.">
-              {({ id }) => <Input id={id} maxLength={2000} value={note} onChange={(e) => setNote(e.target.value)} />}
+              {({ id }) => (
+                <Input
+                  id={id}
+                  maxLength={2000}
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                />
+              )}
             </Field>
             <DialogFooter>
               <Button variant="ghost" onClick={() => setOpen(false)} disabled={busy}>
@@ -506,9 +587,10 @@ export function OfferActions({
     }
     if (needsNote && note.trim().length < 3) {
       setError({
-        message: staff && commits(action)
-          ? "Record the customer's instruction (how and when they asked for this)."
-          : 'A short reason is required; it is recorded in the negotiation log.',
+        message:
+          staff && commits(action)
+            ? "Record the customer's instruction (how and when they asked for this)."
+            : 'A short reason is required; it is recorded in the negotiation log.',
         correlationId: null,
       });
       return;
@@ -516,7 +598,12 @@ export function OfferActions({
     const ok = await run(
       () =>
         portalFetch(`/api/v1/purchase-offers/${offer.id}/actions`, {
-          body: { action, amountKobo: kobo, note: note.trim() || undefined, expectedEntries: offer.entries },
+          body: {
+            action,
+            amountKobo: kobo,
+            note: note.trim() || undefined,
+            expectedEntries: offer.entries,
+          },
         }),
       `Offer ${ACTION_LABELS[action]?.toLowerCase() ?? action}`,
     );
@@ -535,7 +622,13 @@ export function OfferActions({
             <Button
               key={a.action}
               size="sm"
-              variant={a.action === 'withdraw' || a.action === 'reject' ? 'danger' : a.action === 'note' ? 'ghost' : 'secondary'}
+              variant={
+                a.action === 'withdraw' || a.action === 'reject'
+                  ? 'danger'
+                  : a.action === 'note'
+                    ? 'ghost'
+                    : 'secondary'
+              }
               disabled={blocked}
               title={blocked ? cannotCommitReason : undefined}
               onClick={() => {
@@ -558,7 +651,14 @@ export function OfferActions({
               <InlineError error={error} />
               {needsAmount ? (
                 <Field label="Amount (₦)" required>
-                  {({ id }) => <Input id={id} inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} />}
+                  {({ id }) => (
+                    <Input
+                      id={id}
+                      inputMode="decimal"
+                      value={amount}
+                      onChange={(e) => setAmount(e.target.value)}
+                    />
+                  )}
                 </Field>
               ) : null}
               <Field
@@ -566,13 +666,25 @@ export function OfferActions({
                 required={needsNote}
                 hint="Recorded in the append-only negotiation log."
               >
-                {({ id }) => <Textarea id={id} rows={3} maxLength={2000} value={note} onChange={(e) => setNote(e.target.value)} />}
+                {({ id }) => (
+                  <Textarea
+                    id={id}
+                    rows={3}
+                    maxLength={2000}
+                    value={note}
+                    onChange={(e) => setNote(e.target.value)}
+                  />
+                )}
               </Field>
               <DialogFooter>
                 <Button variant="ghost" onClick={() => setAction(null)} disabled={busy}>
                   Cancel
                 </Button>
-                <Button onClick={() => void submit()} loading={busy} variant={action === 'withdraw' || action === 'reject' ? 'danger' : 'primary'}>
+                <Button
+                  onClick={() => void submit()}
+                  loading={busy}
+                  variant={action === 'withdraw' || action === 'reject' ? 'danger' : 'primary'}
+                >
                   Confirm
                 </Button>
               </DialogFooter>
@@ -607,7 +719,10 @@ export function AcknowledgeHandoverButton({
         loading={busy}
         onClick={() =>
           void run(
-            () => portalFetch(`/api/v1/purchase-items/${itemId}/acknowledge`, { body: { expectedVersion } }),
+            () =>
+              portalFetch(`/api/v1/purchase-items/${itemId}/acknowledge`, {
+                body: { expectedVersion },
+              }),
             'Receipt acknowledged',
           )
         }

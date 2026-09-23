@@ -1,13 +1,10 @@
-import { z } from 'zod';
-import { ApiError, uuidSchema, savedSearchCreateSchema } from '@simplexd/contracts';
+import { ApiError, savedSearchCreateSchema } from '@simplexd/contracts';
 import { getIdentity } from '@/lib/auth/session';
-import { json, params, parseJson, parseQuery, route } from '@/lib/api/respond';
+import { json, parseJson, route } from '@/lib/api/respond';
 import '@/lib/api/registry/search-purchase';
 import { createSavedSearch, listSavedSearches } from '@/server/search/saved-searches';
 
 export const dynamic = 'force-dynamic';
-
-const idParams = z.object({ id: uuidSchema });
 
 async function identityOrThrow() {
   const identity = await getIdentity();

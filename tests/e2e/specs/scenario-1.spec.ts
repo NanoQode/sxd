@@ -150,9 +150,10 @@ test.describe('acceptance scenario 1: explore, compare, save, reload', () => {
       const dialog = customer.getByRole('dialog', { name: 'Save scenario' });
       await expect(dialog).toBeVisible();
       await expect(customer).not.toHaveURL(/resume=/);
-      const customerTray = customer.getByRole('region', { name: 'Comparison tray' });
-      await expect(customerTray.locator(TRAY_ITEMS)).toHaveCount(4);
-      expect(await customerTray.locator(TRAY_ITEMS).allInnerTexts()).toEqual(trayNames);
+      expect(new URL(customer.url()).searchParams.get('compare')).toBe(carried.get('compare'));
+      // The modal hides the rest of the page from the accessibility tree, so
+      // the tray is checked by test id here and by role once the dialog closes.
+      await expect(customer.getByTestId('compare-tray')).toContainText('Compare (4/4)');
       await expect(dialog.getByLabel('Scenario name')).not.toHaveValue('');
       await dialog.getByLabel('Scenario name').fill('E2E scenario 1');
       await dialog.getByRole('button', { name: 'Save', exact: true }).click();
@@ -160,6 +161,9 @@ test.describe('acceptance scenario 1: explore, compare, save, reload', () => {
       await expect(dialog).toBeHidden();
       await expect(customer.getByRole('button', { name: 'Saved' }).first()).toBeVisible();
       await expect(customer.getByTestId('scenario-actions')).toContainText('in your account');
+      const customerTray = customer.getByRole('region', { name: 'Comparison tray' });
+      await expect(customerTray.locator(TRAY_ITEMS)).toHaveCount(4);
+      expect(await customerTray.locator(TRAY_ITEMS).allInnerTexts()).toEqual(trayNames);
 
       // Reload preserves the same four markets and filters.
       await customer.reload();
@@ -226,9 +230,12 @@ test.describe('keyboard-only journey at 360 px', () => {
     await expect(page.getByRole('main')).toBeVisible();
 
     // Portal home → requests, through the primary navigation.
-    await tabTo(page, page.getByRole('navigation', { name: 'Portal' }).getByRole('link', {
-      name: 'Requests',
-    }));
+    await tabTo(
+      page,
+      page.getByRole('navigation', { name: 'Portal' }).getByRole('link', {
+        name: 'Requests',
+      }),
+    );
     await page.keyboard.press('Enter');
     await page.waitForURL(/\/portal\/requests$/);
     await expect(page.getByRole('heading', { name: 'Requests' })).toBeVisible();

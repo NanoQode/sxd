@@ -57,7 +57,11 @@ function ItemRows({
               {i.visibility === 'internal' ? <Badge tone="neutral">Internal</Badge> : null}
               {i.kind === 'handover_document' ? (
                 <Badge tone={i.acknowledged ? 'success' : 'warning'}>
-                  {i.acknowledged ? 'Receipt acknowledged' : i.files.length > 0 ? 'Awaiting acknowledgement' : 'No file yet'}
+                  {i.acknowledged
+                    ? 'Receipt acknowledged'
+                    : i.files.length > 0
+                      ? 'Awaiting acknowledgement'
+                      : 'No file yet'}
                 </Badge>
               ) : null}
               {i.offerId ? <Badge tone="info">From the accepted offer</Badge> : null}
@@ -70,12 +74,20 @@ function ItemRows({
               </p>
             ) : null}
             {i.files.length > 0 ? (
-              <p className="text-xs text-fg-muted">Files: {i.files.map((f) => f.name).join(', ')}</p>
+              <p className="text-xs text-fg-muted">
+                Files: {i.files.map((f) => f.name).join(', ')}
+              </p>
             ) : null}
             {canManage && !closed && open ? (
               <div className="flex flex-wrap gap-2">
                 {i.kind !== 'handover_document' ? (
-                  <ApiAction path={path} method="PATCH" body={{ status: 'satisfied', expectedVersion: i.version }} label="Satisfied" successMessage="Marked satisfied" />
+                  <ApiAction
+                    path={path}
+                    method="PATCH"
+                    body={{ status: 'satisfied', expectedVersion: i.version }}
+                    label="Satisfied"
+                    successMessage="Marked satisfied"
+                  />
                 ) : null}
                 <ApiAction
                   path={path}
@@ -83,7 +95,11 @@ function ItemRows({
                   body={{ status: 'waived', expectedVersion: i.version }}
                   reasonKey="reason"
                   label="Waive"
-                  confirm={{ title: `Waive this ${KIND_LABEL[i.kind]}`, requireReason: true, confirmLabel: 'Waive' }}
+                  confirm={{
+                    title: `Waive this ${KIND_LABEL[i.kind]}`,
+                    requireReason: true,
+                    confirmLabel: 'Waive',
+                  }}
                 />
                 <ApiAction
                   path={path}
@@ -91,7 +107,12 @@ function ItemRows({
                   body={{ status: 'failed', expectedVersion: i.version }}
                   reasonKey="reason"
                   label="Failed"
-                  confirm={{ title: `Record that this ${KIND_LABEL[i.kind]} failed`, requireReason: true, confirmLabel: 'Record', tone: 'danger' }}
+                  confirm={{
+                    title: `Record that this ${KIND_LABEL[i.kind]} failed`,
+                    requireReason: true,
+                    confirmLabel: 'Record',
+                    tone: 'danger',
+                  }}
                 />
                 {files.length > 0 ? (
                   <FormDialog
@@ -157,8 +178,12 @@ export async function PurchaseAdminPanel({
     );
   }
   const w = ws.value;
-  const entries = search.ok ? search.value.shortlists.flatMap((s) => s.items.filter((i) => i.status !== 'removed')) : [];
-  const liveOffer = w.offers.some((o) => ['draft', 'submitted', 'countered', 'accepted'].includes(o.status));
+  const entries = search.ok
+    ? search.value.shortlists.flatMap((s) => s.items.filter((i) => i.status !== 'removed'))
+    : [];
+  const liveOffer = w.offers.some((o) =>
+    ['draft', 'submitted', 'countered', 'accepted'].includes(o.status),
+  );
   const itemPath = `/api/v1/service-requests/${requestId}/purchase/items`;
   const addItem = (kind: PurchaseItemDto['kind'], label: string) => (
     <FormDialog
@@ -184,7 +209,17 @@ export async function PurchaseAdminPanel({
           ],
         },
         ...(kind === 'handover_document' && files.length > 0
-          ? [{ name: 'fileIds', label: 'Files', type: 'select' as const, options: fileOptions(files), list: true, wide: true, hint: 'Clean files already on this request.' }]
+          ? [
+              {
+                name: 'fileIds',
+                label: 'Files',
+                type: 'select' as const,
+                options: fileOptions(files),
+                list: true,
+                wide: true,
+                hint: 'Clean files already on this request.',
+              },
+            ]
           : []),
       ]}
     />
@@ -200,17 +235,21 @@ export async function PurchaseAdminPanel({
           <p className="font-medium">Fee basis (brief §2)</p>
           {w.feeBasis.agreedAt ? (
             <Alert tone="success" title="Fee basis agreed">
-              {((w.feeBasis.percentageBps ?? 0) / 100).toFixed(2)}% of {w.feeBasis.basisDescription ?? 'the agreed basis'}
-              {w.feeBasis.basisAmountKobo ? ` (${koboToNaira(w.feeBasis.basisAmountKobo, { whole: true })})` : ''} ={' '}
-              {w.feeBasis.feeKobo ? koboToNaira(w.feeBasis.feeKobo, { whole: true }) : '—'}, agreed{' '}
-              {formatDateTimeLabel(w.feeBasis.agreedAt)}.
+              {((w.feeBasis.percentageBps ?? 0) / 100).toFixed(2)}% of{' '}
+              {w.feeBasis.basisDescription ?? 'the agreed basis'}
+              {w.feeBasis.basisAmountKobo
+                ? ` (${koboToNaira(w.feeBasis.basisAmountKobo, { whole: true })})`
+                : ''}{' '}
+              = {w.feeBasis.feeKobo ? koboToNaira(w.feeBasis.feeKobo, { whole: true }) : '—'},
+              agreed {formatDateTimeLabel(w.feeBasis.agreedAt)}.
             </Alert>
           ) : (
             <>
               <p className="text-fg-muted">
-                Not agreed yet. Draft the percentage quote below: it needs the agreed basis amount (purchase price or
-                cap) and the customer-signed scope attached to this request; issue and acceptance are refused otherwise.
-                The invoice is computed from the basis only.
+                Not agreed yet. Draft the percentage quote below: it needs the agreed basis amount
+                (purchase price or cap) and the customer-signed scope attached to this request;
+                issue and acceptance are refused otherwise. The invoice is computed from the basis
+                only.
               </p>
               {canQuote && !closed ? (
                 <FormDialog
@@ -222,8 +261,22 @@ export async function PurchaseAdminPanel({
                   successMessage="Quote drafted — issue it from the Quotations section"
                   extraBody={{ currency: 'NGN' }}
                   fields={[
-                    { name: 'percentageBps', bodyKey: 'feeBasis.percentageBps', label: 'Percentage (basis points)', type: 'number', required: true, defaultValue: 150, hint: '150 = 1.50%' },
-                    { name: 'basisAmountKobo', bodyKey: 'feeBasis.basisAmountKobo', label: 'Agreed basis amount (₦)', type: 'naira', required: true },
+                    {
+                      name: 'percentageBps',
+                      bodyKey: 'feeBasis.percentageBps',
+                      label: 'Percentage (basis points)',
+                      type: 'number',
+                      required: true,
+                      defaultValue: 150,
+                      hint: '150 = 1.50%',
+                    },
+                    {
+                      name: 'basisAmountKobo',
+                      bodyKey: 'feeBasis.basisAmountKobo',
+                      label: 'Agreed basis amount (₦)',
+                      type: 'naira',
+                      required: true,
+                    },
                     {
                       name: 'basisKind',
                       bodyKey: 'feeBasis.basisKind',
@@ -235,7 +288,14 @@ export async function PurchaseAdminPanel({
                         { value: 'agreed_cap', label: 'Explicit cap agreed with the customer' },
                       ],
                     },
-                    { name: 'basisDescription', bodyKey: 'feeBasis.basisDescription', label: 'Basis description', required: true, wide: true, hint: 'e.g. “the agreed purchase price of Plot 5 (₦46,000,000)”.' },
+                    {
+                      name: 'basisDescription',
+                      bodyKey: 'feeBasis.basisDescription',
+                      label: 'Basis description',
+                      required: true,
+                      wide: true,
+                      hint: 'e.g. “the agreed purchase price of Plot 5 (₦46,000,000)”.',
+                    },
                     {
                       name: 'signedScopeFileId',
                       bodyKey: 'feeBasis.signedScopeFileId',
@@ -244,12 +304,32 @@ export async function PurchaseAdminPanel({
                       required: true,
                       options: fileOptions(files),
                       wide: true,
-                      hint: files.length === 0 ? 'Upload the signed scope in the Documents section first.' : 'A clean file attached to this request.',
+                      hint:
+                        files.length === 0
+                          ? 'Upload the signed scope in the Documents section first.'
+                          : 'A clean file attached to this request.',
                     },
-                    { name: 'scopeMarkdown', label: 'Scope', type: 'textarea', required: true, wide: true },
+                    {
+                      name: 'scopeMarkdown',
+                      label: 'Scope',
+                      type: 'textarea',
+                      required: true,
+                      wide: true,
+                    },
                     { name: 'exclusions', label: 'Exclusions', type: 'textarea', wide: true },
-                    { name: 'depositBps', label: 'Deposit on acceptance (basis points)', type: 'number', defaultValue: 10000, hint: '10000 = the whole fee; 0 = no upfront payment' },
-                    { name: 'requiresPayment', label: 'Requires payment before work', type: 'checkbox', defaultValue: true },
+                    {
+                      name: 'depositBps',
+                      label: 'Deposit on acceptance (basis points)',
+                      type: 'number',
+                      defaultValue: 10000,
+                      hint: '10000 = the whole fee; 0 = no upfront payment',
+                    },
+                    {
+                      name: 'requiresPayment',
+                      label: 'Requires payment before work',
+                      type: 'checkbox',
+                      defaultValue: true,
+                    },
                   ]}
                 />
               ) : null}
@@ -268,9 +348,23 @@ export async function PurchaseAdminPanel({
                 submitLabel="Save draft"
                 successMessage="Offer drafted"
                 fields={[
-                  { name: 'shortlistItemId', label: 'Property', type: 'select', required: true, options: entries.map((e) => ({ value: e.id, label: e.title })), wide: true },
+                  {
+                    name: 'shortlistItemId',
+                    label: 'Property',
+                    type: 'select',
+                    required: true,
+                    options: entries.map((e) => ({ value: e.id, label: e.title })),
+                    wide: true,
+                  },
                   { name: 'amountKobo', label: 'Amount (₦)', type: 'naira', required: true },
-                  { name: 'conditions', label: 'Terms', type: 'textarea', list: true, hint: 'One per line; tracked as conditions once accepted.', wide: true },
+                  {
+                    name: 'conditions',
+                    label: 'Terms',
+                    type: 'textarea',
+                    list: true,
+                    hint: 'One per line; tracked as conditions once accepted.',
+                    wide: true,
+                  },
                   { name: 'expiresAt', label: 'Valid until', type: 'datetime' },
                   { name: 'note', label: 'Note (customer instruction)', wide: true },
                 ]}
@@ -287,14 +381,21 @@ export async function PurchaseAdminPanel({
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="font-medium">{o.subjectTitle}</span>
                   <StatusBadge status={o.status} />
-                  <span className="text-fg-muted">{koboToNaira(o.amountKobo, { whole: true })}</span>
-                  {o.externalReference ? <span className="text-xs text-fg-muted">{o.externalReference}</span> : null}
+                  <span className="text-fg-muted">
+                    {koboToNaira(o.amountKobo, { whole: true })}
+                  </span>
+                  {o.externalReference ? (
+                    <span className="text-xs text-fg-muted">{o.externalReference}</span>
+                  ) : null}
                 </div>
-                {o.conditions.length > 0 ? <p className="text-xs">Terms: {o.conditions.join('; ')}</p> : null}
+                {o.conditions.length > 0 ? (
+                  <p className="text-xs">Terms: {o.conditions.join('; ')}</p>
+                ) : null}
                 <ol className="space-y-1 border-l border-border pl-3 text-xs">
                   {o.negotiationLog.map((e, i) => (
                     <li key={`${e.at}-${i}`}>
-                      <span className="text-fg-muted">{formatDateTimeLabel(e.at)}</span> · <strong>{humanize(e.action)}</strong>
+                      <span className="text-fg-muted">{formatDateTimeLabel(e.at)}</span> ·{' '}
+                      <strong>{humanize(e.action)}</strong>
                       {e.amountKobo ? ` ${koboToNaira(e.amountKobo, { whole: true })}` : ''}
                       {e.byName ? ` · ${e.byName}` : ''}
                       {e.actor ? ` (${e.actor})` : ''}
@@ -320,11 +421,15 @@ export async function PurchaseAdminPanel({
             <p className="font-medium">Diligence dependency</p>
             {w.diligence.request ? (
               <p>
-                <Link href={`/admin/service-requests/${w.diligence.request.id}`} className="underline">
+                <Link
+                  href={`/admin/service-requests/${w.diligence.request.id}`}
+                  className="underline"
+                >
                   {w.diligence.request.reference}
                 </Link>{' '}
-                ({humanize(w.diligence.request.status)}) · {w.diligence.openRedFlags ?? 0} unresolved red flag(s) ·
-                memorandum {w.diligence.memoReleased ? 'released' : 'not released'}
+                ({humanize(w.diligence.request.status)}) · {w.diligence.openRedFlags ?? 0}{' '}
+                unresolved red flag(s) · memorandum{' '}
+                {w.diligence.memoReleased ? 'released' : 'not released'}
               </p>
             ) : (
               <p className="text-fg-muted">No due-diligence request linked.</p>
@@ -360,13 +465,18 @@ export async function PurchaseAdminPanel({
                         label: 'Due-diligence request',
                         type: 'select',
                         required: true,
-                        options: w.diligence.candidates.map((c) => ({ value: c.id, label: `${c.reference} · ${c.title} (${humanize(c.status)})` })),
+                        options: w.diligence.candidates.map((c) => ({
+                          value: c.id,
+                          label: `${c.reference} · ${c.title} (${humanize(c.status)})`,
+                        })),
                         wide: true,
                       },
                     ]}
                   />
                 ) : (
-                  <p className="text-xs text-fg-muted">This customer has no due-diligence request to link yet.</p>
+                  <p className="text-xs text-fg-muted">
+                    This customer has no due-diligence request to link yet.
+                  </p>
                 )}
                 {canOverride && !w.diligence.waived ? (
                   <ApiAction
@@ -376,7 +486,8 @@ export async function PurchaseAdminPanel({
                     label="Waive dependency"
                     confirm={{
                       title: 'Waive the diligence dependency',
-                      description: 'Closing will no longer wait for diligence. The reason is recorded and shown to the customer.',
+                      description:
+                        'Closing will no longer wait for diligence. The reason is recorded and shown to the customer.',
                       requireReason: true,
                       confirmLabel: 'Waive',
                       tone: 'danger',
@@ -398,7 +509,12 @@ export async function PurchaseAdminPanel({
               <p className="font-medium">Document handover</p>
               {canManage && !closed ? addItem('handover_document', 'Add handover document') : null}
             </div>
-            <ItemRows items={w.handoverDocuments} files={files} canManage={canManage} closed={closed} />
+            <ItemRows
+              items={w.handoverDocuments}
+              files={files}
+              canManage={canManage}
+              closed={closed}
+            />
           </div>
         </div>
 
@@ -424,7 +540,8 @@ export async function PurchaseAdminPanel({
                   </Link>{' '}
                   <span className="text-xs text-fg-muted">
                     {formatDateTimeLabel(c.at)}
-                    {c.byName ? ` · ${c.byName}` : ''} · {c.handedOverDocuments.length} document(s) handed over
+                    {c.byName ? ` · ${c.byName}` : ''} · {c.handedOverDocuments.length} document(s)
+                    handed over
                   </span>
                 </li>
               ))}

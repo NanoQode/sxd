@@ -167,28 +167,30 @@ export async function loadTenderOpportunities(
   return {
     moduleEnabled: true,
     scope,
-    items: visible.flatMap((row) => {
-      const linkedThrough = linkedThroughById.get(row.id);
-      if (
-        !linkedThrough ||
-        !row.submissionDeadlineAt ||
-        (row.status !== 'published' && row.status !== 'clarifications')
-      ) {
-        return [];
-      }
-      return [
-        {
-          id: row.id,
-          reference: row.reference,
-          title: row.title,
-          status: row.status,
-          releaseAt: row.releaseAt ? row.releaseAt.toISOString() : null,
-          submissionDeadlineAt: row.submissionDeadlineAt.toISOString(),
-          displayTimeZone: row.displayTimeZone,
-          linkedThrough,
-          href: hrefFor(scope, row.id),
-        },
-      ];
-    }).slice(0, LIMIT),
+    items: visible
+      .flatMap((row) => {
+        const linkedThrough = linkedThroughById.get(row.id);
+        if (
+          !linkedThrough ||
+          !row.submissionDeadlineAt ||
+          (row.status !== 'published' && row.status !== 'clarifications')
+        ) {
+          return [];
+        }
+        return [
+          {
+            id: row.id,
+            reference: row.reference,
+            title: row.title,
+            status: row.status,
+            releaseAt: row.releaseAt ? row.releaseAt.toISOString() : null,
+            submissionDeadlineAt: row.submissionDeadlineAt.toISOString(),
+            displayTimeZone: row.displayTimeZone,
+            linkedThrough,
+            href: hrefFor(scope, row.id),
+          },
+        ];
+      })
+      .slice(0, LIMIT),
   };
 }

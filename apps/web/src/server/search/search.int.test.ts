@@ -141,7 +141,9 @@ describe('saved searches and alerts', () => {
       .from(schema.jobs)
       .where(like(schema.jobs.dedupeKey, `saved-search-alert:${searchId}:%`));
     expect(jobs.map((j) => j.dedupeKey)).toEqual([savedSearchAlertKey(searchId, matching)]);
-    const event = (jobs[0]!.payload as { event: { type: string; payload: Record<string, unknown> } }).event;
+    const event = (
+      jobs[0]!.payload as { event: { type: string; payload: Record<string, unknown> } }
+    ).event;
     expect(event.type).toBe('saved_search.matched');
     expect(event.payload).toMatchObject({ listingId: matching, recipientUserIds: [f.ownerA] });
 
@@ -214,7 +216,10 @@ describe('shortlists, comparison and viewings', () => {
     expect(sl.status).toBe('draft');
     const a = await addShortlistItem(staff(f.pm, 'project_manager'), shortlistId, { listingId });
     listingItem = a.id;
-    expect(a.comparison.price).toEqual({ value: (50_000_000n * 100n).toString(), source: 'listing' });
+    expect(a.comparison.price).toEqual({
+      value: (50_000_000n * 100n).toString(),
+      source: 'listing',
+    });
     expect(a.comparison.area).toEqual({ value: '420.50', source: 'listing' });
     expect(a.comparison.verification.source).toBe('listing');
     expect(a.comparison.verification.value?.checks[0]?.item).toBe('title_document_sighted');
@@ -224,7 +229,10 @@ describe('shortlists, comparison and viewings', () => {
       priceKobo: (48_000_000n * 100n).toString(),
     });
     externalItem = b.id;
-    expect(b.comparison.price).toEqual({ value: (48_000_000n * 100n).toString(), source: 'shortlist_entry' });
+    expect(b.comparison.price).toEqual({
+      value: (48_000_000n * 100n).toString(),
+      source: 'shortlist_entry',
+    });
     expect(b.comparison.tenure).toEqual({ value: null, source: null });
     const c = await addShortlistItem(staff(f.pm, 'project_manager'), shortlistId, {
       externalReference: 'PropertyPro listing 12345',
@@ -234,12 +242,14 @@ describe('shortlists, comparison and viewings', () => {
     expect(c.comparison.price).toEqual({ value: null, source: null });
     expect(c.comparison.titleDisclosure).toEqual({ value: null, source: null });
     // Duplicates and unpublished listings are refused; listing entries keep the listing's price.
-    expect(await code(addShortlistItem(staff(f.pm, 'project_manager'), shortlistId, { listingId }))).toBe(
-      'conflict',
-    );
+    expect(
+      await code(addShortlistItem(staff(f.pm, 'project_manager'), shortlistId, { listingId })),
+    ).toBe('conflict');
     const withdrawn = await insertListing(f, { title: 'Withdrawn', status: 'withdrawn' });
     expect(
-      await code(addShortlistItem(staff(f.pm, 'project_manager'), shortlistId, { listingId: withdrawn })),
+      await code(
+        addShortlistItem(staff(f.pm, 'project_manager'), shortlistId, { listingId: withdrawn }),
+      ),
     ).toBe('validation_failed');
   });
 
@@ -251,7 +261,9 @@ describe('shortlists, comparison and viewings', () => {
     // Another organisation and an unassigned project manager never do.
     expect(await code(getShortlist(customerB(f), shortlistId))).toBe('not_found');
     expect(await code(getSearchWorkspace(customerB(f), f.searchA))).toBe('not_found');
-    expect(await code(getShortlist(staff(f.otherPm, 'project_manager'), shortlistId))).toBe('forbidden');
+    expect(await code(getShortlist(staff(f.otherPm, 'project_manager'), shortlistId))).toBe(
+      'forbidden',
+    );
     expect(
       await code(
         updateShortlist(staff(f.otherPm, 'project_manager'), shortlistId, {
@@ -275,7 +287,12 @@ describe('shortlists, comparison and viewings', () => {
     const [event] = await f.dbs.owner
       .select()
       .from(schema.outboxEvents)
-      .where(and(eq(schema.outboxEvents.eventType, 'shortlist.shared'), eq(schema.outboxEvents.aggregateId, shortlistId)));
+      .where(
+        and(
+          eq(schema.outboxEvents.eventType, 'shortlist.shared'),
+          eq(schema.outboxEvents.aggregateId, shortlistId),
+        ),
+      );
     expect(event).toBeDefined();
   });
 
@@ -297,20 +314,22 @@ describe('shortlists, comparison and viewings', () => {
       preference: 'preferred',
     });
     expect(rated).toMatchObject({ customerRating: 4, status: 'preferred' });
-    expect(await code(giveShortlistFeedback(customerB(f), listingItem, { rating: 1 }))).toBe('not_found');
-    // External entries need a booked viewing appointment.
-    expect(await code(requestViewing(customerA(f), f.searchA, { shortlistItemId: externalItem }))).toBe(
-      'validation_failed',
+    expect(await code(giveShortlistFeedback(customerB(f), listingItem, { rating: 1 }))).toBe(
+      'not_found',
     );
+    // External entries need a booked viewing appointment.
+    expect(
+      await code(requestViewing(customerA(f), f.searchA, { shortlistItemId: externalItem })),
+    ).toBe('validation_failed');
     const viewing = await requestViewing(customerA(f), f.searchA, {
       shortlistItemId: listingItem,
       preferredTimes: 'Weekday mornings',
     });
     expect(viewing.status).toBe('requested');
     expect(viewing.title).toBe('Ikoyi terrace');
-    expect(await code(requestViewing(customerA(f), f.searchA, { shortlistItemId: listingItem }))).toBe(
-      'conflict',
-    );
+    expect(
+      await code(requestViewing(customerA(f), f.searchA, { shortlistItemId: listingItem })),
+    ).toBe('conflict');
     // Feedback before the viewing happened is refused; staff confirm then complete it.
     expect(
       await code(
@@ -322,7 +341,10 @@ describe('shortlists, comparison and viewings', () => {
     ).toBe('invalid_transition');
     expect(
       await code(
-        updateViewing(customerA(f), viewing.id, { status: 'confirmed', expectedUpdatedAt: viewing.updatedAt }),
+        updateViewing(customerA(f), viewing.id, {
+          status: 'confirmed',
+          expectedUpdatedAt: viewing.updatedAt,
+        }),
       ),
     ).toBe('forbidden');
     const confirmed = await updateViewing(staff(f.pm, 'project_manager'), viewing.id, {
@@ -336,9 +358,14 @@ describe('shortlists, comparison and viewings', () => {
       expectedUpdatedAt: confirmed.updatedAt,
     });
     expect(done.status).toBe('completed');
-    expect(await code(updateViewing(staff(f.pm, 'project_manager'), viewing.id, { status: 'confirmed', expectedUpdatedAt: done.updatedAt }))).toBe(
-      'invalid_transition',
-    );
+    expect(
+      await code(
+        updateViewing(staff(f.pm, 'project_manager'), viewing.id, {
+          status: 'confirmed',
+          expectedUpdatedAt: done.updatedAt,
+        }),
+      ),
+    ).toBe('invalid_transition');
     const withFeedback = await giveViewingFeedback(customerA(f), viewing.id, {
       feedback: 'Loved it, damp patch in the kitchen',
       expectedUpdatedAt: done.updatedAt,
@@ -353,9 +380,9 @@ describe('shortlists, comparison and viewings', () => {
   it('completes by acceptance (approval authority) and freezes the shortlist', async () => {
     const current = await getShortlist(customerA(f), shortlistId);
     updatedAt = current.updatedAt;
-    expect(await code(acceptShortlist(customerB(f), shortlistId, { expectedUpdatedAt: updatedAt }))).toBe(
-      'not_found',
-    );
+    expect(
+      await code(acceptShortlist(customerB(f), shortlistId, { expectedUpdatedAt: updatedAt })),
+    ).toBe('not_found');
     const accepted = await acceptShortlist(customerA(f, 'approver'), shortlistId, {
       expectedUpdatedAt: updatedAt,
       note: 'Go ahead with the Ikoyi terrace',
@@ -376,7 +403,9 @@ describe('shortlists, comparison and viewings', () => {
   });
 
   it('records a documented search outcome as a report under the request', async () => {
-    const sl = await createShortlist(staff(f.pm, 'project_manager'), f.searchA, { name: 'Second round' });
+    const sl = await createShortlist(staff(f.pm, 'project_manager'), f.searchA, {
+      name: 'Second round',
+    });
     await addShortlistItem(staff(f.pm, 'project_manager'), sl.id, {
       externalReference: 'Agent Chidi ref 9',
       title: 'Yaba flat',
@@ -396,16 +425,24 @@ describe('shortlists, comparison and viewings', () => {
     ).toBe('forbidden');
     const done = await recordShortlistOutcome(staff(f.pm, 'project_manager'), sl.id, {
       outcome: 'customer_paused_search',
-      summary: 'The customer paused the search until the new financial year; two entries were viewed.',
+      summary:
+        'The customer paused the search until the new financial year; two entries were viewed.',
       expectedUpdatedAt: shared.updatedAt,
     });
     expect(done.status).toBe('outcome_recorded');
-    expect(done.outcome).toMatchObject({ outcome: 'customer_paused_search', tallies: { considered: 1 } });
+    expect(done.outcome).toMatchObject({
+      outcome: 'customer_paused_search',
+      tallies: { considered: 1 },
+    });
     const [report] = await f.dbs.owner
       .select()
       .from(schema.reports)
       .where(eq(schema.reports.id, done.outcome!.reportId!));
-    expect(report).toMatchObject({ kind: 'search_outcome', serviceRequestId: f.searchA, status: 'draft' });
+    expect(report).toMatchObject({
+      kind: 'search_outcome',
+      serviceRequestId: f.searchA,
+      status: 'draft',
+    });
     // Until a reviewer releases the report the customer sees the status, not the summary.
     const customerView = await getShortlist(customerA(f), sl.id);
     expect(customerView.status).toBe('outcome_recorded');
