@@ -72,11 +72,25 @@ function isCrossSite(request: NextRequest): boolean {
   const origin = request.headers.get('origin');
   if (!origin) return false;
   const allowed = new Set([request.nextUrl.origin]);
-  if (process.env.APP_URL) {
+  // A browser cannot set Host on a cross-site request, so an Origin matching
+  // the host it addressed is same-site even when the server knows itself by
+  // another name (a reverse proxy, 127.0.0.1 versus localhost).
+  const host = request.headers.get('x-forwarded-host') ?? request.headers.get('host');
+  if (host) {
+    const proto =
+      request.headers.get('x-forwarded-proto')?.split(',')[0]?.trim() ??
+      request.nextUrl.protocol.replace(':', '');
+    allowed.add(`${proto}://${host}`);
+  }
+  for (const configured of [
+    process.env.APP_URL,
+    ...(process.env.TRUSTED_ORIGINS ?? '').split(','),
+  ]) {
+    if (!configured?.trim()) continue;
     try {
-      allowed.add(new URL(process.env.APP_URL).origin);
+      allowed.add(new URL(configured.trim()).origin);
     } catch {
-      /* ignore malformed APP_URL; the request origin still counts */
+      /* ignore malformed configuration; the request origin still counts */
     }
   }
   return !allowed.has(origin);

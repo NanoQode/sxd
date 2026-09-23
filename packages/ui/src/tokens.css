@@ -21,7 +21,7 @@
   /* Text */
   --sx-fg: #1f2421;
   --sx-fg-muted: #5b625e;
-  --sx-fg-subtle: #7c837f;
+  --sx-fg-subtle: #666b68;
   --sx-fg-on-primary: #ffffff;
   --sx-fg-on-accent: #1f2421;
 
@@ -29,15 +29,15 @@
   --sx-primary: #1f5f4b;
   --sx-primary-hover: #17503e;
   --sx-primary-soft: #dcebe4;
-  --sx-teal: #1f7a8c;
+  --sx-teal: #1d7081;
   --sx-teal-soft: #d8ecf0;
   --sx-gold: #c8a04b;
   --sx-gold-soft: #f5ecd6;
 
   /* Status (always paired with icons and words, never colour alone) */
-  --sx-success: #2e7d4f;
+  --sx-success: #2c774b;
   --sx-success-soft: #dff1e5;
-  --sx-warning: #a8651a;
+  --sx-warning: #975b17;
   --sx-warning-soft: #fbead2;
   --sx-danger: #b3261e;
   --sx-danger-soft: #f9dcda;
@@ -46,12 +46,12 @@
 
   /* Evidence badges */
   --sx-badge-sourced: #2f5f9e;
-  --sx-badge-verified: #2e7d4f;
+  --sx-badge-verified: #2c774b;
   --sx-badge-regional: #7a5c2e;
   --sx-badge-model: #6b4fa0;
-  --sx-badge-assumption: #8a6d1f;
-  --sx-badge-unknown: #6b716d;
-  --sx-badge-stale: #a8651a;
+  --sx-badge-assumption: #82661d;
+  --sx-badge-unknown: #626864;
+  --sx-badge-stale: #975b17;
   --sx-badge-disputed: #b3261e;
 
   /* Focus and shape */
@@ -106,7 +106,7 @@
     --sx-fg: #ecebe6;
     --sx-fg-muted: #b3b8b4;
     --sx-fg-subtle: #8b918d;
-    --sx-fg-on-primary: #f5f7f4;
+    --sx-fg-on-primary: #10201a;
     --sx-fg-on-accent: #151917;
     --sx-primary: #4fae8f;
     --sx-primary-hover: #63bf9f;
@@ -159,7 +159,7 @@
   --sx-fg: #ecebe6;
   --sx-fg-muted: #b3b8b4;
   --sx-fg-subtle: #8b918d;
-  --sx-fg-on-primary: #f5f7f4;
+  --sx-fg-on-primary: #10201a;
   --sx-fg-on-accent: #151917;
   --sx-primary: #4fae8f;
   --sx-primary-hover: #63bf9f;

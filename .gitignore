@@ -36,3 +36,9 @@ Thumbs.db
 .idea/
 .vscode/*
 !.vscode/extensions.json
+
+# redis snapshots written when redis-server runs in a package directory
+dump.rdb
+
+# Playwright sessions for demo accounts
+tests/e2e/.auth/

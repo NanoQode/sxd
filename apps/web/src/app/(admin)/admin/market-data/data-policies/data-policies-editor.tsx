@@ -66,7 +66,7 @@ export function DataPoliciesEditor({
           <Card key={p.key}>
             <CardHeader>
               <CardTitle>
-                <code className="font-mono text-sm">{p.key}</code>
+                <code className="font-mono text-sm break-all">{p.key}</code>
               </CardTitle>
               <CardDescription>{p.description}</CardDescription>
             </CardHeader>

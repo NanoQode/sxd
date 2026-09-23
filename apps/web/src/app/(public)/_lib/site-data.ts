@@ -1,6 +1,7 @@
 import 'server-only';
 import { cache } from 'react';
 import type { Metadata } from 'next';
+import { unstable_rethrow } from 'next/navigation';
 import type { MarketDetailDto, MarketListResponse, PublishedContent } from '@simplexd/contracts';
 import type { EvidenceBadgeKind } from '@simplexd/ui';
 import { getIdentity } from '@/lib/auth/session';
@@ -62,6 +63,8 @@ export const loadCatalog = cache(async (): Promise<ServiceCatalog | null> => {
   try {
     return await listServiceCatalog();
   } catch (err) {
+    // Rendering signals (dynamic usage, notFound, redirect) belong to Next.
+    unstable_rethrow(err);
     logger().warn({ err: (err as Error).message }, 'service catalogue unavailable');
     return null;
   }
@@ -86,6 +89,8 @@ export const contentBySlug = cache(
       const page = await getPublishedContent(slug);
       return page && page.kind === kind ? page : null;
     } catch (err) {
+      // Rendering signals (dynamic usage, notFound, redirect) belong to Next.
+      unstable_rethrow(err);
       logger().warn({ err: (err as Error).message, slug }, 'content unavailable');
       return null;
     }
@@ -97,6 +102,8 @@ export const contentByKind = cache(
     try {
       return await listPublishedContent(kind);
     } catch (err) {
+      // Rendering signals (dynamic usage, notFound, redirect) belong to Next.
+      unstable_rethrow(err);
       logger().warn({ err: (err as Error).message, kind }, 'content list unavailable');
       return [];
     }
@@ -114,6 +121,8 @@ export const loadMarkets = cache(async (): Promise<MarketsResult> => {
     );
     return { status: 'ok', data };
   } catch (err) {
+    // Rendering signals (dynamic usage, notFound, redirect) belong to Next.
+    unstable_rethrow(err);
     logger().warn({ err: (err as Error).message }, 'market list unavailable');
     return { status: 'unavailable' };
   }
@@ -128,6 +137,8 @@ export const loadMarket = cache(async (slug: string): Promise<MarketResult> => {
     const market = await getMarketBySlug(slug, identity);
     return market ? { status: 'ok', market } : { status: 'missing' };
   } catch (err) {
+    // Rendering signals (dynamic usage, notFound, redirect) belong to Next.
+    unstable_rethrow(err);
     logger().warn({ err: (err as Error).message, slug }, 'market detail unavailable');
     return { status: 'unavailable' };
   }

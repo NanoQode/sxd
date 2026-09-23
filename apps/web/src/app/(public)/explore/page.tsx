@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 
 export default function ExplorePage() {
   return (
-    <main className="sx-container py-8">
+    <div className="sx-container py-8">
       <PageHeader
         eyebrow="Nigeria location explorer"
         title="Explore where to build"
@@ -20,6 +20,6 @@ export default function ExplorePage() {
       <div className="mt-6">
         <LocationExplorer variant="full" />
       </div>
-    </main>
+    </div>
   );
 }

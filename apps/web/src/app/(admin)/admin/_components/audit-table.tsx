@@ -29,7 +29,7 @@ export function AuditTable({
     {
       key: 'action',
       header: 'Action',
-      cell: (e) => <code className="font-mono text-xs">{e.action}</code>,
+      cell: (e) => <code className="font-mono text-xs break-all">{e.action}</code>,
     },
     {
       key: 'entity',

@@ -1,10 +1,13 @@
 import { defineConfig, devices } from '@playwright/test';
 
-const baseURL = process.env.E2E_BASE_URL ?? 'http://127.0.0.1:3000';
+// Sign-in only works from the origin the app knows itself by (APP_URL or
+// TRUSTED_ORIGINS), so tests default to the same address as .env.example.
+const baseURL = process.env.E2E_BASE_URL ?? process.env.APP_URL ?? 'http://localhost:3000';
 const executablePath = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH;
 
 export default defineConfig({
   testDir: './specs',
+  globalSetup: './global-setup.ts',
   timeout: 60_000,
   expect: { timeout: 10_000 },
   fullyParallel: false,

@@ -72,7 +72,9 @@ export function DefinitionList({
 }
 
 export function Mono({ children }: { children: ReactNode }) {
-  return <code className="rounded bg-bg-sunken px-1 py-0.5 font-mono text-xs">{children}</code>;
+  return (
+    <code className="rounded bg-bg-sunken px-1 py-0.5 font-mono text-xs break-all">{children}</code>
+  );
 }
 
 export function JsonBlock({ value }: { value: unknown }) {

@@ -306,6 +306,42 @@ export const consentDtoSchema = z.object({
 });
 export type ConsentDto = z.infer<typeof consentDtoSchema>;
 
+export const CONSENT_PURPOSES = [
+  'privacy_notice',
+  'marketing_email',
+  'marketing_sms',
+  'analytics',
+  'identity_documents',
+  'screening',
+] as const;
+
+/** Body of POST /api/v1/me/consents: one append-only consent decision. */
+export const consentRecordSchema = z.object({
+  purpose: z.enum(CONSENT_PURPOSES),
+  granted: z.boolean(),
+  source: z.string().max(64).default('portal'),
+  policyVersion: z.string().max(32).default('2026-09'),
+});
+export type ConsentRecordInput = z.infer<typeof consentRecordSchema>;
+
+/**
+ * Body of PATCH /api/v1/me/preferences. The route additionally checks the time
+ * zone against the runtime's IANA database.
+ */
+export const profilePreferencesUpdateSchema = z
+  .object({
+    themePreference: z.enum(['system', 'light', 'dark']).optional(),
+    reduceMotion: z.boolean().optional(),
+    timeZone: timeZoneSchema.optional(),
+    locale: z.string().min(2).max(16).optional(),
+    goals: z.array(z.string().max(64)).max(10).optional(),
+    diaspora: z.boolean().optional(),
+    countryOfResidence: z.string().length(2).optional(),
+    ownershipType: z.enum(['individual', 'company']).optional(),
+  })
+  .refine((v) => Object.keys(v).length > 0, 'nothing to update');
+export type ProfilePreferencesUpdate = z.infer<typeof profilePreferencesUpdateSchema>;
+
 export const GOAL_OPTIONS = [
   { value: 'buy_safely', label: 'Buy safely' },
   { value: 'build_with_oversight', label: 'Build with oversight' },

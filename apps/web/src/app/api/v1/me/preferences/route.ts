@@ -1,6 +1,5 @@
 import { eq } from 'drizzle-orm';
-import { z } from 'zod';
-import { ApiError, timeZoneSchema } from '@simplexd/contracts';
+import { ApiError, profilePreferencesUpdateSchema } from '@simplexd/contracts';
 import { getDb, schema, withActor } from '@simplexd/db';
 import { isValidTimeZone } from '@simplexd/domain/time';
 import { getIdentity } from '@/lib/auth/session';
@@ -8,18 +7,10 @@ import { json, parseJson, route } from '@/lib/api/respond';
 
 export const dynamic = 'force-dynamic';
 
-const patchSchema = z
-  .object({
-    themePreference: z.enum(['system', 'light', 'dark']).optional(),
-    reduceMotion: z.boolean().optional(),
-    timeZone: timeZoneSchema.refine(isValidTimeZone, 'unknown time zone').optional(),
-    locale: z.string().min(2).max(16).optional(),
-    goals: z.array(z.string().max(64)).max(10).optional(),
-    diaspora: z.boolean().optional(),
-    countryOfResidence: z.string().length(2).optional(),
-    ownershipType: z.enum(['individual', 'company']).optional(),
-  })
-  .refine((v) => Object.keys(v).length > 0, 'nothing to update');
+const patchSchema = profilePreferencesUpdateSchema.refine(
+  (v) => v.timeZone === undefined || isValidTimeZone(v.timeZone),
+  { message: 'unknown time zone', path: ['timeZone'] },
+);
 
 export const GET = route(async (_req, { correlationId }) => {
   const identity = await getIdentity();

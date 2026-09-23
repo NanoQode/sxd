@@ -8,8 +8,8 @@ export const dynamic = 'force-dynamic';
 
 /**
  * POST /api/v1/service-requests/:id/transitions — customer transitions only
- * (cancel with reason, pause with reason, resume). Staff transitions arrive in
- * Wave 2 with the triage and quotation tools.
+ * (cancel with reason, pause with reason, resume). Staff move requests through
+ * the triage, assignment and quotation endpoints beside this one.
  */
 export const POST = route<{ params: Promise<{ id: string }> }>(async (req, ctx) => {
   const identity = await getIdentity();

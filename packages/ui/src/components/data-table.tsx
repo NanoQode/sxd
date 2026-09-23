@@ -86,14 +86,14 @@ export function DataTable<T>({
             className="rounded-lg border border-border bg-bg-elevated p-3"
             onClick={onRowClick ? () => onRowClick(row) : undefined}
           >
-            <p className="mb-2 font-medium">{rowLabel(row)}</p>
-            <dl className="grid grid-cols-[minmax(0,40%)_1fr] gap-x-3 gap-y-1 text-sm">
+            <p className="mb-2 font-medium wrap-anywhere">{rowLabel(row)}</p>
+            <dl className="grid grid-cols-[minmax(0,40%)_minmax(0,1fr)] gap-x-3 gap-y-1 text-sm">
               {columns
                 .filter((c) => !c.hideOnMobile)
                 .map((c) => (
                   <div key={c.key} className="contents">
-                    <dt className="text-fg-muted">{c.mobileLabel ?? c.header}</dt>
-                    <dd className="min-w-0">{c.cell(row)}</dd>
+                    <dt className="text-fg-muted wrap-anywhere">{c.mobileLabel ?? c.header}</dt>
+                    <dd className="min-w-0 wrap-anywhere">{c.cell(row)}</dd>
                   </div>
                 ))}
             </dl>

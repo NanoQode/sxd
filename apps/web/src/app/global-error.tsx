@@ -44,7 +44,7 @@ export default function GlobalError({
             please try again in a moment.
           </p>
           {error.digest ? (
-            <p style={{ fontSize: 12, color: '#7c837f' }}>Reference: {error.digest}</p>
+            <p style={{ fontSize: 12, color: '#666b68' }}>Reference: {error.digest}</p>
           ) : null}
           <div style={{ display: 'flex', gap: 8, marginTop: 16, flexWrap: 'wrap' }}>
             <button
