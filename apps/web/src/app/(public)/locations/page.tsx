@@ -59,7 +59,10 @@ export default async function LocationsPage() {
             description="The market read model did not respond. Published markets, their evidence and service availability will appear here once it is online."
             action={
               <div className="flex flex-wrap justify-center gap-2">
-                <Link href="/explore" className={buttonVariants({ variant: 'secondary', size: 'sm' })}>
+                <Link
+                  href="/explore"
+                  className={buttonVariants({ variant: 'secondary', size: 'sm' })}
+                >
                   Try the explorer
                 </Link>
                 <Link href="/book" className={buttonVariants({ size: 'sm' })}>

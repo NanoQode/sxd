@@ -29,7 +29,8 @@ type Params = Promise<{ slug: string }>;
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
   const { slug } = await params;
   const result = await loadMarket(slug);
-  if (result.status === 'missing') return { title: 'Location not found', robots: { index: false, follow: false } };
+  if (result.status === 'missing')
+    return { title: 'Location not found', robots: { index: false, follow: false } };
   if (result.status === 'unavailable') {
     return publicMetadata({
       title: 'Location data not available yet',
@@ -39,7 +40,9 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
     });
   }
   const m = result.market;
-  const incomplete = m.evidence.localObservations + m.evidence.regionalContextObservations === 0 && !m.profileMarkdown;
+  const incomplete =
+    m.evidence.localObservations + m.evidence.regionalContextObservations === 0 &&
+    !m.profileMarkdown;
   return publicMetadata({
     title: `${m.name}, ${m.stateName}${m.isFederalCapital ? '' : ' State'}`,
     description: `${m.name} property market evidence: ${m.evidence.localObservations} local observation${m.evidence.localObservations === 1 ? '' : 's'}, ${m.evidence.regionalContextObservations} statewide context figures, service availability ${humanize(m.serviceAvailability).toLowerCase()}, and what is still missing.`,
@@ -74,7 +77,10 @@ export default async function LocationDetailPage({ params }: { params: Params })
             description="The market read model did not respond, so this page cannot show evidence, coverage or map position. Nothing is estimated in its place."
             action={
               <div className="flex flex-wrap justify-center gap-2">
-                <Link href="/locations" className={buttonVariants({ variant: 'secondary', size: 'sm' })}>
+                <Link
+                  href="/locations"
+                  className={buttonVariants({ variant: 'secondary', size: 'sm' })}
+                >
                   All locations
                 </Link>
                 <Link href={`/book?market=${slug}`} className={buttonVariants({ size: 'sm' })}>
@@ -124,7 +130,12 @@ export default async function LocationDetailPage({ params }: { params: Params })
         <div className="space-y-1">
           <EvidenceBadge kind={l.badge} />
           {l.source?.url ? (
-            <a href={l.source.url} rel="noopener noreferrer" target="_blank" className="block text-xs text-primary underline">
+            <a
+              href={l.source.url}
+              rel="noopener noreferrer"
+              target="_blank"
+              className="block text-xs text-primary underline"
+            >
               {l.source.title}
             </a>
           ) : l.source ? (
@@ -136,7 +147,11 @@ export default async function LocationDetailPage({ params }: { params: Params })
   ];
 
   const quoteColumns: Column<SupplierQuote>[] = [
-    { key: 'material', header: 'Material', cell: (q) => `${humanize(q.material)} · ${q.specification}` },
+    {
+      key: 'material',
+      header: 'Material',
+      cell: (q) => `${humanize(q.material)} · ${q.specification}`,
+    },
     { key: 'unit', header: 'Unit', cell: (q) => q.unit },
     {
       key: 'price',
@@ -148,11 +163,16 @@ export default async function LocationDetailPage({ params }: { params: Params })
       header: 'Delivery',
       cell: (q) => (q.deliveryCost ? formatNairaString(q.deliveryCost.amountKobo) : 'Not stated'),
     },
-    { key: 'lead', header: 'Lead time', cell: (q) => (q.leadTimeDays === null ? 'Not stated' : `${q.leadTimeDays} days`) },
+    {
+      key: 'lead',
+      header: 'Lead time',
+      cell: (q) => (q.leadTimeDays === null ? 'Not stated' : `${q.leadTimeDays} days`),
+    },
     {
       key: 'dates',
       header: 'Quoted / valid until',
-      cell: (q) => `${formatDateLabel(q.quotedAt)} / ${q.validUntil ? formatDateLabel(q.validUntil) : 'not stated'}`,
+      cell: (q) =>
+        `${formatDateLabel(q.quotedAt)} / ${q.validUntil ? formatDateLabel(q.validUntil) : 'not stated'}`,
     },
     {
       key: 'badge',
@@ -168,7 +188,11 @@ export default async function LocationDetailPage({ params }: { params: Params })
 
   return (
     <>
-      <PageAction label={`Book about ${m.name}`} href={bookHref} secondary={{ label: 'Compare', href: compareHref }} />
+      <PageAction
+        label={`Book about ${m.name}`}
+        href={bookHref}
+        secondary={{ label: 'Compare', href: compareHref }}
+      />
       <JsonLd
         data={placeJsonLd({
           name: m.name,
@@ -189,7 +213,9 @@ export default async function LocationDetailPage({ params }: { params: Params })
         <p className="text-xs font-medium tracking-wide text-fg-muted uppercase">
           {stateLabel} · {ZONE_NAMES[m.geopoliticalZone]}
         </p>
-        <h1 className="font-display mt-1 text-3xl font-semibold leading-tight sm:text-4xl">{m.name}</h1>
+        <h1 className="font-display mt-1 text-3xl font-semibold leading-tight sm:text-4xl">
+          {m.name}
+        </h1>
         {m.aliases.length > 0 ? (
           <p className="mt-1 text-sm text-fg-muted">Also known as {m.aliases.join(', ')}</p>
         ) : null}
@@ -199,7 +225,9 @@ export default async function LocationDetailPage({ params }: { params: Params })
             {recommendationLabel(m.recommendationStatus)}
           </Badge>
           {m.evidence.freshness === 'stale' ? <Badge tone="warning">Evidence stale</Badge> : null}
-          {m.evidence.freshness === 'unknown' ? <Badge tone="neutral">Evidence freshness unknown</Badge> : null}
+          {m.evidence.freshness === 'unknown' ? (
+            <Badge tone="neutral">Evidence freshness unknown</Badge>
+          ) : null}
         </div>
         {m.overlapNote ? (
           <Alert tone="info" title="Overlapping geography" className="mt-4">
@@ -218,7 +246,8 @@ export default async function LocationDetailPage({ params }: { params: Params })
               <Prose html={renderMarkdown(m.profileMarkdown)} className="mt-2" />
             ) : (
               <p className="mt-2 text-sm text-fg-muted">
-                An editorial profile for {m.name} is pending review. Nothing is generated in its place.
+                An editorial profile for {m.name} is pending review. Nothing is generated in its
+                place.
               </p>
             )}
             {m.selectionBasis ? (
@@ -237,8 +266,14 @@ export default async function LocationDetailPage({ params }: { params: Params })
             {m.serviceCoverage.length > 0 ? (
               <ul className="mt-3 divide-y divide-border rounded-lg border border-border bg-bg-elevated">
                 {m.serviceCoverage.map((c) => (
-                  <li key={c.serviceSlug} className="flex flex-wrap items-center justify-between gap-2 px-4 py-2">
-                    <Link href={`/services/${c.serviceSlug}`} className="text-sm font-medium hover:underline">
+                  <li
+                    key={c.serviceSlug}
+                    className="flex flex-wrap items-center justify-between gap-2 px-4 py-2"
+                  >
+                    <Link
+                      href={`/services/${c.serviceSlug}`}
+                      className="text-sm font-medium hover:underline"
+                    >
                       {c.serviceName}
                     </Link>
                     <div className="flex items-center gap-2">
@@ -266,7 +301,10 @@ export default async function LocationDetailPage({ params }: { params: Params })
             </p>
             <div className="mt-3">
               {m.localObservations.length > 0 ? (
-                <ObservationTable observations={m.localObservations} caption={`Local observations for ${m.name}`} />
+                <ObservationTable
+                  observations={m.localObservations}
+                  caption={`Local observations for ${m.name}`}
+                />
               ) : (
                 <p className="rounded-md border border-dashed border-border p-4 text-sm text-fg-muted">
                   No city-level observations are published for {m.name}. No price is estimated in
@@ -369,7 +407,9 @@ export default async function LocationDetailPage({ params }: { params: Params })
                       <li key={t.id} className="flex items-center justify-between gap-2 px-3 py-2">
                         <span>
                           {t.title}
-                          <span className="block text-xs text-fg-muted">{humanize(t.category)}</span>
+                          <span className="block text-xs text-fg-muted">
+                            {humanize(t.category)}
+                          </span>
                         </span>
                         <Badge tone="neutral">{humanize(t.status)}</Badge>
                       </li>
@@ -419,7 +459,8 @@ export default async function LocationDetailPage({ params }: { params: Params })
               </ul>
             ) : (
               <p className="mt-2 text-sm text-fg-muted">
-                No neighbourhoods are published for {m.name}. Boundaries are never fabricated from city points.
+                No neighbourhoods are published for {m.name}. Boundaries are never fabricated from
+                city points.
               </p>
             )}
           </section>
@@ -448,7 +489,10 @@ export default async function LocationDetailPage({ params }: { params: Params })
           ) : null}
         </div>
 
-        <aside className="space-y-4 lg:sticky lg:top-24 lg:self-start" aria-label="Map position, review status and actions">
+        <aside
+          className="space-y-4 lg:sticky lg:top-24 lg:self-start"
+          aria-label="Map position, review status and actions"
+        >
           <div className="rounded-lg border border-border bg-bg-elevated p-5">
             <h2 className="text-base font-semibold">Map position</h2>
             <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
@@ -461,7 +505,12 @@ export default async function LocationDetailPage({ params }: { params: Params })
               <dt className="text-fg-muted">Source</dt>
               <dd>
                 {m.coordinateSource?.url ? (
-                  <a href={m.coordinateSource.url} rel="noopener noreferrer" target="_blank" className="text-primary underline">
+                  <a
+                    href={m.coordinateSource.url}
+                    rel="noopener noreferrer"
+                    target="_blank"
+                    className="text-primary underline"
+                  >
                     {m.coordinateSource.title}
                   </a>
                 ) : (
@@ -472,7 +521,10 @@ export default async function LocationDetailPage({ params }: { params: Params })
             <p className="mt-2 text-xs text-fg-subtle">
               A reference coordinate, not a surveyed property location. WGS84.
             </p>
-            <Link href={`/explore?market=${m.slug}`} className={`${buttonVariants({ variant: 'secondary', size: 'sm' })} mt-3`}>
+            <Link
+              href={`/explore?market=${m.slug}`}
+              className={`${buttonVariants({ variant: 'secondary', size: 'sm' })} mt-3`}
+            >
               Show on the map
             </Link>
           </div>
@@ -499,16 +551,24 @@ export default async function LocationDetailPage({ params }: { params: Params })
               </div>
             ) : null}
             <p className="mt-3 text-xs text-fg-subtle">
-              Last reviewed: {m.lastReviewedAt ? formatDateLabel(m.lastReviewedAt) : 'not yet reviewed'}
+              Last reviewed:{' '}
+              {m.lastReviewedAt ? formatDateLabel(m.lastReviewedAt) : 'not yet reviewed'}
               <br />
-              Last researched: {m.evidence.lastResearchedAt ? formatDateLabel(m.evidence.lastResearchedAt) : 'not recorded'}
+              Last researched:{' '}
+              {m.evidence.lastResearchedAt
+                ? formatDateLabel(m.evidence.lastResearchedAt)
+                : 'not recorded'}
               <br />
-              Published: {m.publishedAt ? formatDateLabel(m.publishedAt) : '—'} · Version {m.version}
+              Published: {m.publishedAt ? formatDateLabel(m.publishedAt) : '—'} · Version{' '}
+              {m.version}
             </p>
           </div>
 
           <div className="flex flex-col gap-2">
-            <Link href={compareHref} className={buttonVariants({ variant: 'secondary', size: 'lg' })}>
+            <Link
+              href={compareHref}
+              className={buttonVariants({ variant: 'secondary', size: 'lg' })}
+            >
               Compare in the explorer
             </Link>
             <Link href={bookHref} className={buttonVariants({ size: 'lg' })}>

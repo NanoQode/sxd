@@ -391,7 +391,7 @@ function compareLine(item: RfqItemSpec, line: ResponseLineInput | undefined, cur
   }
   // supplier units required = qty * d / n ; cost = price * qty * d / n ; per RFQ unit = price * d / n
   const unitsScaled = divideRoundHalfUp(qty * denominator, numerator);
-  const wholeUnits = (qty * denominator) % numerator === 0n;
+  const wholeUnits = (qty * denominator) % numerator === 0n && unitsScaled % ONE === 0n;
   const lineTotal = divideRoundHalfUp(price * qty * denominator, numerator * ONE);
   const normalizedUnitPrice = divideRoundHalfUp(price * denominator, numerator);
   const factor =

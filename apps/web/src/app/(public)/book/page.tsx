@@ -20,7 +20,9 @@ export default async function BookPage({ searchParams }: { searchParams: SearchP
   const catalog = await loadCatalog();
   const base = readPrefill(params);
   const selected = base.serviceSlug
-    ? [...(catalog?.core ?? []), ...(catalog?.planned ?? [])].find((s) => s.slug === base.serviceSlug)
+    ? [...(catalog?.core ?? []), ...(catalog?.planned ?? [])].find(
+        (s) => s.slug === base.serviceSlug,
+      )
     : undefined;
   const prefill = {
     ...base,
@@ -38,7 +40,9 @@ export default async function BookPage({ searchParams }: { searchParams: SearchP
       <Breadcrumbs items={[{ name: 'Book a consultation', href: '/book' }]} baseUrl={siteUrl()} />
       <div className="sx-container grid gap-8 py-6 lg:grid-cols-[3fr_2fr]">
         <div>
-          <h1 className="font-display text-3xl font-semibold leading-tight sm:text-4xl">{BOOK_DEFAULT.title}</h1>
+          <h1 className="font-display text-3xl font-semibold leading-tight sm:text-4xl">
+            {BOOK_DEFAULT.title}
+          </h1>
           <p className="mt-3 max-w-prose text-lg text-fg-muted">{BOOK_DEFAULT.intro}</p>
           {selected ? (
             <p className="mt-3 text-sm">
@@ -55,7 +59,10 @@ export default async function BookPage({ searchParams }: { searchParams: SearchP
             <ConsultationForm services={services} prefill={prefill} variant="book" />
           </div>
         </div>
-        <aside className="space-y-6 lg:sticky lg:top-24 lg:self-start" aria-label="What to prepare and what happens next">
+        <aside
+          className="space-y-6 lg:sticky lg:top-24 lg:self-start"
+          aria-label="What to prepare and what happens next"
+        >
           <div className="rounded-lg border border-border bg-bg-elevated p-5">
             <h2 className="text-base font-semibold">Useful to have ready</h2>
             <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-fg-muted">
@@ -72,8 +79,14 @@ export default async function BookPage({ searchParams }: { searchParams: SearchP
             <h2 className="text-base font-semibold">What happens next</h2>
             <ol className="mt-2 list-decimal space-y-1 pl-5 text-sm text-fg-muted">
               <li>You receive an email acknowledgement with a reference.</li>
-              <li>The team confirms scope and proposes a consultation time in your time zone and Africa/Lagos.</li>
-              <li>After the consultation you receive a scoped quotation with its price basis and validity.</li>
+              <li>
+                The team confirms scope and proposes a consultation time in your time zone and
+                Africa/Lagos.
+              </li>
+              <li>
+                After the consultation you receive a scoped quotation with its price basis and
+                validity.
+              </li>
             </ol>
           </div>
           <Illustration name="coordination" className="hidden max-w-xs lg:block" />

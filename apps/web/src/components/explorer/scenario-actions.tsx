@@ -117,7 +117,7 @@ export function ScenarioActions({
       </p>
       {scenario.error ? (
         <Alert tone="warning" title="Saved scenario could not be loaded">
-          The link's scenario is not available (it may have expired or belong to another account).{' '}
+          The link&apos;s scenario is not available (it may have expired or belong to another account).{' '}
           <button type="button" className="underline" onClick={scenario.refetch}>
             Retry
           </button>

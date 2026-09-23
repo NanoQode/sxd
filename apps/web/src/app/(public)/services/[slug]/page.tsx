@@ -86,11 +86,15 @@ export default async function ServiceDetailPage({ params }: { params: Params }) 
               <p className="text-xs font-medium tracking-wide text-fg-muted uppercase">
                 {planned ? 'Planned service' : 'Core service'}
               </p>
-              <h1 className="font-display text-2xl font-semibold leading-tight sm:text-3xl">{service.name}</h1>
+              <h1 className="font-display text-2xl font-semibold leading-tight sm:text-3xl">
+                {service.name}
+              </h1>
               <div className="mt-2 flex flex-wrap gap-1.5">
                 {planned ? (
                   <Badge tone={service.availability === 'request' ? 'success' : 'neutral'}>
-                    {service.availability === 'request' ? 'Open for requests' : 'Inquiry only, not yet bookable'}
+                    {service.availability === 'request'
+                      ? 'Open for requests'
+                      : 'Inquiry only, not yet bookable'}
                   </Badge>
                 ) : (
                   <Badge tone="success">Available by consultation request</Badge>
@@ -100,7 +104,9 @@ export default async function ServiceDetailPage({ params }: { params: Params }) 
             </div>
           </div>
           <p className="mt-4 max-w-prose text-base text-fg-muted">{service.shortDescription}</p>
-          {service.descriptionHtml ? <Prose html={service.descriptionHtml} className="mt-4" /> : null}
+          {service.descriptionHtml ? (
+            <Prose html={service.descriptionHtml} className="mt-4" />
+          ) : null}
 
           {planned ? (
             <Alert tone="info" title="Why this service is not bookable yet" className="mt-6">
@@ -125,15 +131,22 @@ export default async function ServiceDetailPage({ params }: { params: Params }) 
             {service.deliverables.length > 0 ? (
               <ul className="mt-3 grid gap-2 sm:grid-cols-2">
                 {service.deliverables.map((d) => (
-                  <li key={d} className="flex gap-2 rounded-md border border-border bg-bg-elevated px-3 py-2 text-sm">
-                    <span aria-hidden="true" className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
+                  <li
+                    key={d}
+                    className="flex gap-2 rounded-md border border-border bg-bg-elevated px-3 py-2 text-sm"
+                  >
+                    <span
+                      aria-hidden="true"
+                      className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full bg-primary"
+                    />
                     <span>{d}</span>
                   </li>
                 ))}
               </ul>
             ) : (
               <p className="mt-2 text-sm text-fg-muted">
-                Deliverables are defined per activated workflow template once this service is staffed.
+                Deliverables are defined per activated workflow template once this service is
+                staffed.
               </p>
             )}
           </section>
@@ -152,14 +165,17 @@ export default async function ServiceDetailPage({ params }: { params: Params }) 
               Workflow steps
             </h2>
             <p className="mt-2 mb-4 max-w-prose text-sm text-fg-muted">
-              Shared engagement pipeline. Rejected, paused and cancelled paths always record a reason
-              and the billing consequence.
+              Shared engagement pipeline. Rejected, paused and cancelled paths always record a
+              reason and the billing consequence.
             </p>
             <WorkflowSteps />
           </section>
         </div>
 
-        <aside className="space-y-4 lg:sticky lg:top-24 lg:self-start" aria-label="Pricing and availability">
+        <aside
+          className="space-y-4 lg:sticky lg:top-24 lg:self-start"
+          aria-label="Pricing and availability"
+        >
           <div className="rounded-lg border border-border bg-bg-elevated p-5">
             <h2 className="text-base font-semibold">Price anchor</h2>
             {planned ? (
@@ -174,7 +190,9 @@ export default async function ServiceDetailPage({ params }: { params: Params }) 
                 {service.packages.map((pkg) => (
                   <li key={pkg.id} className="text-sm">
                     <p className="font-medium">{pkg.name}</p>
-                    <p className="text-lg font-semibold text-fg">{pkg.priceLabel ?? 'Not published'}</p>
+                    <p className="text-lg font-semibold text-fg">
+                      {pkg.priceLabel ?? 'Not published'}
+                    </p>
                     <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-fg-muted">
                       <dt>Basis</dt>
                       <dd className="text-fg">{basisLabel(pkg.priceBasis)}</dd>
@@ -184,12 +202,17 @@ export default async function ServiceDetailPage({ params }: { params: Params }) 
                       <dd className="text-fg">{pkg.exclusions ?? 'Stated in the quotation'}</dd>
                       <dt>Effective</dt>
                       <dd className="text-fg">
-                        {pkg.effectiveFrom ? `from ${formatDateLabel(pkg.effectiveFrom)}` : 'Not set'}
+                        {pkg.effectiveFrom
+                          ? `from ${formatDateLabel(pkg.effectiveFrom)}`
+                          : 'Not set'}
                         {pkg.effectiveTo ? ` to ${formatDateLabel(pkg.effectiveTo)}` : ''}
                       </dd>
                       <dt>Status</dt>
                       <dd>
-                        <StatusBadge status={pkg.publicationState} label={priceStatusLabel(pkg.publicationState)} />
+                        <StatusBadge
+                          status={pkg.publicationState}
+                          label={priceStatusLabel(pkg.publicationState)}
+                        />
                       </dd>
                     </dl>
                     {pkg.priceBasis === 'percentage' ? (
@@ -202,7 +225,8 @@ export default async function ServiceDetailPage({ params }: { params: Params }) 
               </ul>
             )}
             <p className="mt-3 text-xs text-fg-subtle">
-              Anchors are indicative and editable by the business; your price is the scoped quotation.
+              Anchors are indicative and editable by the business; your price is the scoped
+              quotation.
             </p>
             <Link href={requestHref} className={`${buttonVariants({ size: 'lg' })} mt-4 w-full`}>
               {requestLabel}
@@ -228,11 +252,14 @@ export default async function ServiceDetailPage({ params }: { params: Params }) 
                 <dd className="text-right">{coverage.pending}</dd>
               </dl>
             ) : (
-              <p className="mt-3 text-sm text-fg-muted">Coverage counts are not available right now.</p>
+              <p className="mt-3 text-sm text-fg-muted">
+                Coverage counts are not available right now.
+              </p>
             )}
             {coverage && coverage.available + coverage.limited + coverage.onRequest === 0 ? (
               <p className="mt-2 text-xs text-fg-subtle">
-                No location has confirmed availability for this service yet; requests are triaged individually.
+                No location has confirmed availability for this service yet; requests are triaged
+                individually.
               </p>
             ) : null}
             <Link href="/locations" className="mt-3 inline-block text-sm text-primary underline">

@@ -11,7 +11,10 @@ import { getPublishedContent, listPublishedContent } from '@/server/content/publ
 import { getMarketBySlug, listMarkets } from '@/server/markets/queries';
 import { listServiceCatalog, type ServiceCatalog } from '@/server/services/catalog';
 import { SITE, type FaqItem } from '@/components/public/defaults';
-import { defaultEvidenceStandards, type EvidenceStandardItem } from '@/components/public/evidence-standards';
+import {
+  defaultEvidenceStandards,
+  type EvidenceStandardItem,
+} from '@/components/public/evidence-standards';
 import { CORE_SERVICE_NAV, type NavServiceItem } from '@/components/public/nav-data';
 
 /**
@@ -36,7 +39,8 @@ export function publicMetadata(input: {
   type?: 'website' | 'article';
   absoluteTitle?: boolean;
 }): Metadata {
-  const description = input.description.length > 300 ? `${input.description.slice(0, 297)}…` : input.description;
+  const description =
+    input.description.length > 300 ? `${input.description.slice(0, 297)}…` : input.description;
   return {
     title: input.absoluteTitle ? { absolute: input.title } : input.title,
     description,
@@ -70,7 +74,9 @@ export const navServices = cache(async (): Promise<NavServiceItem[]> => {
     slug: s.slug,
     name: s.name,
     hint:
-      CORE_SERVICE_NAV.find((n) => n.slug === s.slug)?.hint ?? s.deliverables[0] ?? s.shortDescription,
+      CORE_SERVICE_NAV.find((n) => n.slug === s.slug)?.hint ??
+      s.deliverables[0] ??
+      s.shortDescription,
   }));
 });
 
@@ -86,14 +92,16 @@ export const contentBySlug = cache(
   },
 );
 
-export const contentByKind = cache(async (kind: PublishedContent['kind']): Promise<PublishedContent[]> => {
-  try {
-    return await listPublishedContent(kind);
-  } catch (err) {
-    logger().warn({ err: (err as Error).message, kind }, 'content list unavailable');
-    return [];
-  }
-});
+export const contentByKind = cache(
+  async (kind: PublishedContent['kind']): Promise<PublishedContent[]> => {
+    try {
+      return await listPublishedContent(kind);
+    } catch (err) {
+      logger().warn({ err: (err as Error).message, kind }, 'content list unavailable');
+      return [];
+    }
+  },
+);
 
 export type MarketsResult = { status: 'ok'; data: MarketListResponse } | { status: 'unavailable' };
 
@@ -112,9 +120,7 @@ export const loadMarkets = cache(async (): Promise<MarketsResult> => {
 });
 
 export type MarketResult =
-  | { status: 'ok'; market: MarketDetailDto }
-  | { status: 'missing' }
-  | { status: 'unavailable' };
+  { status: 'ok'; market: MarketDetailDto } | { status: 'missing' } | { status: 'unavailable' };
 
 export const loadMarket = cache(async (slug: string): Promise<MarketResult> => {
   try {

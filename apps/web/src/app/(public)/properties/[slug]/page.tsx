@@ -1,7 +1,17 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { Alert, Badge, buttonVariants, DataTable, formatArea, formatDateLabel, formatNairaString, humanize, type Column } from '@simplexd/ui';
+import {
+  Alert,
+  Badge,
+  buttonVariants,
+  DataTable,
+  formatArea,
+  formatDateLabel,
+  formatNairaString,
+  humanize,
+  type Column,
+} from '@simplexd/ui';
 import { getIdentity } from '@/lib/auth/session';
 import { PageAction } from '@/components/public/action-bar';
 import { Breadcrumbs } from '@/components/public/breadcrumbs';
@@ -45,7 +55,11 @@ export default async function PropertyDetailPage({ params }: { params: Params })
     { key: 'result', header: 'Result', cell: (c) => c.result },
     { key: 'by', header: 'Checked by', cell: (c) => c.checkedBy },
     { key: 'at', header: 'Checked on', cell: (c) => formatDateLabel(c.checkedAt) },
-    { key: 'expires', header: 'Valid until', cell: (c) => (c.expiresAt ? formatDateLabel(c.expiresAt) : 'No expiry stated') },
+    {
+      key: 'expires',
+      header: 'Valid until',
+      cell: (c) => (c.expiresAt ? formatDateLabel(c.expiresAt) : 'No expiry stated'),
+    },
   ];
 
   return (
@@ -72,12 +86,17 @@ export default async function PropertyDetailPage({ params }: { params: Params })
             <Badge tone="primary">{humanize(listing.kind)}</Badge>
             <Badge tone="neutral">{humanize(listing.propertyKind)}</Badge>
           </div>
-          <h1 className="font-display mt-2 text-2xl font-semibold leading-tight sm:text-3xl">{listing.title}</h1>
+          <h1 className="font-display mt-2 text-2xl font-semibold leading-tight sm:text-3xl">
+            {listing.title}
+          </h1>
           <p className="mt-1 text-fg-muted">
             {listing.marketName ? (
               <>
                 {listing.marketSlug ? (
-                  <Link href={`/locations/${listing.marketSlug}`} className="text-primary underline">
+                  <Link
+                    href={`/locations/${listing.marketSlug}`}
+                    className="text-primary underline"
+                  >
                     {listing.marketName}
                   </Link>
                 ) : (
@@ -91,7 +110,9 @@ export default async function PropertyDetailPage({ params }: { params: Params })
           </p>
           <p className="mt-4 text-2xl font-semibold">
             {listing.priceKobo ? formatNairaString(listing.priceKobo) : 'Price on request'}
-            {listing.priceBasis ? <span className="text-base font-normal text-fg-muted"> · {listing.priceBasis}</span> : null}
+            {listing.priceBasis ? (
+              <span className="text-base font-normal text-fg-muted"> · {listing.priceBasis}</span>
+            ) : null}
           </p>
 
           <dl className="mt-6 grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
@@ -111,7 +132,9 @@ export default async function PropertyDetailPage({ params }: { params: Params })
               <dt className="text-fg-muted">Availability</dt>
               <dd className="font-medium">
                 {listing.availability ?? 'Not stated'}
-                {listing.availabilityConfirmedAt ? ` (confirmed ${formatDateLabel(listing.availabilityConfirmedAt)})` : ''}
+                {listing.availabilityConfirmedAt
+                  ? ` (confirmed ${formatDateLabel(listing.availabilityConfirmedAt)})`
+                  : ''}
               </dd>
             </div>
             <div>
@@ -141,10 +164,12 @@ export default async function PropertyDetailPage({ params }: { params: Params })
               Verification scope
             </h2>
             <p className="mt-1 text-sm text-fg-muted">
-              Only the checks listed here were performed. This is not a statement that the listing is
-              legally verified in every respect.
+              Only the checks listed here were performed. This is not a statement that the listing
+              is legally verified in every respect.
             </p>
-            {listing.verification?.summary ? <p className="mt-2 text-sm">{listing.verification.summary}</p> : null}
+            {listing.verification?.summary ? (
+              <p className="mt-2 text-sm">{listing.verification.summary}</p>
+            ) : null}
             <div className="mt-3">
               <DataTable
                 columns={columns}
@@ -180,13 +205,16 @@ export default async function PropertyDetailPage({ params }: { params: Params })
             <Link href={askHref} className={`${buttonVariants({ size: 'lg' })} mt-4 w-full`}>
               Ask about this listing
             </Link>
-            <Link href="/services/due-diligence" className={`${buttonVariants({ variant: 'secondary', size: 'lg' })} mt-2 w-full`}>
+            <Link
+              href="/services/due-diligence"
+              className={`${buttonVariants({ variant: 'secondary', size: 'lg' })} mt-2 w-full`}
+            >
               Due diligence before you commit
             </Link>
           </div>
           <Alert tone="info" title="Precise location withheld">
-            Coordinates and addresses are published only with the owner&apos;s approval. This listing is
-            shown at {humanize(listing.publicLocationPrecision).toLowerCase()} precision.
+            Coordinates and addresses are published only with the owner&apos;s approval. This
+            listing is shown at {humanize(listing.publicLocationPrecision).toLowerCase()} precision.
           </Alert>
         </aside>
       </div>

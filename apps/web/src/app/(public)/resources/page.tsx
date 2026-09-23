@@ -28,7 +28,10 @@ export default async function ResourcesPage() {
             title="No resources published yet"
             description="Articles are written, reviewed and published through the content workflow. The service pages and evidence standards already explain how engagements run."
             action={
-              <Link href="/how-it-works" className={buttonVariants({ variant: 'secondary', size: 'sm' })}>
+              <Link
+                href="/how-it-works"
+                className={buttonVariants({ variant: 'secondary', size: 'sm' })}
+              >
                 How it works
               </Link>
             }
@@ -38,16 +41,24 @@ export default async function ResourcesPage() {
             {resources.map((r) => {
               const category = fieldString(r, 'category');
               return (
-                <li key={r.slug} className="relative flex flex-col rounded-lg border border-border bg-bg-elevated p-5">
+                <li
+                  key={r.slug}
+                  className="relative flex flex-col rounded-lg border border-border bg-bg-elevated p-5"
+                >
                   {category ? <Badge tone="neutral">{category}</Badge> : null}
                   <h2 className="mt-2 text-lg font-semibold leading-tight">
-                    <Link href={`/resources/${r.slug}`} className="after:absolute after:inset-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus">
+                    <Link
+                      href={`/resources/${r.slug}`}
+                      className="after:absolute after:inset-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+                    >
                       {r.title}
                     </Link>
                   </h2>
                   <p className="mt-1 text-sm text-fg-muted">{excerpt(r, 200)}</p>
                   {r.publishedAt ? (
-                    <p className="mt-3 text-xs text-fg-subtle">Published {formatDateLabel(r.publishedAt)}</p>
+                    <p className="mt-3 text-xs text-fg-subtle">
+                      Published {formatDateLabel(r.publishedAt)}
+                    </p>
                   ) : null}
                 </li>
               );

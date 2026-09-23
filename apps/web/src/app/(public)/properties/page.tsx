@@ -1,6 +1,15 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { Badge, buttonVariants, EmptyState, formatArea, formatDateLabel, formatNairaString, humanize, PageHeader } from '@simplexd/ui';
+import {
+  Badge,
+  buttonVariants,
+  EmptyState,
+  formatArea,
+  formatDateLabel,
+  formatNairaString,
+  humanize,
+  PageHeader,
+} from '@simplexd/ui';
 import { getIdentity } from '@/lib/auth/session';
 import { logger } from '@/lib/logger';
 import { Breadcrumbs } from '@/components/public/breadcrumbs';
@@ -16,12 +25,23 @@ export const metadata: Metadata = publicMetadata({
 });
 
 const KINDS = ['sale', 'lease', 'short_stay'] as const;
-const PROPERTY_KINDS = ['land', 'residential', 'commercial', 'industrial', 'mixed_use', 'student_housing', 'short_stay'] as const;
+const PROPERTY_KINDS = [
+  'land',
+  'residential',
+  'commercial',
+  'industrial',
+  'mixed_use',
+  'student_housing',
+  'short_stay',
+] as const;
 
 function verificationSummary(l: PublicListing): { text: string; expiry: string | null } {
   const checks = l.verification?.checks ?? [];
   if (checks.length === 0) return { text: 'No verification checks recorded', expiry: null };
-  const expiries = checks.map((c) => c.expiresAt).filter((e): e is string => Boolean(e)).sort();
+  const expiries = checks
+    .map((c) => c.expiresAt)
+    .filter((e): e is string => Boolean(e))
+    .sort();
   return {
     text: `${checks.length} check${checks.length === 1 ? '' : 's'} recorded`,
     expiry: expiries[0] ?? null,
@@ -30,9 +50,14 @@ function verificationSummary(l: PublicListing): { text: string; expiry: string |
 
 export default async function PropertiesPage({ searchParams }: { searchParams: SearchParams }) {
   const params = await searchParams;
-  const kindParam = typeof params.kind === 'string' && (KINDS as readonly string[]).includes(params.kind) ? (params.kind as (typeof KINDS)[number]) : undefined;
+  const kindParam =
+    typeof params.kind === 'string' && (KINDS as readonly string[]).includes(params.kind)
+      ? (params.kind as (typeof KINDS)[number])
+      : undefined;
   const typeParam =
-    typeof params.type === 'string' && (PROPERTY_KINDS as readonly string[]).includes(params.type) ? params.type : undefined;
+    typeof params.type === 'string' && (PROPERTY_KINDS as readonly string[]).includes(params.type)
+      ? params.type
+      : undefined;
   const identity = await getIdentity();
   const enabled = identity.featureFlags['core.public_listings'] !== false;
 
@@ -55,18 +80,31 @@ export default async function PropertiesPage({ searchParams }: { searchParams: S
           title="Published listings with their verification scope"
           description="Every listing states what was checked, by whom and when, with an expiry. Owner authority and content are moderated before publication; precise locations are withheld unless the owner approves."
           actions={
-            <Link href="/services/land-sales-leasing" className={buttonVariants({ variant: 'secondary' })}>
+            <Link
+              href="/services/land-sales-leasing"
+              className={buttonVariants({ variant: 'secondary' })}
+            >
               List land or property
             </Link>
           }
         />
 
-        <form method="get" action="/properties" className="flex flex-wrap items-end gap-3 rounded-lg border border-border bg-bg-elevated p-4" aria-label="Filter listings">
+        <form
+          method="get"
+          action="/properties"
+          className="flex flex-wrap items-end gap-3 rounded-lg border border-border bg-bg-elevated p-4"
+          aria-label="Filter listings"
+        >
           <div className="flex flex-col gap-1 text-sm">
             <label htmlFor="filter-kind" className="font-medium">
               Listing type
             </label>
-            <select id="filter-kind" name="kind" defaultValue={kindParam ?? ''} className="h-11 rounded-md border border-border-strong bg-bg-elevated px-3">
+            <select
+              id="filter-kind"
+              name="kind"
+              defaultValue={kindParam ?? ''}
+              className="h-11 rounded-md border border-border-strong bg-bg-elevated px-3"
+            >
               <option value="">Any</option>
               {KINDS.map((k) => (
                 <option key={k} value={k}>
@@ -79,7 +117,12 @@ export default async function PropertiesPage({ searchParams }: { searchParams: S
             <label htmlFor="filter-type" className="font-medium">
               Property type
             </label>
-            <select id="filter-type" name="type" defaultValue={typeParam ?? ''} className="h-11 rounded-md border border-border-strong bg-bg-elevated px-3">
+            <select
+              id="filter-type"
+              name="type"
+              defaultValue={typeParam ?? ''}
+              className="h-11 rounded-md border border-border-strong bg-bg-elevated px-3"
+            >
               <option value="">Any</option>
               {PROPERTY_KINDS.map((k) => (
                 <option key={k} value={k}>
@@ -124,22 +167,32 @@ export default async function PropertiesPage({ searchParams }: { searchParams: S
             {listings.map((l) => {
               const v = verificationSummary(l);
               return (
-                <li key={l.id} className="relative flex flex-col rounded-lg border border-border bg-bg-elevated p-4 shadow-sm">
+                <li
+                  key={l.id}
+                  className="relative flex flex-col rounded-lg border border-border bg-bg-elevated p-4 shadow-sm"
+                >
                   <div className="flex flex-wrap gap-1.5">
                     <Badge tone="primary">{humanize(l.kind)}</Badge>
                     <Badge tone="neutral">{humanize(l.propertyKind)}</Badge>
                   </div>
                   <h2 className="mt-2 text-base font-semibold leading-tight">
-                    <Link href={`/properties/${l.slug}`} className="after:absolute after:inset-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus">
+                    <Link
+                      href={`/properties/${l.slug}`}
+                      className="after:absolute after:inset-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+                    >
                       {l.title}
                     </Link>
                   </h2>
                   <p className="text-sm text-fg-muted">
-                    {l.marketName ? `${l.marketName}${l.stateName ? `, ${l.stateName}` : ''}` : 'Location published at market level only'}
+                    {l.marketName
+                      ? `${l.marketName}${l.stateName ? `, ${l.stateName}` : ''}`
+                      : 'Location published at market level only'}
                   </p>
                   <p className="mt-2 text-lg font-semibold">
                     {l.priceKobo ? formatNairaString(l.priceKobo) : 'Price on request'}
-                    {l.priceBasis ? <span className="text-sm font-normal text-fg-muted"> · {l.priceBasis}</span> : null}
+                    {l.priceBasis ? (
+                      <span className="text-sm font-normal text-fg-muted"> · {l.priceBasis}</span>
+                    ) : null}
                   </p>
                   <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 text-xs text-fg-muted">
                     <dt>Area</dt>
@@ -149,7 +202,9 @@ export default async function PropertiesPage({ searchParams }: { searchParams: S
                     <dt>Availability</dt>
                     <dd className="text-fg">
                       {l.availability ?? 'Not stated'}
-                      {l.availabilityConfirmedAt ? ` (confirmed ${formatDateLabel(l.availabilityConfirmedAt)})` : ''}
+                      {l.availabilityConfirmedAt
+                        ? ` (confirmed ${formatDateLabel(l.availabilityConfirmedAt)})`
+                        : ''}
                     </dd>
                     <dt>Verification</dt>
                     <dd className="text-fg">

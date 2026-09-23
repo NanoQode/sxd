@@ -35,12 +35,22 @@ export function AudiencePage({
   return (
     <>
       <Breadcrumbs items={[{ name: title, href: path }]} baseUrl={siteUrl()} />
-      <section aria-labelledby="audience-heading" className="sx-container grid gap-8 py-8 lg:grid-cols-[3fr_2fr] lg:items-center">
+      <section
+        aria-labelledby="audience-heading"
+        className="sx-container grid gap-8 py-8 lg:grid-cols-[3fr_2fr] lg:items-center"
+      >
         <div className="max-w-2xl">
-          <h1 id="audience-heading" className="font-display text-3xl font-semibold leading-tight sm:text-4xl">
+          <h1
+            id="audience-heading"
+            className="font-display text-3xl font-semibold leading-tight sm:text-4xl"
+          >
             {title}
           </h1>
-          {cms ? <Prose html={cms.bodyHtml} className="mt-4" /> : <p className="mt-4 text-lg text-fg-muted">{copy.intro}</p>}
+          {cms ? (
+            <Prose html={cms.bodyHtml} className="mt-4" />
+          ) : (
+            <p className="mt-4 text-lg text-fg-muted">{copy.intro}</p>
+          )}
           <div className="mt-6 flex flex-col gap-3 sm:flex-row">
             <Link href="/book" className={buttonVariants({ size: 'lg' })}>
               Book a consultation
@@ -54,7 +64,12 @@ export function AudiencePage({
           <Illustration name={illustration} className="max-w-md" />
         </div>
       </section>
-      <Section id="capabilities" eyebrow="Portal capabilities" title="What the platform does for you" tone="sunken">
+      <Section
+        id="capabilities"
+        eyebrow="Portal capabilities"
+        title="What the platform does for you"
+        tone="sunken"
+      >
         <ul className="grid gap-4 sm:grid-cols-2">
           {copy.capabilities.map((c) => (
             <li key={c.heading} className="rounded-lg border border-border bg-bg-elevated p-5">

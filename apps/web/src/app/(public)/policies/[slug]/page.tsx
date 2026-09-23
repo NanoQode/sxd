@@ -65,9 +65,14 @@ export default async function PolicyPage({ params }: { params: Params }) {
   if (!policy) notFound();
   return (
     <>
-      <Breadcrumbs items={[{ name: policy.title, href: `/policies/${policy.slug}` }]} baseUrl={siteUrl()} />
+      <Breadcrumbs
+        items={[{ name: policy.title, href: `/policies/${policy.slug}` }]}
+        baseUrl={siteUrl()}
+      />
       <article className="sx-container py-6">
-        <h1 className="font-display text-3xl font-semibold leading-tight sm:text-4xl">{policy.title}</h1>
+        <h1 className="font-display text-3xl font-semibold leading-tight sm:text-4xl">
+          {policy.title}
+        </h1>
         <p className="mt-2 text-sm text-fg-muted">
           {policy.version ? `Version ${policy.version} · ` : ''}
           {policy.effectiveDate

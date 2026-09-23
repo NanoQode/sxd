@@ -32,7 +32,10 @@ export default async function ProjectsPage() {
             title="Approved case studies will appear here once owners grant publication rights"
             description="Every engagement produces reviewed, versioned reports; publishing them publicly is the owner's decision."
             action={
-              <Link href="/how-it-works" className={buttonVariants({ variant: 'secondary', size: 'sm' })}>
+              <Link
+                href="/how-it-works"
+                className={buttonVariants({ variant: 'secondary', size: 'sm' })}
+              >
                 See how an engagement runs
               </Link>
             }
@@ -44,11 +47,17 @@ export default async function ProjectsPage() {
               const serviceSlug = fieldString(c, 'serviceSlug');
               const completedAt = fieldString(c, 'completedAt');
               return (
-                <article key={c.slug} id={c.slug} className="rounded-lg border border-border bg-bg-elevated p-5 sm:p-6">
+                <article
+                  key={c.slug}
+                  id={c.slug}
+                  className="rounded-lg border border-border bg-bg-elevated p-5 sm:p-6"
+                >
                   <div className="flex flex-wrap gap-1.5">
                     <Badge tone="success">Publication rights granted</Badge>
                     {location ? <Badge tone="neutral">{location}</Badge> : null}
-                    {completedAt ? <Badge tone="neutral">Completed {formatDateLabel(completedAt)}</Badge> : null}
+                    {completedAt ? (
+                      <Badge tone="neutral">Completed {formatDateLabel(completedAt)}</Badge>
+                    ) : null}
                   </div>
                   <h2 className="mt-2 text-xl font-semibold">{c.title}</h2>
                   {serviceSlug ? (
@@ -61,7 +70,9 @@ export default async function ProjectsPage() {
                   ) : null}
                   <Prose html={c.bodyHtml} className="mt-3" />
                   {c.publishedAt ? (
-                    <p className="mt-3 text-xs text-fg-subtle">Published {formatDateLabel(c.publishedAt)}</p>
+                    <p className="mt-3 text-xs text-fg-subtle">
+                      Published {formatDateLabel(c.publishedAt)}
+                    </p>
                   ) : null}
                 </article>
               );
@@ -69,7 +80,12 @@ export default async function ProjectsPage() {
           </div>
         )}
       </div>
-      <Section id="sample-reports" eyebrow="Sample redacted reports" title="What each engagement delivers" tone="sunken">
+      <Section
+        id="sample-reports"
+        eyebrow="Sample redacted reports"
+        title="What each engagement delivers"
+        tone="sunken"
+      >
         <SampleReports />
       </Section>
       <CtaBand />

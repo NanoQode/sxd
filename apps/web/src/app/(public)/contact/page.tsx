@@ -5,17 +5,28 @@ import { ConsultationForm } from '@/components/public/consultation-form';
 import { readPrefill } from '@/components/public/consultation-schema';
 import { CONTACT_FALLBACK } from '@/components/public/defaults';
 import { Prose } from '@/components/public/section';
-import { contentBySlug, fieldString, loadCatalog, publicMetadata, siteUrl, type SearchParams } from '../_lib/site-data';
+import {
+  contentBySlug,
+  fieldString,
+  loadCatalog,
+  publicMetadata,
+  siteUrl,
+  type SearchParams,
+} from '../_lib/site-data';
 
 export const metadata: Metadata = publicMetadata({
   title: 'Contact',
-  description: 'Contact the SimplexD team about property services in Nigeria, or send a request through the form.',
+  description:
+    'Contact the SimplexD team about property services in Nigeria, or send a request through the form.',
   path: '/contact',
 });
 
 export default async function ContactPage({ searchParams }: { searchParams: SearchParams }) {
   const params = await searchParams;
-  const [contact, catalog] = await Promise.all([contentBySlug('contact', 'contact'), loadCatalog()]);
+  const [contact, catalog] = await Promise.all([
+    contentBySlug('contact', 'contact'),
+    loadCatalog(),
+  ]);
   const email = fieldString(contact, 'email');
   const phone = fieldString(contact, 'phone');
   const whatsapp = fieldString(contact, 'whatsapp');
@@ -34,7 +45,9 @@ export default async function ContactPage({ searchParams }: { searchParams: Sear
       <Breadcrumbs items={[{ name: 'Contact', href: '/contact' }]} baseUrl={siteUrl()} />
       <div className="sx-container grid gap-8 py-6 lg:grid-cols-[2fr_3fr]">
         <div>
-          <h1 className="font-display text-3xl font-semibold leading-tight sm:text-4xl">{contact?.title ?? 'Contact SimplexD'}</h1>
+          <h1 className="font-display text-3xl font-semibold leading-tight sm:text-4xl">
+            {contact?.title ?? 'Contact SimplexD'}
+          </h1>
           {contact?.bodyHtml ? <Prose html={contact.bodyHtml} className="mt-4" /> : null}
           <div className="mt-6 rounded-lg border border-border bg-bg-elevated p-5">
             <h2 className="text-base font-semibold">Contact details</h2>
@@ -54,7 +67,10 @@ export default async function ContactPage({ searchParams }: { searchParams: Sear
                   <div>
                     <dt className="text-fg-muted">Phone</dt>
                     <dd>
-                      <a href={`tel:${phone.replace(/\s+/g, '')}`} className="text-primary underline">
+                      <a
+                        href={`tel:${phone.replace(/\s+/g, '')}`}
+                        className="text-primary underline"
+                      >
                         {phone}
                       </a>
                     </dd>
@@ -86,7 +102,9 @@ export default async function ContactPage({ searchParams }: { searchParams: Sear
                 ) : null}
               </dl>
             ) : (
-              <p className="mt-2 text-sm text-fg-muted">{CONTACT_FALLBACK} Use the form to reach the team by email.</p>
+              <p className="mt-2 text-sm text-fg-muted">
+                {CONTACT_FALLBACK} Use the form to reach the team by email.
+              </p>
             )}
           </div>
           <p className="mt-4 text-sm text-fg-muted">

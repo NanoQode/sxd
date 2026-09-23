@@ -109,9 +109,12 @@ function NumberFilter({
   step?: number;
 }) {
   const [text, setText] = useState(value === null ? '' : String(value));
-  useEffect(() => {
+  // Sync from the URL value during render (React's "derived state from props" pattern).
+  const [syncedValue, setSyncedValue] = useState(value);
+  if (syncedValue !== value) {
+    setSyncedValue(value);
     setText(value === null ? '' : String(value));
-  }, [value]);
+  }
   const commit = () => {
     const cleaned = text.replace(/[,\s₦]/g, '');
     if (cleaned === '') {
@@ -155,7 +158,11 @@ export function FilterPanel({ compact = false }: { compact?: boolean }) {
   const { filters, setFilters, resetFilters, query, setQuery, stateOptions, rows, totalMarkets, markets } =
     useExplorer();
   const [search, setSearch] = useState(query);
-  useEffect(() => setSearch(query), [query]);
+  const [syncedQuery, setSyncedQuery] = useState(query);
+  if (syncedQuery !== query) {
+    setSyncedQuery(query);
+    setSearch(query);
+  }
   useEffect(() => {
     const timer = window.setTimeout(() => {
       if (search !== query) setQuery(search);

@@ -62,20 +62,32 @@ export default async function HomePage({ searchParams }: { searchParams: SearchP
       />
 
       {/* 1. Value proposition and two actions */}
-      <section aria-labelledby="hero-heading" className="sx-container grid gap-8 py-10 sm:py-16 lg:grid-cols-[3fr_2fr] lg:items-center">
+      <section
+        aria-labelledby="hero-heading"
+        className="sx-container grid gap-8 py-10 sm:py-16 lg:grid-cols-[3fr_2fr] lg:items-center"
+      >
         <div className="max-w-2xl">
           <p className="text-xs font-medium tracking-wide text-primary uppercase">{HERO.eyebrow}</p>
-          <h1 id="hero-heading" className="font-display mt-2 text-3xl font-semibold leading-tight sm:text-4xl lg:text-5xl">
+          <h1
+            id="hero-heading"
+            className="font-display mt-2 text-3xl font-semibold leading-tight sm:text-4xl lg:text-5xl"
+          >
             {HERO.title}
           </h1>
           <p className="mt-4 text-base text-fg-muted sm:text-lg">{HERO.body}</p>
           <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-            <Link href={HERO.primary.href} className={cn(buttonVariants({ size: 'lg' }), 'w-full sm:w-auto')}>
+            <Link
+              href={HERO.primary.href}
+              className={cn(buttonVariants({ size: 'lg' }), 'w-full sm:w-auto')}
+            >
               {HERO.primary.label}
             </Link>
             <Link
               href={HERO.secondary.href}
-              className={cn(buttonVariants({ variant: 'secondary', size: 'lg' }), 'w-full sm:w-auto')}
+              className={cn(
+                buttonVariants({ variant: 'secondary', size: 'lg' }),
+                'w-full sm:w-auto',
+              )}
             >
               {HERO.secondary.label}
             </Link>
@@ -83,7 +95,10 @@ export default async function HomePage({ searchParams }: { searchParams: SearchP
           <ul className="mt-6 space-y-1.5 text-sm text-fg-muted">
             {HERO.points.map((p) => (
               <li key={p} className="flex gap-2">
-                <span aria-hidden="true" className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full bg-gold" />
+                <span
+                  aria-hidden="true"
+                  className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full bg-gold"
+                />
                 <span>{p}</span>
               </li>
             ))}
@@ -98,8 +113,8 @@ export default async function HomePage({ searchParams }: { searchParams: SearchP
       <section aria-label="Location explorer" className="sx-container pb-10 sm:pb-14">
         <LocationExplorer variant="homepage" />
         <p className="mt-3 text-sm text-fg-muted">
-          Explore anonymously. Each market shows its evidence badges, service availability and
-          what is still missing; saving a scenario or requesting verification asks for an account.{' '}
+          Explore anonymously. Each market shows its evidence badges, service availability and what
+          is still missing; saving a scenario or requesting verification asks for an account.{' '}
           <Link href="/locations" className="text-primary underline">
             Browse all locations as a list
           </Link>
@@ -157,7 +172,10 @@ export default async function HomePage({ searchParams }: { searchParams: SearchP
         title="Inquiry to reviewed delivery, with evidence at each step"
         description="One engagement pipeline is shared by every service. Rejected, paused or cancelled paths always record a reason."
         actions={
-          <Link href="/how-it-works" className={buttonVariants({ variant: 'secondary', size: 'sm' })}>
+          <Link
+            href="/how-it-works"
+            className={buttonVariants({ variant: 'secondary', size: 'sm' })}
+          >
             Read the full process
           </Link>
         }
@@ -190,7 +208,10 @@ export default async function HomePage({ searchParams }: { searchParams: SearchP
             title="Approved case studies will appear here once owners grant publication rights"
             description="Until then, the sample report outlines below describe exactly what each engagement delivers."
             action={
-              <Link href="/projects" className={buttonVariants({ variant: 'secondary', size: 'sm' })}>
+              <Link
+                href="/projects"
+                className={buttonVariants({ variant: 'secondary', size: 'sm' })}
+              >
                 Projects page
               </Link>
             }
@@ -228,7 +249,10 @@ export default async function HomePage({ searchParams }: { searchParams: SearchP
           <ul className="grid gap-4 md:grid-cols-2">
             {testimonials.slice(0, 4).map((t) => (
               <li key={t.slug} className="rounded-lg border border-border bg-bg-elevated p-5">
-                <blockquote className="sx-prose text-sm" dangerouslySetInnerHTML={{ __html: t.bodyHtml }} />
+                <blockquote
+                  className="sx-prose text-sm"
+                  dangerouslySetInnerHTML={{ __html: t.bodyHtml }}
+                />
                 <p className="mt-3 text-sm font-medium">
                   {typeof t.fields.author === 'string' ? t.fields.author : t.title}
                   {typeof t.fields.location === 'string' ? (
@@ -241,7 +265,12 @@ export default async function HomePage({ searchParams }: { searchParams: SearchP
         </Section>
       ) : null}
 
-      <Section id="faq" eyebrow="Questions" title="Frequently asked questions" tone={testimonials.length > 0 ? 'default' : 'sunken'}>
+      <Section
+        id="faq"
+        eyebrow="Questions"
+        title="Frequently asked questions"
+        tone={testimonials.length > 0 ? 'default' : 'sunken'}
+      >
         <div className="max-w-3xl">
           <FaqList items={faqs} />
         </div>
@@ -257,12 +286,17 @@ export default async function HomePage({ searchParams }: { searchParams: SearchP
           <div className="rounded-lg border border-border bg-bg-elevated p-5 sm:p-6">
             <ConsultationForm services={formServices} prefill={prefill} variant="homepage" />
           </div>
-          <aside className="space-y-4 text-sm text-fg-muted" aria-label="What happens after you send the form">
+          <aside
+            className="space-y-4 text-sm text-fg-muted"
+            aria-label="What happens after you send the form"
+          >
             <h3 className="text-base font-semibold text-fg">What happens next</h3>
             <ol className="list-decimal space-y-2 pl-5">
               <li>The team confirms the service fits and checks availability for your location.</li>
               <li>You receive a scoped quotation with price basis, exclusions and validity.</li>
-              <li>Work starts after acceptance and, where required, payment through hosted checkout.</li>
+              <li>
+                Work starts after acceptance and, where required, payment through hosted checkout.
+              </li>
             </ol>
             <p>
               Prefer to explore first?{' '}

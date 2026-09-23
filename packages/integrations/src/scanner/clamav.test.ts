@@ -87,7 +87,7 @@ describe('ClamAvScanner', () => {
     const result = await scanner.scan(payload, { fileName: 'big.bin', sizeBytes: payload.length });
     expect(result).toMatchObject({ verdict: 'clean', signature: null, engine: 'clamav' });
     expect(server.commands).toEqual(['zINSTREAM']);
-    expect(server.frameLengths).toEqual([65536, 65536, 65536, 17 + 3 * 65536 - 3 * 65536]);
+    expect(server.frameLengths).toEqual([65536, 65536, 65536, payload.length - 3 * 65536]);
     expect(Buffer.concat(server.received).equals(payload)).toBe(true);
     expect(frameChunk(Buffer.from('ab'))).toEqual(Buffer.from([0, 0, 0, 2, 0x61, 0x62]));
   });

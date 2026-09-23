@@ -16,10 +16,10 @@ const schema = z.object({
   aliases: z.string().max(500),
   stateId: z.string().uuid('Choose a state'),
   geopoliticalZone: z.enum(ZONES),
-  displayOrder: z.coerce.number().int().min(0),
+  displayOrder: z.number().int().min(0),
   selectionBasis: z.string().max(500),
-  lon: z.coerce.number({ message: 'Longitude must be a number' }),
-  lat: z.coerce.number({ message: 'Latitude must be a number' }),
+  lon: z.number({ message: 'Longitude must be a number' }),
+  lat: z.number({ message: 'Latitude must be a number' }),
   coordinateSourceId: z.string(),
   coordinateAccuracy: z.string().max(200),
   parentMarketId: z.string(),
@@ -220,7 +220,7 @@ export function MarketForm({
           )}
         </Field>
         <Field label="Display order" htmlFor="mf-displayOrder" error={formState.errors.displayOrder?.message}>
-          {({ id, invalid }) => <Input id={id} type="number" min={0} aria-invalid={invalid} {...register('displayOrder')} />}
+          {({ id, invalid }) => <Input id={id} type="number" min={0} aria-invalid={invalid} {...register('displayOrder', { valueAsNumber: true })} />}
         </Field>
         <Field label="Service availability" htmlFor="mf-serviceAvailability" hint="Operations decides this separately from map publication.">
           {({ id, describedBy }) => (
@@ -265,10 +265,10 @@ export function MarketForm({
         />
         <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
           <Field label="Longitude" htmlFor="mf-lon" required error={formState.errors.lon?.message}>
-            {({ id, invalid, describedBy }) => <Input id={id} type="number" step="0.0001" aria-invalid={invalid} aria-describedby={describedBy} {...register('lon')} />}
+            {({ id, invalid, describedBy }) => <Input id={id} type="number" step="0.0001" aria-invalid={invalid} aria-describedby={describedBy} {...register('lon', { valueAsNumber: true })} />}
           </Field>
           <Field label="Latitude" htmlFor="mf-lat" required error={formState.errors.lat?.message}>
-            {({ id, invalid, describedBy }) => <Input id={id} type="number" step="0.0001" aria-invalid={invalid} aria-describedby={describedBy} {...register('lat')} />}
+            {({ id, invalid, describedBy }) => <Input id={id} type="number" step="0.0001" aria-invalid={invalid} aria-describedby={describedBy} {...register('lat', { valueAsNumber: true })} />}
           </Field>
           <Field label="Coordinate source" htmlFor="mf-coordinateSourceId">
             {({ id }) => (

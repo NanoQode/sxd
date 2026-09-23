@@ -8,10 +8,15 @@ import {
   type PendingApprovalsResponse,
 } from '@simplexd/contracts';
 import { getDb, schema, withActor, type Transaction } from '@simplexd/db';
-import { authorizeOrg, authorizeStaff, hasStaffPermission } from '@simplexd/domain/authz';
+import { authorizeOrg, hasStaffPermission } from '@simplexd/domain/authz';
 import type { RequestIdentity } from '@/lib/auth/session';
-import { PROJECT_READ_CHECKS, buildAccess, decideProjectAccess, requireProject } from './access';
-import { ACTIVE_ASSIGNMENT_STATUSES } from './access';
+import {
+  ACTIVE_ASSIGNMENT_STATUSES,
+  PROJECT_READ_CHECKS,
+  buildAccess,
+  decideProjectAccess,
+  requireProject,
+} from './access';
 import { ctxFor, iso, notFound, userIdOf } from './shared';
 
 export type ApprovalRow = typeof schema.approvals.$inferSelect;
@@ -233,5 +238,3 @@ export function assertPendingApproval(row: ApprovalRow | undefined, role: string
   }
   return row;
 }
-
-export { authorizeStaff as _authorizeStaffForApprovals };

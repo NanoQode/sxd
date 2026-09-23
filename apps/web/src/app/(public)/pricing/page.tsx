@@ -1,6 +1,15 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { Alert, buttonVariants, DataTable, EmptyState, formatDateLabel, PageHeader, StatusBadge, type Column } from '@simplexd/ui';
+import {
+  Alert,
+  buttonVariants,
+  DataTable,
+  EmptyState,
+  formatDateLabel,
+  PageHeader,
+  StatusBadge,
+  type Column,
+} from '@simplexd/ui';
 import { Breadcrumbs } from '@/components/public/breadcrumbs';
 import { CtaBand } from '@/components/public/cta-band';
 import { basisLabel, priceStatusLabel } from '@/components/public/price-anchor';
@@ -57,7 +66,10 @@ export default async function PricingPage() {
       key: 'status',
       header: 'Status',
       cell: (r) => (
-        <StatusBadge status={r.pkg.publicationState} label={priceStatusLabel(r.pkg.publicationState)} />
+        <StatusBadge
+          status={r.pkg.publicationState}
+          label={priceStatusLabel(r.pkg.publicationState)}
+        />
       ),
     },
   ];
@@ -77,9 +89,12 @@ export default async function PricingPage() {
           }
         />
         {underReview > 0 ? (
-          <Alert tone="info" title={`${underReview} anchor${underReview > 1 ? 's are' : ' is'} under business review`}>
-            Rows marked “Under business review” show the label instead of a figure until the business
-            approves publication. No number is shown before that review.
+          <Alert
+            tone="info"
+            title={`${underReview} anchor${underReview > 1 ? 's are' : ' is'} under business review`}
+          >
+            Rows marked “Under business review” show the label instead of a figure until the
+            business approves publication. No number is shown before that review.
           </Alert>
         ) : null}
         <Alert tone="warning" title="Percentage fees">
@@ -97,7 +112,9 @@ export default async function PricingPage() {
         ) : (
           <EmptyState
             tone={catalog ? 'neutral' : 'warning'}
-            title={catalog ? 'No price anchors are published yet' : 'Pricing is not available right now'}
+            title={
+              catalog ? 'No price anchors are published yet' : 'Pricing is not available right now'
+            }
             description={
               catalog
                 ? 'Anchors appear here once packages are created and reviewed by the business.'
@@ -106,7 +123,8 @@ export default async function PricingPage() {
           />
         )}
         <p className="text-xs text-fg-subtle">
-          Naira amounts are shown as whole naira; all invoices are issued in NGN. Timestamps in Africa/Lagos.
+          Naira amounts are shown as whole naira; all invoices are issued in NGN. Timestamps in
+          Africa/Lagos.
         </p>
       </div>
       <CtaBand

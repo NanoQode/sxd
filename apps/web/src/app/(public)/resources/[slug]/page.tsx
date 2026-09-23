@@ -36,9 +36,13 @@ export default async function ResourceDetailPage({ params }: { params: Params })
       />
       <article className="sx-container py-6">
         <header className="max-w-prose">
-          <h1 className="font-display text-3xl font-semibold leading-tight sm:text-4xl">{page.title}</h1>
+          <h1 className="font-display text-3xl font-semibold leading-tight sm:text-4xl">
+            {page.title}
+          </h1>
           {page.publishedAt ? (
-            <p className="mt-2 text-sm text-fg-muted">Published {formatDateLabel(page.publishedAt)}</p>
+            <p className="mt-2 text-sm text-fg-muted">
+              Published {formatDateLabel(page.publishedAt)}
+            </p>
           ) : null}
         </header>
         <Prose html={page.bodyHtml} className="mt-6" />

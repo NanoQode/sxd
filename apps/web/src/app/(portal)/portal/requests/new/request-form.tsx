@@ -51,7 +51,7 @@ const schema = z.object({
   scenarioId: z.string().optional(),
   budgetNaira: z.string().optional(),
   preferredTimeline: preferredTimelineSchema.or(z.literal('')).optional(),
-  intake: z.record(z.string(), z.string().max(2000)).default({}),
+  intake: z.record(z.string(), z.string().max(2000)),
 });
 type Values = z.infer<typeof schema>;
 

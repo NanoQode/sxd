@@ -64,7 +64,12 @@ export default function HowItWorksPage() {
       <Section id="steps" title="The engagement pipeline" headingLevel={2} className="pt-2">
         <WorkflowSteps />
       </Section>
-      <Section id="principles" eyebrow="Operating rules" title="What stays true in every engagement" tone="sunken">
+      <Section
+        id="principles"
+        eyebrow="Operating rules"
+        title="What stays true in every engagement"
+        tone="sunken"
+      >
         <ul className="grid gap-4 md:grid-cols-2">
           {PRINCIPLES.map((p) => (
             <li key={p.heading} className="rounded-lg border border-border bg-bg-elevated p-5">

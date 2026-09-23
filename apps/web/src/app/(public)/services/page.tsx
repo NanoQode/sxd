@@ -3,7 +3,12 @@ import Link from 'next/link';
 import { Badge, buttonVariants, EmptyState, PageHeader } from '@simplexd/ui';
 import { Breadcrumbs } from '@/components/public/breadcrumbs';
 import { CtaBand } from '@/components/public/cta-band';
-import { EXPANSION_NOTE, GOAL_LABELS, GOAL_PATHS, type GoalKey } from '@/components/public/defaults';
+import {
+  EXPANSION_NOTE,
+  GOAL_LABELS,
+  GOAL_PATHS,
+  type GoalKey,
+} from '@/components/public/defaults';
 import { Section } from '@/components/public/section';
 import { ServiceCard, ServiceCardGrid } from '@/components/public/service-card';
 import { loadCatalog, publicMetadata, siteUrl, type SearchParams } from '../_lib/site-data';
@@ -42,8 +47,8 @@ export default async function ServicesPage({ searchParams }: { searchParams: Sea
         />
         {goal ? (
           <p className="mt-4 rounded-md border border-primary/30 bg-primary-soft px-4 py-3 text-sm">
-            Showing services that fit <strong>{GOAL_LABELS[goal.key as GoalKey]}</strong>. Highlighted
-            cards produce the evidence that goal needs.{' '}
+            Showing services that fit <strong>{GOAL_LABELS[goal.key as GoalKey]}</strong>.
+            Highlighted cards produce the evidence that goal needs.{' '}
             <Link href="/services" className="text-primary underline">
               Show all equally
             </Link>
@@ -62,7 +67,11 @@ export default async function ServicesPage({ searchParams }: { searchParams: Sea
                 return ai - bi || a.sortOrder - b.sortOrder;
               })
               .map((s) => (
-                <ServiceCard key={s.slug} service={s} highlighted={Boolean(goal?.serviceSlugs.includes(s.slug))} />
+                <ServiceCard
+                  key={s.slug}
+                  service={s}
+                  highlighted={Boolean(goal?.serviceSlugs.includes(s.slug))}
+                />
               ))}
           </ServiceCardGrid>
         ) : (
@@ -89,7 +98,10 @@ export default async function ServicesPage({ searchParams }: { searchParams: Sea
         {catalog && catalog.planned.length > 0 ? (
           <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {catalog.planned.map((s) => (
-              <li key={s.slug} className="flex flex-col rounded-lg border border-border bg-bg-elevated p-4">
+              <li
+                key={s.slug}
+                className="flex flex-col rounded-lg border border-border bg-bg-elevated p-4"
+              >
                 <div className="flex flex-wrap items-center gap-2">
                   <h3 className="text-base font-semibold">
                     <Link href={`/services/${s.slug}`} className="hover:underline">
@@ -97,12 +109,16 @@ export default async function ServicesPage({ searchParams }: { searchParams: Sea
                     </Link>
                   </h3>
                   <Badge tone={s.availability === 'request' ? 'success' : 'neutral'}>
-                    {s.availability === 'request' ? 'Open for requests' : 'Inquiry only, not yet bookable'}
+                    {s.availability === 'request'
+                      ? 'Open for requests'
+                      : 'Inquiry only, not yet bookable'}
                   </Badge>
                 </div>
                 <p className="mt-1 text-sm text-fg-muted">{s.shortDescription}</p>
                 {s.commercialModel ? (
-                  <p className="mt-2 text-xs text-fg-subtle">Commercial model: {s.commercialModel}</p>
+                  <p className="mt-2 text-xs text-fg-subtle">
+                    Commercial model: {s.commercialModel}
+                  </p>
                 ) : null}
                 <Link
                   href={`/book?service=${s.slug}&interest=1`}
