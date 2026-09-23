@@ -30,7 +30,7 @@
     "db:import-markets": "pnpm --filter @simplexd/db import-markets",
     "db:bootstrap-admin": "pnpm --filter @simplexd/db bootstrap-admin",
     "db:check-rls": "pnpm --filter @simplexd/db check-rls",
-    "openapi": "pnpm --filter @simplexd/contracts openapi",
+    "openapi": "pnpm --filter @simplexd/web openapi",
     "backup": "bash ops/backup/backup.sh",
     "restore": "bash ops/backup/restore.sh",
     "ci": "pnpm typecheck && pnpm lint && pnpm test && pnpm build"

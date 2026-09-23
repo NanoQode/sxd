@@ -652,7 +652,7 @@ export const rankingPolicyV1: typeof s.rankingPolicies.$inferInsert = {
     {
       metric: 'affordability',
       direction: 'lower_is_better',
-      unit: 'NGN per m2 total development cost (user cohort)',
+      unit: 'NGN/m2',
       low: 150000,
       high: 900000,
       note: 'Proposed normalisation anchors for assumption-mode comparison; not researched market facts. Data approver must review.',
@@ -660,7 +660,7 @@ export const rankingPolicyV1: typeof s.rankingPolicies.$inferInsert = {
     {
       metric: 'material_access',
       direction: 'lower_is_better',
-      unit: 'days delivered lead time',
+      unit: 'days',
       low: 1,
       high: 21,
       note: 'Proposed anchor; requires verified supplier quotes to become evidence-backed.',
@@ -668,7 +668,7 @@ export const rankingPolicyV1: typeof s.rankingPolicies.$inferInsert = {
     {
       metric: 'net_rental_economics',
       direction: 'higher_is_better',
-      unit: 'percent net yield on development cost',
+      unit: 'percent',
       low: 0,
       high: 12,
       note: 'Proposed anchor; yields are only computed from matched cohort rents and validated costs.',
@@ -692,7 +692,7 @@ export const rankingPolicyV1: typeof s.rankingPolicies.$inferInsert = {
     {
       metric: 'evidence_backed_demand',
       direction: 'higher_is_better',
-      unit: 'index 0-100 from deduplicated comparables and enquiries',
+      unit: 'index',
       low: 0,
       high: 100,
       note: 'Proposed anchor; requires first-party or licensed demand evidence.',
@@ -700,7 +700,7 @@ export const rankingPolicyV1: typeof s.rankingPolicies.$inferInsert = {
     {
       metric: 'infrastructure_site_suitability',
       direction: 'higher_is_better',
-      unit: 'index 0-100 from site checks',
+      unit: 'index',
       low: 0,
       high: 100,
       note: 'Unknown flood or title status never scores as low risk.',

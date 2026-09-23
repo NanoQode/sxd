@@ -1,5 +1,5 @@
 import type { Logger } from 'pino';
-import { enqueueJob, reapStaleJobs, type Database } from '@simplexd/db';
+import { enqueueJob, reapStaleJobs, systemContext, withActor, type Database } from '@simplexd/db';
 
 /**
  * Periodic maintenance. Each schedule enqueues an idempotent job keyed by the
@@ -31,7 +31,7 @@ export function startScheduler(opts: { db: Database; log: Logger }): () => void 
     const run = async () => {
       const bucket = Math.floor(Date.now() / sched.everyMs);
       try {
-        await opts.db.transaction((tx) =>
+        await withActor(opts.db, systemContext('scheduler'), (tx) =>
           enqueueJob(tx, {
             type: sched.type,
             queue: sched.queue,
@@ -49,7 +49,7 @@ export function startScheduler(opts: { db: Database; log: Logger }): () => void 
   }
   timers.push(
     setInterval(() => {
-      reapStaleJobs(opts.db, 15 * 60_000)
+      withActor(opts.db, systemContext('reaper'), (tx) => reapStaleJobs(tx, 15 * 60_000))
         .then((n) => {
           if (n > 0) opts.log.warn({ released: n }, 'released stale job locks');
         })

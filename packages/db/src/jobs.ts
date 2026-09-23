@@ -11,6 +11,18 @@ import * as s from './schema';
  *   exponential backoff, and moves exhausted jobs to `dead` for admin retry.
  */
 
+/**
+ * Drizzle's sql tag expands a JS array into a "(a, b, c)" tuple, which is not a
+ * PostgreSQL array. Build an array literal string instead; values are validated
+ * to a safe character set so the literal cannot be malformed.
+ */
+export function pgArrayLiteral(values: string[]): string {
+  for (const v of values) {
+    if (!/^[A-Za-z0-9_.:-]+$/.test(v)) throw new Error(`unsafe array literal element: ${v}`);
+  }
+  return `{${values.join(',')}}`;
+}
+
 export interface EnqueueJobInput {
   type: string;
   payload: Record<string, unknown>;
@@ -98,7 +110,7 @@ export async function claimJobs(
     UPDATE jobs SET status = 'running', locked_at = ${now}, locked_by = ${opts.workerId}, attempts = attempts + 1, updated_at = ${now}
     WHERE id IN (
       SELECT id FROM jobs
-      WHERE status = 'pending' AND run_at <= ${now} AND queue = ANY(${opts.queues}::text[])
+      WHERE status = 'pending' AND run_at <= ${now} AND queue = ANY(${pgArrayLiteral(opts.queues)}::text[])
       ORDER BY priority DESC, run_at ASC
       LIMIT ${opts.limit}
       FOR UPDATE SKIP LOCKED
@@ -234,7 +246,7 @@ export async function markOutboxPublished(tx: DbExecutor, ids: number[]): Promis
   await tx
     .update(s.outboxEvents)
     .set({ publishedAt: new Date() })
-    .where(sql`${s.outboxEvents.id} = ANY(${ids}::bigint[])`);
+    .where(sql`${s.outboxEvents.id} = ANY(${pgArrayLiteral(ids.map(String))}::bigint[])`);
 }
 
 export async function markOutboxFailed(tx: DbExecutor, id: number, error: unknown): Promise<void> {
@@ -247,9 +259,7 @@ export async function markOutboxFailed(tx: DbExecutor, id: number, error: unknow
     .where(eq(s.outboxEvents.id, id));
 }
 
-export async function queueDepth(
-  db: DbExecutor,
-): Promise<{
+export async function queueDepth(db: DbExecutor): Promise<{
   pending: number;
   running: number;
   dead: number;

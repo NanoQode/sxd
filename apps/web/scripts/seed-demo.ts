@@ -143,10 +143,12 @@ async function ensureOrganization(
   if (existing[0]) return existing[0].id;
   const id = `org_${slug.replace(/-/g, '')}`;
   await db.insert(schema.organization).values({ id, name, slug, createdAt: new Date() });
-  await db
-    .insert(schema.organizationProfiles)
-    .values({ organizationId: id, kind: 'customer' })
-    .onConflictDoNothing();
+  await withActor(db, systemContext('seed-demo'), (tx) =>
+    tx
+      .insert(schema.organizationProfiles)
+      .values({ organizationId: id, kind: 'customer' })
+      .onConflictDoNothing(),
+  );
   await db
     .insert(schema.member)
     .values({
@@ -158,6 +160,38 @@ async function ensureOrganization(
     })
     .onConflictDoNothing();
   return id;
+}
+
+/**
+ * Demo environments publish the imported markets so the explorer is usable.
+ * Production imports stay in draft until operators review and publish them.
+ */
+async function publishSeedMarketsForDemo(adminUserId: string): Promise<number> {
+  return withActor(db, systemContext('seed-demo'), async (tx) => {
+    const rows = await tx
+      .update(schema.markets)
+      .set({
+        publicationState: 'published',
+        publishedAt: new Date(),
+        publishedBy: adminUserId,
+        lastReviewedAt: new Date(),
+        reviewedBy: adminUserId,
+      })
+      .where(eq(schema.markets.publicationState, 'draft'))
+      .returning({ id: schema.markets.id });
+    if (rows.length > 0) {
+      await tx.insert(schema.auditEvents).values({
+        actorType: 'system',
+        actorUserId: adminUserId,
+        action: 'market.published',
+        entityType: 'market',
+        entityId: 'demo-batch',
+        after: { count: rows.length },
+        reason: 'demo seed: publish imported markets for local exploration',
+      });
+    }
+    return rows.length;
+  });
 }
 
 async function main(): Promise<void> {
@@ -204,6 +238,8 @@ async function main(): Promise<void> {
       })
       .onConflictDoNothing();
   }
+  const published = await publishSeedMarketsForDemo(ids.get('admin@demo.simplexd.local')!);
+  console.log(`Published ${published} imported markets for the demo environment.`);
   await withActor(db, systemContext('seed-demo'), async (tx) => {
     await appendOutbox(tx, {
       eventType: 'demo.seeded',
@@ -211,14 +247,12 @@ async function main(): Promise<void> {
       aggregateId: 'demo',
       payload: { users: demoUsers.length },
     });
-    await tx
-      .insert(schema.auditEvents)
-      .values({
-        actorType: 'system',
-        action: 'demo.seeded',
-        entityType: 'system',
-        reason: 'seed-demo script',
-      });
+    await tx.insert(schema.auditEvents).values({
+      actorType: 'system',
+      action: 'demo.seeded',
+      entityType: 'system',
+      reason: 'seed-demo script',
+    });
   });
   console.log(`Demo accounts ready (${demoUsers.length}). Password for all: ${DEMO_PASSWORD}`);
   console.log(

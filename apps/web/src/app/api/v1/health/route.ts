@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm';
-import { getDb, queueDepth } from '@simplexd/db';
+import { getDb, queueDepth, systemContext, withActor } from '@simplexd/db';
 import { env } from '@/lib/env';
 import { json, route } from '@/lib/api/respond';
 
@@ -21,7 +21,7 @@ export const GET = route(async (req, { correlationId }) => {
       req.headers.get('authorization')?.replace(/^Bearer\s+/i, '') ??
       new URL(req.url).searchParams.get('token');
     if (e.HEALTH_TOKEN && token === e.HEALTH_TOKEN) {
-      details = { queue: await queueDepth(db) };
+      details = { queue: await withActor(db, systemContext('health'), (tx) => queueDepth(tx)) };
     }
   } catch {
     database = 'error';

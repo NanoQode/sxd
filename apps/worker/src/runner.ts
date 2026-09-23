@@ -76,7 +76,7 @@ export class JobRunner {
     try {
       const capacity = this.opts.concurrency - this.inFlight.size;
       if (capacity > 0) {
-        const jobs = await this.opts.db.transaction((tx) =>
+        const jobs = await withActor(this.opts.db, systemContext('worker-claim'), (tx) =>
           claimJobs(tx, {
             workerId: this.opts.workerId,
             queues: this.opts.queues,
@@ -108,7 +108,9 @@ export class JobRunner {
     const handler = this.handlers.get(job.type);
     if (!handler) {
       log.error('no handler registered');
-      await failJob(this.opts.db, job, new Error(`no handler for ${job.type}`), { retry: false });
+      await withActor(this.opts.db, systemContext(), (tx) =>
+        failJob(tx, job, new Error(`no handler for ${job.type}`), { retry: false }),
+      );
       return;
     }
     const started = Date.now();
@@ -119,11 +121,13 @@ export class JobRunner {
         userId: job.actorUserId,
       };
       await handler({ db: this.opts.db, job, log, actor });
-      await completeJob(this.opts.db, job.id);
+      await withActor(this.opts.db, systemContext(), (tx) => completeJob(tx, job.id));
       log.info({ ms: Date.now() - started }, 'job succeeded');
     } catch (err) {
       const retry = !(err instanceof NonRetryableJobError);
-      const outcome = await failJob(this.opts.db, job, err, { retry });
+      const outcome = await withActor(this.opts.db, systemContext(), (tx) =>
+        failJob(tx, job, err, { retry }),
+      );
       log.warn({ err, outcome, ms: Date.now() - started }, 'job failed');
     }
   }

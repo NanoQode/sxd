@@ -4,6 +4,8 @@ import {
   enqueueJob,
   markOutboxFailed,
   markOutboxPublished,
+  systemContext,
+  withActor,
   type Database,
   type OutboxRow,
 } from '@simplexd/db';
@@ -12,9 +14,7 @@ import {
  * Maps business events to jobs. Each mapping is idempotent through the job
  * dedupe key, so replaying an outbox row never duplicates side effects.
  */
-export type OutboxRoute = (
-  event: OutboxRow,
-) => Array<{
+export type OutboxRoute = (event: OutboxRow) => Array<{
   type: string;
   queue?: string;
   payload?: Record<string, unknown>;
@@ -81,7 +81,7 @@ export function runOutboxRelay(opts: {
   const loop = async () => {
     if (stopped) return;
     try {
-      const processed = await opts.db.transaction(async (tx) => {
+      const processed = await withActor(opts.db, systemContext('outbox-relay'), async (tx) => {
         const events = await claimOutboxBatch(tx, opts.batch ?? 50);
         const done: number[] = [];
         for (const event of events) {
