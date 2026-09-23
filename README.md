@@ -18,6 +18,8 @@ packages/domain/          Pure logic: money, calculators, ranking, timelines, wo
 packages/db/              Drizzle schema, migrations, RLS, seed importer, CLI commands
 packages/ui/              Design tokens, themes (light/dark/system, reduced motion), components
 packages/integrations/    Paystack, Termii, SMTP, Google Calendar/Meet, storage, scanner, secrets
+packages/finance/         Quotes, invoices, payment attempts, allocations, refunds, ledger postings
+packages/notifications/   Event-to-recipient resolvers, templates, channel dispatch, preferences
 packages/contracts/       Zod API contracts, error codes, OpenAPI generator
 data/seed/                Reviewed 50-market research seed and its licence/notes
 tests/e2e/                Playwright journeys and accessibility checks
@@ -53,7 +55,7 @@ pnpm db:bootstrap-admin --email you@example.com
 | ---------------------------------------------------- | ----------------------------------------------------------------------- |
 | `pnpm typecheck` / `pnpm lint` / `pnpm format:check` | Static checks across the workspace                                      |
 | `pnpm test`                                          | Unit and integration tests (integration suites need the test database)  |
-| `pnpm test:e2e`                                      | Playwright journeys against a running web app                           |
+| `pnpm test:e2e`                                      | Playwright journeys against a running web app seeded with `seed:demo`   |
 | `pnpm db:generate`                                   | Generate a migration after editing `packages/db/src/schema`             |
 | `pnpm db:migrate`                                    | Apply pending migrations                                                |
 | `pnpm db:seed`                                       | Seed reference data and import `data/seed/nigeria-50-markets.seed.json` |
