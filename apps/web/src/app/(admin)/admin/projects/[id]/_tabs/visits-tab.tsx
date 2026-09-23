@@ -72,11 +72,11 @@ export async function VisitsTab({ identity, shell }: { identity: RequestIdentity
               </p>
               <div className="mt-2 flex flex-wrap gap-2">
                 {v.status === 'submitted' && shell.permissions.manage && v.inspectorUserId !== me ? (
-                  <ApiAction path={`/api/v1/site-visits/${v.id}/review`} label="Mark reviewed" variant="primary" body={(reason) => ({ note: reason || undefined })} confirm={{ title: 'Review this visit?', description: 'Confirms the findings were reviewed by someone other than the inspector.', confirmLabel: 'Reviewed' }} successMessage="Visit reviewed" />
+                  <ApiAction path={`/api/v1/site-visits/${v.id}/review`} label="Mark reviewed" variant="primary" reasonKey="note" confirm={{ title: 'Review this visit?', description: 'Confirms the findings were reviewed by someone other than the inspector.', confirmLabel: 'Reviewed' }} successMessage="Visit reviewed" />
                 ) : null}
                 {v.status === 'submitted' && v.inspectorUserId === me ? <span className="text-xs text-fg-muted">You submitted this visit; another staff member must review it.</span> : null}
                 {['scheduled', 'in_progress'].includes(v.status) && shell.permissions.manage ? (
-                  <ApiAction path={`/api/v1/site-visits/${v.id}/cancel`} label="Cancel" variant="ghost" body={(reason) => ({ reason })} confirm={{ title: 'Cancel this visit?', requireReason: true, confirmLabel: 'Cancel visit', tone: 'danger' }} successMessage="Visit cancelled" />
+                  <ApiAction path={`/api/v1/site-visits/${v.id}/cancel`} label="Cancel" variant="ghost" reasonKey="reason" confirm={{ title: 'Cancel this visit?', requireReason: true, confirmLabel: 'Cancel visit', tone: 'danger' }} successMessage="Visit cancelled" />
                 ) : null}
                 <Link href={`/admin/projects/${p.id}?tab=evidence&siteVisitId=${v.id}`} className="text-sm underline">
                   Evidence

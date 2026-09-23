@@ -164,13 +164,13 @@ export default async function ReportReviewPage({ params }: { params: Promise<{ i
               ) : null}
               {report.status === 'in_review' && canReview && !isAuthor ? (
                 <>
-                  <ApiAction path={`/api/v1/reports/${report.id}/review`} label="Approve" variant="primary" body={(reason) => ({ decision: 'approved', note: reason || undefined, expectedVersion: report.version })} confirm={{ title: 'Approve this revision?', description: isReviewer ? 'You are the named reviewer.' : 'You are not the named reviewer; the server may refuse unless your role permits it.', confirmLabel: 'Approve' }} successMessage="Report approved" />
-                  <ApiAction path={`/api/v1/reports/${report.id}/review`} label="Request changes" body={(reason) => ({ decision: 'changes_requested', note: reason, expectedVersion: report.version })} confirm={{ title: 'Request changes?', requireReason: true, reasonLabel: 'What must change (sent to the author)', confirmLabel: 'Request changes' }} successMessage="Changes requested" />
+                  <ApiAction path={`/api/v1/reports/${report.id}/review`} label="Approve" variant="primary" body={{ decision: 'approved', expectedVersion: report.version }} reasonKey="note" confirm={{ title: 'Approve this revision?', description: isReviewer ? 'You are the named reviewer.' : 'You are not the named reviewer; the server may refuse unless your role permits it.', confirmLabel: 'Approve' }} successMessage="Report approved" />
+                  <ApiAction path={`/api/v1/reports/${report.id}/review`} label="Request changes" body={{ decision: 'changes_requested', expectedVersion: report.version }} reasonKey="note" confirm={{ title: 'Request changes?', requireReason: true, reasonLabel: 'What must change (sent to the author)', confirmLabel: 'Request changes' }} successMessage="Changes requested" />
                 </>
               ) : null}
               {report.status === 'in_review' && (!canReview || isAuthor) ? <p className="text-xs text-fg-muted">{isAuthor ? 'Authors cannot review their own report.' : 'Reviewing needs reports.review.'}</p> : null}
               {report.status === 'approved' && canRelease && !isAuthor ? (
-                <ApiAction path={`/api/v1/reports/${report.id}/release`} label="Release to customer" variant="primary" body={(reason) => ({ note: reason || undefined, expectedVersion: report.version })} confirm={{ title: 'Release this report?', description: 'The approved revision becomes visible to the customer and is frozen.', confirmLabel: 'Release' }} successMessage="Report released" />
+                <ApiAction path={`/api/v1/reports/${report.id}/release`} label="Release to customer" variant="primary" body={{ expectedVersion: report.version }} reasonKey="note" confirm={{ title: 'Release this report?', description: 'The approved revision becomes visible to the customer and is frozen.', confirmLabel: 'Release' }} successMessage="Report released" />
               ) : null}
               {report.status === 'approved' && (!canRelease || isAuthor) ? <p className="text-xs text-fg-muted">{isAuthor ? 'Authors cannot release their own report.' : 'Releasing needs reports.release.'}</p> : null}
               {report.availableTransitions.length === 0 ? <p className="text-xs text-fg-muted">No transitions from {humanize(report.status)}.</p> : null}

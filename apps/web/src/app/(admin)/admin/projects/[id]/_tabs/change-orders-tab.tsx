@@ -78,13 +78,13 @@ export async function ChangeOrdersTab({ identity, shell }: { identity: RequestId
                   ) : null}
                   {staffPending && perms.changeOrdersApprove ? (
                     <>
-                      <ApiAction path={`/api/v1/change-orders/${co.id}/approve`} label="Approve (staff)" variant="primary" body={(reason) => ({ approverRole: 'staff', decision: 'approved', note: reason || undefined, expectedVersion: co.version })} confirm={{ title: `Approve CO-${co.number} as staff?`, description: 'The budget changes only once the customer approval (if required) is also present.', confirmLabel: 'Approve' }} successMessage="Staff approval recorded" />
-                      <ApiAction path={`/api/v1/change-orders/${co.id}/approve`} label="Reject" variant="danger" body={(reason) => ({ approverRole: 'staff', decision: 'rejected', note: reason, expectedVersion: co.version })} confirm={{ title: `Reject CO-${co.number}?`, requireReason: true, confirmLabel: 'Reject', tone: 'danger' }} successMessage="Rejected" />
+                      <ApiAction path={`/api/v1/change-orders/${co.id}/approve`} label="Approve (staff)" variant="primary" body={{ approverRole: 'staff', decision: 'approved', expectedVersion: co.version }} reasonKey="note" confirm={{ title: `Approve CO-${co.number} as staff?`, description: 'The budget changes only once the customer approval (if required) is also present.', confirmLabel: 'Approve' }} successMessage="Staff approval recorded" />
+                      <ApiAction path={`/api/v1/change-orders/${co.id}/approve`} label="Reject" variant="danger" body={{ approverRole: 'staff', decision: 'rejected', expectedVersion: co.version }} reasonKey="note" confirm={{ title: `Reject CO-${co.number}?`, requireReason: true, confirmLabel: 'Reject', tone: 'danger' }} successMessage="Rejected" />
                     </>
                   ) : null}
                   {staffPending && !perms.changeOrdersApprove ? <span className="text-xs text-fg-muted">Staff approval needs change_orders.staff_approve.</span> : null}
                   {['submitted', 'customer_review', 'staff_review'].includes(co.status) && isCreator && co.approvals.every((a) => a.status === 'pending') ? (
-                    <ApiAction path={`/api/v1/change-orders/${co.id}/withdraw`} label="Withdraw" variant="ghost" body={(reason) => ({ reason, expectedVersion: co.version })} confirm={{ title: 'Withdraw this change order?', requireReason: true, confirmLabel: 'Withdraw' }} successMessage="Withdrawn" />
+                    <ApiAction path={`/api/v1/change-orders/${co.id}/withdraw`} label="Withdraw" variant="ghost" body={{ expectedVersion: co.version }} reasonKey="reason" confirm={{ title: 'Withdraw this change order?', requireReason: true, confirmLabel: 'Withdraw' }} successMessage="Withdrawn" />
                   ) : null}
                 </div>
               </li>

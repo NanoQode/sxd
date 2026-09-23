@@ -79,7 +79,7 @@ export async function DefectsTab({ identity, shell }: { identity: RequestIdentit
                               path={`/api/v1/defects/${d.id}/transitions`}
                               label={humanize(to)}
                               variant="ghost"
-                              body={(reason) => ({ to, reason: reason || undefined })}
+                              body={{ to }} reasonKey="reason"
                               confirm={to === 'disputed' || to === 'closed' ? { title: `Move #${d.number} to ${humanize(to)}?`, requireReason: to === 'disputed', confirmLabel: humanize(to) } : undefined}
                               successMessage={`Defect ${humanize(to)}`}
                             />

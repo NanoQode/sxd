@@ -157,7 +157,7 @@ export default async function PropertyDetailPage({ params }: { params: Promise<{
                           path={`/api/v1/properties/${id}/owner-authorities/${a.id}/verify`}
                           label="Verify"
                           variant="primary"
-                          body={(reason) => ({ note: reason || undefined })}
+                          reasonKey="note"
                           confirm={{ title: 'Verify owner authority?', description: 'Confirms the document authorises this owner. Add a note for the record.', confirmLabel: 'Verify' }}
                           successMessage="Authority verified"
                         />
@@ -165,7 +165,7 @@ export default async function PropertyDetailPage({ params }: { params: Promise<{
                           path={`/api/v1/properties/${id}/owner-authorities/${a.id}/reject`}
                           label="Reject"
                           variant="danger"
-                          body={(reason) => ({ reason })}
+                          reasonKey="reason"
                           confirm={{ title: 'Reject owner authority?', requireReason: true, confirmLabel: 'Reject', tone: 'danger' }}
                           successMessage="Authority rejected"
                         />

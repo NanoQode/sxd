@@ -144,7 +144,7 @@ export default async function AssignmentsPage({ searchParams }: { searchParams: 
                       {a.status === 'accepted' ? <ApiAction path={`/api/v1/assignments/${a.id}/activate`} label="Activate" successMessage="Activated" /> : null}
                       {a.status === 'active' ? <ApiAction path={`/api/v1/assignments/${a.id}/complete`} label="Complete" successMessage="Completed" /> : null}
                       {['proposed', 'accepted', 'active'].includes(a.status) ? (
-                        <ApiAction path={`/api/v1/assignments/${a.id}/revoke`} label="Revoke" variant="ghost" body={(reason) => ({ reason })} confirm={{ title: 'Revoke assignment?', requireReason: true, confirmLabel: 'Revoke', tone: 'danger' }} successMessage="Revoked" />
+                        <ApiAction path={`/api/v1/assignments/${a.id}/revoke`} label="Revoke" variant="ghost" reasonKey="reason" confirm={{ title: 'Revoke assignment?', requireReason: true, confirmLabel: 'Revoke', tone: 'danger' }} successMessage="Revoked" />
                       ) : null}
                     </span>
                   ) : (

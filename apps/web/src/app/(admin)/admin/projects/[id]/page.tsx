@@ -83,7 +83,7 @@ export default async function ProjectDetailPage({ params, searchParams }: { para
                     path={`/api/v1/projects/${p.id}/transitions`}
                     label={humanize(t.to)}
                     variant={t.to === 'cancelled' ? 'danger' : 'secondary'}
-                    body={(reason) => ({ to: t.to, reason: reason || undefined, expectedVersion: p.version })}
+                    body={{ to: t.to, expectedVersion: p.version }} reasonKey="reason"
                     confirm={{ title: `Move project to ${humanize(t.to)}?`, requireReason: t.reason, confirmLabel: humanize(t.to), tone: t.to === 'cancelled' ? 'danger' : 'primary' }}
                     successMessage={`Project ${humanize(t.to)}`}
                   />

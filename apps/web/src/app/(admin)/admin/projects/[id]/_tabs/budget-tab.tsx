@@ -79,8 +79,8 @@ export async function BudgetTab({ identity, shell }: { identity: RequestIdentity
               </div>
               {bv.status === 'draft' && canManage && bv.approvalPolicy.requiresStaffApproval && !bv.approvals.some((a) => a.approverRole === 'staff' && a.status !== 'pending') ? (
                 <div className="mt-2 flex flex-wrap gap-2">
-                  <ApiAction path={`/api/v1/budgets/${bv.id}/decisions`} label="Approve (staff)" variant="primary" body={(reason) => ({ decision: 'approved', note: reason || undefined })} confirm={{ title: `Approve budget version ${bv.version}?`, description: 'Becomes the approved budget only once every required approval is present.', confirmLabel: 'Approve' }} successMessage="Decision recorded" />
-                  <ApiAction path={`/api/v1/budgets/${bv.id}/decisions`} label="Reject" variant="danger" body={(reason) => ({ decision: 'rejected', note: reason })} confirm={{ title: 'Reject this version?', requireReason: true, confirmLabel: 'Reject', tone: 'danger' }} successMessage="Version rejected" />
+                  <ApiAction path={`/api/v1/budgets/${bv.id}/decisions`} label="Approve (staff)" variant="primary" body={{ decision: 'approved' }} reasonKey="note" confirm={{ title: `Approve budget version ${bv.version}?`, description: 'Becomes the approved budget only once every required approval is present.', confirmLabel: 'Approve' }} successMessage="Decision recorded" />
+                  <ApiAction path={`/api/v1/budgets/${bv.id}/decisions`} label="Reject" variant="danger" body={{ decision: 'rejected' }} reasonKey="note" confirm={{ title: 'Reject this version?', requireReason: true, confirmLabel: 'Reject', tone: 'danger' }} successMessage="Version rejected" />
                 </div>
               ) : null}
               {bv.items.length > 0 || (bv.status === 'draft' && bv.source === 'boq' && canManage) ? (

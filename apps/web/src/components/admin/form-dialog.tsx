@@ -4,10 +4,12 @@ import { useRouter } from 'next/navigation';
 import { useState, type ReactNode } from 'react';
 import { Alert, Button, Dialog, DialogContent, DialogFooter, Field, Input, NativeSelect, Textarea, useToast, type ButtonProps } from '@simplexd/ui';
 import { adminFetch, errorMessage, isMfaError } from '@/lib/admin/client';
+import { FORM_TRANSFORMS, buildBody, fillTemplate, type BodyFieldSpec, type FormTransformName, type FormValues } from '@/lib/admin/form-body';
 import { parseNairaToKobo } from '@/lib/admin/money';
 
-export type FieldSpec = {
-  name: string;
+export type { FormValues };
+
+export type FieldSpec = BodyFieldSpec & {
   label: string;
   type?: 'text' | 'number' | 'date' | 'datetime' | 'textarea' | 'select' | 'checkbox' | 'naira';
   options?: Array<{ value: string; label: string }>;
@@ -21,12 +23,15 @@ export type FieldSpec = {
   wide?: boolean;
 };
 
-export type FormValues = Record<string, string | number | boolean | null | undefined>;
-
 /**
  * Declarative create/edit dialog: renders labelled fields, validates required
  * ones client-side, posts the mapped body and refreshes. Naira fields are
  * converted to integer kobo strings; datetime fields to ISO instants.
+ *
+ * Server pages describe the body with field `bodyKey`/`emptyAs`/`list`, a
+ * static `extraBody` and, for special cases, a named `transform`; client
+ * components may pass `toBody` directly (functions cannot cross from a server
+ * component).
  */
 export function FormDialog({
   trigger,
@@ -36,6 +41,8 @@ export function FormDialog({
   path,
   method = 'POST',
   toBody,
+  transform,
+  extraBody,
   idempotent,
   submitLabel = 'Save',
   successMessage,
@@ -52,8 +59,12 @@ export function FormDialog({
   fields: FieldSpec[];
   path: string;
   method?: 'POST' | 'PATCH' | 'PUT';
-  /** Maps form values to the request body (values already normalised). */
+  /** Client components only: maps form values to the request body. */
   toBody?: (values: FormValues) => unknown;
+  /** Named transform from FORM_TRANSFORMS; receives the values and `extraBody`. */
+  transform?: FormTransformName;
+  /** Static body fields (dotted keys allowed) merged after the field values. */
+  extraBody?: Record<string, unknown>;
   idempotent?: boolean;
   submitLabel?: string;
   successMessage?: string;
@@ -61,7 +72,8 @@ export function FormDialog({
   size?: ButtonProps['size'];
   disabled?: boolean;
   disabledReason?: string;
-  redirectTo?: (result: unknown) => string;
+  /** Template such as `/admin/reports/{id}` filled from the API result, or a function (client only). */
+  redirectTo?: string | ((result: unknown) => string);
   children?: ReactNode;
 }) {
   const router = useRouter();
@@ -94,12 +106,16 @@ export function FormDialog({
         else if (f.type === 'datetime') normalised[f.name] = new Date(String(raw)).toISOString();
         else normalised[f.name] = String(raw).trim();
       }
-      const body = toBody ? toBody(normalised) : normalised;
+      const body = toBody
+        ? toBody(normalised)
+        : transform
+          ? FORM_TRANSFORMS[transform](normalised, extraBody ?? {})
+          : buildBody(fields, normalised, extraBody);
       const result = await adminFetch<unknown>(path, { method, body, idempotent });
       if (successMessage) toast({ title: successMessage, tone: 'success' });
       setOpen(false);
       setValues(initial(fields));
-      if (redirectTo) router.push(redirectTo(result));
+      if (redirectTo) router.push(typeof redirectTo === 'function' ? redirectTo(result) : fillTemplate(redirectTo, result));
       router.refresh();
     } catch (err) {
       if (isMfaError(err)) setMfa(true);
@@ -114,6 +130,7 @@ export function FormDialog({
       <Button variant={variant} size={size} disabled={disabled} title={disabled ? disabledReason : undefined} onClick={() => setOpen(true)}>
         {trigger}
       </Button>
+      {disabled && disabledReason ? <span className="sr-only">{disabledReason}</span> : null}
       <Dialog open={open} onOpenChange={(v) => !busy && setOpen(v)}>
         <DialogContent title={title} description={description} size="lg">
           <div className="grid gap-3 sm:grid-cols-2">
@@ -137,7 +154,7 @@ export function FormDialog({
             {fields.map((f) => (
               <div key={f.name} className={f.wide || f.type === 'textarea' ? 'sm:col-span-2' : undefined}>
                 {f.type === 'checkbox' ? (
-                  <label className="flex h-11 items-center gap-2 text-sm">
+                  <label className="flex min-h-11 items-center gap-2 text-sm">
                     <input type="checkbox" className="h-4 w-4" checked={Boolean(values[f.name])} onChange={(e) => set(f.name, e.target.checked)} />
                     {f.label}
                     {f.hint ? <span className="text-fg-muted">— {f.hint}</span> : null}
