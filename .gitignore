@@ -16,8 +16,11 @@ next-env.d.ts
 !.env.example
 !.env.test.example
 
-# test artifacts
-coverage/
+# test artifacts (anchored: a route segment may be called coverage)
+/coverage/
+/apps/*/coverage/
+/packages/*/coverage/
+/tests/*/coverage/
 test-results/
 playwright-report/
 blob-report/

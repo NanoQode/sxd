@@ -6,7 +6,9 @@ node_modules
 dist
 **/dist
 coverage
-**/coverage
+apps/*/coverage
+packages/*/coverage
+tests/*/coverage
 playwright-report
 test-results
 uploads-dev
