@@ -17,9 +17,19 @@ export function ModeSwitch({
   onChange: (mode: ExplorerMode) => void;
   className?: string;
 }) {
-  const options: Array<{ value: ExplorerMode; label: string; icon: typeof BookOpen; hint: string }> = [
+  const options: Array<{
+    value: ExplorerMode;
+    label: string;
+    icon: typeof BookOpen;
+    hint: string;
+  }> = [
     { value: 'evidence', label: 'Evidence mode', icon: BookOpen, hint: COPY.evidenceModeHint },
-    { value: 'assumption', label: 'Assumption mode', icon: Calculator, hint: COPY.assumptionModeBanner },
+    {
+      value: 'assumption',
+      label: 'Assumption mode',
+      icon: Calculator,
+      hint: COPY.assumptionModeBanner,
+    },
   ];
   return (
     <div

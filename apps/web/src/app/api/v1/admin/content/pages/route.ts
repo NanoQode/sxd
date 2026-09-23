@@ -16,5 +16,8 @@ export const GET = route(async (req, { correlationId }) => {
 export const POST = route(async (req, { correlationId }) => {
   const identity = await requireStaff('content.edit');
   const body = await parseJson(req, contentPageCreateSchema);
-  return json(await createContentPage(identity, body, { correlationId }), { status: 201, correlationId });
+  return json(await createContentPage(identity, body, { correlationId }), {
+    status: 201,
+    correlationId,
+  });
 });

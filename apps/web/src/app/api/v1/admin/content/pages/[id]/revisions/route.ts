@@ -21,8 +21,11 @@ export const POST = route<{ params: Promise<{ id: string }> }>(async (req, ctx) 
   const identity = await requireStaff('content.edit');
   const { id } = await params(ctx, idSchema);
   const body = await parseJson(req, contentRevisionCreateSchema);
-  return json(await createContentRevision(identity, id, body, { correlationId: ctx.correlationId }), {
-    status: 201,
-    correlationId: ctx.correlationId,
-  });
+  return json(
+    await createContentRevision(identity, id, body, { correlationId: ctx.correlationId }),
+    {
+      status: 201,
+      correlationId: ctx.correlationId,
+    },
+  );
 });

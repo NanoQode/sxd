@@ -1,4 +1,9 @@
-import { formatNairaString, formatNumber, formatPercent, formatWholeNaira } from '@simplexd/ui/format';
+import {
+  formatNairaString,
+  formatNumber,
+  formatPercent,
+  formatWholeNaira,
+} from '@simplexd/ui/format';
 import type { ObservationDto } from '@simplexd/contracts';
 
 /** Formats an observation's value with its declared representation; never reinterprets units. */
@@ -64,8 +69,10 @@ export function formatMetricValue(value: number | null, unit: string | null): st
     return `${formatWholeNaira(value)}${suffix}`;
   }
   if (lower === '%' || lower === 'percent') return formatPercent(value);
-  if (lower === 'days' || lower === 'day') return `${formatNumber(value, Number.isInteger(value) ? 0 : 1)} days`;
-  if (lower === 'months' || lower === 'month') return `${formatNumber(value, Number.isInteger(value) ? 0 : 1)} months`;
+  if (lower === 'days' || lower === 'day')
+    return `${formatNumber(value, Number.isInteger(value) ? 0 : 1)} days`;
+  if (lower === 'months' || lower === 'month')
+    return `${formatNumber(value, Number.isInteger(value) ? 0 : 1)} months`;
   const digits = Number.isInteger(value) ? 0 : 2;
   return u === '' ? formatNumber(value, digits) : `${formatNumber(value, digits)} ${u}`;
 }

@@ -16,6 +16,7 @@
     "@simplexd/contracts": "workspace:*",
     "@simplexd/db": "workspace:*",
     "@simplexd/domain": "workspace:*",
+    "@simplexd/finance": "workspace:*",
     "@simplexd/integrations": "workspace:*",
     "drizzle-orm": "0.45.3",
     "ioredis": "6.0.0",

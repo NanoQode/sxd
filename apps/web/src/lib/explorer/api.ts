@@ -86,7 +86,13 @@ export function describeError(error: unknown): ErrorDescription {
     };
   }
   if (error instanceof Error) {
-    return { message: error.message, retryable: true, correlationId: null, code: null, status: null };
+    return {
+      message: error.message,
+      retryable: true,
+      correlationId: null,
+      code: null,
+      status: null,
+    };
   }
   return {
     message: 'Something went wrong.',
@@ -175,7 +181,11 @@ async function readError(res: Response): Promise<ExplorerApiError> {
   });
 }
 
-async function request<T>(path: string, schema: z.ZodType<T>, options: RequestOptions = {}): Promise<T> {
+async function request<T>(
+  path: string,
+  schema: z.ZodType<T>,
+  options: RequestOptions = {},
+): Promise<T> {
   const res = await send(path, options);
   if (!res.ok) throw await readError(res);
   if (res.status === 204) {
@@ -220,9 +230,13 @@ export function getMarkets(
   params: Partial<MarketListQuery> = {},
   signal?: AbortSignal,
 ): Promise<MarketListResponse> {
-  return request(`/markets${query({ ...params, limit: params.limit ?? 100 })}`, marketListResponseSchema, {
-    signal,
-  });
+  return request(
+    `/markets${query({ ...params, limit: params.limit ?? 100 })}`,
+    marketListResponseSchema,
+    {
+      signal,
+    },
+  );
 }
 
 export function getMarketsGeoJson(signal?: AbortSignal): Promise<MarketGeoJson> {
@@ -258,12 +272,19 @@ export function postRecommendations(
   body: RecommendationRequest,
   signal?: AbortSignal,
 ): Promise<RecommendationResponse> {
-  return request('/recommendations', recommendationResponseSchema, { method: 'POST', body, signal });
+  return request('/recommendations', recommendationResponseSchema, {
+    method: 'POST',
+    body,
+    signal,
+  });
 }
 
 export type ComparisonRequest = z.input<typeof comparisonRequestSchema>;
 
-export function postComparison(body: ComparisonRequest, signal?: AbortSignal): Promise<ComparisonResponse> {
+export function postComparison(
+  body: ComparisonRequest,
+  signal?: AbortSignal,
+): Promise<ComparisonResponse> {
   return request('/comparisons', comparisonResponseSchema, { method: 'POST', body, signal });
 }
 
@@ -289,7 +310,11 @@ export function getScenario(id: string, signal?: AbortSignal): Promise<ScenarioD
 
 export type ScenarioUpdate = z.input<typeof scenarioUpdateSchema>;
 
-export function updateScenario(id: string, body: ScenarioUpdate, signal?: AbortSignal): Promise<ScenarioDto> {
+export function updateScenario(
+  id: string,
+  body: ScenarioUpdate,
+  signal?: AbortSignal,
+): Promise<ScenarioDto> {
   return request(`/scenarios/${encodeURIComponent(id)}`, scenarioDtoSchema, {
     method: 'PATCH',
     body,
@@ -298,10 +323,14 @@ export function updateScenario(id: string, body: ScenarioUpdate, signal?: AbortS
 }
 
 export function deleteScenario(id: string, signal?: AbortSignal): Promise<void> {
-  return request(`/scenarios/${encodeURIComponent(id)}`, z.unknown().transform(() => undefined), {
-    method: 'DELETE',
-    signal,
-  });
+  return request(
+    `/scenarios/${encodeURIComponent(id)}`,
+    z.unknown().transform(() => undefined),
+    {
+      method: 'DELETE',
+      signal,
+    },
+  );
 }
 
 export function claimScenario(id: string, signal?: AbortSignal): Promise<ScenarioDto> {
@@ -342,11 +371,15 @@ export function requestVerification(
   body: VerificationRequestInput,
   signal?: AbortSignal,
 ): Promise<ScenarioDto | null> {
-  return request(`/scenarios/${encodeURIComponent(id)}/request-verification`, verificationResponseSchema, {
-    method: 'POST',
-    body,
-    signal,
-  });
+  return request(
+    `/scenarios/${encodeURIComponent(id)}/request-verification`,
+    verificationResponseSchema,
+    {
+      method: 'POST',
+      body,
+      signal,
+    },
+  );
 }
 
 const looseRecord = z.record(z.string(), z.unknown());
@@ -430,7 +463,9 @@ export async function getScenarioReport(id: string, signal?: AbortSignal): Promi
   }
   const record = looseRecord.safeParse(json);
   const r = record.success ? record.data : {};
-  const report = looseRecord.safeParse(r.report).success ? (r.report as Record<string, unknown>) : r;
+  const report = looseRecord.safeParse(r.report).success
+    ? (r.report as Record<string, unknown>)
+    : r;
   const disclaimers = Array.isArray(report.disclaimers)
     ? report.disclaimers.filter((d): d is string => typeof d === 'string')
     : typeof report.disclaimer === 'string'

@@ -165,7 +165,10 @@ export class DevCalendarProvider implements CalendarProvider {
   }
 
   private assertAccess(credentials: CalendarCredentials): void {
-    if (!credentials.accessToken.startsWith('dev-access-') || this.revokedTokens.has(credentials.accessToken)) {
+    if (
+      !credentials.accessToken.startsWith('dev-access-') ||
+      this.revokedTokens.has(credentials.accessToken)
+    ) {
       if (credentials.refreshToken && this.issuedRefreshTokens.has(credentials.refreshToken)) {
         // Simulate the library's lazy refresh + `tokens` event.
         const next = this.mintTokens(credentials.refreshToken, credentials);
@@ -184,7 +187,8 @@ export class DevCalendarProvider implements CalendarProvider {
       refreshToken,
       expiresAt: new Date(this.now().getTime() + 3600 * 1000),
       scope: previous?.scope ?? [],
-      idTokenEmail: previous?.idTokenEmail ?? this.options.accountEmail ?? 'organiser@dev.simplexd.local',
+      idTokenEmail:
+        previous?.idTokenEmail ?? this.options.accountEmail ?? 'organiser@dev.simplexd.local',
     };
   }
 
@@ -274,7 +278,8 @@ export class DevCalendarProvider implements CalendarProvider {
         if (event.calendarId !== calendarId || event.status === 'cancelled') continue;
         const s = new Date(event.start).getTime();
         const e = new Date(event.end).getTime();
-        if (s < max && e > min) result.busy.push({ calendarId, start: event.start, end: event.end });
+        if (s < max && e > min)
+          result.busy.push({ calendarId, start: event.start, end: event.end });
       }
     }
     result.busy.sort((a, b) => a.start.localeCompare(b.start));
@@ -331,12 +336,18 @@ export class DevCalendarProvider implements CalendarProvider {
   private getOrThrow(calendarId: string, eventId: string): DevEvent {
     const event = this.events.get(eventId);
     if (!event || event.calendarId !== calendarId) {
-      throw new CalendarProviderError(`event ${eventId} not found`, { code: 'not_found', httpStatus: 404 });
+      throw new CalendarProviderError(`event ${eventId} not found`, {
+        code: 'not_found',
+        httpStatus: 404,
+      });
     }
     return event;
   }
 
-  async createEvent(credentials: CalendarCredentials, input: CreateEventInput): Promise<EventResult> {
+  async createEvent(
+    credentials: CalendarCredentials,
+    input: CreateEventInput,
+  ): Promise<EventResult> {
     this.assertAccess(credentials);
     if (new Date(input.end).getTime() <= new Date(input.start).getTime()) {
       throw new CalendarProviderError('event end must be after start', { code: 'invalid_request' });
@@ -346,7 +357,8 @@ export class DevCalendarProvider implements CalendarProvider {
       if (
         existing.status !== 'cancelled' &&
         existing.extendedPrivate[PRIVATE_PROPERTY_KEYS.appointmentId] === input.appointmentId &&
-        existing.extendedPrivate[PRIVATE_PROPERTY_KEYS.conferenceRequestId] === input.conferenceRequestId
+        existing.extendedPrivate[PRIVATE_PROPERTY_KEYS.conferenceRequestId] ===
+          input.conferenceRequestId
       ) {
         return this.toResult(existing);
       }
@@ -407,7 +419,10 @@ export class DevCalendarProvider implements CalendarProvider {
     if (etag !== null && etag !== etagOf(event.etagVersion)) throw new CalendarConflictError();
   }
 
-  async updateEvent(credentials: CalendarCredentials, input: UpdateEventInput): Promise<EventResult> {
+  async updateEvent(
+    credentials: CalendarCredentials,
+    input: UpdateEventInput,
+  ): Promise<EventResult> {
     this.assertAccess(credentials);
     const event = this.getOrThrow(input.calendarId, input.eventId);
     this.assertEtag(event, input.etag);
@@ -429,7 +444,8 @@ export class DevCalendarProvider implements CalendarProvider {
     if (patch.privateProps !== undefined) {
       event.extendedPrivate = {
         ...patch.privateProps,
-        [PRIVATE_PROPERTY_KEYS.appointmentId]: event.extendedPrivate[PRIVATE_PROPERTY_KEYS.appointmentId] ?? '',
+        [PRIVATE_PROPERTY_KEYS.appointmentId]:
+          event.extendedPrivate[PRIVATE_PROPERTY_KEYS.appointmentId] ?? '',
         [PRIVATE_PROPERTY_KEYS.conferenceRequestId]:
           event.extendedPrivate[PRIVATE_PROPERTY_KEYS.conferenceRequestId] ?? '',
       };
@@ -460,10 +476,16 @@ export class DevCalendarProvider implements CalendarProvider {
     return { status: 'cancelled' };
   }
 
-  async watchEvents(credentials: CalendarCredentials, input: WatchEventsInput): Promise<WatchResult> {
+  async watchEvents(
+    credentials: CalendarCredentials,
+    input: WatchEventsInput,
+  ): Promise<WatchResult> {
     this.assertAccess(credentials);
     if (this.channels.has(input.channelId)) {
-      throw new CalendarProviderError('channel id already in use', { code: 'already_exists', httpStatus: 400 });
+      throw new CalendarProviderError('channel id already in use', {
+        code: 'already_exists',
+        httpStatus: 400,
+      });
     }
     const channel: DevChannel = {
       channelId: input.channelId,
@@ -474,7 +496,11 @@ export class DevCalendarProvider implements CalendarProvider {
       messageNumber: 1,
     };
     this.channels.set(channel.channelId, channel);
-    return { channelId: channel.channelId, resourceId: channel.resourceId, expiration: channel.expiration };
+    return {
+      channelId: channel.channelId,
+      resourceId: channel.resourceId,
+      expiration: channel.expiration,
+    };
   }
 
   async stopChannel(credentials: CalendarCredentials, input: StopChannelInput): Promise<void> {

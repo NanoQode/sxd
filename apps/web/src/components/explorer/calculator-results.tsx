@@ -24,22 +24,39 @@ function Money({ value }: { value: number | null | undefined }) {
   return <span className="tabular-nums">{formatScenarioNaira(value)}</span>;
 }
 
-function ResultCell({ result, render }: { result: CalcResult<number> | undefined; render: (value: number) => ReactNode }) {
+function ResultCell({
+  result,
+  render,
+}: {
+  result: CalcResult<number> | undefined;
+  render: (value: number) => ReactNode;
+}) {
   if (!result) return <span className="text-fg-muted">—</span>;
-  return result.ok ? <span className="tabular-nums">{render(result.value)}</span> : <span className="text-fg-muted">{result.reason}</span>;
+  return result.ok ? (
+    <span className="tabular-nums">{render(result.value)}</span>
+  ) : (
+    <span className="text-fg-muted">{result.reason}</span>
+  );
 }
 
 const IRR_REASONS: Record<string, string> = {
-  irr_not_unique: 'Not unique: the cash flows change sign more than once, so no single rate is reported.',
+  irr_not_unique:
+    'Not unique: the cash flows change sign more than once, so no single rate is reported.',
   irr_no_solution: 'No solution: the cash flows never change sign.',
 };
 
-export function DevelopmentCostCard({ result }: { result: CalculatorRunResult['developmentCost'] }) {
+export function DevelopmentCostCard({
+  result,
+}: {
+  result: CalculatorRunResult['developmentCost'];
+}) {
   if (!result.ok) {
     return (
       <Alert tone="info" title="Development cost not computed">
         {result.reason}
-        {result.missing.length > 0 ? <p className="mt-1">Missing: {result.missing.join(', ')}</p> : null}
+        {result.missing.length > 0 ? (
+          <p className="mt-1">Missing: {result.missing.join(', ')}</p>
+        ) : null}
       </Alert>
     );
   }
@@ -51,7 +68,10 @@ export function DevelopmentCostCard({ result }: { result: CalculatorRunResult['d
         Total development cost: <Money value={value.total} />
       </h4>
       <p className="text-xs text-fg-muted">
-        Basis: {value.build.basis === 'boq' ? 'priced bill of quantities (the area-rate estimate is never added to it)' : 'gross floor area × approved build rate'}
+        Basis:{' '}
+        {value.build.basis === 'boq'
+          ? 'priced bill of quantities (the area-rate estimate is never added to it)'
+          : 'gross floor area × approved build rate'}
         {value.build.areaRateCrossCheck !== null && value.build.areaRateCrossCheck !== undefined
           ? ` · area-rate cross-check ${formatScenarioNaira(value.build.areaRateCrossCheck)} (not added)`
           : ''}
@@ -93,22 +113,48 @@ const LONG_LET_ROWS: Array<{
   cell: (v: LongLetView) => ReactNode;
 }> = [
   { label: 'Scheduled annual rent', cell: (v) => <Money value={v.scheduledAnnualRent} /> },
-  { label: 'Effective income (after vacancy and collection loss)', cell: (v) => <Money value={v.effectiveIncome} /> },
-  { label: 'Recurring operating expenses', cell: (v) => <Money value={v.operatingExpenses.total} /> },
+  {
+    label: 'Effective income (after vacancy and collection loss)',
+    cell: (v) => <Money value={v.effectiveIncome} />,
+  },
+  {
+    label: 'Recurring operating expenses',
+    cell: (v) => <Money value={v.operatingExpenses.total} />,
+  },
   { label: 'Net operating income (pre-tax, before debt)', cell: (v) => <Money value={v.noi} /> },
   {
     label: 'Capex reserve',
     cell: (v) => (
       <span>
         <Money value={v.capexReserve ?? 0} />
-        <span className="block text-xs text-fg-muted">{v.capexReserveTreatment === 'included_in_noi' ? 'included in NOI basis' : 'reported separately'}</span>
+        <span className="block text-xs text-fg-muted">
+          {v.capexReserveTreatment === 'included_in_noi'
+            ? 'included in NOI basis'
+            : 'reported separately'}
+        </span>
       </span>
     ),
   },
-  { label: 'Tax (business-reviewed assumption)', cell: (v) => <Money value={v.tax?.amount ?? 0} /> },
-  { label: 'Gross yield (denominator: development cost)', cell: (v) => <ResultCell result={numberResult(v.grossYieldPercent)} render={(n) => formatPercent(n, 2)} /> },
-  { label: 'Net yield (denominator: development cost)', cell: (v) => <ResultCell result={numberResult(v.netYieldPercent)} render={(n) => formatPercent(n, 2)} /> },
-  { label: 'Annual debt service (not an NOI expense)', cell: (v) => <Money value={v.annualDebtService} /> },
+  {
+    label: 'Tax (business-reviewed assumption)',
+    cell: (v) => <Money value={v.tax?.amount ?? 0} />,
+  },
+  {
+    label: 'Gross yield (denominator: development cost)',
+    cell: (v) => (
+      <ResultCell result={numberResult(v.grossYieldPercent)} render={(n) => formatPercent(n, 2)} />
+    ),
+  },
+  {
+    label: 'Net yield (denominator: development cost)',
+    cell: (v) => (
+      <ResultCell result={numberResult(v.netYieldPercent)} render={(n) => formatPercent(n, 2)} />
+    ),
+  },
+  {
+    label: 'Annual debt service (not an NOI expense)',
+    cell: (v) => <Money value={v.annualDebtService} />,
+  },
   { label: 'Cash flow after debt (pre-tax)', cell: (v) => <Money value={v.cashFlowAfterDebt} /> },
   {
     label: 'Simple payback',
@@ -119,12 +165,29 @@ const LONG_LET_ROWS: Array<{
   {
     label: 'Cash-on-cash (explicit equity only)',
     cell: (v) =>
-      v.cashOnCashPercent ? <ResultCell result={numberResult(v.cashOnCashPercent)} render={(n) => formatPercent(n, 2)} /> : <span className="text-fg-muted">Needs equity</span>,
+      v.cashOnCashPercent ? (
+        <ResultCell
+          result={numberResult(v.cashOnCashPercent)}
+          render={(n) => formatPercent(n, 2)}
+        />
+      ) : (
+        <span className="text-fg-muted">Needs equity</span>
+      ),
   },
 ];
 
-export function LongLetTable({ sets, base }: { sets: CalculatorRunResult['sets']; base: CalculatorRunResult['longLet'] }) {
-  const columns: Array<{ key: 'low' | 'base' | 'high'; label: string; result: CalcResult<LongLetView> }> = sets
+export function LongLetTable({
+  sets,
+  base,
+}: {
+  sets: CalculatorRunResult['sets'];
+  base: CalculatorRunResult['longLet'];
+}) {
+  const columns: Array<{
+    key: 'low' | 'base' | 'high';
+    label: string;
+    result: CalcResult<LongLetView>;
+  }> = sets
     ? [
         { key: 'low', label: 'Low', result: sets.low },
         { key: 'base', label: 'Base', result: sets.base },
@@ -136,17 +199,23 @@ export function LongLetTable({ sets, base }: { sets: CalculatorRunResult['sets']
     return (
       <Alert tone="info" title="Rental economics not computed">
         {base.ok ? 'No usable set.' : base.reason}
-        {!base.ok && base.missing.length > 0 ? <p className="mt-1">Missing: {base.missing.join(', ')}</p> : null}
+        {!base.ok && base.missing.length > 0 ? (
+          <p className="mt-1">Missing: {base.missing.join(', ')}</p>
+        ) : null}
       </Alert>
     );
   }
   const denominator = columns.find((c) => c.result.ok)?.result;
-  const denominatorLabel = denominator && denominator.ok ? humanizeKey(denominator.value.denominator.kind) : 'development cost';
+  const denominatorLabel =
+    denominator && denominator.ok
+      ? humanizeKey(denominator.value.denominator.kind)
+      : 'development cost';
   return (
     <div className="overflow-x-auto rounded-lg border border-border">
       <table className="w-full min-w-[520px] text-sm" data-testid="long-let-table">
         <caption className="px-3 py-2 text-left text-xs text-fg-muted">
-          Long-let economics per input set. Yields divide by the {denominatorLabel.toLowerCase()} (the denominator), never by a market value.
+          Long-let economics per input set. Yields divide by the {denominatorLabel.toLowerCase()}{' '}
+          (the denominator), never by a market value.
         </caption>
         <thead className="bg-bg-sunken text-left text-xs uppercase tracking-wide text-fg-muted">
           <tr>
@@ -168,7 +237,11 @@ export function LongLetTable({ sets, base }: { sets: CalculatorRunResult['sets']
               </th>
               {columns.map((c) => (
                 <td key={c.key} className="px-3 py-2 align-top">
-                  {c.result.ok ? row.cell(c.result.value) : <span className="text-xs text-fg-muted">Not computed: {c.result.reason}</span>}
+                  {c.result.ok ? (
+                    row.cell(c.result.value)
+                  ) : (
+                    <span className="text-xs text-fg-muted">Not computed: {c.result.reason}</span>
+                  )}
                 </td>
               ))}
             </tr>
@@ -205,7 +278,9 @@ export function ShortStayTable({ result }: { result: CalculatorRunResult['shortS
           <dd>{formatNumber(v.availableNightsPerYear)}</dd>
         </div>
         <div>
-          <dt className="text-xs text-fg-muted">Occupied nights ({Math.round(v.occupiedNightFraction * 100)}%)</dt>
+          <dt className="text-xs text-fg-muted">
+            Occupied nights ({Math.round(v.occupiedNightFraction * 100)}%)
+          </dt>
           <dd>{formatNumber(v.occupiedNights, 1)}</dd>
         </div>
         <div>
@@ -221,7 +296,9 @@ export function ShortStayTable({ result }: { result: CalculatorRunResult['shortS
           </dd>
         </div>
         <div>
-          <dt className="text-xs text-fg-muted">Cleaning ({formatNumber(v.numberOfStays, 1)} stays)</dt>
+          <dt className="text-xs text-fg-muted">
+            Cleaning ({formatNumber(v.numberOfStays, 1)} stays)
+          </dt>
           <dd>
             <Money value={v.cleaningCosts} />
           </dd>
@@ -235,11 +312,16 @@ export function ShortStayTable({ result }: { result: CalculatorRunResult['shortS
         <div>
           <dt className="text-xs text-fg-muted">Net yield (denominator: development cost)</dt>
           <dd>
-            <ResultCell result={numberResult(v.netYieldPercent)} render={(n) => formatPercent(n, 2)} />
+            <ResultCell
+              result={numberResult(v.netYieldPercent)}
+              render={(n) => formatPercent(n, 2)}
+            />
           </dd>
         </div>
       </dl>
-      <p className="mt-1 text-xs text-fg-muted">Nightly rate × 365 is never used as revenue: only available, occupied nights count.</p>
+      <p className="mt-1 text-xs text-fg-muted">
+        Nightly rate × 365 is never used as revenue: only available, occupied nights count.
+      </p>
     </section>
   );
 }
@@ -251,17 +333,26 @@ export function ScheduleSummary({ result }: { result: CalculatorRunResult['phasi
   const s = result.value.schedule;
   const totals = result.value.totals;
   return (
-    <section aria-labelledby="calc-schedule" className="rounded-lg border border-border p-3 text-sm">
+    <section
+      aria-labelledby="calc-schedule"
+      className="rounded-lg border border-border p-3 text-sm"
+    >
       <h4 id="calc-schedule" className="text-sm font-semibold">
         Expected schedule under your assumptions
       </h4>
       <p className="mt-1">
-        Construction {s.constructionDurationMonths} months, then a completion delay of {s.completionDelayMonths} months: rental income starts in{' '}
-        {formatMonthIndex(s.rentalStartIndex)} after start ({formatMonthIndex(s.plannedRentalStartIndex ?? s.constructionDurationMonths)} without delay).
+        Construction {s.constructionDurationMonths} months, then a completion delay of{' '}
+        {s.completionDelayMonths} months: rental income starts in{' '}
+        {formatMonthIndex(s.rentalStartIndex)} after start (
+        {formatMonthIndex(s.plannedRentalStartIndex ?? s.constructionDurationMonths)} without
+        delay).
       </p>
       {totals ? (
         <p className="mt-1 text-xs text-fg-muted">
-          Over {result.value.months.length} months: rental income <Money value={totals.rentalIncome} />, operating expenses <Money value={totals.operatingExpenses} />, net cash flow <Money value={totals.netCashFlow} />.
+          Over {result.value.months.length} months: rental income{' '}
+          <Money value={totals.rentalIncome} />, operating expenses{' '}
+          <Money value={totals.operatingExpenses} />, net cash flow{' '}
+          <Money value={totals.netCashFlow} />.
         </p>
       ) : null}
       <p className="mt-1 text-xs text-fg-muted">{COPY.notPromisedDate}</p>
@@ -269,7 +360,13 @@ export function ScheduleSummary({ result }: { result: CalculatorRunResult['phasi
   );
 }
 
-export function NpvIrrRows({ npv, irr }: { npv: CalculatorRunResult['npv']; irr: CalculatorRunResult['irr'] }) {
+export function NpvIrrRows({
+  npv,
+  irr,
+}: {
+  npv: CalculatorRunResult['npv'];
+  irr: CalculatorRunResult['irr'];
+}) {
   return (
     <section aria-labelledby="calc-npv" className="rounded-lg border border-border p-3 text-sm">
       <h4 id="calc-npv" className="text-sm font-semibold">
@@ -280,7 +377,8 @@ export function NpvIrrRows({ npv, irr }: { npv: CalculatorRunResult['npv']; irr:
         <dd>
           {npv.ok ? (
             <span>
-              <Money value={npv.value.npv} /> at {formatPercent(npv.value.discountRate * 100, 1)} per period
+              <Money value={npv.value.npv} /> at {formatPercent(npv.value.discountRate * 100, 1)}{' '}
+              per period
             </span>
           ) : (
             <span className="text-fg-muted">{npv.reason}</span>
@@ -292,7 +390,10 @@ export function NpvIrrRows({ npv, irr }: { npv: CalculatorRunResult['npv']; irr:
             <span>
               {formatPercent(irr.value.irr * 100, 2)} per period
               {irr.value.uniqueness && irr.value.uniqueness !== 'unique' ? (
-                <span className="text-warning"> (unverified: several sign changes; may not be unique)</span>
+                <span className="text-warning">
+                  {' '}
+                  (unverified: several sign changes; may not be unique)
+                </span>
               ) : null}
             </span>
           ) : (
@@ -347,7 +448,8 @@ export function CalculatorResults({
   if (result.empty) {
     return (
       <Alert tone="warning" title="No calculator results were recognised">
-        The calculator service responded, but not in a shape this page can read. Nothing has been estimated in its place.
+        The calculator service responded, but not in a shape this page can read. Nothing has been
+        estimated in its place.
       </Alert>
     );
   }
@@ -366,7 +468,9 @@ export function CalculatorResults({
       {result.sensitivity.ok ? (
         <SensitivityChart grid={result.sensitivity.value} />
       ) : (
-        <p className="text-sm text-fg-muted">Sensitivity not computed: {result.sensitivity.reason}</p>
+        <p className="text-sm text-fg-muted">
+          Sensitivity not computed: {result.sensitivity.reason}
+        </p>
       )}
     </div>
   );

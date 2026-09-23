@@ -155,16 +155,29 @@ export async function createServiceRequest(
       .where(eq(schema.services.slug, input.serviceSlug));
     if (!service) throw new ApiError('not_found', 'service not found');
     if (!isBookable(service, identity.featureFlags)) {
-      throw new ApiError('feature_disabled', `${service.name} is not bookable yet; register interest instead`, {
-        details: { code: 'not_bookable', inquiryEnabled: service.inquiryEnabled, serviceSlug: service.slug },
-      });
+      throw new ApiError(
+        'feature_disabled',
+        `${service.name} is not bookable yet; register interest instead`,
+        {
+          details: {
+            code: 'not_bookable',
+            inquiryEnabled: service.inquiryEnabled,
+            serviceSlug: service.slug,
+          },
+        },
+      );
     }
     let marketName: string | null = null;
     if (input.marketId) {
       const [market] = await tx
         .select({ id: schema.markets.id, name: schema.markets.name })
         .from(schema.markets)
-        .where(and(eq(schema.markets.id, input.marketId), eq(schema.markets.publicationState, 'published')));
+        .where(
+          and(
+            eq(schema.markets.id, input.marketId),
+            eq(schema.markets.publicationState, 'published'),
+          ),
+        );
       if (!market) throw new ApiError('validation_failed', 'the selected market is not available');
       marketName = market.name;
     }

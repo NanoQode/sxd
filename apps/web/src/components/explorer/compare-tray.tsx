@@ -26,7 +26,10 @@ export function CompareTray({ onOpenComparison }: { onOpenComparison: () => void
           {compareSlugs.map((slug) => {
             const market = compareMarkets.find((m) => m.slug === slug);
             return (
-              <li key={slug} className="inline-flex items-center gap-1 rounded-full border border-border bg-bg-sunken pl-3 text-sm">
+              <li
+                key={slug}
+                className="inline-flex items-center gap-1 rounded-full border border-border bg-bg-sunken pl-3 text-sm"
+              >
                 {market?.name ?? slug}
                 <button
                   type="button"
@@ -44,12 +47,20 @@ export function CompareTray({ onOpenComparison }: { onOpenComparison: () => void
           <Button variant="ghost" onClick={clearCompare}>
             Clear
           </Button>
-          <Button onClick={onOpenComparison} disabled={!ready} title={ready ? undefined : 'Add at least one more market'}>
+          <Button
+            onClick={onOpenComparison}
+            disabled={!ready}
+            title={ready ? undefined : 'Add at least one more market'}
+          >
             <Scale aria-hidden="true" className="h-4 w-4" /> Compare
           </Button>
         </div>
       </div>
-      {!ready ? <p className="mt-1 text-xs text-fg-muted">Add at least one more market to compare (up to four).</p> : null}
+      {!ready ? (
+        <p className="mt-1 text-xs text-fg-muted">
+          Add at least one more market to compare (up to four).
+        </p>
+      ) : null}
       {warnings.length > 0 ? (
         <Alert tone="warning" title="Overlapping markets" className="mt-2">
           <ul className="list-disc pl-5">

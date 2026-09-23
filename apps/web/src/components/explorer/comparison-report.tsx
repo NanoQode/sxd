@@ -3,7 +3,13 @@
 import { ArrowLeft, ExternalLink, Printer } from 'lucide-react';
 import { Alert, Button } from '@simplexd/ui';
 import { formatDateTimeLabel } from '@simplexd/ui/format';
-import type { ComparisonResponse, ExplorerFilters, Priorities, RankedMarketDto, ScenarioAssumptions } from '@simplexd/contracts';
+import type {
+  ComparisonResponse,
+  ExplorerFilters,
+  Priorities,
+  RankedMarketDto,
+  ScenarioAssumptions,
+} from '@simplexd/contracts';
 import {
   COPY,
   OBJECTIVE_LABELS,
@@ -26,7 +32,13 @@ import type { GeneratedReport } from './use-scenario';
 export interface ComparisonReportProps {
   generated: GeneratedReport;
   comparison: ComparisonResponse | null;
-  markets: Array<{ id: string; name: string; stateName: string; parentMarketId: string | null; overlapNote?: string | null }>;
+  markets: Array<{
+    id: string;
+    name: string;
+    stateName: string;
+    parentMarketId: string | null;
+    overlapNote?: string | null;
+  }>;
   rankedBySlug: ReadonlyMap<string, RankedMarketDto>;
   filters: ExplorerFilters;
   priorities: Priorities;
@@ -52,8 +64,10 @@ export function ComparisonReport({
   const json = report.kind === 'json' ? report : null;
   const table = json?.comparison ?? comparison;
   const title = json?.title ?? table?.reportTitle ?? 'Dated comparison report';
-  const generatedAt = json?.generatedAt ?? snapshot.generatedAt ?? table?.generatedAt ?? new Date().toISOString();
-  const policyVersion = json?.policyVersion ?? snapshot.policyVersion ?? table?.policyVersion ?? scenario.policyVersion;
+  const generatedAt =
+    json?.generatedAt ?? snapshot.generatedAt ?? table?.generatedAt ?? new Date().toISOString();
+  const policyVersion =
+    json?.policyVersion ?? snapshot.policyVersion ?? table?.policyVersion ?? scenario.policyVersion;
   const warnings = overlapWarnings(markets);
   const base = assumptions.base;
   const disclaimers = [
@@ -65,7 +79,11 @@ export function ComparisonReport({
   ];
 
   return (
-    <article aria-labelledby="comparison-report-title" className="space-y-6 rounded-lg border border-border bg-bg-elevated p-4 sm:p-6" data-testid="comparison-report">
+    <article
+      aria-labelledby="comparison-report-title"
+      className="space-y-6 rounded-lg border border-border bg-bg-elevated p-4 sm:p-6"
+      data-testid="comparison-report"
+    >
       <div className="flex flex-wrap items-center justify-between gap-2 print:hidden">
         <Button variant="ghost" onClick={onClose}>
           <ArrowLeft aria-hidden="true" className="h-4 w-4" /> Back to explorer
@@ -85,7 +103,9 @@ export function ComparisonReport({
       </div>
 
       <header className="space-y-1">
-        <p className="text-xs font-medium uppercase tracking-wide text-fg-muted">SimplexD · dated comparison report</p>
+        <p className="text-xs font-medium uppercase tracking-wide text-fg-muted">
+          SimplexD · dated comparison report
+        </p>
         <h1 id="comparison-report-title" className="font-display text-2xl font-semibold">
           {title}
         </h1>
@@ -101,7 +121,11 @@ export function ComparisonReport({
           <dt className="text-fg-muted">Snapshot</dt>
           <dd>{json?.snapshotId ?? snapshot.snapshotId ?? 'recorded with the scenario'}</dd>
           <dt className="text-fg-muted">Mode</dt>
-          <dd>{mode === 'assumption' ? 'Assumption mode (scenario, not an evidence-backed ranking)' : 'Evidence mode'}</dd>
+          <dd>
+            {mode === 'assumption'
+              ? 'Assumption mode (scenario, not an evidence-backed ranking)'
+              : 'Evidence mode'}
+          </dd>
         </dl>
       </header>
 
@@ -125,15 +149,36 @@ export function ComparisonReport({
             <ul className="list-disc pl-5">
               <li>Land cost: {formatScenarioNaira(base.landCostNaira)}</li>
               <li>
-                Build: {base.boqTotalNaira !== null ? `priced BOQ ${formatScenarioNaira(base.boqTotalNaira)}` : `${base.grossFloorAreaM2 ?? '—'} m² × ${formatScenarioNaira(base.buildRateNairaPerM2)} per m²`}
+                Build:{' '}
+                {base.boqTotalNaira !== null
+                  ? `priced BOQ ${formatScenarioNaira(base.boqTotalNaira)}`
+                  : `${base.grossFloorAreaM2 ?? '—'} m² × ${formatScenarioNaira(base.buildRateNairaPerM2)} per m²`}
               </li>
               <li>
-                Units: {base.units.length === 0 ? 'none' : base.units.map((u) => `${u.count} × ${u.label} at ${formatScenarioNaira(u.annualRentPerUnitNaira)}/year`).join('; ')}
+                Units:{' '}
+                {base.units.length === 0
+                  ? 'none'
+                  : base.units
+                      .map(
+                        (u) =>
+                          `${u.count} × ${u.label} at ${formatScenarioNaira(u.annualRentPerUnitNaira)}/year`,
+                      )
+                      .join('; ')}
               </li>
-              <li>Vacancy {Math.round(base.vacancyRate * 100)}% · collection loss {Math.round(base.collectionLossRate * 100)}%</li>
-              <li>Construction {base.constructionMonths} months · completion delay {base.completionDelayMonths} months</li>
-              {assumptions.low ? <li>Low set overrides: {Object.keys(assumptions.low).join(', ')}</li> : null}
-              {assumptions.high ? <li>High set overrides: {Object.keys(assumptions.high).join(', ')}</li> : null}
+              <li>
+                Vacancy {Math.round(base.vacancyRate * 100)}% · collection loss{' '}
+                {Math.round(base.collectionLossRate * 100)}%
+              </li>
+              <li>
+                Construction {base.constructionMonths} months · completion delay{' '}
+                {base.completionDelayMonths} months
+              </li>
+              {assumptions.low ? (
+                <li>Low set overrides: {Object.keys(assumptions.low).join(', ')}</li>
+              ) : null}
+              {assumptions.high ? (
+                <li>High set overrides: {Object.keys(assumptions.high).join(', ')}</li>
+              ) : null}
               {assumptions.notes ? <li>Notes: {assumptions.notes}</li> : null}
             </ul>
           </div>
@@ -157,7 +202,9 @@ export function ComparisonReport({
         {table ? (
           <ComparisonTable comparison={table} rankedBySlug={rankedBySlug} />
         ) : (
-          <p className="text-sm text-fg-muted">The comparison table was not available when this report was generated.</p>
+          <p className="text-sm text-fg-muted">
+            The comparison table was not available when this report was generated.
+          </p>
         )}
       </section>
 

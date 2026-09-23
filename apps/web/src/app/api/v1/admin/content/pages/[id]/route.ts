@@ -20,7 +20,10 @@ export const PATCH = route<{ params: Promise<{ id: string }> }>(async (req, ctx)
   const identity = await requireStaff('content.edit');
   const { id } = await params(ctx, idSchema);
   const body = await parseJson(req, contentPagePatchSchema);
-  return json(await updateContentPageMeta(identity, id, body, { correlationId: ctx.correlationId }), {
-    correlationId: ctx.correlationId,
-  });
+  return json(
+    await updateContentPageMeta(identity, id, body, { correlationId: ctx.correlationId }),
+    {
+      correlationId: ctx.correlationId,
+    },
+  );
 });

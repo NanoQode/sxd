@@ -25,7 +25,12 @@ describe('toggleCompare', () => {
 });
 
 describe('overlap detection', () => {
-  const lagos = { id: 'lagos', name: 'Lagos', parentMarketId: null, overlapNote: 'Overlapping metropolitan market labels; do not sum market-level totals.' };
+  const lagos = {
+    id: 'lagos',
+    name: 'Lagos',
+    parentMarketId: null,
+    overlapNote: 'Overlapping metropolitan market labels; do not sum market-level totals.',
+  };
   const ikeja = { id: 'ikeja', name: 'Ikeja', parentMarketId: 'lagos', overlapNote: null };
   const ikorodu = { id: 'ikorodu', name: 'Ikorodu', parentMarketId: 'lagos', overlapNote: null };
   const epe = { id: 'epe', name: 'Epe', parentMarketId: null, overlapNote: null };
@@ -42,7 +47,9 @@ describe('overlap detection', () => {
     expect(warnings).toHaveLength(3);
     expect(warnings[0]).toContain('Lagos and Ikeja overlap');
     expect(warnings[0]).toContain('do not sum market-level totals');
-    expect(warnings.every((w) => w.includes('do not add their populations, listings or demand totals'))).toBe(true);
+    expect(
+      warnings.every((w) => w.includes('do not add their populations, listings or demand totals')),
+    ).toBe(true);
     expect(overlapWarnings([lagos, epe])).toEqual([]);
   });
 });

@@ -13,14 +13,14 @@ testing.
 2. **APIs & Services → Library → Google Calendar API → Enable.** Google Meet links are created
    through the Calendar API (`conferenceData.createRequest`); no separate Meet API is needed.
 3. **Google Auth Platform / OAuth consent screen**
-   - User type: *Internal* if every organiser is in the company's Workspace domain (no
-     verification, no 100-user cap), otherwise *External*.
+   - User type: _Internal_ if every organiser is in the company's Workspace domain (no
+     verification, no 100-user cap), otherwise _External_.
    - App name, support email, privacy policy and terms URLs (the public site's policy pages).
    - Authorised domains: the production domain (`simplexd.co`) and any staging domain.
    - **Data access / scopes**: add the scopes listed in §3. The console labels each as
      non-sensitive / sensitive / restricted and states whether verification is required
-     (**unverified**: expect the event scopes to be *sensitive* → verification + privacy
-     policy; while an External app is in *Testing*, grants expire after **7 days** — verified
+     (**unverified**: expect the event scopes to be _sensitive_ → verification + privacy
+     policy; while an External app is in _Testing_, grants expire after **7 days** — verified
      from the client README — so do not leave production in Testing).
 4. **Credentials → Create credentials → OAuth client ID → Web application**
    - Authorised redirect URI, exactly: `${APP_URL}/api/v1/admin/integrations/google/callback`
@@ -62,12 +62,12 @@ delegation is not used.
 
 `DEFAULT_GOOGLE_SCOPES` (verified per-method scope lists):
 
-| Scope | Why |
-| --- | --- |
-| `calendar.calendarlist.readonly` | choose the booking calendar |
-| `calendar.freebusy` | availability without event titles |
-| `calendar.events.owned` | create/patch/delete/watch/list events on calendars the organiser owns |
-| `openid email` | identify the connected account (ID token email) |
+| Scope                            | Why                                                                   |
+| -------------------------------- | --------------------------------------------------------------------- |
+| `calendar.calendarlist.readonly` | choose the booking calendar                                           |
+| `calendar.freebusy`              | availability without event titles                                     |
+| `calendar.events.owned`          | create/patch/delete/watch/list events on calendars the organiser owns |
+| `openid email`                   | identify the connected account (ID token email)                       |
 
 Use `SHARED_CALENDAR_GOOGLE_SCOPES` (`calendar.events` + `calendar.events.freebusy`) only when
 the booking calendar is a shared calendar the organiser does not own.
@@ -97,7 +97,7 @@ the booking calendar is a shared calendar the organiser does not own.
   `slot_reservations` is the arbiter for concurrent bookings; availability is rechecked
   (`isSlotAvailable`) before confirmation. Google races are reconciled, not prevented.
 - `createEvent` sends `conferenceDataVersion=1`, `conferenceData.createRequest { requestId,
-  conferenceSolutionKey.type = 'hangoutsMeet' }`, attendees with `responseStatus: needsAction`,
+conferenceSolutionKey.type = 'hangoutsMeet' }`, attendees with `responseStatus: needsAction`,
   `sendUpdates`, start/end with `timeZone`, and `extendedProperties.private.simplexdAppointmentId`
   (all verified). The event id is derived from `appointmentId + conferenceRequestId`, so a
   retried insert returns the existing event (409 → get) instead of duplicating it. Store
@@ -154,13 +154,13 @@ tokens with `expireSyncTokens()` for the 410 path. Its Meet links do not resolve
 
 ## 9. Verified vs unverified summary
 
-| Item | Status |
-| --- | --- |
-| OAuth endpoints, params, refresh-token-on-first-consent, PKCE S256, revoke URL | verified |
-| Scope URLs and per-method acceptance | verified |
-| freebusy.query, events.insert/patch/delete params, `conferenceDataVersion`, `requestId`, `hangoutsMeet`, status codes, `sendUpdates` | verified |
-| `If-Match`/412 semantics | header pass-through verified; 412 behaviour from snippets |
-| events.watch/channels.stop schema | verified |
-| Notification header names/states, no payload, HTTPS/domain verification, retry policy, channel max lifetime | unverified |
-| syncToken rules, `showDeleted` requirement, 410 ⇒ full sync | verified |
-| Scope sensitivity labels / verification thresholds | unverified |
+| Item                                                                                                                                 | Status                                                    |
+| ------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------- |
+| OAuth endpoints, params, refresh-token-on-first-consent, PKCE S256, revoke URL                                                       | verified                                                  |
+| Scope URLs and per-method acceptance                                                                                                 | verified                                                  |
+| freebusy.query, events.insert/patch/delete params, `conferenceDataVersion`, `requestId`, `hangoutsMeet`, status codes, `sendUpdates` | verified                                                  |
+| `If-Match`/412 semantics                                                                                                             | header pass-through verified; 412 behaviour from snippets |
+| events.watch/channels.stop schema                                                                                                    | verified                                                  |
+| Notification header names/states, no payload, HTTPS/domain verification, retry policy, channel max lifetime                          | unverified                                                |
+| syncToken rules, `showDeleted` requirement, 410 ⇒ full sync                                                                          | verified                                                  |
+| Scope sensitivity labels / verification thresholds                                                                                   | unverified                                                |

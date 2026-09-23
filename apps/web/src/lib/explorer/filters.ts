@@ -18,13 +18,7 @@ import type { AmenityPreference } from './url-state';
  */
 
 export type AmenityKey =
-  | 'power'
-  | 'water'
-  | 'internet'
-  | 'transport'
-  | 'schools'
-  | 'hospitals'
-  | 'soilInvestigation';
+  'power' | 'water' | 'internet' | 'transport' | 'schools' | 'hospitals' | 'soilInvestigation';
 
 const AMENITY_METRICS: Record<AmenityKey, readonly string[]> = {
   power: ['power', 'power_supply', 'power_provision', 'grid_power_hours'],
@@ -180,7 +174,10 @@ export function applyClientFilters(
   ];
 
   return markets.filter((market) => {
-    if (filters.preferredZones.length > 0 && !filters.preferredZones.includes(market.geopoliticalZone))
+    if (
+      filters.preferredZones.length > 0 &&
+      !filters.preferredZones.includes(market.geopoliticalZone)
+    )
       return false;
     if (filters.preferredStateIds.length > 0 && !filters.preferredStateIds.includes(market.stateId))
       return false;
@@ -211,7 +208,10 @@ export function applyClientFilters(
 }
 
 /** Narrow the list by free-text search (kept separate so it can run on every keystroke). */
-export function applyQuery(markets: readonly MarketSummaryDto[], query: string): MarketSummaryDto[] {
+export function applyQuery(
+  markets: readonly MarketSummaryDto[],
+  query: string,
+): MarketSummaryDto[] {
   if (query.trim() === '') return [...markets];
   return markets.filter((market) => matchesQuery(market, query));
 }

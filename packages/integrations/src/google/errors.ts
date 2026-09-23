@@ -57,7 +57,9 @@ export class CalendarProviderError extends Error {
     this.code = options.code ?? 'provider';
     this.httpStatus = options.httpStatus ?? null;
     this.retryable = options.retryable ?? false;
-    this.providerReason = options.providerReason ? sanitizeErrorMessage(options.providerReason) : null;
+    this.providerReason = options.providerReason
+      ? sanitizeErrorMessage(options.providerReason)
+      : null;
   }
 }
 

@@ -1,6 +1,10 @@
 import 'server-only';
 import { and, eq } from 'drizzle-orm';
-import { ApiError, type ServiceRequestDto, type ServiceRequestTransition } from '@simplexd/contracts';
+import {
+  ApiError,
+  type ServiceRequestDto,
+  type ServiceRequestTransition,
+} from '@simplexd/contracts';
 import { appendOutbox, getDb, schema, withActor } from '@simplexd/db';
 import { engagementMachine, evaluateTransition } from '@simplexd/domain/workflow';
 import { recordAudit } from '@/lib/audit';
@@ -45,9 +49,13 @@ export async function applyCustomerTransition(
       });
     }
     if (sr.version !== input.expectedVersion) {
-      throw new ApiError('version_conflict', 'this request changed since you loaded it; reload and try again', {
-        details: { currentVersion: sr.version },
-      });
+      throw new ApiError(
+        'version_conflict',
+        'this request changed since you loaded it; reload and try again',
+        {
+          details: { currentVersion: sr.version },
+        },
+      );
     }
     // The update, transition and log appends all run under the customer's own
     // context: the row is visible through the request policy.
@@ -61,10 +69,15 @@ export async function applyCustomerTransition(
     const updated = await tx
       .update(schema.serviceRequests)
       .set(patch)
-      .where(and(eq(schema.serviceRequests.id, sr.id), eq(schema.serviceRequests.version, sr.version)))
+      .where(
+        and(eq(schema.serviceRequests.id, sr.id), eq(schema.serviceRequests.version, sr.version)),
+      )
       .returning({ id: schema.serviceRequests.id });
     if (updated.length === 0) {
-      throw new ApiError('version_conflict', 'this request changed since you loaded it; reload and try again');
+      throw new ApiError(
+        'version_conflict',
+        'this request changed since you loaded it; reload and try again',
+      );
     }
     await tx.insert(schema.engagementTransitions).values({
       serviceRequestId: sr.id,
@@ -81,7 +94,13 @@ export async function applyCustomerTransition(
       aggregateId: sr.id,
       organizationId: sr.organizationId,
       actorUserId: userId,
-      payload: { serviceRequestId: sr.id, reference: sr.reference, from: sr.status, to: input.to, reason: input.reason ?? null },
+      payload: {
+        serviceRequestId: sr.id,
+        reference: sr.reference,
+        from: sr.status,
+        to: input.to,
+        reason: input.reason ?? null,
+      },
       correlationId: options.correlationId,
     });
     await recordAudit(tx, identity, {

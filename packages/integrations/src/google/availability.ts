@@ -93,12 +93,16 @@ export function computeSlots(input: ComputeSlotsInput): Slot[] {
   if (!Number.isInteger(duration) || duration <= 0)
     throw new Error('durationMinutes must be a positive integer');
   const step = input.stepMinutes ?? duration;
-  if (!Number.isInteger(step) || step <= 0) throw new Error('stepMinutes must be a positive integer');
+  if (!Number.isInteger(step) || step <= 0)
+    throw new Error('stepMinutes must be a positive integer');
   const bufferMs = (input.bufferMinutes ?? 0) * 60_000;
   const zone = input.workingHours.timeZone;
 
   const now = toUtcDateTime(input.now);
-  const earliest = maxDate(toUtcDateTime(input.from), now.plus({ hours: input.minNoticeHours ?? 0 }));
+  const earliest = maxDate(
+    toUtcDateTime(input.from),
+    now.plus({ hours: input.minNoticeHours ?? 0 }),
+  );
   const latestStart = now.plus({ days: input.maxDaysAhead ?? 60 });
   const windowEnd = toUtcDateTime(input.to);
   if (earliest >= windowEnd) return [];
@@ -210,7 +214,10 @@ export function dualZoneLabel(
 }
 
 /** Groups UTC slots by the customer's local calendar date for display. */
-export function groupSlotsByLocalDate(slots: readonly Slot[], zone: string): Record<string, Slot[]> {
+export function groupSlotsByLocalDate(
+  slots: readonly Slot[],
+  zone: string,
+): Record<string, Slot[]> {
   const groups: Record<string, Slot[]> = {};
   for (const slot of slots) {
     const date = DateTime.fromISO(slot.start, { setZone: true }).setZone(zone).toISODate();

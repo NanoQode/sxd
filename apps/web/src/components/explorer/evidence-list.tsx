@@ -30,7 +30,11 @@ export function ObservationList({
               ? `Source updated ${formatDateLabel(o.sourceUpdatedAt)}`
               : 'Observation period not stated';
         return (
-          <li key={o.id} className="rounded-md border border-border p-2 text-sm" data-testid="observation">
+          <li
+            key={o.id}
+            className="rounded-md border border-border p-2 text-sm"
+            data-testid="observation"
+          >
             <div className="flex flex-wrap items-center justify-between gap-1">
               <span className="font-medium">{humanizeKey(o.metric)}</span>
               <EvidenceBadge kind={statewide ? 'regional_context' : o.badge} showDescription />
@@ -79,9 +83,13 @@ export function ObservationList({
               </dd>
             </dl>
             {!o.rankEligible && o.reasonNotRankEligible ? (
-              <p className="mt-1 text-xs text-fg-muted">Not used for ranking: {o.reasonNotRankEligible}</p>
+              <p className="mt-1 text-xs text-fg-muted">
+                Not used for ranking: {o.reasonNotRankEligible}
+              </p>
             ) : null}
-            {o.editorialNote ? <p className="mt-1 text-xs text-fg-muted">{o.editorialNote}</p> : null}
+            {o.editorialNote ? (
+              <p className="mt-1 text-xs text-fg-muted">{o.editorialNote}</p>
+            ) : null}
           </li>
         );
       })}
@@ -90,11 +98,15 @@ export function ObservationList({
 }
 
 export function SupplierLeadList({ leads }: { leads: readonly SupplierLeadDto[] }) {
-  if (leads.length === 0) return <p className="text-sm text-fg-muted">No supplier research leads recorded yet.</p>;
+  if (leads.length === 0)
+    return <p className="text-sm text-fg-muted">No supplier research leads recorded yet.</p>;
   return (
     <ul className="space-y-2">
       {leads.map((lead) => (
-        <li key={`${lead.facilityId}-${lead.relation}`} className="rounded-md border border-border p-2 text-sm">
+        <li
+          key={`${lead.facilityId}-${lead.relation}`}
+          className="rounded-md border border-border p-2 text-sm"
+        >
           <div className="flex flex-wrap items-center justify-between gap-1">
             <span className="font-medium">
               {lead.name}
@@ -106,7 +118,9 @@ export function SupplierLeadList({ leads }: { leads: readonly SupplierLeadDto[] 
             {humanizeKey(lead.material)}
             {lead.stateName ? ` · ${lead.stateName}` : ''} · {humanizeKey(lead.relation)} ·{' '}
             {humanizeKey(lead.evidenceStatus)} · stock {humanizeKey(lead.stockStatus)} ·{' '}
-            {lead.deliveryCoverageVerified ? 'delivery coverage verified' : 'delivery coverage not verified'}
+            {lead.deliveryCoverageVerified
+              ? 'delivery coverage verified'
+              : 'delivery coverage not verified'}
           </p>
           {lead.note ? <p className="mt-1 text-xs text-fg-muted">{lead.note}</p> : null}
           {lead.source?.url ? (
@@ -140,8 +154,11 @@ export function SupplierQuoteList({ quotes }: { quotes: readonly SupplierQuoteDt
             <EvidenceBadge kind={quote.badge} showDescription />
           </div>
           <p className="tabular-nums">
-            {quote.unitPrice ? formatNairaString(quote.unitPrice.amountKobo) : 'Price not stated'} per {quote.unit}
-            {quote.deliveryCost ? ` · delivery ${formatNairaString(quote.deliveryCost.amountKobo)}` : ' · delivery not quoted'}
+            {quote.unitPrice ? formatNairaString(quote.unitPrice.amountKobo) : 'Price not stated'}{' '}
+            per {quote.unit}
+            {quote.deliveryCost
+              ? ` · delivery ${formatNairaString(quote.deliveryCost.amountKobo)}`
+              : ' · delivery not quoted'}
             {quote.leadTimeDays !== null ? ` · lead time ${quote.leadTimeDays} days` : ''}
           </p>
           <p className="text-xs text-fg-muted">

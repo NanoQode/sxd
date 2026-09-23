@@ -8,5 +8,10 @@ export {
   type ClamAvOptions,
   type ParsedClamResponse,
 } from './clamav';
-export { DevMalwareScanner, EICAR_TEST_STRING, DEV_SCANNER_ENGINE, type DevScannerOptions } from './dev';
+export {
+  DevMalwareScanner,
+  EICAR_TEST_STRING,
+  DEV_SCANNER_ENGINE,
+  type DevScannerOptions,
+} from './dev';
 export * from './factory';

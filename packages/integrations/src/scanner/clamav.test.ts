@@ -13,7 +13,9 @@ interface FakeClamd {
 }
 
 /** Minimal clamd that understands z-mode PING/VERSION/INSTREAM and verifies the length-prefixed framing. */
-async function startFakeClamd(behaviour: { respond?: (data: Buffer) => string | null } = {}): Promise<FakeClamd> {
+async function startFakeClamd(
+  behaviour: { respond?: (data: Buffer) => string | null } = {},
+): Promise<FakeClamd> {
   const sockets = new Set<net.Socket>();
   const frameLengths: number[] = [];
   const received: Buffer[] = [];
@@ -82,7 +84,12 @@ describe('ClamAvScanner', () => {
   it('frames INSTREAM chunks with big-endian lengths and a zero terminator', async () => {
     const server = await startFakeClamd();
     servers.push(server);
-    const scanner = new ClamAvScanner({ host: '127.0.0.1', port: server.port, chunkBytes: 64 * 1024, timeoutMs: 5000 });
+    const scanner = new ClamAvScanner({
+      host: '127.0.0.1',
+      port: server.port,
+      chunkBytes: 64 * 1024,
+      timeoutMs: 5000,
+    });
     const payload = Buffer.alloc(200 * 1024 + 17, 7);
     const result = await scanner.scan(payload, { fileName: 'big.bin', sizeBytes: payload.length });
     expect(result).toMatchObject({ verdict: 'clean', signature: null, engine: 'clamav' });
@@ -96,7 +103,11 @@ describe('ClamAvScanner', () => {
     const server = await startFakeClamd();
     servers.push(server);
     const scanner = new ClamAvScanner({ host: '127.0.0.1', port: server.port, chunkBytes: 8 });
-    const stream = Readable.from([Buffer.from('prefix '), Buffer.from(EICAR_TEST_STRING), Buffer.from(' suffix')]);
+    const stream = Readable.from([
+      Buffer.from('prefix '),
+      Buffer.from(EICAR_TEST_STRING),
+      Buffer.from(' suffix'),
+    ]);
     const result = await scanner.scan(stream, { fileName: 'eicar.com', sizeBytes: 100 });
     expect(result).toMatchObject({ verdict: 'infected', signature: 'Eicar-Test-Signature' });
     expect(result.durationMs).toBeGreaterThanOrEqual(0);
@@ -106,7 +117,10 @@ describe('ClamAvScanner', () => {
     const server = await startFakeClamd();
     servers.push(server);
     const scanner = new ClamAvScanner({ host: '127.0.0.1', port: server.port });
-    expect(await scanner.ping()).toEqual({ ok: true, version: 'ClamAV 1.4.1/27400/Tue Sep 22 2026' });
+    expect(await scanner.ping()).toEqual({
+      ok: true,
+      version: 'ClamAV 1.4.1/27400/Tue Sep 22 2026',
+    });
     expect(server.commands).toEqual(['zPING', 'zVERSION']);
   });
 
@@ -121,7 +135,11 @@ describe('ClamAvScanner', () => {
     const closed = await startFakeClamd();
     const { port } = closed;
     await closed.close();
-    const refused = await new ClamAvScanner({ host: '127.0.0.1', port, connectTimeoutMs: 500 }).scan(Buffer.from('x'), {
+    const refused = await new ClamAvScanner({
+      host: '127.0.0.1',
+      port,
+      connectTimeoutMs: 500,
+    }).scan(Buffer.from('x'), {
       fileName: 'a.txt',
       sizeBytes: 1,
     });
@@ -130,14 +148,23 @@ describe('ClamAvScanner', () => {
 
     const limited = new ClamAvScanner({ host: '127.0.0.1', port, maxBytes: 10 });
     const tooBig = await limited.scan(Buffer.alloc(11), { fileName: 'big.bin', sizeBytes: 11 });
-    expect(tooBig).toMatchObject({ verdict: 'error', error: expect.stringContaining('quarantined') });
+    expect(tooBig).toMatchObject({
+      verdict: 'error',
+      error: expect.stringContaining('quarantined'),
+    });
     expect((await new ClamAvScanner({ host: '127.0.0.1', port }).ping()).ok).toBe(false);
   });
 
   it('parses clamd response lines', () => {
     expect(parseClamResponse('stream: OK\0')).toEqual({ verdict: 'clean', signature: null });
-    expect(parseClamResponse('stream: Win.Test.EICAR_HDB-1 FOUND')).toEqual({ verdict: 'infected', signature: 'Win.Test.EICAR_HDB-1' });
-    expect(parseClamResponse('INSTREAM size limit exceeded. ERROR')).toMatchObject({ verdict: 'error', error: expect.stringContaining('size limit') });
+    expect(parseClamResponse('stream: Win.Test.EICAR_HDB-1 FOUND')).toEqual({
+      verdict: 'infected',
+      signature: 'Win.Test.EICAR_HDB-1',
+    });
+    expect(parseClamResponse('INSTREAM size limit exceeded. ERROR')).toMatchObject({
+      verdict: 'error',
+      error: expect.stringContaining('size limit'),
+    });
     expect(parseClamResponse('???')).toMatchObject({ verdict: 'error' });
     expect(() => new ClamAvScanner({ host: '', port: 3310 })).toThrow(/CLAMAV_HOST/);
   });

@@ -44,7 +44,19 @@ describe('draft storage', () => {
 
   it('survives an unavailable storage', () => {
     expect(loadDraft(null)).toBeNull();
-    expect(saveDraft({ name: null, assumptions: DEFAULT_ASSUMPTIONS, priorities: {}, mode: 'evidence', scenarioId: null, compare: [] }, null)).toBeNull();
+    expect(
+      saveDraft(
+        {
+          name: null,
+          assumptions: DEFAULT_ASSUMPTIONS,
+          priorities: {},
+          mode: 'evidence',
+          scenarioId: null,
+          compare: [],
+        },
+        null,
+      ),
+    ).toBeNull();
     const throwing = {
       getItem: () => {
         throw new Error('blocked');

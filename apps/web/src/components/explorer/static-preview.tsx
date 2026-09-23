@@ -35,7 +35,9 @@ function gridLines(): Array<{ kind: 'lon' | 'lat'; value: number; x?: number; y?
   return lines;
 }
 
-function zoneCentroids(features: readonly MarketFeature[]): Array<{ zone: Zone; x: number; y: number }> {
+function zoneCentroids(
+  features: readonly MarketFeature[],
+): Array<{ zone: Zone; x: number; y: number }> {
   const sums = new Map<Zone, { lon: number; lat: number; n: number }>();
   for (const feature of features) {
     const zone = feature.properties.zone;
@@ -70,7 +72,10 @@ export function StaticPreview({
       ? 'Static preview: longitude and latitude grid, markets not loaded yet'
       : `Static preview: ${features.length} markets plotted on a longitude and latitude grid`;
   return (
-    <div className={cn('relative h-full w-full bg-bg-sunken', className)} data-testid="static-preview">
+    <div
+      className={cn('relative h-full w-full bg-bg-sunken', className)}
+      data-testid="static-preview"
+    >
       <svg
         viewBox={`0 0 ${BOX.width} ${BOX.height}`}
         role="img"
@@ -90,7 +95,12 @@ export function StaticPreview({
                 stroke="var(--sx-chart-grid)"
                 strokeWidth="1"
               />
-              <text x={(line.x ?? 0) + 3} y={BOX.height - 6} fontSize="11" fill="var(--sx-fg-subtle)">
+              <text
+                x={(line.x ?? 0) + 3}
+                y={BOX.height - 6}
+                fontSize="11"
+                fill="var(--sx-fg-subtle)"
+              >
                 {line.value}°E
               </text>
             </g>
@@ -150,9 +160,7 @@ export function StaticPreview({
                 stroke="var(--sx-bg-elevated)"
                 strokeWidth="1.5"
               >
-                <title>
-                  {feature.properties.name}, {feature.properties.stateName} — {FRESHNESS_LEGEND[freshness]}
-                </title>
+                <title>{`${feature.properties.name}, ${feature.properties.stateName} — ${FRESHNESS_LEGEND[freshness]}`}</title>
               </circle>
             </g>
           );

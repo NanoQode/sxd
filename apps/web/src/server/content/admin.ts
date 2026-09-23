@@ -1,6 +1,6 @@
 import 'server-only';
-import { and, asc, desc, eq, ilike, lt, lte, or, sql } from 'drizzle-orm';
-import { z } from 'zod';
+import { and, asc, desc, eq, ilike, lte, or, sql } from 'drizzle-orm';
+import type { z } from 'zod';
 import {
   ApiError,
   type ContentListQuery,
@@ -79,11 +79,20 @@ async function loadPage(tx: Transaction, id: string): Promise<PageRow> {
   return page;
 }
 
-async function loadRevision(tx: Transaction, pageId: string, revision: number): Promise<RevisionRow> {
+async function loadRevision(
+  tx: Transaction,
+  pageId: string,
+  revision: number,
+): Promise<RevisionRow> {
   const [row] = await tx
     .select()
     .from(schema.contentRevisions)
-    .where(and(eq(schema.contentRevisions.pageId, pageId), eq(schema.contentRevisions.revision, revision)));
+    .where(
+      and(
+        eq(schema.contentRevisions.pageId, pageId),
+        eq(schema.contentRevisions.revision, revision),
+      ),
+    );
   if (!row) throw new ApiError('not_found', `revision ${revision} not found`);
   return row;
 }
@@ -102,14 +111,12 @@ export async function listContentPages(
           query.kind ? eq(schema.contentPages.kind, query.kind) : undefined,
           query.status ? eq(schema.contentPages.status, query.status) : undefined,
           query.q
-            ? or(ilike(schema.contentPages.title, `%${query.q}%`), ilike(schema.contentPages.slug, `%${query.q}%`))
-            : undefined,
-          cursor
             ? or(
-                lt(schema.contentPages.updatedAt, cursor.createdAt),
-                and(eq(schema.contentPages.updatedAt, cursor.createdAt), lt(schema.contentPages.id, cursor.id)),
+                ilike(schema.contentPages.title, `%${query.q}%`),
+                ilike(schema.contentPages.slug, `%${query.q}%`),
               )
             : undefined,
+          cursor ? keysetAfter(schema.contentPages.updatedAt, schema.contentPages.id, cursor) : undefined,
         ),
       )
       .orderBy(desc(schema.contentPages.updatedAt), desc(schema.contentPages.id))
@@ -120,7 +127,10 @@ export async function listContentPages(
   return { items, nextCursor: last ? encodeCursor(last.updatedAt, last.id) : null };
 }
 
-export async function getContentPageDetail(identity: RequestIdentity, id: string): Promise<ContentPageDetail> {
+export async function getContentPageDetail(
+  identity: RequestIdentity,
+  id: string,
+): Promise<ContentPageDetail> {
   return withActor(getDb(), identity.ctx, async (tx) => {
     const page = await loadPage(tx, id);
     const revisions = await tx
@@ -136,7 +146,10 @@ export async function getContentPageDetail(identity: RequestIdentity, id: string
       unpublishedAt: page.unpublishedAt?.toISOString() ?? null,
       relatedEntityType: page.relatedEntityType,
       relatedEntityId: page.relatedEntityId,
-      revisions: revisions.map((row) => ({ ...toRevisionDto(row.r), createdByName: row.createdByName })),
+      revisions: revisions.map((row) => ({
+        ...toRevisionDto(row.r),
+        createdByName: row.createdByName,
+      })),
     };
   });
 }
@@ -188,7 +201,8 @@ export async function createContentPage(
       return toPageDto(page!);
     });
   } catch (err) {
-    if (isUniqueViolation(err)) throw new ApiError('conflict', `a page with slug "${parsed.slug}" already exists`);
+    if (isUniqueViolation(err))
+      throw new ApiError('conflict', `a page with slug "${parsed.slug}" already exists`);
     throw err;
   }
 }
@@ -242,7 +256,8 @@ export async function createContentRevision(
   const userId = identity.session!.user.id;
   return withActor(getDb(), identity.ctx, async (tx) => {
     const page = await loadPage(tx, id);
-    if (page.status === 'archived') throw new ApiError('invalid_transition', 'archived pages cannot be edited');
+    if (page.status === 'archived')
+      throw new ApiError('invalid_transition', 'archived pages cannot be edited');
     if (page.version !== input.expectedVersion) {
       throw new ApiError('version_conflict', 'this page changed since you loaded it', {
         details: { currentVersion: page.version },
@@ -287,7 +302,14 @@ export async function createContentRevision(
   });
 }
 
-const PUBLISH_ACTIONS = new Set(['approve', 'publish', 'schedule', 'unpublish', 'archive', 'rollback']);
+const PUBLISH_ACTIONS = new Set([
+  'approve',
+  'publish',
+  'schedule',
+  'unpublish',
+  'archive',
+  'rollback',
+]);
 
 /**
  * Workflow actions. `submit_for_review` needs content.edit; the rest need
@@ -323,22 +345,32 @@ export async function applyContentAction(
     } else {
       assertAllowed(authorizeStaff(identity.actor, 'content.edit', { type: 'content_page', id }));
     }
-    const requiresSeparateApprover = ['approve', 'publish', 'schedule', 'rollback'].includes(parsed.action);
+    const requiresSeparateApprover = ['approve', 'publish', 'schedule', 'rollback'].includes(
+      parsed.action,
+    );
     if (requiresSeparateApprover && revision.createdBy && revision.createdBy === userId) {
       throw new ApiError('forbidden', 'the approver must differ from the revision author', {
         details: { code: 'separation_of_duties', revision: targetRevision },
       });
     }
 
-    const before = { status: page.status, publishedRevision: page.publishedRevision, publishAt: page.publishAt };
-    const patch: Partial<typeof schema.contentPages.$inferInsert> = { version: page.version + 1, updatedBy: userId };
+    const before = {
+      status: page.status,
+      publishedRevision: page.publishedRevision,
+      publishAt: page.publishAt,
+    };
+    const patch: Partial<typeof schema.contentPages.$inferInsert> = {
+      version: page.version + 1,
+      updatedBy: userId,
+    };
     let revisionStatus: string | null = null;
     let cacheAffected = false;
     let auditAction = `content.${parsed.action}`;
 
     switch (parsed.action) {
       case 'submit_for_review': {
-        if (page.status === 'archived') throw new ApiError('invalid_transition', 'archived pages cannot be reviewed');
+        if (page.status === 'archived')
+          throw new ApiError('invalid_transition', 'archived pages cannot be reviewed');
         revisionStatus = 'in_review';
         if (page.publishedRevision === null) patch.status = 'in_review';
         break;
@@ -348,7 +380,8 @@ export async function applyContentAction(
         break;
       }
       case 'publish': {
-        if (page.status === 'archived') throw new ApiError('invalid_transition', 'restore the page before publishing');
+        if (page.status === 'archived')
+          throw new ApiError('invalid_transition', 'restore the page before publishing');
         patch.status = 'published';
         patch.publishedRevision = targetRevision;
         patch.publishedAt = now;
@@ -359,12 +392,17 @@ export async function applyContentAction(
         break;
       }
       case 'schedule': {
-        if (!parsed.publishAt) throw new ApiError('validation_failed', 'publishAt is required to schedule');
+        if (!parsed.publishAt)
+          throw new ApiError('validation_failed', 'publishAt is required to schedule');
         const at = new Date(parsed.publishAt);
         if (at.getTime() <= now.getTime()) {
-          throw new ApiError('validation_failed', 'publishAt must be in the future; use publish for immediate publication');
+          throw new ApiError(
+            'validation_failed',
+            'publishAt must be in the future; use publish for immediate publication',
+          );
         }
-        if (page.status === 'archived') throw new ApiError('invalid_transition', 'restore the page before scheduling');
+        if (page.status === 'archived')
+          throw new ApiError('invalid_transition', 'restore the page before scheduling');
         patch.status = 'scheduled';
         patch.publishedRevision = targetRevision;
         patch.publishAt = at;
@@ -375,7 +413,10 @@ export async function applyContentAction(
       }
       case 'unpublish': {
         if (page.status !== 'published' && page.status !== 'scheduled') {
-          throw new ApiError('invalid_transition', 'only published or scheduled pages can be unpublished');
+          throw new ApiError(
+            'invalid_transition',
+            'only published or scheduled pages can be unpublished',
+          );
         }
         patch.status = 'unpublished';
         patch.unpublishedAt = now;
@@ -391,12 +432,16 @@ export async function applyContentAction(
         break;
       }
       case 'rollback': {
-        if (parsed.revision === undefined) throw new ApiError('validation_failed', 'revision is required to roll back');
+        if (parsed.revision === undefined)
+          throw new ApiError('validation_failed', 'revision is required to roll back');
         if (parsed.revision >= page.currentRevision && page.publishedRevision === parsed.revision) {
           throw new ApiError('invalid_transition', 'that revision is already live');
         }
         if (revision.reviewStatus !== 'published' && revision.reviewStatus !== 'approved') {
-          throw new ApiError('invalid_transition', 'only previously approved or published revisions can be rolled back to');
+          throw new ApiError(
+            'invalid_transition',
+            'only previously approved or published revisions can be rolled back to',
+          );
         }
         patch.status = 'published';
         patch.publishedRevision = parsed.revision;
@@ -456,27 +501,36 @@ export function renderPreviewHtml(markdown: string): string {
  * pages whose publishAt has passed. Not cached; used by the preview page,
  * the scheduler promotion and tests.
  */
-export async function resolvePublicContent(slug: string, now: Date = new Date()): Promise<PublishedContent | null> {
-  const rows = await withActor(getDb(), { userId: null, organizationId: null, staff: false }, (tx) =>
-    tx
-      .select({ page: schema.contentPages, rev: schema.contentRevisions })
-      .from(schema.contentPages)
-      .innerJoin(
-        schema.contentRevisions,
-        and(
-          eq(schema.contentRevisions.pageId, schema.contentPages.id),
-          eq(schema.contentRevisions.revision, schema.contentPages.publishedRevision),
-        ),
-      )
-      .where(
-        and(
-          eq(schema.contentPages.slug, slug),
-          or(
-            eq(schema.contentPages.status, 'published'),
-            and(eq(schema.contentPages.status, 'scheduled'), lte(schema.contentPages.publishAt, now)),
+export async function resolvePublicContent(
+  slug: string,
+  now: Date = new Date(),
+): Promise<PublishedContent | null> {
+  const rows = await withActor(
+    getDb(),
+    { userId: null, organizationId: null, staff: false },
+    (tx) =>
+      tx
+        .select({ page: schema.contentPages, rev: schema.contentRevisions })
+        .from(schema.contentPages)
+        .innerJoin(
+          schema.contentRevisions,
+          and(
+            eq(schema.contentRevisions.pageId, schema.contentPages.id),
+            eq(schema.contentRevisions.revision, schema.contentPages.publishedRevision),
+          ),
+        )
+        .where(
+          and(
+            eq(schema.contentPages.slug, slug),
+            or(
+              eq(schema.contentPages.status, 'published'),
+              and(
+                eq(schema.contentPages.status, 'scheduled'),
+                lte(schema.contentPages.publishAt, now),
+              ),
+            ),
           ),
         ),
-      ),
   );
   const row = rows[0];
   if (!row) return null;
@@ -497,29 +551,54 @@ export async function resolvePublicContent(slug: string, now: Date = new Date())
  * Intended for the worker scheduler; safe to call repeatedly.
  */
 export async function publishDueScheduledPages(now: Date = new Date()): Promise<number> {
-  const promoted = await withActor(getDb(), { userId: null, organizationId: null, staff: false, bypass: true }, async (tx) => {
-    const rows = await tx
-      .update(schema.contentPages)
-      .set({ status: 'published', publishedAt: now, publishAt: null, version: sql`${schema.contentPages.version} + 1` })
-      .where(and(eq(schema.contentPages.status, 'scheduled'), lte(schema.contentPages.publishAt, now)))
-      .returning({ id: schema.contentPages.id, slug: schema.contentPages.slug, publishedRevision: schema.contentPages.publishedRevision });
-    for (const row of rows) {
-      if (row.publishedRevision !== null) {
-        await tx
-          .update(schema.contentRevisions)
-          .set({ reviewStatus: 'published' })
-          .where(and(eq(schema.contentRevisions.pageId, row.id), eq(schema.contentRevisions.revision, row.publishedRevision)));
+  const promoted = await withActor(
+    getDb(),
+    { userId: null, organizationId: null, staff: false, bypass: true },
+    async (tx) => {
+      const rows = await tx
+        .update(schema.contentPages)
+        .set({
+          status: 'published',
+          publishedAt: now,
+          publishAt: null,
+          version: sql`${schema.contentPages.version} + 1`,
+        })
+        .where(
+          and(eq(schema.contentPages.status, 'scheduled'), lte(schema.contentPages.publishAt, now)),
+        )
+        .returning({
+          id: schema.contentPages.id,
+          slug: schema.contentPages.slug,
+          publishedRevision: schema.contentPages.publishedRevision,
+        });
+      for (const row of rows) {
+        if (row.publishedRevision !== null) {
+          await tx
+            .update(schema.contentRevisions)
+            .set({ reviewStatus: 'published' })
+            .where(
+              and(
+                eq(schema.contentRevisions.pageId, row.id),
+                eq(schema.contentRevisions.revision, row.publishedRevision),
+              ),
+            );
+        }
+        await recordAudit(tx, null, {
+          actorType: 'system',
+          action: 'content.publish',
+          entityType: 'content_page',
+          entityId: row.id,
+          after: {
+            status: 'published',
+            slug: row.slug,
+            publishedRevision: row.publishedRevision,
+            scheduled: true,
+          },
+        });
       }
-      await recordAudit(tx, null, {
-        actorType: 'system',
-        action: 'content.publish',
-        entityType: 'content_page',
-        entityId: row.id,
-        after: { status: 'published', slug: row.slug, publishedRevision: row.publishedRevision, scheduled: true },
-      });
-    }
-    return rows.length;
-  });
+      return rows.length;
+    },
+  );
   if (promoted > 0) await cacheDelete('content');
   return promoted;
 }
@@ -531,7 +610,9 @@ export async function listApprovedMedia(identity: RequestIdentity): Promise<Medi
       .select({ m: schema.mediaAssets, f: schema.fileObjects })
       .from(schema.mediaAssets)
       .innerJoin(schema.fileObjects, eq(schema.fileObjects.id, schema.mediaAssets.fileId))
-      .where(and(eq(schema.mediaAssets.approvedForPublic, true), eq(schema.fileObjects.status, 'clean')))
+      .where(
+        and(eq(schema.mediaAssets.approvedForPublic, true), eq(schema.fileObjects.status, 'clean')),
+      )
       .orderBy(asc(schema.mediaAssets.createdAt))
       .limit(200),
   );

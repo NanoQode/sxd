@@ -79,6 +79,6 @@ export function buildRows(
 export function hasRanking(recommendation: RecommendationResponse | null | undefined): boolean {
   return Boolean(
     recommendation?.rankingEnabled &&
-      recommendation.organic.some((r) => r.status === 'ranked' && r.rank !== null),
+    recommendation.organic.some((r) => r.status === 'ranked' && r.rank !== null),
   );
 }

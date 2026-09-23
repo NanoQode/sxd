@@ -212,8 +212,10 @@ export function assumptionsFromForm(form: ScenarioFormOutput): ScenarioAssumptio
     if (set.vacancyPercent !== null) partial.vacancyRate = set.vacancyPercent;
     if (set.landCostNaira !== null) partial.landCostNaira = set.landCostNaira;
     if (set.buildRateNairaPerM2 !== null) partial.buildRateNairaPerM2 = set.buildRateNairaPerM2;
-    if (set.completionDelayMonths !== null) partial.completionDelayMonths = set.completionDelayMonths;
-    if (set.annualDebtServiceNaira !== null) partial.annualDebtServiceNaira = set.annualDebtServiceNaira;
+    if (set.completionDelayMonths !== null)
+      partial.completionDelayMonths = set.completionDelayMonths;
+    if (set.annualDebtServiceNaira !== null)
+      partial.annualDebtServiceNaira = set.annualDebtServiceNaira;
     if (set.unitRents.some((rent) => rent !== null) && units.length > 0) {
       partial.units = units.map((group, index) => {
         const rent = set.unitRents[index] ?? null;
@@ -328,7 +330,10 @@ export function missingAssumptionInputs(assumptions: ScenarioAssumptions): strin
   const base = assumptions.base;
   const missing: string[] = [];
   if (base.landCostNaira === null) missing.push('land cost');
-  if (base.boqTotalNaira === null && (base.grossFloorAreaM2 === null || base.buildRateNairaPerM2 === null)) {
+  if (
+    base.boqTotalNaira === null &&
+    (base.grossFloorAreaM2 === null || base.buildRateNairaPerM2 === null)
+  ) {
     missing.push('gross floor area and build rate (or a priced BOQ total)');
   }
   if (base.units.length === 0 && base.shortStay === null) {
@@ -365,7 +370,10 @@ export function buildScenarioCreate(input: {
   marketIds: string[];
 }): ScenarioCreate {
   return {
-    name: input.name.trim() === '' ? defaultScenarioName(input.objective) : input.name.trim().slice(0, 120),
+    name:
+      input.name.trim() === ''
+        ? defaultScenarioName(input.objective)
+        : input.name.trim().slice(0, 120),
     objective: input.objective,
     mode: input.mode,
     filters: input.filters,
@@ -385,7 +393,9 @@ export function defaultScenarioName(objective: Objective, date: Date = new Date(
 export function stableKey(value: unknown): string {
   return JSON.stringify(value, (_key, v: unknown) =>
     v && typeof v === 'object' && !Array.isArray(v)
-      ? Object.fromEntries(Object.entries(v as Record<string, unknown>).sort(([a], [b]) => (a < b ? -1 : 1)))
+      ? Object.fromEntries(
+          Object.entries(v as Record<string, unknown>).sort(([a], [b]) => (a < b ? -1 : 1)),
+        )
       : v,
   );
 }

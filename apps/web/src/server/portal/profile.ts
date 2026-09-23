@@ -22,7 +22,10 @@ export async function updatePhone(
 ): Promise<{ phoneE164: string | null }> {
   if (!identity.session) throw new ApiError('unauthenticated', 'sign in required');
   const userId = identity.session.user.id;
-  const phoneE164 = input.phone && input.phone.trim().length > 0 ? normalizePhone(input.phone, input.defaultCountry) : null;
+  const phoneE164 =
+    input.phone && input.phone.trim().length > 0
+      ? normalizePhone(input.phone, input.defaultCountry)
+      : null;
   await withActor(getDb(), identity.ctx, async (tx) => {
     await tx.insert(schema.userProfiles).values({ userId }).onConflictDoNothing();
     const [current] = await tx

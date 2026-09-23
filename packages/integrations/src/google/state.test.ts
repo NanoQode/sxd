@@ -25,7 +25,10 @@ describe('OAuth state', () => {
   it('rejects tampering, wrong secrets and malformed values', () => {
     const signed = signState('nonce123', secret);
     const [state, ts, sig] = signed.split('.') as [string, string, string];
-    expect(verifyState(`${state}x.${ts}.${sig}`, secret)).toEqual({ ok: false, reason: 'bad_signature' });
+    expect(verifyState(`${state}x.${ts}.${sig}`, secret)).toEqual({
+      ok: false,
+      reason: 'bad_signature',
+    });
     expect(verifyState(signed, 'another-secret-that-is-long-enough')).toEqual({
       ok: false,
       reason: 'bad_signature',
@@ -72,7 +75,9 @@ describe('PKCE', () => {
 
   it('bundles state and PKCE for a pending authorisation', () => {
     const pending = beginAuthorization(secret, new Date('2026-09-23T10:00:00Z'));
-    expect(verifyState(pending.signedState, secret, { now: new Date('2026-09-23T10:01:00Z') })).toMatchObject({
+    expect(
+      verifyState(pending.signedState, secret, { now: new Date('2026-09-23T10:01:00Z') }),
+    ).toMatchObject({
       ok: true,
       state: pending.state,
     });

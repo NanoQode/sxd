@@ -1,7 +1,12 @@
 import 'server-only';
 import { and, desc, eq } from 'drizzle-orm';
-import { z } from 'zod';
-import { ApiError, type RedirectDto, redirectPatchSchema, redirectUpsertSchema } from '@simplexd/contracts';
+import type { z } from 'zod';
+import {
+  ApiError,
+  type RedirectDto,
+  redirectPatchSchema,
+  redirectUpsertSchema,
+} from '@simplexd/contracts';
 import { getDb, schema, withActor } from '@simplexd/db';
 import { recordAudit } from '@/lib/audit';
 import type { RequestIdentity } from '@/lib/auth/session';
@@ -44,17 +49,24 @@ export async function createRedirect(
   const parsed = redirectUpsertSchema.parse(input);
   const fromPath = normalizePath(parsed.fromPath);
   const toPath = parsed.toPath.startsWith('/') ? normalizePath(parsed.toPath) : parsed.toPath;
-  if (fromPath === toPath) throw new ApiError('validation_failed', 'a redirect cannot point to itself');
-  if (fromPath.startsWith('/api/') || fromPath === '/api') throw new ApiError('validation_failed', 'API paths cannot be redirected');
+  if (fromPath === toPath)
+    throw new ApiError('validation_failed', 'a redirect cannot point to itself');
+  if (fromPath.startsWith('/api/') || fromPath === '/api')
+    throw new ApiError('validation_failed', 'API paths cannot be redirected');
   const dto = await withActor(getDb(), identity.ctx, async (tx) => {
-    const existing = await tx.select({ id: schema.redirects.id }).from(schema.redirects).where(eq(schema.redirects.fromPath, fromPath));
-    if (existing.length > 0) throw new ApiError('conflict', `a redirect from ${fromPath} already exists`);
+    const existing = await tx
+      .select({ id: schema.redirects.id })
+      .from(schema.redirects)
+      .where(eq(schema.redirects.fromPath, fromPath));
+    if (existing.length > 0)
+      throw new ApiError('conflict', `a redirect from ${fromPath} already exists`);
     // Prevent two-hop loops: A → B while B → A already exists.
     const reverse = await tx
       .select({ id: schema.redirects.id })
       .from(schema.redirects)
       .where(and(eq(schema.redirects.fromPath, toPath), eq(schema.redirects.toPath, fromPath)));
-    if (reverse.length > 0) throw new ApiError('validation_failed', 'this redirect would create a loop');
+    if (reverse.length > 0)
+      throw new ApiError('validation_failed', 'this redirect would create a loop');
     const [row] = await tx
       .insert(schema.redirects)
       .values({
@@ -89,8 +101,14 @@ export async function patchRedirect(
   const dto = await withActor(getDb(), identity.ctx, async (tx) => {
     const [before] = await tx.select().from(schema.redirects).where(eq(schema.redirects.id, id));
     if (!before) throw new ApiError('not_found', 'redirect not found');
-    const toPath = parsed.toPath !== undefined ? (parsed.toPath.startsWith('/') ? normalizePath(parsed.toPath) : parsed.toPath) : before.toPath;
-    if (toPath === before.fromPath) throw new ApiError('validation_failed', 'a redirect cannot point to itself');
+    const toPath =
+      parsed.toPath !== undefined
+        ? parsed.toPath.startsWith('/')
+          ? normalizePath(parsed.toPath)
+          : parsed.toPath
+        : before.toPath;
+    if (toPath === before.fromPath)
+      throw new ApiError('validation_failed', 'a redirect cannot point to itself');
     const [row] = await tx
       .update(schema.redirects)
       .set({
@@ -105,8 +123,18 @@ export async function patchRedirect(
       action: 'redirect.updated',
       entityType: 'redirect',
       entityId: id,
-      before: { toPath: before.toPath, statusCode: before.statusCode, active: before.active, note: before.note },
-      after: { toPath: row!.toPath, statusCode: row!.statusCode, active: row!.active, note: row!.note },
+      before: {
+        toPath: before.toPath,
+        statusCode: before.statusCode,
+        active: before.active,
+        note: before.note,
+      },
+      after: {
+        toPath: row!.toPath,
+        statusCode: row!.statusCode,
+        active: row!.active,
+        note: row!.note,
+      },
       correlationId: options.correlationId,
     });
     return toDto(row!);
@@ -129,11 +157,14 @@ export async function resolveRedirect(path: string): Promise<ResolvedRedirect | 
   const key = normalizePath(path.split('?')[0] ?? path);
   if (!key.startsWith('/')) return null;
   return cached<ResolvedRedirect | null>(`redirect:${key}`, 60, async () => {
-    const rows = await withActor(getDb(), { userId: null, organizationId: null, staff: false }, (tx) =>
-      tx
-        .select({ toPath: schema.redirects.toPath, statusCode: schema.redirects.statusCode })
-        .from(schema.redirects)
-        .where(and(eq(schema.redirects.fromPath, key), eq(schema.redirects.active, true))),
+    const rows = await withActor(
+      getDb(),
+      { userId: null, organizationId: null, staff: false },
+      (tx) =>
+        tx
+          .select({ toPath: schema.redirects.toPath, statusCode: schema.redirects.statusCode })
+          .from(schema.redirects)
+          .where(and(eq(schema.redirects.fromPath, key), eq(schema.redirects.active, true))),
     );
     const row = rows[0];
     return row ? { toPath: row.toPath, statusCode: row.statusCode } : null;

@@ -15,5 +15,8 @@ export const GET = route(async (_req, { correlationId }) => {
 export const POST = route(async (req, { correlationId }) => {
   const identity = await requireStaff('content.publish');
   const body = await parseJson(req, redirectUpsertSchema);
-  return json(await createRedirect(identity, body, { correlationId }), { status: 201, correlationId });
+  return json(await createRedirect(identity, body, { correlationId }), {
+    status: 201,
+    correlationId,
+  });
 });

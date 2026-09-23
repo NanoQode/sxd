@@ -103,7 +103,9 @@ describe('filtersFromParams', () => {
 
 describe('href and defaults', () => {
   it('omits default values from the full-explorer link', () => {
-    expect(buildExploreHref({ objective: 'long_term_rent', zones: [], view: 'map' })).toBe('/explore');
+    expect(buildExploreHref({ objective: 'long_term_rent', zones: [], view: 'map' })).toBe(
+      '/explore',
+    );
   });
 
   it('carries non-default state into the link', () => {

@@ -11,11 +11,14 @@ export const STORAGE_KEY_PATTERN = /^[a-z0-9/_.-]+$/;
 export const STORAGE_KEY_MAX_LENGTH = 900;
 
 export function isValidStorageKey(key: string): boolean {
-  if (typeof key !== 'string' || key.length === 0 || key.length > STORAGE_KEY_MAX_LENGTH) return false;
+  if (typeof key !== 'string' || key.length === 0 || key.length > STORAGE_KEY_MAX_LENGTH)
+    return false;
   if (!STORAGE_KEY_PATTERN.test(key)) return false;
   if (key.startsWith('/') || key.endsWith('/') || key.includes('//')) return false;
   const segments = key.split('/');
-  return segments.every((segment) => segment !== '.' && segment !== '..' && !segment.startsWith('.'));
+  return segments.every(
+    (segment) => segment !== '.' && segment !== '..' && !segment.startsWith('.'),
+  );
 }
 
 export function assertValidStorageKey(key: string): void {
@@ -35,7 +38,8 @@ function slug(value: string, label: string): string {
 export function normalizeExtension(ext: string | null | undefined): string {
   if (!ext) return '';
   const lower = (ext.startsWith('.') ? ext : `.${ext}`).toLowerCase();
-  if (!/^\.[a-z0-9]{1,8}$/.test(lower)) throw new StorageError(`invalid extension: ${ext}`, 'invalid_key');
+  if (!/^\.[a-z0-9]{1,8}$/.test(lower))
+    throw new StorageError(`invalid extension: ${ext}`, 'invalid_key');
   if ((BLOCKED_EXTENSIONS as readonly string[]).includes(lower))
     throw new StorageError(`extension ${lower} is not accepted`, 'invalid_key');
   return lower;
@@ -53,8 +57,13 @@ export interface BuildStorageKeyInput {
 /** `org/<org>/<purpose>/<fileId><ext>` or `shared/<purpose>/<fileId><ext>`. */
 export function buildStorageKey(input: BuildStorageKeyInput): string {
   if (!/^[a-z0-9-]{8,64}$/i.test(input.fileId))
-    throw new StorageError('fileId must be an identifier of 8–64 [a-z0-9-] characters', 'invalid_key');
-  const scope = input.organizationId ? `org/${slug(input.organizationId, 'organizationId')}` : 'shared';
+    throw new StorageError(
+      'fileId must be an identifier of 8–64 [a-z0-9-] characters',
+      'invalid_key',
+    );
+  const scope = input.organizationId
+    ? `org/${slug(input.organizationId, 'organizationId')}`
+    : 'shared';
   const key = `${scope}/${slug(input.purpose, 'purpose')}/${input.fileId.toLowerCase()}${normalizeExtension(input.ext)}`;
   assertValidStorageKey(key);
   return key;

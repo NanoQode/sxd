@@ -49,25 +49,36 @@ export type ParsedClamResponse =
 /** Parses one clamd response line (NUL/newline stripped). */
 export function parseClamResponse(raw: string): ParsedClamResponse {
   const line = raw.replace(/\0+$/, '').trim();
-  if (/^(stream|-):?\s*OK$/.test(line) || line === 'stream: OK') return { verdict: 'clean', signature: null };
+  if (/^(stream|-):?\s*OK$/.test(line) || line === 'stream: OK')
+    return { verdict: 'clean', signature: null };
   const found = /^(?:stream|-):\s*(.+?)\s+FOUND$/.exec(line);
   if (found && found[1]) return { verdict: 'infected', signature: found[1] };
   if (/ERROR$/.test(line)) return { verdict: 'error', signature: null, error: line };
-  return { verdict: 'error', signature: null, error: `unexpected clamd response: ${line.slice(0, 120)}` };
+  return {
+    verdict: 'error',
+    signature: null,
+    error: `unexpected clamd response: ${line.slice(0, 120)}`,
+  };
 }
 
-function toChunks(source: Buffer | Uint8Array | Readable, chunkBytes: number): AsyncIterable<Buffer> {
+function toChunks(
+  source: Buffer | Uint8Array | Readable,
+  chunkBytes: number,
+): AsyncIterable<Buffer> {
   if (source instanceof Readable) {
     return (async function* () {
       for await (const chunk of source) {
-        const buf = typeof chunk === 'string' ? Buffer.from(chunk) : Buffer.from(chunk as Uint8Array);
-        for (let offset = 0; offset < buf.length; offset += chunkBytes) yield buf.subarray(offset, offset + chunkBytes);
+        const buf =
+          typeof chunk === 'string' ? Buffer.from(chunk) : Buffer.from(chunk as Uint8Array);
+        for (let offset = 0; offset < buf.length; offset += chunkBytes)
+          yield buf.subarray(offset, offset + chunkBytes);
       }
     })();
   }
   const buf = Buffer.from(source);
   return (async function* () {
-    for (let offset = 0; offset < buf.length; offset += chunkBytes) yield buf.subarray(offset, offset + chunkBytes);
+    for (let offset = 0; offset < buf.length; offset += chunkBytes)
+      yield buf.subarray(offset, offset + chunkBytes);
   })();
 }
 
@@ -188,7 +199,8 @@ export class ClamAvScanner implements MalwareScanner {
 
     const write = async (data: Buffer): Promise<void> => {
       if (socket.destroyed || settled) return;
-      if (!socket.write(data)) await Promise.race([once(socket, 'drain'), responsePromise.catch(() => undefined)]);
+      if (!socket.write(data))
+        await Promise.race([once(socket, 'drain'), responsePromise.catch(() => undefined)]);
     };
 
     try {
@@ -198,7 +210,9 @@ export class ClamAvScanner implements MalwareScanner {
         if (settled) break;
         sent += chunk.length;
         if (sent > this.options.maxBytes) {
-          rejectResponse(new Error(`file exceeds the scanner limit of ${this.options.maxBytes} bytes`));
+          rejectResponse(
+            new Error(`file exceeds the scanner limit of ${this.options.maxBytes} bytes`),
+          );
           socket.destroy();
           break;
         }
@@ -229,7 +243,8 @@ export class ClamAvScanner implements MalwareScanner {
     try {
       const raw = await this.instream(source);
       const parsed = parseClamResponse(raw);
-      if (parsed.verdict === 'error') return done({ verdict: 'error', signature: null, error: parsed.error });
+      if (parsed.verdict === 'error')
+        return done({ verdict: 'error', signature: null, error: parsed.error });
       return done({ verdict: parsed.verdict, signature: parsed.signature });
     } catch (err) {
       const message = err instanceof Error ? err.message : 'unknown scanner failure';

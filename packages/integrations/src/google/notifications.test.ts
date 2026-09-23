@@ -24,7 +24,12 @@ describe('push notifications', () => {
     const fromRecord = parsePushNotification(headers);
     expect(fromRecord).toMatchObject({
       ok: true,
-      notification: { channelId: 'chan-1', resourceId: 'res-1', resourceState: 'exists', messageNumber: 7 },
+      notification: {
+        channelId: 'chan-1',
+        resourceId: 'res-1',
+        resourceState: 'exists',
+        messageNumber: 7,
+      },
     });
     const fromHeaders = parsePushNotification(new Headers(headers));
     expect(fromHeaders).toEqual(fromRecord);
@@ -35,10 +40,12 @@ describe('push notifications', () => {
       ok: false,
       reason: expect.stringContaining('Channel-ID'),
     });
-    expect(parsePushNotification({ ...headers, 'X-Goog-Resource-State': 'deleted' })).toMatchObject({
-      ok: false,
-      reason: expect.stringContaining('Resource-State'),
-    });
+    expect(parsePushNotification({ ...headers, 'X-Goog-Resource-State': 'deleted' })).toMatchObject(
+      {
+        ok: false,
+        reason: expect.stringContaining('Resource-State'),
+      },
+    );
   });
 
   it('verifies the channel token against the stored hash in constant time', () => {
@@ -59,7 +66,9 @@ describe('push notifications', () => {
 
   it('validates end to end without trusting any payload', async () => {
     const stored = hashChannelToken(token);
-    const ok = await validatePushNotification(headers, async (id) => (id === 'chan-1' ? stored : null));
+    const ok = await validatePushNotification(headers, async (id) =>
+      id === 'chan-1' ? stored : null,
+    );
     expect(ok).toMatchObject({ ok: true, action: 'fetch_changes', respondWithStatus: 200 });
 
     const unknown = await validatePushNotification(headers, () => null);

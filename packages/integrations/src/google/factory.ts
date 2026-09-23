@@ -21,7 +21,10 @@ export interface CalendarProviderFactoryInput {
 /** Path the admin console shows next to the client-ID field; must match the Cloud Console entry exactly. */
 export const GOOGLE_OAUTH_CALLBACK_PATH = '/api/v1/admin/integrations/google/callback';
 
-export function googleRedirectUri(appUrl: string, path: string = GOOGLE_OAUTH_CALLBACK_PATH): string {
+export function googleRedirectUri(
+  appUrl: string,
+  path: string = GOOGLE_OAUTH_CALLBACK_PATH,
+): string {
   return `${appUrl.replace(/\/+$/, '')}${path.startsWith('/') ? path : `/${path}`}`;
 }
 

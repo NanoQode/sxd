@@ -53,6 +53,9 @@ importers:
       '@simplexd/domain':
         specifier: workspace:*
         version: link:../../packages/domain
+      '@simplexd/finance':
+        specifier: workspace:*
+        version: link:../../packages/finance
       '@simplexd/integrations':
         specifier: workspace:*
         version: link:../../packages/integrations
@@ -183,6 +186,9 @@ importers:
       '@simplexd/domain':
         specifier: workspace:*
         version: link:../../packages/domain
+      '@simplexd/finance':
+        specifier: workspace:*
+        version: link:../../packages/finance
       '@simplexd/integrations':
         specifier: workspace:*
         version: link:../../packages/integrations
@@ -329,6 +335,40 @@ importers:
         specifier: 5.0.1
         version: 5.0.1(@types/node@22.20.4)(@vitest/coverage-v8@5.0.1)(jsdom@30.1.1(@noble/hashes@2.4.0))(vite@8.3.0(@types/node@22.20.4)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15))
 
+  packages/finance:
+    dependencies:
+      '@simplexd/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+      '@simplexd/db':
+        specifier: workspace:*
+        version: link:../db
+      '@simplexd/domain':
+        specifier: workspace:*
+        version: link:../domain
+      '@simplexd/integrations':
+        specifier: workspace:*
+        version: link:../integrations
+      drizzle-orm:
+        specifier: 0.45.3
+        version: 0.45.3(@prisma/client@5.22.0)(@types/pg@8.23.1)(better-sqlite3@12.11.1)(kysely@0.29.6)(pg@8.23.0)
+      zod:
+        specifier: 4.6.5
+        version: 4.6.5
+    devDependencies:
+      eslint:
+        specifier: 9.39.5
+        version: 9.39.5(jiti@2.7.0)
+      typescript:
+        specifier: 5.9.3
+        version: 5.9.3
+      typescript-eslint:
+        specifier: 8.70.1
+        version: 8.70.1(eslint@9.39.5(jiti@2.7.0))(typescript@5.9.3)
+      vitest:
+        specifier: 5.0.1
+        version: 5.0.1(@types/node@22.20.4)(@vitest/coverage-v8@5.0.1)(jsdom@30.1.1(@noble/hashes@2.4.0))(vite@8.3.0(@types/node@22.20.4)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15))
+
   packages/integrations:
     dependencies:
       '@aws-sdk/client-s3':
@@ -380,6 +420,46 @@ importers:
       '@types/nodemailer':
         specifier: 8.0.2
         version: 8.0.2
+      eslint:
+        specifier: 9.39.5
+        version: 9.39.5(jiti@2.7.0)
+      typescript:
+        specifier: 5.9.3
+        version: 5.9.3
+      typescript-eslint:
+        specifier: 8.70.1
+        version: 8.70.1(eslint@9.39.5(jiti@2.7.0))(typescript@5.9.3)
+      vitest:
+        specifier: 5.0.1
+        version: 5.0.1(@types/node@22.20.4)(@vitest/coverage-v8@5.0.1)(jsdom@30.1.1(@noble/hashes@2.4.0))(vite@8.3.0(@types/node@22.20.4)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15))
+
+  packages/notifications:
+    dependencies:
+      '@simplexd/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+      '@simplexd/db':
+        specifier: workspace:*
+        version: link:../db
+      '@simplexd/domain':
+        specifier: workspace:*
+        version: link:../domain
+      '@simplexd/integrations':
+        specifier: workspace:*
+        version: link:../integrations
+      drizzle-orm:
+        specifier: 0.45.3
+        version: 0.45.3(@prisma/client@5.22.0)(@types/pg@8.23.1)(better-sqlite3@12.11.1)(kysely@0.29.6)(pg@8.23.0)
+      luxon:
+        specifier: 3.7.2
+        version: 3.7.2
+      zod:
+        specifier: 4.6.5
+        version: 4.6.5
+    devDependencies:
+      '@types/luxon':
+        specifier: 3.7.5
+        version: 3.7.5
       eslint:
         specifier: 9.39.5
         version: 9.39.5(jiti@2.7.0)

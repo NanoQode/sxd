@@ -25,8 +25,10 @@ function stateSignature(state: string, issuedAtSeconds: number, secret: string):
 
 /** `${state}.${issuedAtSeconds}.${hmac}` — the value sent as the OAuth `state` parameter. */
 export function signState(state: string, secret: string, issuedAt: Date = new Date()): string {
-  if (!state || state.includes('.')) throw new Error('state must be a non-empty string without "."');
-  if (!secret || secret.length < 16) throw new Error('state signing secret must be at least 16 characters');
+  if (!state || state.includes('.'))
+    throw new Error('state must be a non-empty string without "."');
+  if (!secret || secret.length < 16)
+    throw new Error('state signing secret must be at least 16 characters');
   const issuedAtSeconds = Math.floor(issuedAt.getTime() / 1000);
   return `${state}.${issuedAtSeconds}.${stateSignature(state, issuedAtSeconds, secret)}`;
 }
@@ -81,7 +83,11 @@ export interface PkcePair {
 
 export function createPkcePair(): PkcePair {
   const codeVerifier = createCodeVerifier();
-  return { codeVerifier, codeChallenge: codeChallengeS256(codeVerifier), codeChallengeMethod: 'S256' };
+  return {
+    codeVerifier,
+    codeChallenge: codeChallengeS256(codeVerifier),
+    codeChallengeMethod: 'S256',
+  };
 }
 
 /** Everything the app must remember (server-side, short-lived) between redirect and callback. */

@@ -1,4 +1,6 @@
 import 'server-only';
+import { sql, type SQL } from 'drizzle-orm';
+import type { PgColumn } from 'drizzle-orm/pg-core';
 
 /** Keyset cursor (timestamp + id) for stable pagination over activity-style lists. */
 export function encodeCursor(createdAt: Date, id: string): string {
@@ -17,4 +19,17 @@ export function decodeCursor(cursor: string | undefined): { createdAt: Date; id:
   } catch {
     return null;
   }
+}
+
+/**
+ * "Rows strictly after the cursor" for a (timestamp DESC, id DESC) ordering.
+ * PostgreSQL keeps microseconds while JavaScript dates keep milliseconds, so the
+ * comparison truncates the column to milliseconds to match the encoded cursor.
+ */
+export function keysetAfter(
+  timestampCol: PgColumn,
+  idCol: PgColumn,
+  cursor: { createdAt: Date; id: string },
+): SQL {
+  return sql`(date_trunc('milliseconds', ${timestampCol}) < ${cursor.createdAt} OR (date_trunc('milliseconds', ${timestampCol}) = ${cursor.createdAt} AND ${idCol} < ${cursor.id}))`;
 }

@@ -2,7 +2,14 @@ import { ArrowRight, Scale, SearchX } from 'lucide-react';
 import Link from 'next/link';
 import { Badge, Button, EmptyState, Skeleton, cn } from '@simplexd/ui';
 import type { RecommendationResponse } from '@simplexd/contracts';
-import { COPY, ZONE_LABELS, metricLabel, statusSummary, type MarketRow, type MarketRows } from '@/lib/explorer';
+import {
+  COPY,
+  ZONE_LABELS,
+  metricLabel,
+  statusSummary,
+  type MarketRow,
+  type MarketRows,
+} from '@/lib/explorer';
 import { ErrorState } from './error-state';
 import { AvailabilityBadge, EvidenceBadgeRow, MarketStatusPill } from './market-status';
 
@@ -92,19 +99,26 @@ function ResultRow({
           </div>
         ) : null}
         {market.overlapNote ? (
-          <p className="mt-1 text-xs text-warning">Overlapping metropolitan market: {market.overlapNote}</p>
+          <p className="mt-1 text-xs text-warning">
+            Overlapping metropolitan market: {market.overlapNote}
+          </p>
         ) : null}
         <p className="mt-2 text-xs text-fg-muted">
           {market.evidence.localObservations} local observation
           {market.evidence.localObservations === 1 ? '' : 's'} ·{' '}
           {market.evidence.regionalContextObservations} statewide context ·{' '}
-          {market.evidence.supplierLeads} supplier lead{market.evidence.supplierLeads === 1 ? '' : 's'}
-          {market.evidence.supplierQuotes > 0 ? ` · ${market.evidence.supplierQuotes} verified quotes` : ''}
+          {market.evidence.supplierLeads} supplier lead
+          {market.evidence.supplierLeads === 1 ? '' : 's'}
+          {market.evidence.supplierQuotes > 0
+            ? ` · ${market.evidence.supplierQuotes} verified quotes`
+            : ''}
         </p>
         <div className="mt-2 flex flex-wrap items-center gap-1">
           <AvailabilityBadge availability={market.serviceAvailability} />
           <EvidenceBadgeRow badges={market.evidence.badges} />
-          {market.evidence.badges.length === 0 ? <Badge tone="neutral">No evidence badges yet</Badge> : null}
+          {market.evidence.badges.length === 0 ? (
+            <Badge tone="neutral">No evidence badges yet</Badge>
+          ) : null}
         </div>
         <div className="mt-3 flex flex-wrap gap-2">
           <Button variant="secondary" onClick={() => onSelect(market.slug)} aria-pressed={selected}>
@@ -168,7 +182,9 @@ export function ResultsList({
         </p>
       ) : null}
 
-      {error ? <ErrorState title="Markets could not be loaded" error={error} onRetry={onRetry} /> : null}
+      {error ? (
+        <ErrorState title="Markets could not be loaded" error={error} onRetry={onRetry} />
+      ) : null}
 
       {loading && !error ? (
         <ul className="space-y-2" aria-hidden="true">
@@ -215,7 +231,10 @@ export function ResultsList({
 
       {hidden > 0 && moreHref ? (
         <p>
-          <Link href={moreHref} className="sx-touch inline-flex items-center gap-1 text-primary underline underline-offset-4">
+          <Link
+            href={moreHref}
+            className="sx-touch inline-flex items-center gap-1 text-primary underline underline-offset-4"
+          >
             See all {rows.organic.length} matching markets in the full explorer
             <ArrowRight aria-hidden="true" className="h-4 w-4" />
           </Link>
@@ -223,7 +242,10 @@ export function ResultsList({
       ) : null}
 
       {rows.sponsored.length > 0 ? (
-        <section aria-labelledby={`${headingId}-sponsored`} className="rounded-lg border border-gold/60 bg-gold-soft/40 p-3">
+        <section
+          aria-labelledby={`${headingId}-sponsored`}
+          className="rounded-lg border border-gold/60 bg-gold-soft/40 p-3"
+        >
           <h3 id={`${headingId}-sponsored`} className="text-sm font-semibold">
             Sponsored placements
           </h3>

@@ -154,7 +154,10 @@ export function MapFrame({ config: configOverride }: { config?: MapConfig }) {
           <MapErrorPanel error={error} onRetry={retry} onUseList={useList} />
         ) : styleUrl && visibleGeoJson ? (
           <div
-            className={cn('sx-transition-base absolute inset-0', ready ? 'opacity-100' : 'opacity-0')}
+            className={cn(
+              'sx-transition-base absolute inset-0',
+              ready ? 'opacity-100' : 'opacity-0',
+            )}
             aria-busy={!ready}
           >
             <MapView

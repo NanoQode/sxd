@@ -16,7 +16,11 @@ export function ExplorerSkeleton({ variant }: { variant: ExplorerVariant }) {
         <Skeleton className="h-11 w-32" />
         <Skeleton className="h-11 w-24" />
       </div>
-      <div className={variant === 'full' ? 'mt-4 grid gap-4 lg:grid-cols-[300px_minmax(0,1fr)_360px]' : 'mt-4'}>
+      <div
+        className={
+          variant === 'full' ? 'mt-4 grid gap-4 lg:grid-cols-[300px_minmax(0,1fr)_360px]' : 'mt-4'
+        }
+      >
         {variant === 'full' ? <Skeleton className="hidden h-96 lg:block" /> : null}
         <Skeleton className={`${mapHeight} w-full rounded-lg`} label="Loading map" />
         {variant === 'full' ? <Skeleton className="hidden h-96 lg:block" /> : null}

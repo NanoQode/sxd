@@ -8,7 +8,19 @@ import { useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { GOAL_OPTIONS } from '@simplexd/contracts';
-import { Alert, Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Field, Input, NativeSelect } from '@simplexd/ui';
+import {
+  Alert,
+  Badge,
+  Button,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  Field,
+  Input,
+  NativeSelect,
+} from '@simplexd/ui';
 import { apiFetch, errorMessage } from '@/lib/api/client-fetch';
 import { authClient } from '@/lib/auth/client';
 import { timeZoneOptions } from '@/app/(portal)/portal/settings/profile-form';
@@ -70,7 +82,9 @@ export function OnboardingWizard({
 }) {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const [step, setStep] = useState<'organisation' | 'profile'>(memberships.length > 0 ? 'profile' : 'organisation');
+  const [step, setStep] = useState<'organisation' | 'profile'>(
+    memberships.length > 0 ? 'profile' : 'organisation',
+  );
   const [error, setError] = useState<string | null>(null);
   const [createdOrg, setCreatedOrg] = useState<string | null>(null);
   const zones = useMemo(() => timeZoneOptions(), []);
@@ -89,7 +103,8 @@ export function OnboardingWizard({
   const profileForm = useForm<ProfileValues>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
-      timeZone: profile.timeZone && profile.timeZone !== 'Africa/Lagos' ? profile.timeZone : detected,
+      timeZone:
+        profile.timeZone && profile.timeZone !== 'Africa/Lagos' ? profile.timeZone : detected,
       phone: profile.phoneE164 ?? '',
       countryOfResidence: profile.countryOfResidence ?? '',
       diaspora: profile.diaspora === null ? '' : profile.diaspora ? 'yes' : 'no',
@@ -99,7 +114,10 @@ export function OnboardingWizard({
 
   const createOrganisation = orgForm.handleSubmit(async (values) => {
     setError(null);
-    const res = await authClient.organization.create({ name: values.name, slug: slugify(values.name) });
+    const res = await authClient.organization.create({
+      name: values.name,
+      slug: slugify(values.name),
+    });
     if (res.error || !res.data) {
       setError(res.error?.message ?? 'Could not create the organisation.');
       return;
@@ -110,8 +128,14 @@ export function OnboardingWizard({
       return;
     }
     try {
-      await apiFetch('/api/v1/me/organizations', { method: 'PATCH', body: { ownershipType: values.ownershipType } });
-      await apiFetch('/api/v1/me/preferences', { method: 'PATCH', body: { ownershipType: values.ownershipType } });
+      await apiFetch('/api/v1/me/organizations', {
+        method: 'PATCH',
+        body: { ownershipType: values.ownershipType },
+      });
+      await apiFetch('/api/v1/me/preferences', {
+        method: 'PATCH',
+        body: { ownershipType: values.ownershipType },
+      });
     } catch (err) {
       setError(errorMessage(err));
       return;
@@ -126,13 +150,17 @@ export function OnboardingWizard({
     setError(null);
     try {
       const prefs: Record<string, unknown> = { timeZone: values.timeZone, goals: values.goals };
-      if (values.countryOfResidence) prefs['countryOfResidence'] = values.countryOfResidence.toUpperCase();
+      if (values.countryOfResidence)
+        prefs['countryOfResidence'] = values.countryOfResidence.toUpperCase();
       if (values.diaspora) prefs['diaspora'] = values.diaspora === 'yes';
       await apiFetch('/api/v1/me/preferences', { method: 'PATCH', body: prefs });
       if ((values.phone ?? '') !== (profile.phoneE164 ?? '')) {
         await apiFetch('/api/v1/me/phone', {
           method: 'PATCH',
-          body: { phone: values.phone ? values.phone : null, defaultCountry: values.countryOfResidence || 'NG' },
+          body: {
+            phone: values.phone ? values.phone : null,
+            defaultCountry: values.countryOfResidence || 'NG',
+          },
         });
       }
       await apiFetch('/api/v1/me/onboarding', { method: 'POST', body: { goals: values.goals } });
@@ -160,12 +188,17 @@ export function OnboardingWizard({
   return (
     <div className="space-y-6">
       <ol className="flex gap-4 text-sm" aria-label="Onboarding steps">
-        <li className={step === 'organisation' ? 'font-semibold text-primary' : 'text-fg-muted'}>1. Organisation</li>
-        <li className={step === 'profile' ? 'font-semibold text-primary' : 'text-fg-muted'}>2. Profile</li>
+        <li className={step === 'organisation' ? 'font-semibold text-primary' : 'text-fg-muted'}>
+          1. Organisation
+        </li>
+        <li className={step === 'profile' ? 'font-semibold text-primary' : 'text-fg-muted'}>
+          2. Profile
+        </li>
       </ol>
       {!emailVerified ? (
         <Alert tone="warning" title="Email not verified yet">
-          Check your inbox for the verification link. You can continue setting up; some actions wait for a verified email.
+          Check your inbox for the verification link. You can continue setting up; some actions wait
+          for a verified email.
         </Alert>
       ) : null}
       {error ? (
@@ -177,26 +210,49 @@ export function OnboardingWizard({
       {step === 'organisation' ? (
         <Card>
           <CardHeader>
-            <CardTitle className="text-xl">Welcome, {userName.split(' ')[0]}. Set up your organisation</CardTitle>
+            <CardTitle className="text-xl">
+              Welcome, {userName.split(' ')[0]}. Set up your organisation
+            </CardTitle>
             <CardDescription>
-              Requests, documents and invoices belong to an organisation so household members and advisers can share them.
-              You can belong to several and switch at any time.
+              Requests, documents and invoices belong to an organisation so household members and
+              advisers can share them. You can belong to several and switch at any time.
             </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={createOrganisation} noValidate className="space-y-4">
-              <Field label="Organisation name" required hint="A family name, a company or simply your own name." error={orgForm.formState.errors.name?.message}>
+              <Field
+                label="Organisation name"
+                required
+                hint="A family name, a company or simply your own name."
+                error={orgForm.formState.errors.name?.message}
+              >
                 {({ id, describedBy, invalid }) => (
-                  <Input id={id} autoComplete="organization" aria-describedby={describedBy} aria-invalid={invalid} {...orgForm.register('name')} />
+                  <Input
+                    id={id}
+                    autoComplete="organization"
+                    aria-describedby={describedBy}
+                    aria-invalid={invalid}
+                    {...orgForm.register('name')}
+                  />
                 )}
               </Field>
               <fieldset className="space-y-2">
                 <legend className="text-sm font-medium">Ownership</legend>
                 {(['individual', 'company'] as const).map((v) => (
-                  <label key={v} className="flex items-start gap-2 rounded-md border border-border p-3 text-sm has-[:checked]:border-primary">
-                    <input type="radio" value={v} className="mt-1 accent-[var(--sx-primary)]" {...orgForm.register('ownershipType')} />
+                  <label
+                    key={v}
+                    className="flex items-start gap-2 rounded-md border border-border p-3 text-sm has-[:checked]:border-primary"
+                  >
+                    <input
+                      type="radio"
+                      value={v}
+                      className="mt-1 accent-[var(--sx-primary)]"
+                      {...orgForm.register('ownershipType')}
+                    />
                     <span>
-                      <span className="font-medium">{v === 'individual' ? 'Individual or household' : 'Company'}</span>
+                      <span className="font-medium">
+                        {v === 'individual' ? 'Individual or household' : 'Company'}
+                      </span>
                       <br />
                       <span className="text-fg-muted">
                         {v === 'individual'
@@ -207,11 +263,17 @@ export function OnboardingWizard({
                   </label>
                 ))}
               </fieldset>
-              <Button type="submit" className="w-full" loading={orgForm.formState.isSubmitting} loadingLabel="Creating organisation">
+              <Button
+                type="submit"
+                className="w-full"
+                loading={orgForm.formState.isSubmitting}
+                loadingLabel="Creating organisation"
+              >
                 Create organisation
               </Button>
               <p className="text-center text-sm text-fg-muted">
-                Received an invitation? Open the link in the email to join an existing organisation instead.
+                Received an invitation? Open the link in the email to join an existing organisation
+                instead.
               </p>
             </form>
           </CardContent>
@@ -219,7 +281,9 @@ export function OnboardingWizard({
       ) : (
         <Card>
           <CardHeader>
-            <CardTitle className="text-xl">{createdOrg ? `${createdOrg} is ready.` : 'Your profile'}</CardTitle>
+            <CardTitle className="text-xl">
+              {createdOrg ? `${createdOrg} is ready.` : 'Your profile'}
+            </CardTitle>
             <CardDescription>
               {memberships.length > 0 && !createdOrg ? (
                 <>
@@ -230,7 +294,11 @@ export function OnboardingWizard({
                     </Badge>
                   ))}
                   .{' '}
-                  <button type="button" className="text-primary underline" onClick={() => setStep('organisation')}>
+                  <button
+                    type="button"
+                    className="text-primary underline"
+                    onClick={() => setStep('organisation')}
+                  >
                     Create another organisation
                   </button>
                 </>
@@ -241,29 +309,71 @@ export function OnboardingWizard({
           </CardHeader>
           <CardContent>
             <form onSubmit={saveProfile} noValidate className="space-y-4">
-              <Field label="Time zone" required hint={`Detected from your device: ${detected}.`} error={profileForm.formState.errors.timeZone?.message}>
+              <Field
+                label="Time zone"
+                required
+                hint={`Detected from your device: ${detected}.`}
+                error={profileForm.formState.errors.timeZone?.message}
+              >
                 {({ id, describedBy, invalid }) => (
                   <div className="flex flex-wrap items-center gap-2">
-                    <NativeSelect id={id} aria-describedby={describedBy} aria-invalid={invalid} className="max-w-md" {...profileForm.register('timeZone')}>
+                    <NativeSelect
+                      id={id}
+                      aria-describedby={describedBy}
+                      aria-invalid={invalid}
+                      className="max-w-md"
+                      {...profileForm.register('timeZone')}
+                    >
                       {zones.map((z) => (
                         <option key={z} value={z}>
                           {z}
                         </option>
                       ))}
                     </NativeSelect>
-                    <Button type="button" variant="secondary" size="sm" onClick={() => profileForm.setValue('timeZone', detected)}>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => profileForm.setValue('timeZone', detected)}
+                    >
                       Use detected
                     </Button>
                   </div>
                 )}
               </Field>
               <div className="grid gap-4 sm:grid-cols-2">
-                <Field label="Phone (optional)" hint="International format is safest, e.g. +234 801 234 5678." error={profileForm.formState.errors.phone?.message}>
-                  {({ id, describedBy, invalid }) => <Input id={id} type="tel" inputMode="tel" autoComplete="tel" aria-describedby={describedBy} aria-invalid={invalid} {...profileForm.register('phone')} />}
-                </Field>
-                <Field label="Country of residence" hint="Two-letter code, e.g. NG, GB, US, CA." error={profileForm.formState.errors.countryOfResidence?.message}>
+                <Field
+                  label="Phone (optional)"
+                  hint="International format is safest, e.g. +234 801 234 5678."
+                  error={profileForm.formState.errors.phone?.message}
+                >
                   {({ id, describedBy, invalid }) => (
-                    <Input id={id} maxLength={2} autoComplete="country" className="uppercase" aria-describedby={describedBy} aria-invalid={invalid} {...profileForm.register('countryOfResidence')} />
+                    <Input
+                      id={id}
+                      type="tel"
+                      inputMode="tel"
+                      autoComplete="tel"
+                      aria-describedby={describedBy}
+                      aria-invalid={invalid}
+                      {...profileForm.register('phone')}
+                    />
+                  )}
+                </Field>
+                <Field
+                  label="Country of residence"
+                  hint="Two-letter code, e.g. NG, GB, US, CA."
+                  error={profileForm.formState.errors.countryOfResidence?.message}
+                >
+                  {({ id, describedBy, invalid }) => (
+                    <Input
+                      id={id}
+                      maxLength={2}
+                      autoComplete="country"
+                      className="uppercase"
+                      aria-describedby={describedBy}
+                      aria-invalid={invalid}
+                      {...profileForm.register('countryOfResidence')}
+                    />
                   )}
                 </Field>
               </div>
@@ -280,19 +390,40 @@ export function OnboardingWizard({
                 <legend className="text-sm font-medium">What do you want to achieve?</legend>
                 <div className="grid gap-2 sm:grid-cols-2">
                   {GOAL_OPTIONS.map((g) => (
-                    <label key={g.value} className="flex items-center gap-2 rounded-md border border-border p-3 text-sm has-[:checked]:border-primary">
-                      <input type="checkbox" value={g.value} className="accent-[var(--sx-primary)]" {...profileForm.register('goals')} />
+                    <label
+                      key={g.value}
+                      className="flex items-center gap-2 rounded-md border border-border p-3 text-sm has-[:checked]:border-primary"
+                    >
+                      <input
+                        type="checkbox"
+                        value={g.value}
+                        className="accent-[var(--sx-primary)]"
+                        {...profileForm.register('goals')}
+                      />
                       {g.label}
                     </label>
                   ))}
                 </div>
-                <p className="text-xs text-fg-subtle">{goals.length === 0 ? 'Pick any that apply, or skip.' : `${goals.length} selected.`}</p>
+                <p className="text-xs text-fg-subtle">
+                  {goals.length === 0
+                    ? 'Pick any that apply, or skip.'
+                    : `${goals.length} selected.`}
+                </p>
               </fieldset>
               <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-between">
-                <Button type="button" variant="ghost" onClick={() => void skipProfile()} disabled={profileForm.formState.isSubmitting}>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => void skipProfile()}
+                  disabled={profileForm.formState.isSubmitting}
+                >
                   Skip for now
                 </Button>
-                <Button type="submit" loading={profileForm.formState.isSubmitting} loadingLabel="Saving">
+                <Button
+                  type="submit"
+                  loading={profileForm.formState.isSubmitting}
+                  loadingLabel="Saving"
+                >
                   Save and continue
                 </Button>
               </div>

@@ -268,7 +268,16 @@ export default function MapView(props: MapViewProps) {
 
     map.on('error', (event) => {
       if (!loadedRef.current) {
-        propsRef.current.onError(event.error ?? new Error('The map style could not be loaded.'));
+        const raw: unknown = event.error;
+        propsRef.current.onError(
+          raw instanceof Error
+            ? raw
+            : new Error(
+                typeof (raw as { message?: unknown } | undefined)?.message === 'string'
+                  ? String((raw as { message: string }).message)
+                  : 'The map style could not be loaded.',
+              ),
+        );
       } else {
         console.warn('map error after load', event.error);
       }
@@ -346,7 +355,8 @@ export default function MapView(props: MapViewProps) {
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
-    if (map.getLayer(LAYER.selected)) map.setFilter(LAYER.selected, selectedFilter(props.selectedSlug));
+    if (map.getLayer(LAYER.selected))
+      map.setFilter(LAYER.selected, selectedFilter(props.selectedSlug));
     if (!props.selectedSlug) return;
     const feature = props.geojson.features.find((f) => f.properties.slug === props.selectedSlug);
     if (!feature) return;
@@ -360,7 +370,8 @@ export default function MapView(props: MapViewProps) {
   // Comparison rings
   useEffect(() => {
     const map = mapRef.current;
-    if (map?.getLayer(LAYER.compare)) map.setFilter(LAYER.compare, compareFilter(props.compareSlugs));
+    if (map?.getLayer(LAYER.compare))
+      map.setFilter(LAYER.compare, compareFilter(props.compareSlugs));
   }, [props.compareSlugs]);
 
   // Zoom to the visible markets on request

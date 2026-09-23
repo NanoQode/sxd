@@ -24,14 +24,53 @@ export interface ContentSeed {
 }
 
 const EVIDENCE_BADGES = [
-  { key: 'sourced_observation', label: 'Sourced observation', meaning: 'Read from a named published source with its retrieval date and observation period recorded separately.' },
-  { key: 'verified_operational_record', label: 'Verified record', meaning: 'A first-party record checked by SimplexD staff, such as a supplier quotation or a completed site visit.' },
-  { key: 'regional_context', label: 'Statewide context', meaning: 'A statewide or regional figure shown for context; it is not presented as a city value.' },
-  { key: 'model_estimate', label: 'Model estimate', meaning: 'Computed from your assumptions and published policy bounds; a scenario, not a valuation.' },
-  { key: 'user_assumption', label: 'Your assumption', meaning: 'A value you entered for a scenario; it stays labelled as yours everywhere it is used.' },
-  { key: 'unknown', label: 'Unknown', meaning: 'No evidence has been collected yet. Unknown is a real value and is never replaced by a guess or a zero.' },
-  { key: 'stale', label: 'Stale', meaning: 'Older than the freshness policy for its data type; still inspectable, excluded from default ranking.' },
-  { key: 'disputed', label: 'Disputed', meaning: 'Under review after a challenge; shown with the dispute note until resolved.' },
+  {
+    key: 'sourced_observation',
+    label: 'Sourced observation',
+    meaning:
+      'Read from a named published source with its retrieval date and observation period recorded separately.',
+  },
+  {
+    key: 'verified_operational_record',
+    label: 'Verified record',
+    meaning:
+      'A first-party record checked by SimplexD staff, such as a supplier quotation or a completed site visit.',
+  },
+  {
+    key: 'regional_context',
+    label: 'Statewide context',
+    meaning:
+      'A statewide or regional figure shown for context; it is not presented as a city value.',
+  },
+  {
+    key: 'model_estimate',
+    label: 'Model estimate',
+    meaning:
+      'Computed from your assumptions and published policy bounds; a scenario, not a valuation.',
+  },
+  {
+    key: 'user_assumption',
+    label: 'Your assumption',
+    meaning:
+      'A value you entered for a scenario; it stays labelled as yours everywhere it is used.',
+  },
+  {
+    key: 'unknown',
+    label: 'Unknown',
+    meaning:
+      'No evidence has been collected yet. Unknown is a real value and is never replaced by a guess or a zero.',
+  },
+  {
+    key: 'stale',
+    label: 'Stale',
+    meaning:
+      'Older than the freshness policy for its data type; still inspectable, excluded from default ranking.',
+  },
+  {
+    key: 'disputed',
+    label: 'Disputed',
+    meaning: 'Under review after a challenge; shown with the dispute note until resolved.',
+  },
 ];
 
 export const contentSeeds: ContentSeed[] = [
@@ -56,7 +95,10 @@ Reports, site findings and market observations carry their provenance. Photos an
 ## Who it is for
 
 Owners building or buying remotely, busy local professionals who want oversight without site visits, households and advisers who share one organisation, and tenants who need a clear view of their own lease.`,
-    seo: { title: 'About SimplexD', description: 'Property services and independent oversight for Nigerians at home and abroad.' },
+    seo: {
+      title: 'About SimplexD',
+      description: 'Property services and independent oversight for Nigerians at home and abroad.',
+    },
   },
   {
     slug: 'how-it-works',
@@ -87,7 +129,10 @@ Assigned professionals carry out the work. Evidence is uploaded with capture det
 ## 6. Delivery and completion
 
 Released reports, approvals and decisions appear in your portal. You confirm delivery, raise a dispute with a reason, or let the engagement complete after the review window.`,
-    seo: { title: 'How SimplexD works', description: 'From exploring locations to a completed engagement, step by step.' },
+    seo: {
+      title: 'How SimplexD works',
+      description: 'From exploring locations to a completed engagement, step by step.',
+    },
   },
   {
     slug: 'evidence-standards',
@@ -108,7 +153,10 @@ ${EVIDENCE_BADGES.map((b) => `### ${b.label}\n\n${b.meaning}`).join('\n\n')}
 - A statewide figure is never silently presented as a city value.
 - Unknown flood or title status is never treated as low risk.
 - Stale records remain inspectable but are excluded from default ranking.`,
-    seo: { title: 'Evidence standards', description: 'The eight evidence badges SimplexD uses and what each one means.' },
+    seo: {
+      title: 'Evidence standards',
+      description: 'The eight evidence badges SimplexD uses and what each one means.',
+    },
   },
   {
     slug: 'faq-what-is-a-scenario',
@@ -118,9 +166,11 @@ ${EVIDENCE_BADGES.map((b) => `### ${b.label}\n\n${b.meaning}`).join('\n\n')}
     sortOrder: 10,
     fields: {
       question: 'What is a saved scenario?',
-      answer: 'A scenario stores the markets you compared, your filters, scoring priorities and calculator assumptions. It is a comparison under your assumptions, not a valuation or investment advice, and it can be turned into a service request.',
+      answer:
+        'A scenario stores the markets you compared, your filters, scoring priorities and calculator assumptions. It is a comparison under your assumptions, not a valuation or investment advice, and it can be turned into a service request.',
     },
-    bodyMarkdown: 'A scenario stores the markets you compared, your filters, scoring priorities and calculator assumptions. It is a comparison under your assumptions, not a valuation or investment advice, and it can be turned into a service request.',
+    bodyMarkdown:
+      'A scenario stores the markets you compared, your filters, scoring priorities and calculator assumptions. It is a comparison under your assumptions, not a valuation or investment advice, and it can be turned into a service request.',
   },
   {
     slug: 'faq-do-i-need-an-account',
@@ -130,9 +180,11 @@ ${EVIDENCE_BADGES.map((b) => `### ${b.label}\n\n${b.meaning}`).join('\n\n')}
     sortOrder: 11,
     fields: {
       question: 'Do I need an account to explore locations?',
-      answer: 'No. Exploring the map and running basic estimates is open to everyone. An account is needed to save a scenario to your profile, share it privately, request professional validation or start a service.',
+      answer:
+        'No. Exploring the map and running basic estimates is open to everyone. An account is needed to save a scenario to your profile, share it privately, request professional validation or start a service.',
     },
-    bodyMarkdown: 'No. Exploring the map and running basic estimates is open to everyone. An account is needed to save a scenario to your profile, share it privately, request professional validation or start a service.',
+    bodyMarkdown:
+      'No. Exploring the map and running basic estimates is open to everyone. An account is needed to save a scenario to your profile, share it privately, request professional validation or start a service.',
   },
   {
     slug: 'faq-how-are-prices-set',
@@ -142,9 +194,11 @@ ${EVIDENCE_BADGES.map((b) => `### ${b.label}\n\n${b.meaning}`).join('\n\n')}
     sortOrder: 12,
     fields: {
       question: 'How are service prices set?',
-      answer: 'Published starting prices are indicative and state their basis (fixed, from, per month, percentage or by quotation), minimum scope and exclusions. The final price is always set by a scoped quotation that you accept before work begins. Purchase representation is charged only on an agreed percentage basis with a signed scope.',
+      answer:
+        'Published starting prices are indicative and state their basis (fixed, from, per month, percentage or by quotation), minimum scope and exclusions. The final price is always set by a scoped quotation that you accept before work begins. Purchase representation is charged only on an agreed percentage basis with a signed scope.',
     },
-    bodyMarkdown: 'Published starting prices are indicative and state their basis (fixed, from, per month, percentage or by quotation), minimum scope and exclusions. The final price is always set by a scoped quotation that you accept before work begins. Purchase representation is charged only on an agreed percentage basis with a signed scope.',
+    bodyMarkdown:
+      'Published starting prices are indicative and state their basis (fixed, from, per month, percentage or by quotation), minimum scope and exclusions. The final price is always set by a scoped quotation that you accept before work begins. Purchase representation is charged only on an agreed percentage basis with a signed scope.',
   },
   {
     slug: 'faq-who-can-see-my-documents',
@@ -154,9 +208,11 @@ ${EVIDENCE_BADGES.map((b) => `### ${b.label}\n\n${b.meaning}`).join('\n\n')}
     sortOrder: 13,
     fields: {
       question: 'Who can see my documents and reports?',
-      answer: 'Members of your organisation according to their role, people you explicitly grant view, comment or approval rights, and the staff and professionals assigned to your engagement. Internal staff notes are never shown to customers. Access is enforced on the server for every query and download, not only in the interface.',
+      answer:
+        'Members of your organisation according to their role, people you explicitly grant view, comment or approval rights, and the staff and professionals assigned to your engagement. Internal staff notes are never shown to customers. Access is enforced on the server for every query and download, not only in the interface.',
     },
-    bodyMarkdown: 'Members of your organisation according to their role, people you explicitly grant view, comment or approval rights, and the staff and professionals assigned to your engagement. Internal staff notes are never shown to customers. Access is enforced on the server for every query and download, not only in the interface.',
+    bodyMarkdown:
+      'Members of your organisation according to their role, people you explicitly grant view, comment or approval rights, and the staff and professionals assigned to your engagement. Internal staff notes are never shown to customers. Access is enforced on the server for every query and download, not only in the interface.',
   },
   {
     slug: 'faq-how-do-payments-work',
@@ -166,9 +222,11 @@ ${EVIDENCE_BADGES.map((b) => `### ${b.label}\n\n${b.meaning}`).join('\n\n')}
     sortOrder: 14,
     fields: {
       question: 'How do payments work?',
-      answer: 'Invoices are issued after you accept a quotation. Card payments use the payment provider’s hosted checkout, so card details never pass through SimplexD. A payment is only marked successful after the server verifies the provider’s confirmation of reference, amount and currency. Declared bank transfers are confirmed by finance before they count as paid.',
+      answer:
+        'Invoices are issued after you accept a quotation. Card payments use the payment provider’s hosted checkout, so card details never pass through SimplexD. A payment is only marked successful after the server verifies the provider’s confirmation of reference, amount and currency. Declared bank transfers are confirmed by finance before they count as paid.',
     },
-    bodyMarkdown: 'Invoices are issued after you accept a quotation. Card payments use the payment provider’s hosted checkout, so card details never pass through SimplexD. A payment is only marked successful after the server verifies the provider’s confirmation of reference, amount and currency. Declared bank transfers are confirmed by finance before they count as paid.',
+    bodyMarkdown:
+      'Invoices are issued after you accept a quotation. Card payments use the payment provider’s hosted checkout, so card details never pass through SimplexD. A payment is only marked successful after the server verifies the provider’s confirmation of reference, amount and currency. Declared bank transfers are confirmed by finance before they count as paid.',
   },
   {
     slug: 'faq-is-a-report-a-legal-guarantee',
@@ -178,9 +236,11 @@ ${EVIDENCE_BADGES.map((b) => `### ${b.label}\n\n${b.meaning}`).join('\n\n')}
     sortOrder: 15,
     fields: {
       question: 'Is a due diligence report a legal guarantee?',
-      answer: 'No. A due diligence memorandum is a professional opinion prepared by named professionals with evidence references and explicit scope and limitations. It does not certify title automatically, and unknown title or flood status is reported as unknown rather than as low risk.',
+      answer:
+        'No. A due diligence memorandum is a professional opinion prepared by named professionals with evidence references and explicit scope and limitations. It does not certify title automatically, and unknown title or flood status is reported as unknown rather than as low risk.',
     },
-    bodyMarkdown: 'No. A due diligence memorandum is a professional opinion prepared by named professionals with evidence references and explicit scope and limitations. It does not certify title automatically, and unknown title or flood status is reported as unknown rather than as low risk.',
+    bodyMarkdown:
+      'No. A due diligence memorandum is a professional opinion prepared by named professionals with evidence references and explicit scope and limitations. It does not certify title automatically, and unknown title or flood status is reported as unknown rather than as low risk.',
   },
   {
     slug: 'privacy',
@@ -188,7 +248,11 @@ ${EVIDENCE_BADGES.map((b) => `### ${b.label}\n\n${b.meaning}`).join('\n\n')}
     title: 'Privacy notice (template pending legal review)',
     summary: 'Template privacy notice; requires legal review before publication to customers.',
     sortOrder: 20,
-    fields: { reviewStatus: 'template_pending_legal_review', effectiveDate: null, jurisdiction: 'Nigeria Data Protection Act 2023 and applicable customer jurisdictions' },
+    fields: {
+      reviewStatus: 'template_pending_legal_review',
+      effectiveDate: null,
+      jurisdiction: 'Nigeria Data Protection Act 2023 and applicable customer jurisdictions',
+    },
     bodyMarkdown: `> **Template requiring legal review.** This privacy notice is a draft structure prepared for the SimplexD platform. It has not been reviewed by a lawyer and must not be relied on until the business obtains professional review and sets an effective date.
 
 ## What we collect
@@ -248,7 +312,12 @@ Requests can be cancelled with a reason; billing consequences depend on the stag
     title: 'Contact',
     summary: 'Contact details pending owner confirmation.',
     sortOrder: 30,
-    fields: { email: null, phone: null, address: null, note: 'Contact details pending owner confirmation' },
+    fields: {
+      email: null,
+      phone: null,
+      address: null,
+      note: 'Contact details pending owner confirmation',
+    },
     bodyMarkdown: `Contact details for SimplexD are pending confirmation by the business owner. Until they are confirmed, use the consultation form to reach the team; signed-in customers can add notes to any request.`,
   },
   {
@@ -257,8 +326,14 @@ Requests can be cancelled with a reason; billing consequences depend on the stag
     title: 'Buy safely',
     summary: 'Check title, documents and the site before you commit.',
     sortOrder: 40,
-    fields: { key: 'buy_safely', description: 'Due diligence with a document checklist, survey references, professional site findings and a decision memorandum before you commit to a purchase.', href: '/services/due-diligence' },
-    bodyMarkdown: 'Due diligence with a document checklist, survey references, professional site findings and a decision memorandum before you commit to a purchase. Purchase representation can then handle offers, conditions and the closing checklist.',
+    fields: {
+      key: 'buy_safely',
+      description:
+        'Due diligence with a document checklist, survey references, professional site findings and a decision memorandum before you commit to a purchase.',
+      href: '/services/due-diligence',
+    },
+    bodyMarkdown:
+      'Due diligence with a document checklist, survey references, professional site findings and a decision memorandum before you commit to a purchase. Purchase representation can then handle offers, conditions and the closing checklist.',
   },
   {
     slug: 'goal-build-with-oversight',
@@ -266,8 +341,14 @@ Requests can be cancelled with a reason; billing consequences depend on the stag
     title: 'Build with oversight',
     summary: 'Independent monitoring of your build with evidence-backed reports.',
     sortOrder: 41,
-    fields: { key: 'build_with_oversight', description: 'Construction monitoring with a project baseline, milestone plan, site visits, photo and video evidence, versioned progress reports and change orders that need your approval.', href: '/services/construction-monitoring' },
-    bodyMarkdown: 'Construction monitoring with a project baseline, milestone plan, site visits, photo and video evidence, versioned progress reports and change orders that need your approval. Architectural services cover the brief, design options and approvals tracking.',
+    fields: {
+      key: 'build_with_oversight',
+      description:
+        'Construction monitoring with a project baseline, milestone plan, site visits, photo and video evidence, versioned progress reports and change orders that need your approval.',
+      href: '/services/construction-monitoring',
+    },
+    bodyMarkdown:
+      'Construction monitoring with a project baseline, milestone plan, site visits, photo and video evidence, versioned progress reports and change orders that need your approval. Architectural services cover the brief, design options and approvals tracking.',
   },
   {
     slug: 'goal-manage-property',
@@ -275,8 +356,14 @@ Requests can be cancelled with a reason; billing consequences depend on the stag
     title: 'Manage my property',
     summary: 'Leases, rent, maintenance and owner statements that reconcile.',
     sortOrder: 42,
-    fields: { key: 'manage_property', description: 'Property management with units and leases, rent schedules and collections, maintenance and recurring inspections, tenant tickets and owner statements.', href: '/services/property-management' },
-    bodyMarkdown: 'Property management with units and leases, rent schedules and collections, maintenance and recurring inspections, tenant tickets and owner statements that reconcile to the underlying records.',
+    fields: {
+      key: 'manage_property',
+      description:
+        'Property management with units and leases, rent schedules and collections, maintenance and recurring inspections, tenant tickets and owner statements.',
+      href: '/services/property-management',
+    },
+    bodyMarkdown:
+      'Property management with units and leases, rent schedules and collections, maintenance and recurring inspections, tenant tickets and owner statements that reconcile to the underlying records.',
   },
   {
     slug: 'goal-invest-and-compare',
@@ -284,8 +371,14 @@ Requests can be cancelled with a reason; billing consequences depend on the stag
     title: 'Invest and compare',
     summary: 'Compare markets with labelled evidence and your own assumptions.',
     sortOrder: 43,
-    fields: { key: 'invest_and_compare', description: 'Compare up to four markets in the explorer with evidence badges, adjust scoring priorities, run cost and rent scenarios and request local verification.', href: '/explore' },
-    bodyMarkdown: 'Compare up to four markets in the explorer with evidence badges, adjust scoring priorities, run cost and rent scenarios and request local verification. Financial ranking stays gated until enough validated local evidence exists.',
+    fields: {
+      key: 'invest_and_compare',
+      description:
+        'Compare up to four markets in the explorer with evidence badges, adjust scoring priorities, run cost and rent scenarios and request local verification.',
+      href: '/explore',
+    },
+    bodyMarkdown:
+      'Compare up to four markets in the explorer with evidence badges, adjust scoring priorities, run cost and rent scenarios and request local verification. Financial ranking stays gated until enough validated local evidence exists.',
   },
   {
     slug: 'diaspora',
@@ -308,7 +401,11 @@ Invite household members and advisers to your organisation with explicit view, c
 ## Requests in your own time
 
 Start a request from a saved scenario, add notes at any hour, and receive a scoped quotation to accept when you are ready.`,
-    seo: { title: 'SimplexD for Nigerians abroad', description: 'Oversee property in Nigeria from any time zone with evidence-backed reports and shared access for family and advisers.' },
+    seo: {
+      title: 'SimplexD for Nigerians abroad',
+      description:
+        'Oversee property in Nigeria from any time zone with evidence-backed reports and shared access for family and advisers.',
+    },
   },
   {
     slug: 'local-nigeria',
@@ -331,7 +428,10 @@ Leases, rent schedules, collections and maintenance are tracked against your pro
 ## One organisation, many people
 
 Add a spouse, partner or adviser with the rights they need, and switch between organisations if you manage property for more than one household or company.`,
-    seo: { title: 'SimplexD for busy professionals in Nigeria', description: 'Independent property oversight and management without the site visits.' },
+    seo: {
+      title: 'SimplexD for busy professionals in Nigeria',
+      description: 'Independent property oversight and management without the site visits.',
+    },
   },
 ];
 
@@ -341,7 +441,10 @@ export async function seedContentPages(db: Database): Promise<number> {
     await applyActorContext(tx, systemContext('seed-content'));
     let inserted = 0;
     for (const page of contentSeeds) {
-      const existing = await tx.select({ id: s.contentPages.id }).from(s.contentPages).where(eq(s.contentPages.slug, page.slug));
+      const existing = await tx
+        .select({ id: s.contentPages.id })
+        .from(s.contentPages)
+        .where(eq(s.contentPages.slug, page.slug));
       if (existing.length > 0) continue;
       const now = new Date();
       const [row] = await tx

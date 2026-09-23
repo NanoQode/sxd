@@ -1,8 +1,30 @@
 import Link from 'next/link';
+import { headers } from 'next/headers';
+import { permanentRedirect, redirect } from 'next/navigation';
 import { buttonVariants } from '@simplexd/ui';
+import { resolveRedirect } from '@/server/content/redirects';
 
-/** Rendered inside the root layout for notFound() and unmatched routes (404 status). */
-export default function NotFound() {
+/**
+ * Rendered inside the root layout for notFound() and unmatched routes (404
+ * status). Before rendering, the requested path (set by the proxy as
+ * x-pathname) is checked against the admin-managed redirect table so URLs
+ * from the migrated website keep working without a database query on every
+ * navigation.
+ */
+export default async function NotFound() {
+  const path = (await headers()).get('x-pathname');
+  if (path) {
+    let target: Awaited<ReturnType<typeof resolveRedirect>> = null;
+    try {
+      target = await resolveRedirect(path);
+    } catch {
+      target = null;
+    }
+    if (target) {
+      if (target.statusCode === 301 || target.statusCode === 308) permanentRedirect(target.toPath);
+      redirect(target.toPath);
+    }
+  }
   return (
     <div className="flex min-h-dvh flex-col">
       <header className="sx-container flex h-16 items-center">

@@ -43,7 +43,8 @@ export const portalRoutes = [
     method: 'post',
     path: '/api/v1/service-requests',
     summary: 'Create a service request (customer intake)',
-    description: 'Creates the request in `inquiry` with reference SR-<year>-<sequence>, the first engagement transition, an outbox event and an audit entry.',
+    description:
+      'Creates the request in `inquiry` with reference SR-<year>-<sequence>, the first engagement transition, an outbox event and an audit entry.',
     tags: ['Service requests'],
     operationId: 'createServiceRequest',
     auth: 'session',
@@ -67,7 +68,12 @@ export const portalRoutes = [
         budgetNaira: z.number().positive().nullable().optional(),
       }),
     },
-    responses: { 201: { description: 'Lead recorded', body: z.object({ leadId: uuidSchema, status: z.string() }) } },
+    responses: {
+      201: {
+        description: 'Lead recorded',
+        body: z.object({ leadId: uuidSchema, status: z.string() }),
+      },
+    },
   }),
   registerRoute({
     method: 'get',
@@ -83,7 +89,8 @@ export const portalRoutes = [
     method: 'post',
     path: '/api/v1/service-requests/{id}/transitions',
     summary: 'Customer transition (cancel, pause, resume)',
-    description: 'Validated by the engagement state machine; cancel and pause require a reason; optimistic concurrency via expectedVersion.',
+    description:
+      'Validated by the engagement state machine; cancel and pause require a reason; optimistic concurrency via expectedVersion.',
     tags: ['Service requests'],
     operationId: 'transitionServiceRequest',
     auth: 'session',
@@ -126,7 +133,12 @@ export const portalRoutes = [
     tags: ['Me'],
     operationId: 'listMyOrganizations',
     auth: 'session',
-    responses: { 200: { description: 'Memberships', body: z.object({ items: z.array(organizationMembershipDtoSchema) }) } },
+    responses: {
+      200: {
+        description: 'Memberships',
+        body: z.object({ items: z.array(organizationMembershipDtoSchema) }),
+      },
+    },
   }),
   registerRoute({
     method: 'patch',
@@ -145,7 +157,12 @@ export const portalRoutes = [
     tags: ['Me'],
     operationId: 'listOrganizationMembers',
     auth: 'session',
-    responses: { 200: { description: 'Members', body: z.object({ items: z.array(organizationMemberDtoSchema) }) } },
+    responses: {
+      200: {
+        description: 'Members',
+        body: z.object({ items: z.array(organizationMemberDtoSchema) }),
+      },
+    },
   }),
   registerRoute({
     method: 'get',
@@ -154,7 +171,12 @@ export const portalRoutes = [
     tags: ['Me'],
     operationId: 'listOrganizationInvitations',
     auth: 'session',
-    responses: { 200: { description: 'Invitations', body: z.object({ items: z.array(organizationInvitationDtoSchema) }) } },
+    responses: {
+      200: {
+        description: 'Invitations',
+        body: z.object({ items: z.array(organizationInvitationDtoSchema) }),
+      },
+    },
   }),
   registerRoute({
     method: 'post',
@@ -174,7 +196,12 @@ export const portalRoutes = [
     operationId: 'revokeOrganizationInvitation',
     auth: 'session',
     request: { params: z.object({ id: z.string() }) },
-    responses: { 200: { description: 'Revoked', body: z.object({ id: z.string(), status: z.literal('canceled') }) } },
+    responses: {
+      200: {
+        description: 'Revoked',
+        body: z.object({ id: z.string(), status: z.literal('canceled') }),
+      },
+    },
   }),
   registerRoute({
     method: 'patch',
@@ -184,7 +211,9 @@ export const portalRoutes = [
     operationId: 'updatePhone',
     auth: 'session',
     request: { body: phoneUpdateSchema },
-    responses: { 200: { description: 'Phone', body: z.object({ phoneE164: z.string().nullable() }) } },
+    responses: {
+      200: { description: 'Phone', body: z.object({ phoneE164: z.string().nullable() }) },
+    },
   }),
   registerRoute({
     method: 'post',
@@ -194,7 +223,9 @@ export const portalRoutes = [
     operationId: 'completeOnboarding',
     auth: 'session',
     request: { body: onboardingCompleteSchema },
-    responses: { 200: { description: 'Completed', body: z.object({ onboardingCompletedAt: z.string() }) } },
+    responses: {
+      200: { description: 'Completed', body: z.object({ onboardingCompletedAt: z.string() }) },
+    },
   }),
   registerRoute({
     method: 'post',
@@ -207,7 +238,11 @@ export const portalRoutes = [
     responses: {
       201: {
         description: 'Recorded',
-        body: z.object({ leadId: uuidSchema, alreadyRequested: z.boolean(), retentionPolicy: z.string() }),
+        body: z.object({
+          leadId: uuidSchema,
+          alreadyRequested: z.boolean(),
+          retentionPolicy: z.string(),
+        }),
       },
     },
   }),

@@ -182,7 +182,9 @@ export async function listInvoices(identity: RequestIdentity): Promise<InvoiceLi
     tx
       .select()
       .from(schema.invoices)
-      .where(and(eq(schema.invoices.organizationId, orgId), sql`${schema.invoices.status} <> 'draft'`))
+      .where(
+        and(eq(schema.invoices.organizationId, orgId), sql`${schema.invoices.status} <> 'draft'`),
+      )
       .orderBy(desc(schema.invoices.issuedAt), desc(schema.invoices.createdAt)),
   );
   return rows.map((i) => ({
@@ -222,9 +224,15 @@ export async function listAppointments(
   const userId = identity.session.user.id;
   const now = new Date();
   const scope = orgId
-    ? or(eq(schema.appointments.organizationId, orgId), eq(schema.appointments.customerUserId, userId))
+    ? or(
+        eq(schema.appointments.organizationId, orgId),
+        eq(schema.appointments.customerUserId, userId),
+      )
     : eq(schema.appointments.customerUserId, userId);
-  const map = (r: { a: typeof schema.appointments.$inferSelect; staffName: string | null }): AppointmentListItem => ({
+  const map = (r: {
+    a: typeof schema.appointments.$inferSelect;
+    staffName: string | null;
+  }): AppointmentListItem => ({
     id: r.a.id,
     kind: r.a.kind,
     status: r.a.status,
@@ -265,7 +273,9 @@ export interface ConversationListItem {
   unread: boolean;
 }
 
-export async function listConversations(identity: RequestIdentity): Promise<ConversationListItem[]> {
+export async function listConversations(
+  identity: RequestIdentity,
+): Promise<ConversationListItem[]> {
   if (!identity.session) return [];
   const userId = identity.session.user.id;
   const rows = await withActor(getDb(), identity.ctx, (tx) =>

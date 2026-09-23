@@ -306,10 +306,16 @@ export interface CalendarProvider {
     input: { calendarId: string; eventId: string },
   ): Promise<EventResult>;
   updateEvent(credentials: CalendarCredentials, input: UpdateEventInput): Promise<EventResult>;
-  cancelEvent(credentials: CalendarCredentials, input: CancelEventInput): Promise<CancelEventResult>;
+  cancelEvent(
+    credentials: CalendarCredentials,
+    input: CancelEventInput,
+  ): Promise<CancelEventResult>;
   watchEvents(credentials: CalendarCredentials, input: WatchEventsInput): Promise<WatchResult>;
   stopChannel(credentials: CalendarCredentials, input: StopChannelInput): Promise<void>;
-  listChanges(credentials: CalendarCredentials, input: ListChangesInput): Promise<ListChangesResult>;
+  listChanges(
+    credentials: CalendarCredentials,
+    input: ListChangesInput,
+  ): Promise<ListChangesResult>;
   testConnection(credentials: CalendarCredentials): Promise<ConnectionTestResult>;
 }
 

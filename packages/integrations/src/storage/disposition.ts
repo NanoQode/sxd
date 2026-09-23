@@ -64,8 +64,10 @@ export function resolveContentDisposition(
   requested: ContentDisposition,
 ): ResolvedDisposition {
   const type = normalizeContentType(contentType);
-  if (isActiveContentType(type)) return { disposition: 'attachment', contentType: OPAQUE_CONTENT_TYPE };
-  if (requested === 'inline' && isInlineSafe(type)) return { disposition: 'inline', contentType: type };
+  if (isActiveContentType(type))
+    return { disposition: 'attachment', contentType: OPAQUE_CONTENT_TYPE };
+  if (requested === 'inline' && isInlineSafe(type))
+    return { disposition: 'inline', contentType: type };
   return { disposition: 'attachment', contentType: type };
 }
 
@@ -79,9 +81,15 @@ export function safeFileName(fileName: string, fallback = 'download'): string {
   return cleaned || fallback;
 }
 
-export function contentDispositionHeader(disposition: ContentDisposition, fileName: string): string {
+export function contentDispositionHeader(
+  disposition: ContentDisposition,
+  fileName: string,
+): string {
   const safe = safeFileName(fileName);
   const ascii = safe.replace(/[^\x20-\x7e]/g, '_');
-  const encoded = encodeURIComponent(safe).replace(/['()*]/g, (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`);
+  const encoded = encodeURIComponent(safe).replace(
+    /['()*]/g,
+    (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`,
+  );
   return `${disposition}; filename="${ascii}"; filename*=UTF-8''${encoded}`;
 }

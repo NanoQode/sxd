@@ -85,7 +85,9 @@ export function LocationPanelContent({
   onSwitchToAssumptions,
 }: LocationPanelContentProps) {
   const prefix = `loc-${detail.slug}`;
-  const missingEvidence = [...new Set([...(ranked?.missingEvidence ?? []), ...detail.missingEvidence])];
+  const missingEvidence = [
+    ...new Set([...(ranked?.missingEvidence ?? []), ...detail.missingEvidence]),
+  ];
   const lastReviewed = detail.lastReviewedAt ?? detail.evidence.lastReviewedAt;
   const activeFlags = detail.flags.filter((flag) => flag.active);
   const flood = floodStatusOf(detail, ranked);
@@ -118,7 +120,9 @@ export function LocationPanelContent({
           {detail.coordinateSource ? ` · ${detail.coordinateSource.title}` : ''}
         </p>
         {detail.overlapNote ? (
-          <p className="text-xs font-medium text-warning">Overlapping metropolitan market: {detail.overlapNote}</p>
+          <p className="text-xs font-medium text-warning">
+            Overlapping metropolitan market: {detail.overlapNote}
+          </p>
         ) : null}
       </header>
 
@@ -159,16 +163,24 @@ export function LocationPanelContent({
         {ranked && (ranked.fit !== null || ranked.assumptionFit !== null) ? (
           <dl className="grid grid-cols-3 gap-2 text-sm">
             <div>
-              <dt className="text-xs text-fg-muted">{ranked.fit !== null ? 'Fit' : 'Assumption fit'}</dt>
-              <dd className="font-semibold tabular-nums">{Math.round(ranked.fit ?? ranked.assumptionFit ?? 0)}/100</dd>
+              <dt className="text-xs text-fg-muted">
+                {ranked.fit !== null ? 'Fit' : 'Assumption fit'}
+              </dt>
+              <dd className="font-semibold tabular-nums">
+                {Math.round(ranked.fit ?? ranked.assumptionFit ?? 0)}/100
+              </dd>
             </div>
             <div>
               <dt className="text-xs text-fg-muted">Coverage</dt>
-              <dd className="font-semibold tabular-nums">{ranked.coverage !== null ? formatPercent(ranked.coverage * 100, 0) : '—'}</dd>
+              <dd className="font-semibold tabular-nums">
+                {ranked.coverage !== null ? formatPercent(ranked.coverage * 100, 0) : '—'}
+              </dd>
             </div>
             <div>
               <dt className="text-xs text-fg-muted">Confidence</dt>
-              <dd className="font-semibold tabular-nums">{ranked.confidence !== null ? formatPercent(ranked.confidence * 100, 0) : '—'}</dd>
+              <dd className="font-semibold tabular-nums">
+                {ranked.confidence !== null ? formatPercent(ranked.confidence * 100, 0) : '—'}
+              </dd>
             </div>
           </dl>
         ) : null}
@@ -176,7 +188,10 @@ export function LocationPanelContent({
           <p className="text-xs text-fg-muted">
             Top contributors:{' '}
             {ranked.topContributors
-              .map((c) => `${humanizeKey(c.metric)}${c.contribution !== null ? ` (${c.contribution.toFixed(1)} pts)` : ''}`)
+              .map(
+                (c) =>
+                  `${humanizeKey(c.metric)}${c.contribution !== null ? ` (${c.contribution.toFixed(1)} pts)` : ''}`,
+              )
               .join(', ')}
           </p>
         ) : null}
@@ -195,12 +210,21 @@ export function LocationPanelContent({
             ))}
           </ul>
         ) : (
-          <p className="text-sm text-fg-muted">No missing evidence listed for the current objective.</p>
+          <p className="text-sm text-fg-muted">
+            No missing evidence listed for the current objective.
+          </p>
         )}
         {detail.researchTasks.length > 0 ? (
           <p className="text-xs text-fg-muted">
-            {detail.researchTasks.filter((t) => t.status !== 'done' && t.status !== 'completed').length} open research
-            task(s): {detail.researchTasks.map((t) => t.title).slice(0, 4).join('; ')}
+            {
+              detail.researchTasks.filter((t) => t.status !== 'done' && t.status !== 'completed')
+                .length
+            }{' '}
+            open research task(s):{' '}
+            {detail.researchTasks
+              .map((t) => t.title)
+              .slice(0, 4)
+              .join('; ')}
             {detail.researchTasks.length > 4 ? '…' : ''}
           </p>
         ) : null}
@@ -210,7 +234,10 @@ export function LocationPanelContent({
         <p className="text-sm">
           {lastReviewed ? formatDateTimeLabel(lastReviewed) : 'Not yet reviewed by SimplexD staff'}
           {detail.evidence.lastResearchedAt ? (
-            <span className="text-fg-muted"> · last researched {formatDateLabel(detail.evidence.lastResearchedAt)}</span>
+            <span className="text-fg-muted">
+              {' '}
+              · last researched {formatDateLabel(detail.evidence.lastResearchedAt)}
+            </span>
           ) : null}
         </p>
       </Section>
@@ -220,10 +247,18 @@ export function LocationPanelContent({
         {detail.serviceCoverage.length > 0 ? (
           <ul className="space-y-1 text-sm">
             {detail.serviceCoverage.map((service) => (
-              <li key={service.serviceSlug} className="flex flex-wrap items-center justify-between gap-1">
+              <li
+                key={service.serviceSlug}
+                className="flex flex-wrap items-center justify-between gap-1"
+              >
                 <span>{service.serviceName}</span>
-                <StatusBadge status={service.availability} label={AVAILABILITY_LABELS[service.availability] ?? service.availability} />
-                {service.note ? <span className="w-full text-xs text-fg-muted">{service.note}</span> : null}
+                <StatusBadge
+                  status={service.availability}
+                  label={AVAILABILITY_LABELS[service.availability] ?? service.availability}
+                />
+                {service.note ? (
+                  <span className="w-full text-xs text-fg-muted">{service.note}</span>
+                ) : null}
               </li>
             ))}
           </ul>
@@ -234,16 +269,28 @@ export function LocationPanelContent({
         )}
       </Section>
 
-      <Section id={`${prefix}-local`} title={`Local observations (${detail.localObservations.length})`}>
+      <Section
+        id={`${prefix}-local`}
+        title={`Local observations (${detail.localObservations.length})`}
+      >
         <ObservationList
           observations={detail.localObservations}
           emptyMessage={`${COPY.moreLocalData}: no city-level observations have been published for ${detail.name} yet.`}
         />
       </Section>
 
-      <Section id={`${prefix}-statewide`} title={`Statewide context (${detail.regionalContextObservations.length})`}>
-        <p className="text-xs text-fg-muted">{COPY.statewideContext}; shown for context only and never used as a city figure.</p>
-        <ObservationList observations={detail.regionalContextObservations} statewide emptyMessage="No statewide context observations linked." />
+      <Section
+        id={`${prefix}-statewide`}
+        title={`Statewide context (${detail.regionalContextObservations.length})`}
+      >
+        <p className="text-xs text-fg-muted">
+          {COPY.statewideContext}; shown for context only and never used as a city figure.
+        </p>
+        <ObservationList
+          observations={detail.regionalContextObservations}
+          statewide
+          emptyMessage="No statewide context observations linked."
+        />
       </Section>
 
       <Section id={`${prefix}-neighbourhoods`} title="Neighbourhoods">
@@ -268,7 +315,8 @@ export function LocationPanelContent({
         {detail.supplierLeads.length > 0 ? (
           <>
             <p className="text-xs text-fg-muted">
-              Research leads ({detail.supplierLeads.length}) — editorial pointers, not verified distribution routes.
+              Research leads ({detail.supplierLeads.length}) — editorial pointers, not verified
+              distribution routes.
               {detail.supplyMappingMethod ? ` ${detail.supplyMappingMethod}` : ''}
             </p>
             <SupplierLeadList leads={detail.supplierLeads} />
@@ -289,23 +337,24 @@ export function LocationPanelContent({
         {mode === 'assumption' && phasing ? (
           phasing.ok ? (
             <p className="text-sm">
-              Construction {phasing.value.schedule.constructionDurationMonths} months plus a completion delay of{' '}
-              {phasing.value.schedule.completionDelayMonths} months: rental income is assumed from{' '}
-              {formatMonthIndex(phasing.value.schedule.rentalStartIndex)} after start.{' '}
-              <span className="text-fg-muted">{COPY.notPromisedDate}</span>
+              Construction {phasing.value.schedule.constructionDurationMonths} months plus a
+              completion delay of {phasing.value.schedule.completionDelayMonths} months: rental
+              income is assumed from {formatMonthIndex(phasing.value.schedule.rentalStartIndex)}{' '}
+              after start. <span className="text-fg-muted">{COPY.notPromisedDate}</span>
             </p>
           ) : (
             <p className="text-sm text-fg-muted">Schedule not computed: {phasing.reason}</p>
           )
         ) : (
           <p className="text-sm text-fg-muted">
-            Switch to assumption mode and enter construction months and a completion delay to model a schedule.{' '}
-            {COPY.notPromisedDate}
+            Switch to assumption mode and enter construction months and a completion delay to model
+            a schedule. {COPY.notPromisedDate}
           </p>
         )}
         {detail.timelineTemplate ? (
           <p className="text-xs text-fg-muted">
-            Template “{detail.timelineTemplate.name}” ({humanizeKey(detail.timelineTemplate.status)}):{' '}
+            Template “{detail.timelineTemplate.name}” ({humanizeKey(detail.timelineTemplate.status)}
+            ):{' '}
             {detail.timelineTemplate.canComputeCompletionDate
               ? 'can compute a completion date from its inputs.'
               : `cannot compute a completion date yet${
@@ -313,7 +362,9 @@ export function LocationPanelContent({
                     ? ` — missing ${detail.timelineTemplate.missingInputs.join(', ')}`
                     : ''
                 }.`}
-            {detail.timelineTemplate.assumptionNotes ? ` ${detail.timelineTemplate.assumptionNotes}` : ''}
+            {detail.timelineTemplate.assumptionNotes
+              ? ` ${detail.timelineTemplate.assumptionNotes}`
+              : ''}
           </p>
         ) : null}
       </Section>
@@ -323,13 +374,17 @@ export function LocationPanelContent({
           longLet.ok ? (
             <dl className="grid grid-cols-2 gap-x-3 gap-y-1 text-sm">
               <dt className="text-fg-muted">Scheduled annual rent</dt>
-              <dd className="tabular-nums">{formatScenarioNaira(longLet.value.scheduledAnnualRent)}</dd>
+              <dd className="tabular-nums">
+                {formatScenarioNaira(longLet.value.scheduledAnnualRent)}
+              </dd>
               <dt className="text-fg-muted">Effective income</dt>
               <dd className="tabular-nums">{formatScenarioNaira(longLet.value.effectiveIncome)}</dd>
               <dt className="text-fg-muted">Net operating income</dt>
               <dd className="tabular-nums">{formatScenarioNaira(longLet.value.noi)}</dd>
               <dt className="text-fg-muted">Cash flow after debt</dt>
-              <dd className="tabular-nums">{formatScenarioNaira(longLet.value.cashFlowAfterDebt)}</dd>
+              <dd className="tabular-nums">
+                {formatScenarioNaira(longLet.value.cashFlowAfterDebt)}
+              </dd>
               <dt className="text-fg-muted">Net yield (denominator: development cost)</dt>
               <dd className="tabular-nums">
                 {(() => {
@@ -352,9 +407,7 @@ export function LocationPanelContent({
         <ul className="space-y-1 text-sm">
           <li className="flex items-start gap-2">
             <ShieldQuestion aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-fg-muted" />
-            <span>
-              Flood: {FLOOD_LABELS[flood]}
-            </span>
+            <span>Flood: {FLOOD_LABELS[flood]}</span>
           </li>
           <li className="flex items-start gap-2">
             <ShieldQuestion aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-fg-muted" />
@@ -366,21 +419,35 @@ export function LocationPanelContent({
         {activeFlags.length > 0 ? (
           <ul className="space-y-1">
             {activeFlags.map((flag) => (
-              <li key={flag.id} className="rounded-md border border-warning/50 bg-warning-soft p-2 text-sm">
+              <li
+                key={flag.id}
+                className="rounded-md border border-warning/50 bg-warning-soft p-2 text-sm"
+              >
                 <span className="font-medium">{humanizeKey(flag.flagType)}</span>: {flag.note}
-                {flag.validUntil ? <span className="text-xs text-fg-muted"> (until {formatDateLabel(flag.validUntil)})</span> : null}
+                {flag.validUntil ? (
+                  <span className="text-xs text-fg-muted">
+                    {' '}
+                    (until {formatDateLabel(flag.validUntil)})
+                  </span>
+                ) : null}
               </li>
             ))}
           </ul>
         ) : null}
         <p className="text-xs text-fg-muted">
-          Unknown flood or title status is not low risk; a site-level check is required before certifying safety.
+          Unknown flood or title status is not low risk; a site-level check is required before
+          certifying safety.
         </p>
       </Section>
 
       <Section id={`${prefix}-actions`} title="Next actions">
         <div className="flex flex-wrap gap-2">
-          <Button variant={compared ? 'primary' : 'secondary'} onClick={onToggleCompare} aria-pressed={compared} disabled={!compared && compareFull}>
+          <Button
+            variant={compared ? 'primary' : 'secondary'}
+            onClick={onToggleCompare}
+            aria-pressed={compared}
+            disabled={!compared && compareFull}
+          >
             <Scale aria-hidden="true" className="h-4 w-4" />
             {compared ? 'Remove from comparison' : 'Compare'}
           </Button>
@@ -397,16 +464,33 @@ export function LocationPanelContent({
           </Link>
         </div>
         <p className="text-xs text-fg-muted">
-          <EvidenceBadge kind="user_assumption" /> figures come from your inputs; sourced and statewide figures keep their own badges.
+          <EvidenceBadge kind="user_assumption" /> figures come from your inputs; sourced and
+          statewide figures keep their own badges.
         </p>
       </Section>
     </div>
   );
 }
 
-function PanelBody({ onSaveScenario, onRequestVerification }: { onSaveScenario: () => void; onRequestVerification: () => void }) {
-  const { selectedSlug, rankedBySlug, recommendation, mode, setMode, calculators, compareSlugs, compareFull, toggleCompare, scenario } =
-    useExplorer();
+function PanelBody({
+  onSaveScenario,
+  onRequestVerification,
+}: {
+  onSaveScenario: () => void;
+  onRequestVerification: () => void;
+}) {
+  const {
+    selectedSlug,
+    rankedBySlug,
+    recommendation,
+    mode,
+    setMode,
+    calculators,
+    compareSlugs,
+    compareFull,
+    toggleCompare,
+    scenario,
+  } = useExplorer();
   const detail = useQuery({
     queryKey: ['explorer', 'market', selectedSlug],
     queryFn: ({ signal }) => getMarketDetail(selectedSlug as string, signal),
@@ -425,7 +509,13 @@ function PanelBody({ onSaveScenario, onRequestVerification }: { onSaveScenario: 
     );
   }
   if (detail.error || !detail.data) {
-    return <ErrorState title="Market details could not be loaded" error={detail.error} onRetry={() => void detail.refetch()} />;
+    return (
+      <ErrorState
+        title="Market details could not be loaded"
+        error={detail.error}
+        onRetry={() => void detail.refetch()}
+      />
+    );
   }
   return (
     <LocationPanelContent
@@ -459,28 +549,50 @@ export function LocationPanel({
   if (!inline) {
     return (
       <Dialog open={selectedSlug !== null} onOpenChange={(open) => !open && select(null)}>
-        <DialogContent size="sheet" title={title} description={selectedMarket ? `${selectedMarket.stateName} · ${ZONE_LABELS[selectedMarket.geopoliticalZone]}` : undefined}>
-          <PanelBody onSaveScenario={onSaveScenario} onRequestVerification={onRequestVerification} />
+        <DialogContent
+          size="sheet"
+          title={title}
+          description={
+            selectedMarket
+              ? `${selectedMarket.stateName} · ${ZONE_LABELS[selectedMarket.geopoliticalZone]}`
+              : undefined
+          }
+        >
+          <PanelBody
+            onSaveScenario={onSaveScenario}
+            onRequestVerification={onRequestVerification}
+          />
         </DialogContent>
       </Dialog>
     );
   }
 
   return (
-    <aside aria-labelledby="location-panel-heading" className="rounded-lg border border-border bg-bg-elevated p-4">
+    <aside
+      aria-labelledby="location-panel-heading"
+      className="rounded-lg border border-border bg-bg-elevated p-4"
+    >
       <div className="mb-3 flex items-start justify-between gap-2">
         <h2 id="location-panel-heading" className="text-lg font-semibold leading-tight">
           {selectedSlug ? title : 'Selected location'}
         </h2>
         {selectedSlug ? (
-          <Button size="icon" variant="ghost" aria-label="Close location details" onClick={() => select(null)}>
+          <Button
+            size="icon"
+            variant="ghost"
+            aria-label="Close location details"
+            onClick={() => select(null)}
+          >
             <X aria-hidden="true" className="h-5 w-5" />
           </Button>
         ) : null}
       </div>
       {selectedSlug ? (
         <div className="max-h-[70vh] overflow-y-auto pr-1">
-          <PanelBody onSaveScenario={onSaveScenario} onRequestVerification={onRequestVerification} />
+          <PanelBody
+            onSaveScenario={onSaveScenario}
+            onRequestVerification={onRequestVerification}
+          />
         </div>
       ) : (
         <EmptyState

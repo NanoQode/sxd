@@ -19,9 +19,21 @@ describe('checksums', () => {
   });
 
   it('verifies declared checksums', () => {
-    expect(verifyDeclaredChecksum(ABC_SHA256, ABC_SHA256)).toEqual({ ok: true, sha256: ABC_SHA256 });
-    expect(verifyDeclaredChecksum(null, ABC_SHA256)).toMatchObject({ ok: false, reason: 'missing' });
-    expect(verifyDeclaredChecksum('zzz', ABC_SHA256)).toMatchObject({ ok: false, reason: 'malformed' });
-    expect(verifyDeclaredChecksum(sha256HexSync(Buffer.from('abd')), ABC_SHA256)).toMatchObject({ ok: false, reason: 'mismatch' });
+    expect(verifyDeclaredChecksum(ABC_SHA256, ABC_SHA256)).toEqual({
+      ok: true,
+      sha256: ABC_SHA256,
+    });
+    expect(verifyDeclaredChecksum(null, ABC_SHA256)).toMatchObject({
+      ok: false,
+      reason: 'missing',
+    });
+    expect(verifyDeclaredChecksum('zzz', ABC_SHA256)).toMatchObject({
+      ok: false,
+      reason: 'malformed',
+    });
+    expect(verifyDeclaredChecksum(sha256HexSync(Buffer.from('abd')), ABC_SHA256)).toMatchObject({
+      ok: false,
+      reason: 'mismatch',
+    });
   });
 });

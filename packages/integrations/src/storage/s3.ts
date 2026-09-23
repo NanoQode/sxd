@@ -99,7 +99,10 @@ export class S3StorageProvider implements StorageProvider {
 
   constructor(options: S3StorageOptions) {
     if (!options.buckets.private || !options.buckets.quarantine) {
-      throw new StorageError('S3 private and quarantine bucket names are required', 'not_configured');
+      throw new StorageError(
+        'S3 private and quarantine bucket names are required',
+        'not_configured',
+      );
     }
     if (options.buckets.private === options.buckets.quarantine) {
       throw new StorageError('quarantine and private buckets must be different', 'not_configured');
@@ -164,7 +167,10 @@ export class S3StorageProvider implements StorageProvider {
     }
     const partCount = input.partCount ?? 0;
     if (!Number.isInteger(partCount) || partCount < 1 || partCount > MULTIPART_MAX_PARTS)
-      throw new StorageError(`partCount must be between 1 and ${MULTIPART_MAX_PARTS}`, 'invalid_request');
+      throw new StorageError(
+        `partCount must be between 1 and ${MULTIPART_MAX_PARTS}`,
+        'invalid_request',
+      );
     const created = await this.transport.send(
       new CreateMultipartUploadCommand({ Bucket, Key: input.key, ContentType: input.contentType }),
     );
@@ -173,7 +179,12 @@ export class S3StorageProvider implements StorageProvider {
     for (let partNumber = 1; partNumber <= partCount; partNumber += 1) {
       const url = await this.presign(
         this.client,
-        new UploadPartCommand({ Bucket, Key: input.key, UploadId: created.UploadId, PartNumber: partNumber }),
+        new UploadPartCommand({
+          Bucket,
+          Key: input.key,
+          UploadId: created.UploadId,
+          PartNumber: partNumber,
+        }),
         { expiresIn },
       );
       partUrls.push({ partNumber, url });
@@ -191,7 +202,8 @@ export class S3StorageProvider implements StorageProvider {
 
   async completeMultipart(input: CompleteMultipartInput): Promise<{ etag: string | null }> {
     assertValidStorageKey(input.key);
-    if (input.parts.length === 0) throw new StorageError('at least one part is required', 'invalid_request');
+    if (input.parts.length === 0)
+      throw new StorageError('at least one part is required', 'invalid_request');
     const parts = [...input.parts].sort((a, b) => a.partNumber - b.partNumber);
     const result = await this.transport.send(
       new CompleteMultipartUploadCommand({
@@ -245,8 +257,13 @@ export class S3StorageProvider implements StorageProvider {
       throw err;
     }
     if (body instanceof Readable) return body;
-    if (body && typeof (body as { transformToByteArray?: unknown }).transformToByteArray === 'function') {
-      const bytes = await (body as { transformToByteArray(): Promise<Uint8Array> }).transformToByteArray();
+    if (
+      body &&
+      typeof (body as { transformToByteArray?: unknown }).transformToByteArray === 'function'
+    ) {
+      const bytes = await (
+        body as { transformToByteArray(): Promise<Uint8Array> }
+      ).transformToByteArray();
       return Readable.from(Buffer.from(bytes));
     }
     throw new StorageError('storage returned an unreadable body');
@@ -261,7 +278,10 @@ export class S3StorageProvider implements StorageProvider {
     assertValidStorageKey(location.key);
     const isStream = body instanceof Readable;
     if (isStream && options.contentLength === undefined)
-      throw new StorageError('contentLength is required when uploading a stream', 'invalid_request');
+      throw new StorageError(
+        'contentLength is required when uploading a stream',
+        'invalid_request',
+      );
     const result = await this.transport.send(
       new PutObjectCommand({
         Bucket: this.bucketName(location.bucket),

@@ -51,7 +51,10 @@ export async function apiFetch<T>(
   return (await res.json()) as T;
 }
 
-export function errorMessage(err: unknown, fallback = 'Something went wrong. Please try again.'): string {
+export function errorMessage(
+  err: unknown,
+  fallback = 'Something went wrong. Please try again.',
+): string {
   if (err instanceof ApiClientError) {
     const details = Array.isArray(err.details)
       ? (err.details as Array<{ path?: string; message?: string }>)

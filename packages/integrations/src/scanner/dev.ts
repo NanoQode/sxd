@@ -13,7 +13,11 @@ import type { MalwareScanner, ScanInput, ScanResult, ScannerPing } from './types
  * quarantined by antivirus software on developer machines or CI runners.
  */
 
-export const EICAR_TEST_STRING = ['X5O!P%@AP[4\\PZX54(P^)7CC)7}$', 'EICAR-STANDARD-', 'ANTIVIRUS-TEST-FILE!$H+H*'].join('');
+export const EICAR_TEST_STRING = [
+  'X5O!P%@AP[4\\PZX54(P^)7CC)7}$',
+  'EICAR-STANDARD-',
+  'ANTIVIRUS-TEST-FILE!$H+H*',
+].join('');
 export const DEV_SCANNER_ENGINE = 'dev-eicar';
 const SNIFF_BYTES = 64 * 1024;
 
@@ -56,7 +60,8 @@ export class DevMalwareScanner implements MalwareScanner {
       const chunks: Buffer[] = [];
       let size = 0;
       for await (const chunk of source) {
-        const buf = typeof chunk === 'string' ? Buffer.from(chunk) : Buffer.from(chunk as Uint8Array);
+        const buf =
+          typeof chunk === 'string' ? Buffer.from(chunk) : Buffer.from(chunk as Uint8Array);
         if (size < SNIFF_BYTES) chunks.push(buf.subarray(0, SNIFF_BYTES - size));
         size += buf.length;
       }

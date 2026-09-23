@@ -40,7 +40,9 @@ export const contentCrmRoutes = [
     operationId: 'adminListContentPages',
     auth: 'staff',
     request: { query: contentListQuerySchema },
-    responses: { 200: { description: 'Page of content pages', body: pageOf(contentPageDtoSchema) } },
+    responses: {
+      200: { description: 'Page of content pages', body: pageOf(contentPageDtoSchema) },
+    },
   }),
   registerRoute({
     method: 'post',
@@ -80,7 +82,12 @@ export const contentCrmRoutes = [
     operationId: 'adminListContentRevisions',
     auth: 'staff',
     request: { params: idParam },
-    responses: { 200: { description: 'Revisions', body: z.object({ items: z.array(contentRevisionDtoSchema) }) } },
+    responses: {
+      200: {
+        description: 'Revisions',
+        body: z.object({ items: z.array(contentRevisionDtoSchema) }),
+      },
+    },
   }),
   registerRoute({
     method: 'post',
@@ -90,13 +97,20 @@ export const contentCrmRoutes = [
     operationId: 'adminCreateContentRevision',
     auth: 'staff',
     request: { params: idParam, body: contentRevisionCreateSchema },
-    responses: { 201: { description: 'Revision', body: z.object({ page: contentPageDtoSchema, revision: contentRevisionDtoSchema }) } },
+    responses: {
+      201: {
+        description: 'Revision',
+        body: z.object({ page: contentPageDtoSchema, revision: contentRevisionDtoSchema }),
+      },
+    },
   }),
   registerRoute({
     method: 'post',
     path: '/api/v1/admin/content/pages/{id}/actions',
-    summary: 'Workflow action (submit_for_review, approve, publish, schedule, unpublish, archive, rollback)',
-    description: 'Publishing, scheduling and rollback require content.publish and an actor different from the revision author.',
+    summary:
+      'Workflow action (submit_for_review, approve, publish, schedule, unpublish, archive, rollback)',
+    description:
+      'Publishing, scheduling and rollback require content.publish and an actor different from the revision author.',
     tags: ['Admin: content'],
     operationId: 'adminContentAction',
     auth: 'staff',
@@ -120,7 +134,12 @@ export const contentCrmRoutes = [
     tags: ['Admin: content'],
     operationId: 'adminListApprovedMedia',
     auth: 'staff',
-    responses: { 200: { description: 'Assets', body: z.object({ items: z.array(mediaAssetDtoSchema), uploads: z.literal('wave_2') }) } },
+    responses: {
+      200: {
+        description: 'Assets',
+        body: z.object({ items: z.array(mediaAssetDtoSchema), uploads: z.literal('wave_2') }),
+      },
+    },
   }),
   registerRoute({
     method: 'get',
@@ -129,7 +148,9 @@ export const contentCrmRoutes = [
     tags: ['Admin: content'],
     operationId: 'adminListRedirects',
     auth: 'staff',
-    responses: { 200: { description: 'Redirects', body: z.object({ items: z.array(redirectDtoSchema) }) } },
+    responses: {
+      200: { description: 'Redirects', body: z.object({ items: z.array(redirectDtoSchema) }) },
+    },
   }),
   registerRoute({
     method: 'post',
@@ -168,7 +189,9 @@ export const contentCrmRoutes = [
     tags: ['Admin: CRM'],
     operationId: 'adminListLeadAssignees',
     auth: 'staff',
-    responses: { 200: { description: 'Assignees', body: z.object({ items: z.array(staffAssigneeDtoSchema) }) } },
+    responses: {
+      200: { description: 'Assignees', body: z.object({ items: z.array(staffAssigneeDtoSchema) }) },
+    },
   }),
   registerRoute({
     method: 'get',

@@ -5,11 +5,23 @@ import type { RequestIdentity } from '@/lib/auth/session';
 
 export interface HomeCards {
   approvalsPending: { count: number; href: string };
-  upcomingVisits: { count: number; next: { startsAt: string; kind: string; topic: string | null } | null; href: string };
+  upcomingVisits: {
+    count: number;
+    next: { startsAt: string; kind: string; topic: string | null } | null;
+    href: string;
+  };
   invoicesDue: { count: number; outstandingKobo: string; href: string };
-  latestReports: { items: Array<{ id: string; title: string; kind: string; releasedAt: string | null }>; href: string };
+  latestReports: {
+    items: Array<{ id: string; title: string; kind: string; releasedAt: string | null }>;
+    href: string;
+  };
   budgetChanges: { count: number; deltaKobo: string; href: string };
-  assignedContact: { name: string | null; email: string | null; reference: string | null; href: string };
+  assignedContact: {
+    name: string | null;
+    email: string | null;
+    reference: string | null;
+    href: string;
+  };
   openRequests: { count: number; href: string };
 }
 
@@ -92,7 +104,12 @@ export async function loadHomeCards(identity: RequestIdentity): Promise<HomeCard
         delta: sql<string>`coalesce(sum(${schema.changeOrders.amountDeltaKobo}), 0)::text`,
       })
       .from(schema.changeOrders)
-      .where(and(eq(schema.changeOrders.organizationId, orgId), eq(schema.changeOrders.status, 'approved')));
+      .where(
+        and(
+          eq(schema.changeOrders.organizationId, orgId),
+          eq(schema.changeOrders.status, 'approved'),
+        ),
+      );
     const [contact] = await tx
       .select({
         name: schema.user.name,
@@ -134,7 +151,11 @@ export async function loadHomeCards(identity: RequestIdentity): Promise<HomeCard
       upcomingVisits: {
         count: visits.length,
         next: nextVisit
-          ? { startsAt: nextVisit.startsAt.toISOString(), kind: nextVisit.kind, topic: nextVisit.topic }
+          ? {
+              startsAt: nextVisit.startsAt.toISOString(),
+              kind: nextVisit.kind,
+              topic: nextVisit.topic,
+            }
           : null,
         href: '/portal/appointments',
       },
@@ -152,7 +173,11 @@ export async function loadHomeCards(identity: RequestIdentity): Promise<HomeCard
         })),
         href: '/portal/documents',
       },
-      budgetChanges: { count: changes?.count ?? 0, deltaKobo: changes?.delta ?? '0', href: '/portal/projects' },
+      budgetChanges: {
+        count: changes?.count ?? 0,
+        deltaKobo: changes?.delta ?? '0',
+        href: '/portal/projects',
+      },
       assignedContact: {
         name: contact?.name ?? null,
         email: contact?.email ?? null,

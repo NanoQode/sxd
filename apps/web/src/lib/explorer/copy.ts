@@ -22,16 +22,19 @@ export const COPY = {
   statewideContext: 'Statewide context — not a city value',
   scenarioDisclaimer:
     'All calculators are scenarios under your assumptions, not valuations, guarantees or investment advice.',
-  notPromisedDate: 'This is a scenario schedule under your assumptions, not a promised completion date.',
+  notPromisedDate:
+    'This is a scenario schedule under your assumptions, not a promised completion date.',
   mapNotConfigured: 'Map tiles are not configured yet',
   mapNotConfiguredDetail:
     'A licensed map tile provider has not been connected (NEXT_PUBLIC_MAP_STYLE_URL). The list below has the complete functionality of the map.',
   mapFailed: 'The map could not be loaded',
   noTenders: 'No tender opportunities are published for this market yet.',
-  noSupplierQuotes: 'No verified supplier quotations yet. Leads below are research pointers, not delivery routes or prices.',
+  noSupplierQuotes:
+    'No verified supplier quotations yet. Leads below are research pointers, not delivery routes or prices.',
   coverageVsAvailability:
     'Map coverage and service availability are separate: a marker does not mean a staffed SimplexD operation.',
-  denominatorNote: 'Yields divide by the development cost (the denominator), not by a market value.',
+  denominatorNote:
+    'Yields divide by the development cost (the denominator), not by a market value.',
   paybackUndefined: 'undefined (non-positive cash flow)',
   assumptionModeBanner:
     'Assumption mode: your inputs and model estimates count. Results are scenarios, not evidence-backed rankings.',
@@ -218,7 +221,8 @@ export function describeFilters(
     if (isDefault && key !== 'objective') continue;
     let text: string;
     if (key === 'objective') text = OBJECTIVE_LABELS[filters.objective];
-    else if (key === 'preferredZones') text = filters.preferredZones.map((z) => ZONE_LABELS[z]).join(', ');
+    else if (key === 'preferredZones')
+      text = filters.preferredZones.map((z) => ZONE_LABELS[z]).join(', ');
     else if (key === 'preferredStateIds')
       text = filters.preferredStateIds.map((id) => stateNames.get(id) ?? id).join(', ');
     else if (typeof value === 'boolean') text = value ? 'Yes' : 'No';
@@ -233,6 +237,9 @@ export function describePriorities(priorities: Priorities): string {
   const entries = Object.entries(priorities).filter(([, v]) => typeof v === 'number' && v !== 1);
   if (entries.length === 0) return 'Default priorities';
   return entries
-    .map(([k, v]) => `${metricLabel(k)} ×${(v as number).toFixed(2).replace(/0+$/, '').replace(/\.$/, '')}`)
+    .map(
+      ([k, v]) =>
+        `${metricLabel(k)} ×${(v as number).toFixed(2).replace(/0+$/, '').replace(/\.$/, '')}`,
+    )
     .join(', ');
 }

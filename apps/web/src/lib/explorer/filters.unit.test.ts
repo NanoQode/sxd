@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { amenityStatus, applyClientFilters, applyQuery, floodPasses, floodStatusOf } from './filters';
+import {
+  amenityStatus,
+  applyClientFilters,
+  applyQuery,
+  floodPasses,
+  floodStatusOf,
+} from './filters';
 import { market, ranked } from './test-fixtures';
 import { DEFAULT_FILTERS } from './url-state';
 
@@ -52,9 +58,10 @@ describe('applyClientFilters', () => {
 
   it('filters by service team availability', () => {
     expect(
-      applyClientFilters(all, { ...DEFAULT_FILTERS, serviceTeamAvailability: 'available_only' }).map(
-        (m) => m.slug,
-      ),
+      applyClientFilters(all, {
+        ...DEFAULT_FILTERS,
+        serviceTeamAvailability: 'available_only',
+      }).map((m) => m.slug),
     ).toEqual(['kano']);
   });
 
@@ -106,9 +113,13 @@ describe('applyClientFilters', () => {
     expect(floodStatusOf(lagos, r)).toBe('high');
     expect(floodStatusOf(lagos, null)).toBe('unknown');
     expect(
-      applyClientFilters([lagos], { ...DEFAULT_FILTERS, floodExposure: 'exclude_high' }, {
-        rankedBySlug: new Map([['lagos', r]]),
-      }),
+      applyClientFilters(
+        [lagos],
+        { ...DEFAULT_FILTERS, floodExposure: 'exclude_high' },
+        {
+          rankedBySlug: new Map([['lagos', r]]),
+        },
+      ),
     ).toEqual([]);
   });
 
@@ -124,9 +135,11 @@ describe('applyClientFilters', () => {
       applyClientFilters(markets, { ...DEFAULT_FILTERS, power: 'required' }).map((m) => m.slug),
     ).toEqual(['p', 'u']);
     expect(
-      applyClientFilters(markets, { ...DEFAULT_FILTERS, power: 'required', includeUnknown: false }).map(
-        (m) => m.slug,
-      ),
+      applyClientFilters(markets, {
+        ...DEFAULT_FILTERS,
+        power: 'required',
+        includeUnknown: false,
+      }).map((m) => m.slug),
     ).toEqual(['p']);
     expect(
       applyClientFilters(markets, { ...DEFAULT_FILTERS, power: 'unknown_ok' }).map((m) => m.slug),

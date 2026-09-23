@@ -155,8 +155,17 @@ function NumberFilter({
 }
 
 export function FilterPanel({ compact = false }: { compact?: boolean }) {
-  const { filters, setFilters, resetFilters, query, setQuery, stateOptions, rows, totalMarkets, markets } =
-    useExplorer();
+  const {
+    filters,
+    setFilters,
+    resetFilters,
+    query,
+    setQuery,
+    stateOptions,
+    rows,
+    totalMarkets,
+    markets,
+  } = useExplorer();
   const [search, setSearch] = useState(query);
   const [syncedQuery, setSyncedQuery] = useState(query);
   if (syncedQuery !== query) {
@@ -273,7 +282,10 @@ export function FilterPanel({ compact = false }: { compact?: boolean }) {
           <span aria-hidden="true">{statesOpen ? '−' : '+'}</span>
         </button>
         {statesOpen ? (
-          <ul id={statesId} className="mt-1 max-h-56 space-y-0.5 overflow-y-auto rounded-md border border-border p-1">
+          <ul
+            id={statesId}
+            className="mt-1 max-h-56 space-y-0.5 overflow-y-auto rounded-md border border-border p-1"
+          >
             {stateOptions.length === 0 ? (
               <li className="p-2 text-sm text-fg-muted">States load with the market list.</li>
             ) : null}
@@ -287,7 +299,9 @@ export function FilterPanel({ compact = false }: { compact?: boolean }) {
                     onChange={() => toggleState(state.id)}
                   />
                   <span className="flex-1">{state.name}</span>
-                  <span className="text-xs text-fg-muted">{ZONE_LABELS[state.geopoliticalZone]}</span>
+                  <span className="text-xs text-fg-muted">
+                    {ZONE_LABELS[state.geopoliticalZone]}
+                  </span>
                 </label>
               </li>
             ))}
@@ -298,15 +312,53 @@ export function FilterPanel({ compact = false }: { compact?: boolean }) {
       {!compact ? (
         <>
           <div className="grid grid-cols-2 gap-3">
-            <NumberFilter label="Land area" unit="m²" value={filters.landAreaM2} onCommit={(landAreaM2) => setFilters({ landAreaM2 })} />
-            <NumberFilter label="Floor area" unit="m²" value={filters.floorAreaM2} onCommit={(floorAreaM2) => setFilters({ floorAreaM2 })} />
+            <NumberFilter
+              label="Land area"
+              unit="m²"
+              value={filters.landAreaM2}
+              onCommit={(landAreaM2) => setFilters({ landAreaM2 })}
+            />
+            <NumberFilter
+              label="Floor area"
+              unit="m²"
+              value={filters.floorAreaM2}
+              onCommit={(floorAreaM2) => setFilters({ floorAreaM2 })}
+            />
           </div>
-          <SelectFilter label="Asset type" value={filters.assetType} options={ASSET_TYPES} onChange={(assetType) => setFilters({ assetType })} allowNone="Any" />
+          <SelectFilter
+            label="Asset type"
+            value={filters.assetType}
+            options={ASSET_TYPES}
+            onChange={(assetType) => setFilters({ assetType })}
+            allowNone="Any"
+          />
           <div className="grid grid-cols-2 gap-3">
-            <NumberFilter label="Bedrooms or units" value={filters.bedroomsOrUnits} onCommit={(n) => setFilters({ bedroomsOrUnits: n === null ? null : Math.round(n) })} step={1} />
-            <NumberFilter label="Target completion" unit="months" value={filters.targetCompletionMonths} onCommit={(n) => setFilters({ targetCompletionMonths: n === null ? null : Math.max(1, Math.round(n)) })} min={1} step={1} />
+            <NumberFilter
+              label="Bedrooms or units"
+              value={filters.bedroomsOrUnits}
+              onCommit={(n) => setFilters({ bedroomsOrUnits: n === null ? null : Math.round(n) })}
+              step={1}
+            />
+            <NumberFilter
+              label="Target completion"
+              unit="months"
+              value={filters.targetCompletionMonths}
+              onCommit={(n) =>
+                setFilters({
+                  targetCompletionMonths: n === null ? null : Math.max(1, Math.round(n)),
+                })
+              }
+              min={1}
+              step={1}
+            />
           </div>
-          <SelectFilter label="Quality specification" value={filters.qualitySpecification} options={QUALITY_SPECS} onChange={(qualitySpecification) => setFilters({ qualitySpecification })} allowNone="Any" />
+          <SelectFilter
+            label="Quality specification"
+            value={filters.qualitySpecification}
+            options={QUALITY_SPECS}
+            onChange={(qualitySpecification) => setFilters({ qualitySpecification })}
+            allowNone="Any"
+          />
           <NumberFilter
             label="Minimum projected net yield"
             unit="%"
@@ -314,12 +366,20 @@ export function FilterPanel({ compact = false }: { compact?: boolean }) {
             onCommit={(minProjectedNetYieldPercent) => setFilters({ minProjectedNetYieldPercent })}
             hint="Compared against evidence or your assumptions; markets with unknown yield stay visible while unknown is allowed."
           />
-          <SelectFilter label="Risk tolerance" value={filters.riskTolerance} options={RISK_TOLERANCES} onChange={(riskTolerance) => riskTolerance && setFilters({ riskTolerance })} />
+          <SelectFilter
+            label="Risk tolerance"
+            value={filters.riskTolerance}
+            options={RISK_TOLERANCES}
+            onChange={(riskTolerance) => riskTolerance && setFilters({ riskTolerance })}
+          />
           <SelectFilter
             label="Evidence freshness"
             value={filters.evidenceFreshness}
             options={EVIDENCE_FRESHNESS}
-            labels={{ fresh_only: 'Fresh evidence only', include_stale: 'Include stale evidence (inspectable, not ranked)' }}
+            labels={{
+              fresh_only: 'Fresh evidence only',
+              include_stale: 'Include stale evidence (inspectable, not ranked)',
+            }}
             onChange={(evidenceFreshness) => evidenceFreshness && setFilters({ evidenceFreshness })}
           />
         </>
@@ -333,7 +393,11 @@ export function FilterPanel({ compact = false }: { compact?: boolean }) {
             treated as low risk.
           </span>
         </label>
-        <Switch id="filter-include-unknown" checked={filters.includeUnknown} onCheckedChange={(includeUnknown) => setFilters({ includeUnknown })} />
+        <Switch
+          id="filter-include-unknown"
+          checked={filters.includeUnknown}
+          onCheckedChange={(includeUnknown) => setFilters({ includeUnknown })}
+        />
       </div>
 
       {!compact ? (
@@ -362,8 +426,22 @@ export function FilterPanel({ compact = false }: { compact?: boolean }) {
                 onChange={(value) => value && setFilters({ [key]: value })}
               />
             ))}
-            <SelectFilter label="Flood exposure" value={filters.floodExposure} options={FLOOD_PREFERENCES} labels={FLOOD_LABELS} onChange={(floodExposure) => floodExposure && setFilters({ floodExposure })} />
-            <SelectFilter label="Service team availability" value={filters.serviceTeamAvailability} options={TEAM_PREFERENCES} labels={TEAM_LABELS} onChange={(serviceTeamAvailability) => serviceTeamAvailability && setFilters({ serviceTeamAvailability })} />
+            <SelectFilter
+              label="Flood exposure"
+              value={filters.floodExposure}
+              options={FLOOD_PREFERENCES}
+              labels={FLOOD_LABELS}
+              onChange={(floodExposure) => floodExposure && setFilters({ floodExposure })}
+            />
+            <SelectFilter
+              label="Service team availability"
+              value={filters.serviceTeamAvailability}
+              options={TEAM_PREFERENCES}
+              labels={TEAM_LABELS}
+              onChange={(serviceTeamAvailability) =>
+                serviceTeamAvailability && setFilters({ serviceTeamAvailability })
+              }
+            />
           </div>
         </details>
       ) : null}
@@ -382,7 +460,11 @@ export function FilterSheet() {
         <SlidersHorizontal aria-hidden="true" className="h-4 w-4" />
         Filters{active > 0 ? ` (${active})` : ''}
       </Button>
-      <DialogContent size="sheet" title="Filters" description="Unknown is a real value; markets without evidence stay visible while unknown is allowed.">
+      <DialogContent
+        size="sheet"
+        title="Filters"
+        description="Unknown is a real value; markets without evidence stay visible while unknown is allowed."
+      >
         <FilterPanel />
         <div className="mt-4">
           <Button className="w-full" onClick={() => setOpen(false)}>

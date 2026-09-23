@@ -8,10 +8,21 @@ import type { Session } from '@/lib/auth/server';
  * modules read are populated.
  */
 
-function fakeSession(user: { id: string; email: string; name: string }, activeOrganizationId: string | null): Session {
+function fakeSession(
+  user: { id: string; email: string; name: string },
+  activeOrganizationId: string | null,
+): Session {
   const now = new Date();
   return {
-    user: { id: user.id, email: user.email, name: user.name, emailVerified: true, image: null, createdAt: now, updatedAt: now },
+    user: {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      emailVerified: true,
+      image: null,
+      createdAt: now,
+      updatedAt: now,
+    },
     session: {
       id: `sess_${user.id}`,
       userId: user.id,
@@ -37,7 +48,10 @@ export function customerIdentity(input: {
   timeZone?: string;
 }): RequestIdentity {
   const memberships =
-    input.memberships ?? (input.organizationId ? [{ organizationId: input.organizationId, role: input.role ?? 'owner' }] : []);
+    input.memberships ??
+    (input.organizationId
+      ? [{ organizationId: input.organizationId, role: input.role ?? 'owner' }]
+      : []);
   const name = input.name ?? input.email.split('@')[0]!;
   return {
     session: fakeSession({ id: input.userId, email: input.email, name }, input.organizationId),
@@ -51,7 +65,12 @@ export function customerIdentity(input: {
       impersonation: null,
       flags: input.flags ?? {},
     },
-    ctx: { userId: input.userId, organizationId: input.organizationId, staff: false, anonymousToken: null },
+    ctx: {
+      userId: input.userId,
+      organizationId: input.organizationId,
+      staff: false,
+      anonymousToken: null,
+    },
     profile: null,
     featureFlags: input.flags ?? {},
   };

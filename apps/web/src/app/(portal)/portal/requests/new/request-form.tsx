@@ -3,7 +3,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import {
@@ -99,15 +99,8 @@ export function RequestForm({
   const serviceSlug = form.watch('serviceSlug');
   const service = useMemo(() => services.find((s) => s.slug === serviceSlug) ?? null, [services, serviceSlug]);
 
-  // Preserve typed answers when switching services: only prune keys the new service does not use.
-  useEffect(() => {
-    if (!service) return;
-    const current = form.getValues('intake');
-    const next: Record<string, string> = {};
-    for (const key of service.intakeKeys) next[key] = current[key] ?? '';
-    form.setValue('intake', next);
-  }, [service, form]);
-
+  // Typed intake answers are preserved when switching services; the server keeps only
+  // the keys the chosen service's workflow template defines.
   const onSubmit = form.handleSubmit(async (values) => {
     setError(null);
     if (!service) return;

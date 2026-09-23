@@ -15,7 +15,10 @@ const CATEGORIES = ['security', 'transactional', 'reminders', 'digests', 'market
 /** Essential security messages follow product policy and cannot be disabled. */
 const LOCKED = ['security'] as const;
 
-function defaultEnabled(channel: (typeof CHANNELS)[number], category: (typeof CATEGORIES)[number]): boolean {
+function defaultEnabled(
+  channel: (typeof CHANNELS)[number],
+  category: (typeof CATEGORIES)[number],
+): boolean {
   if (category === 'marketing') return false;
   if (channel === 'sms') return category === 'security' || category === 'transactional';
   return true;
@@ -27,7 +30,9 @@ function toHhmm(value: string | null): string | null {
 }
 
 /** Full channel x category matrix; missing rows fall back to policy defaults. */
-export async function getNotificationPreferences(identity: RequestIdentity): Promise<NotificationPreferencesDto> {
+export async function getNotificationPreferences(
+  identity: RequestIdentity,
+): Promise<NotificationPreferencesDto> {
   if (!identity.session) throw new ApiError('unauthenticated', 'sign in required');
   const userId = identity.session.user.id;
   const { rows, quietDefault } = await withActor(getDb(), identity.ctx, async (tx) => {
@@ -39,7 +44,10 @@ export async function getNotificationPreferences(identity: RequestIdentity): Pro
       .select({ value: schema.settings.value })
       .from(schema.settings)
       .where(eq(schema.settings.key, 'notifications.quiet_hours'));
-    return { rows, quietDefault: (setting?.value as { start?: string; end?: string } | undefined) ?? null };
+    return {
+      rows,
+      quietDefault: (setting?.value as { start?: string; end?: string } | undefined) ?? null,
+    };
   });
   const byKey = new Map(rows.map((r) => [`${r.channel}:${r.category}`, r]));
   const items: NotificationPreferenceItem[] = [];
@@ -49,7 +57,9 @@ export async function getNotificationPreferences(identity: RequestIdentity): Pro
       items.push({
         channel,
         category,
-        enabled: (LOCKED as readonly string[]).includes(category) ? true : (row?.enabled ?? defaultEnabled(channel, category)),
+        enabled: (LOCKED as readonly string[]).includes(category)
+          ? true
+          : (row?.enabled ?? defaultEnabled(channel, category)),
         digest: row?.digest ?? 'none',
       });
     }
@@ -75,7 +85,9 @@ export async function updateNotificationPreferences(
   if (!identity.session) throw new ApiError('unauthenticated', 'sign in required');
   const userId = identity.session.user.id;
   if (input.timeZone && !isValidTimeZone(input.timeZone)) {
-    throw new ApiError('validation_failed', 'unknown time zone', { details: [{ path: 'timeZone' }] });
+    throw new ApiError('validation_failed', 'unknown time zone', {
+      details: [{ path: 'timeZone' }],
+    });
   }
   const timeZone = input.timeZone ?? identity.profile?.timeZone ?? 'Africa/Lagos';
   await withActor(getDb(), identity.ctx, async (tx) => {

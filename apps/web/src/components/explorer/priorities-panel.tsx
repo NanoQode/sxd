@@ -3,7 +3,12 @@
 import { RotateCcw } from 'lucide-react';
 import { Button } from '@simplexd/ui';
 import type { MetricKey, Objective, Priorities } from '@simplexd/contracts';
-import { DEFAULT_WEIGHT_PERCENT, METRIC_KEYS, METRIC_LABELS, priorityOrDefault } from '@/lib/explorer';
+import {
+  DEFAULT_WEIGHT_PERCENT,
+  METRIC_KEYS,
+  METRIC_LABELS,
+  priorityOrDefault,
+} from '@/lib/explorer';
 
 /**
  * Scoring priorities: a 0–1 multiplier per metric applied to the policy's
@@ -42,7 +47,12 @@ export function PrioritiesPanel({
             investment truths.
           </p>
         </div>
-        <Button variant="ghost" onClick={() => onChange({})} disabled={!hasChanges} aria-label="Reset priorities to defaults">
+        <Button
+          variant="ghost"
+          onClick={() => onChange({})}
+          disabled={!hasChanges}
+          aria-label="Reset priorities to defaults"
+        >
           <RotateCcw aria-hidden="true" className="h-4 w-4" /> Reset
         </Button>
       </div>

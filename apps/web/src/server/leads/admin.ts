@@ -1,6 +1,6 @@
 import 'server-only';
 import { and, desc, eq, ilike, inArray, isNull, lt, or, sql } from 'drizzle-orm';
-import { z } from 'zod';
+import type { z } from 'zod';
 import {
   ApiError,
   type LeadConvert,
@@ -68,7 +68,11 @@ function toLeadDto(
 
 function baseSelect(tx: Transaction) {
   return tx
-    .select({ lead: schema.leads, serviceName: schema.services.name, assigneeName: schema.user.name })
+    .select({
+      lead: schema.leads,
+      serviceName: schema.services.name,
+      assigneeName: schema.user.name,
+    })
     .from(schema.leads)
     .leftJoin(schema.services, eq(schema.services.id, schema.leads.interestServiceId))
     .leftJoin(schema.user, eq(schema.user.id, schema.leads.assignedToUserId));
@@ -91,7 +95,10 @@ export async function listLeads(
               : eq(schema.leads.assignedToUserId, parsed.assignedToUserId)
             : undefined,
           parsed.q
-            ? or(ilike(schema.leads.contactName, `%${parsed.q}%`), ilike(schema.leads.email, `%${parsed.q}%`))
+            ? or(
+                ilike(schema.leads.contactName, `%${parsed.q}%`),
+                ilike(schema.leads.email, `%${parsed.q}%`),
+              )
             : undefined,
           cursor
             ? or(
@@ -104,7 +111,9 @@ export async function listLeads(
       .orderBy(desc(schema.leads.createdAt), desc(schema.leads.id))
       .limit(parsed.limit + 1),
   );
-  const items = rows.slice(0, parsed.limit).map((r) => toLeadDto(r.lead, r.serviceName, r.assigneeName));
+  const items = rows
+    .slice(0, parsed.limit)
+    .map((r) => toLeadDto(r.lead, r.serviceName, r.assigneeName));
   const last = rows.length > parsed.limit ? rows[parsed.limit - 1] : null;
   return { items, nextCursor: last ? encodeCursor(last.lead.createdAt, last.lead.id) : null };
 }
@@ -116,31 +125,51 @@ export async function getLeadDetail(identity: RequestIdentity, id: string): Prom
     if (!row) throw new ApiError('not_found', 'lead not found');
     const lead = row.lead;
     const context = (lead.context as LeadContext | null) ?? {};
-    const marketIds = Array.isArray(context.marketIds) ? context.marketIds.filter((m) => typeof m === 'string') : [];
+    const marketIds = Array.isArray(context.marketIds)
+      ? context.marketIds.filter((m) => typeof m === 'string')
+      : [];
     const markets =
       marketIds.length > 0
         ? await tx
-            .select({ id: schema.markets.id, name: schema.markets.name, stateName: schema.states.name })
+            .select({
+              id: schema.markets.id,
+              name: schema.markets.name,
+              stateName: schema.states.name,
+            })
             .from(schema.markets)
             .innerJoin(schema.states, eq(schema.states.id, schema.markets.stateId))
             .where(inArray(schema.markets.id, marketIds))
         : [];
     const [scenario] = lead.scenarioId
       ? await tx
-          .select({ id: schema.scenarios.id, name: schema.scenarios.name, objective: schema.scenarios.objective })
+          .select({
+            id: schema.scenarios.id,
+            name: schema.scenarios.name,
+            objective: schema.scenarios.objective,
+          })
           .from(schema.scenarios)
           .where(eq(schema.scenarios.id, lead.scenarioId))
       : [];
     const [linkedUser] = await tx
       .select({ id: schema.user.id, name: schema.user.name, email: schema.user.email })
       .from(schema.user)
-      .where(lead.userId ? eq(schema.user.id, lead.userId) : sql`lower(${schema.user.email}) = ${lead.email.toLowerCase()}`)
+      .where(
+        lead.userId
+          ? eq(schema.user.id, lead.userId)
+          : sql`lower(${schema.user.email}) = ${lead.email.toLowerCase()}`,
+      )
       .limit(1);
     const [org] = lead.organizationId
-      ? await tx.select({ name: schema.organization.name }).from(schema.organization).where(eq(schema.organization.id, lead.organizationId))
+      ? await tx
+          .select({ name: schema.organization.name })
+          .from(schema.organization)
+          .where(eq(schema.organization.id, lead.organizationId))
       : [];
     const [service] = lead.interestServiceId
-      ? await tx.select({ slug: schema.services.slug }).from(schema.services).where(eq(schema.services.id, lead.interestServiceId))
+      ? await tx
+          .select({ slug: schema.services.slug })
+          .from(schema.services)
+          .where(eq(schema.services.id, lead.interestServiceId))
       : [];
     const notes = await tx
       .select({ n: schema.notes, authorName: schema.user.name })
@@ -172,7 +201,12 @@ export async function getLeadDetail(identity: RequestIdentity, id: string): Prom
 export async function listStaffAssignees(identity: RequestIdentity): Promise<StaffAssigneeDto[]> {
   const rows = await withActor(getDb(), identity.ctx, (tx) =>
     tx
-      .select({ userId: schema.staffRoles.userId, role: schema.staffRoles.role, name: schema.user.name, email: schema.user.email })
+      .select({
+        userId: schema.staffRoles.userId,
+        role: schema.staffRoles.role,
+        name: schema.user.name,
+        email: schema.user.email,
+      })
       .from(schema.staffRoles)
       .innerJoin(schema.user, eq(schema.user.id, schema.staffRoles.userId))
       .where(isNull(schema.staffRoles.revokedAt))
@@ -204,8 +238,14 @@ export async function updateLead(
       const staff = await tx
         .select({ id: schema.staffRoles.id })
         .from(schema.staffRoles)
-        .where(and(eq(schema.staffRoles.userId, parsed.assignedToUserId), isNull(schema.staffRoles.revokedAt)));
-      if (staff.length === 0) throw new ApiError('validation_failed', 'assignee must be an active staff member');
+        .where(
+          and(
+            eq(schema.staffRoles.userId, parsed.assignedToUserId),
+            isNull(schema.staffRoles.revokedAt),
+          ),
+        );
+      if (staff.length === 0)
+        throw new ApiError('validation_failed', 'assignee must be an active staff member');
     }
     if (parsed.status === 'converted' && !lead.convertedServiceRequestId) {
       throw new ApiError('invalid_transition', 'use the convert action to mark a lead converted');
@@ -232,7 +272,11 @@ export async function updateLead(
       entityId: id,
       organizationId: lead.organizationId,
       before: { status: lead.status, assignedToUserId: lead.assignedToUserId },
-      after: { status: patch.status ?? lead.status, assignedToUserId: patch.assignedToUserId === undefined ? lead.assignedToUserId : patch.assignedToUserId },
+      after: {
+        status: patch.status ?? lead.status,
+        assignedToUserId:
+          patch.assignedToUserId === undefined ? lead.assignedToUserId : patch.assignedToUserId,
+      },
       reason: parsed.note ?? null,
       correlationId: options.correlationId,
     });
@@ -249,11 +293,21 @@ export async function addLeadNote(
 ): Promise<NoteDto> {
   const userId = identity.session!.user.id;
   return withActor(getDb(), identity.ctx, async (tx) => {
-    const [lead] = await tx.select({ id: schema.leads.id, organizationId: schema.leads.organizationId }).from(schema.leads).where(eq(schema.leads.id, id));
+    const [lead] = await tx
+      .select({ id: schema.leads.id, organizationId: schema.leads.organizationId })
+      .from(schema.leads)
+      .where(eq(schema.leads.id, id));
     if (!lead) throw new ApiError('not_found', 'lead not found');
     const [note] = await tx
       .insert(schema.notes)
-      .values({ organizationId: null, entityType: 'lead', entityId: id, body, visibility: 'internal', authorUserId: userId })
+      .values({
+        organizationId: null,
+        entityType: 'lead',
+        entityId: id,
+        body,
+        visibility: 'internal',
+        authorUserId: userId,
+      })
       .returning();
     await recordAudit(tx, identity, {
       action: 'lead.note_added',
@@ -283,20 +337,36 @@ export async function convertLead(
   return withActor(getDb(), identity.ctx, async (tx) => {
     const [lead] = await tx.select().from(schema.leads).where(eq(schema.leads.id, id));
     if (!lead) throw new ApiError('not_found', 'lead not found');
-    if (lead.status === 'converted') throw new ApiError('invalid_transition', 'this lead was already converted');
-    if (lead.status === 'spam') throw new ApiError('invalid_transition', 'mark the lead as new or qualified before converting');
+    if (lead.status === 'converted')
+      throw new ApiError('invalid_transition', 'this lead was already converted');
+    if (lead.status === 'spam')
+      throw new ApiError(
+        'invalid_transition',
+        'mark the lead as new or qualified before converting',
+      );
     const serviceRows = input.serviceSlug
       ? await tx.select().from(schema.services).where(eq(schema.services.slug, input.serviceSlug))
       : lead.interestServiceId
-        ? await tx.select().from(schema.services).where(eq(schema.services.id, lead.interestServiceId))
+        ? await tx
+            .select()
+            .from(schema.services)
+            .where(eq(schema.services.id, lead.interestServiceId))
         : [];
     const service = serviceRows[0];
-    if (!service) throw new ApiError('validation_failed', 'choose a service to convert this lead into a request');
+    if (!service)
+      throw new ApiError(
+        'validation_failed',
+        'choose a service to convert this lead into a request',
+      );
 
     const [user] = await tx
       .select({ id: schema.user.id, name: schema.user.name })
       .from(schema.user)
-      .where(lead.userId ? eq(schema.user.id, lead.userId) : sql`lower(${schema.user.email}) = ${lead.email.toLowerCase()}`)
+      .where(
+        lead.userId
+          ? eq(schema.user.id, lead.userId)
+          : sql`lower(${schema.user.email}) = ${lead.email.toLowerCase()}`,
+      )
       .limit(1);
     const memberships = user
       ? await tx
@@ -318,7 +388,10 @@ export async function convertLead(
         serviceId: service.id,
         title: input.title?.trim() || `${service.name} for ${lead.contactName}`,
         description: lead.message,
-        marketId: Array.isArray(context.marketIds) && typeof context.marketIds[0] === 'string' ? context.marketIds[0] : null,
+        marketId:
+          Array.isArray(context.marketIds) && typeof context.marketIds[0] === 'string'
+            ? context.marketIds[0]
+            : null,
         scenarioId: lead.scenarioId,
         leadId: lead.id,
         context: {
@@ -334,10 +407,24 @@ export async function convertLead(
       });
       await tx
         .update(schema.leads)
-        .set({ status: 'converted', convertedServiceRequestId: created.id, userId: lead.userId ?? user.id, organizationId })
+        .set({
+          status: 'converted',
+          convertedServiceRequestId: created.id,
+          userId: lead.userId ?? user.id,
+          organizationId,
+        })
         .where(eq(schema.leads.id, id));
       if (input.note) {
-        await tx.insert(schema.notes).values({ organizationId: null, entityType: 'lead', entityId: id, body: input.note, visibility: 'internal', authorUserId: staffUserId });
+        await tx
+          .insert(schema.notes)
+          .values({
+            organizationId: null,
+            entityType: 'lead',
+            entityId: id,
+            body: input.note,
+            visibility: 'internal',
+            authorUserId: staffUserId,
+          });
       }
       await recordAudit(tx, identity, {
         action: 'lead.converted',
@@ -382,7 +469,16 @@ export async function convertLead(
     });
     await tx.update(schema.leads).set({ status: 'contacted' }).where(eq(schema.leads.id, id));
     if (input.note) {
-      await tx.insert(schema.notes).values({ organizationId: null, entityType: 'lead', entityId: id, body: input.note, visibility: 'internal', authorUserId: staffUserId });
+      await tx
+        .insert(schema.notes)
+        .values({
+          organizationId: null,
+          entityType: 'lead',
+          entityId: id,
+          body: input.note,
+          visibility: 'internal',
+          authorUserId: staffUserId,
+        });
     }
     await recordAudit(tx, identity, {
       action: 'lead.invited',
@@ -393,6 +489,12 @@ export async function convertLead(
       reason: input.note ?? null,
       correlationId: options.correlationId,
     });
-    return { path: 'invitation_sent', serviceRequestId: null, reference: null, organizationId: null, leadStatus: 'contacted' };
+    return {
+      path: 'invitation_sent',
+      serviceRequestId: null,
+      reference: null,
+      organizationId: null,
+      leadStatus: 'contacted',
+    };
   });
 }

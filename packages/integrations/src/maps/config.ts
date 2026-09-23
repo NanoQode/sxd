@@ -94,10 +94,13 @@ function parseUrl(url: string): URL {
 
 export function detectMapProvider(url: string): MapProviderKind {
   const host = parseUrl(url).hostname.toLowerCase();
-  for (const [kind, hosts] of Object.entries(PROVIDER_HOSTS) as Array<[MapProviderKind, string[]]>) {
+  for (const [kind, hosts] of Object.entries(PROVIDER_HOSTS) as Array<
+    [MapProviderKind, string[]]
+  >) {
     if (hosts.some((h) => host === h || host.endsWith(`.${h}`))) return kind;
   }
-  if (host === 'localhost' || host.endsWith('.local') || host.endsWith('.internal')) return 'self-hosted';
+  if (host === 'localhost' || host.endsWith('.local') || host.endsWith('.internal'))
+    return 'self-hosted';
   return 'other';
 }
 
@@ -173,12 +176,16 @@ export function resolveMapConfig(
     if (production) {
       assertLicensedProvider(url, label);
     } else if (isCommunityTileHost(parsed.hostname)) {
-      warnings.push(`${label} uses community tiles (${parsed.hostname}); allowed in ${appEnv} only`);
+      warnings.push(
+        `${label} uses community tiles (${parsed.hostname}); allowed in ${appEnv} only`,
+      );
     } else if (parsed.protocol !== 'https:') {
       warnings.push(`${label} is not https; allowed in ${appEnv} only`);
     }
     if (isRestrictedTileHost(parsed.hostname)) {
-      warnings.push(`${label} uses ${parsed.hostname}, whose free tier restricts commercial production use; confirm the licence`);
+      warnings.push(
+        `${label} uses ${parsed.hostname}, whose free tier restricts commercial production use; confirm the licence`,
+      );
     }
     hosts.add(parsed.hostname.toLowerCase());
     provider ??= detectMapProvider(url);
@@ -188,7 +195,11 @@ export function resolveMapConfig(
     for (const host of PROVIDER_HOSTS[provider]) hosts.add(host);
   }
   for (const entry of (env.MAP_TILE_HOSTS ?? '').split(',')) {
-    const host = entry.trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/.*$/, '');
+    const host = entry
+      .trim()
+      .toLowerCase()
+      .replace(/^https?:\/\//, '')
+      .replace(/\/.*$/, '');
     if (host) hosts.add(host);
   }
 
@@ -198,9 +209,15 @@ export function resolveMapConfig(
       provider && provider !== 'other' && provider !== 'self-hosted'
         ? PROVIDER_ATTRIBUTION[provider]
         : OSM_DATA_ATTRIBUTION;
-    if (provider === 'other') warnings.push('NEXT_PUBLIC_MAP_ATTRIBUTION is not set for an unrecognised provider; only the OpenStreetMap data credit is shown');
+    if (provider === 'other')
+      warnings.push(
+        'NEXT_PUBLIC_MAP_ATTRIBUTION is not set for an unrecognised provider; only the OpenStreetMap data credit is shown',
+      );
   }
-  if (!dark) warnings.push('NEXT_PUBLIC_MAP_STYLE_URL_DARK is not set; the light style is used in dark mode');
+  if (!dark)
+    warnings.push(
+      'NEXT_PUBLIC_MAP_STYLE_URL_DARK is not set; the light style is used in dark mode',
+    );
 
   return {
     configured: true,

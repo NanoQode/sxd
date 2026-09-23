@@ -17,7 +17,13 @@ export const GET = route(async (_req, { correlationId }) => {
 export const POST = route(async (req, { correlationId }) => {
   const identity = await getIdentity();
   if (!identity.session) throw new ApiError('unauthenticated', 'sign in required');
-  await enforceRateLimit(`invitations:${identity.session.user.id}`, { windowSeconds: 3600, max: 20 });
+  await enforceRateLimit(`invitations:${identity.session.user.id}`, {
+    windowSeconds: 3600,
+    max: 20,
+  });
   const body = await parseJson(req, organizationInviteSchema);
-  return json(await inviteMember(identity, body, { correlationId }), { status: 201, correlationId });
+  return json(await inviteMember(identity, body, { correlationId }), {
+    status: 201,
+    correlationId,
+  });
 });

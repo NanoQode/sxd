@@ -79,7 +79,11 @@ const eventFixture: calendar_v3.Schema$Event = {
   end: { dateTime: '2026-11-02T08:30:00Z', timeZone: 'Africa/Lagos' },
   extendedProperties: { private: { simplexdAppointmentId: 'appt-1' } },
   conferenceData: {
-    createRequest: { requestId: 'req-1', conferenceSolutionKey: { type: 'hangoutsMeet' }, status: { statusCode: 'pending' } },
+    createRequest: {
+      requestId: 'req-1',
+      conferenceSolutionKey: { type: 'hangoutsMeet' },
+      status: { statusCode: 'pending' },
+    },
   },
 };
 
@@ -94,10 +98,15 @@ function calendarStub() {
       },
     },
   }));
-  const patch = vi.fn<CalendarApi['events']['patch']>(async () => ({ data: { ...eventFixture, etag: '"etag-2"', sequence: 1 } }));
+  const patch = vi.fn<CalendarApi['events']['patch']>(async () => ({
+    data: { ...eventFixture, etag: '"etag-2"', sequence: 1 },
+  }));
   const del = vi.fn<CalendarApi['events']['delete']>(async () => ({}));
   const list = vi.fn<CalendarApi['events']['list']>(async () => ({
-    data: { items: [eventFixture, { id: 'evt-gone', status: 'cancelled' }], nextSyncToken: 'sync-2' },
+    data: {
+      items: [eventFixture, { id: 'evt-gone', status: 'cancelled' }],
+      nextSyncToken: 'sync-2',
+    },
   }));
   const watch = vi.fn<CalendarApi['events']['watch']>(async () => ({
     data: { id: 'chan-1', resourceId: 'res-1', expiration: '1800000000000' },
@@ -111,7 +120,17 @@ function calendarStub() {
     },
   }));
   const calendarList = vi.fn<CalendarApi['calendarList']['list']>(async () => ({
-    data: { items: [{ id: 'primary', summary: 'Organiser', primary: true, accessRole: 'owner', timeZone: 'Africa/Lagos' }] },
+    data: {
+      items: [
+        {
+          id: 'primary',
+          summary: 'Organiser',
+          primary: true,
+          accessRole: 'owner',
+          timeZone: 'Africa/Lagos',
+        },
+      ],
+    },
   }));
   const stop = vi.fn<CalendarApi['channels']['stop']>(async () => ({}));
   const api: CalendarApi = {
@@ -172,7 +191,11 @@ describe('GoogleCalendarProvider OAuth', () => {
       codeVerifier: 'verifier',
       redirectUri: 'https://app.example.com/cb',
     });
-    expect(oauth.getToken).toHaveBeenCalledWith({ code: '4/code', codeVerifier: 'verifier', redirect_uri: 'https://app.example.com/cb' });
+    expect(oauth.getToken).toHaveBeenCalledWith({
+      code: '4/code',
+      codeVerifier: 'verifier',
+      redirect_uri: 'https://app.example.com/cb',
+    });
     expect(tokens).toEqual({
       accessToken: 'ya29.first',
       refreshToken: '1//refresh-first',
@@ -186,7 +209,11 @@ describe('GoogleCalendarProvider OAuth', () => {
   it('maps invalid_grant on refresh to CalendarAuthError with reconnect instructions', async () => {
     const oauth = oauthStub();
     oauth.refreshAccessToken.mockRejectedValueOnce(
-      gaxiosError(400, { error: 'invalid_grant', error_description: 'Token has been expired or revoked.' }, 'invalid_grant'),
+      gaxiosError(
+        400,
+        { error: 'invalid_grant', error_description: 'Token has been expired or revoked.' },
+        'invalid_grant',
+      ),
     );
     const p = provider(oauth, calendarStub().api);
     const err = await p.refresh(credentials).catch((e: unknown) => e);
@@ -198,7 +225,9 @@ describe('GoogleCalendarProvider OAuth', () => {
     const refreshed = await p.refresh(credentials);
     expect(refreshed.accessToken).toBe('ya29.refreshed');
     expect(refreshed.refreshToken).toBe('1//refresh-stored'); // preserved when Google omits it
-    await expect(p.refresh({ ...credentials, refreshToken: null })).rejects.toBeInstanceOf(CalendarAuthError);
+    await expect(p.refresh({ ...credentials, refreshToken: null })).rejects.toBeInstanceOf(
+      CalendarAuthError,
+    );
   });
 
   it('treats an already-revoked token as revoked', async () => {
@@ -206,7 +235,9 @@ describe('GoogleCalendarProvider OAuth', () => {
     oauth.revokeToken.mockRejectedValueOnce(gaxiosError(400, { error: 'invalid_token' }));
     await expect(provider(oauth, calendarStub().api).revoke('1//gone')).resolves.toBeUndefined();
     oauth.revokeToken.mockRejectedValueOnce(gaxiosError(503));
-    await expect(provider(oauth, calendarStub().api).revoke('1//x')).rejects.toBeInstanceOf(CalendarProviderError);
+    await expect(provider(oauth, calendarStub().api).revoke('1//x')).rejects.toBeInstanceOf(
+      CalendarProviderError,
+    );
   });
 });
 
@@ -228,7 +259,10 @@ describe('GoogleCalendarProvider events', () => {
       privateProps: { simplexdKind: 'consultation' },
       reminders: [{ method: 'email', minutes: 1440 }],
     });
-    expect(oauth.credentials).toMatchObject({ access_token: 'ya29.stored', refresh_token: '1//refresh-stored' });
+    expect(oauth.credentials).toMatchObject({
+      access_token: 'ya29.stored',
+      refresh_token: '1//refresh-stored',
+    });
     const [params, options] = cal.insert.mock.calls[0]!;
     expect(params.calendarId).toBe('primary');
     expect(params.conferenceDataVersion).toBe(1);
@@ -237,16 +271,27 @@ describe('GoogleCalendarProvider events', () => {
       createRequest: { requestId: 'req-1', conferenceSolutionKey: { type: 'hangoutsMeet' } },
     });
     expect(params.requestBody?.id).toBe(deterministicEventId('appt-1', 'req-1'));
-    expect(params.requestBody?.start).toEqual({ dateTime: '2026-11-02T08:00:00.000Z', timeZone: 'Africa/Lagos' });
+    expect(params.requestBody?.start).toEqual({
+      dateTime: '2026-11-02T08:00:00.000Z',
+      timeZone: 'Africa/Lagos',
+    });
     expect(params.requestBody?.attendees).toEqual([
-      { email: 'customer@example.com', displayName: 'Customer', optional: false, responseStatus: 'needsAction' },
+      {
+        email: 'customer@example.com',
+        displayName: 'Customer',
+        optional: false,
+        responseStatus: 'needsAction',
+      },
     ]);
     expect(params.requestBody?.extendedProperties?.private).toMatchObject({
       simplexdAppointmentId: 'appt-1',
       simplexdConferenceRequestId: 'req-1',
       simplexdKind: 'consultation',
     });
-    expect(params.requestBody?.reminders).toEqual({ useDefault: false, overrides: [{ method: 'email', minutes: 1440 }] });
+    expect(params.requestBody?.reminders).toEqual({
+      useDefault: false,
+      overrides: [{ method: 'email', minutes: 1440 }],
+    });
     expect(options?.timeout).toBe(15_000);
     expect(result.conference).toEqual({ status: 'pending', meetUrl: null, requestId: 'req-1' });
     expect(result.eventId).toBe('evt-1');
@@ -255,7 +300,9 @@ describe('GoogleCalendarProvider events', () => {
   it('returns the existing event when a retried insert hits 409', async () => {
     const oauth = oauthStub();
     const cal = calendarStub();
-    cal.insert.mockRejectedValueOnce(gaxiosError(409, { error: { errors: [{ reason: 'duplicate' }] } }));
+    cal.insert.mockRejectedValueOnce(
+      gaxiosError(409, { error: { errors: [{ reason: 'duplicate' }] } }),
+    );
     const result = await provider(oauth, cal.api).createEvent(credentials, {
       calendarId: 'primary',
       appointmentId: 'appt-1',
@@ -271,15 +318,26 @@ describe('GoogleCalendarProvider events', () => {
       { calendarId: 'primary', eventId: deterministicEventId('appt-1', 'req-1') },
       expect.anything(),
     );
-    expect(result.conference).toEqual({ status: 'ready', meetUrl: 'https://meet.google.com/abc-defg-hij', requestId: 'req-1' });
+    expect(result.conference).toEqual({
+      status: 'ready',
+      meetUrl: 'https://meet.google.com/abc-defg-hij',
+      requestId: 'req-1',
+    });
   });
 
   it('polls conference status through getEvent', async () => {
     const cal = calendarStub();
-    const result = await provider(oauthStub(), cal.api).getEvent(credentials, { calendarId: 'primary', eventId: 'evt-1' });
+    const result = await provider(oauthStub(), cal.api).getEvent(credentials, {
+      calendarId: 'primary',
+      eventId: 'evt-1',
+    });
     expect(result.conference.status).toBe('ready');
     expect(result.conference.meetUrl).toBe('https://meet.google.com/abc-defg-hij');
-    expect(parseConference({ conferenceData: { createRequest: { requestId: 'r', status: { statusCode: 'failure' } } } })).toEqual({
+    expect(
+      parseConference({
+        conferenceData: { createRequest: { requestId: 'r', status: { statusCode: 'failure' } } },
+      }),
+    ).toEqual({
       status: 'failed',
       meetUrl: null,
       requestId: 'r',
@@ -294,33 +352,63 @@ describe('GoogleCalendarProvider events', () => {
       calendarId: 'primary',
       eventId: 'evt-1',
       etag: '"etag-1"',
-      patch: { start: '2026-11-02T09:00:00Z', end: '2026-11-02T09:30:00Z', timeZone: 'Africa/Lagos', conferenceRequestId: 'req-2' },
+      patch: {
+        start: '2026-11-02T09:00:00Z',
+        end: '2026-11-02T09:30:00Z',
+        timeZone: 'Africa/Lagos',
+        conferenceRequestId: 'req-2',
+      },
       sendUpdates: 'all',
     });
     const [params, options] = cal.patch.mock.calls[0]!;
     expect(options?.headers).toEqual({ 'If-Match': '"etag-1"' });
     expect(params.conferenceDataVersion).toBe(1);
-    expect(params.requestBody?.start).toEqual({ dateTime: '2026-11-02T09:00:00.000Z', timeZone: 'Africa/Lagos' });
+    expect(params.requestBody?.start).toEqual({
+      dateTime: '2026-11-02T09:00:00.000Z',
+      timeZone: 'Africa/Lagos',
+    });
     expect(params.requestBody?.conferenceData?.createRequest?.requestId).toBe('req-2');
     expect(updated.etag).toBe('"etag-2"');
 
-    cal.patch.mockRejectedValueOnce(gaxiosError(412, { error: { errors: [{ reason: 'conditionNotMet' }] } }));
+    cal.patch.mockRejectedValueOnce(
+      gaxiosError(412, { error: { errors: [{ reason: 'conditionNotMet' }] } }),
+    );
     await expect(
-      p.updateEvent(credentials, { calendarId: 'primary', eventId: 'evt-1', etag: '"stale"', patch: { summary: 'x' }, sendUpdates: 'none' }),
+      p.updateEvent(credentials, {
+        calendarId: 'primary',
+        eventId: 'evt-1',
+        etag: '"stale"',
+        patch: { summary: 'x' },
+        sendUpdates: 'none',
+      }),
     ).rejects.toBeInstanceOf(CalendarConflictError);
   });
 
   it('cancels with If-Match and treats 404/410 as already gone', async () => {
     const cal = calendarStub();
     const p = provider(oauthStub(), cal.api);
-    expect(await p.cancelEvent(credentials, { calendarId: 'primary', eventId: 'evt-1', etag: '"etag-1"', sendUpdates: 'all' })).toEqual({
+    expect(
+      await p.cancelEvent(credentials, {
+        calendarId: 'primary',
+        eventId: 'evt-1',
+        etag: '"etag-1"',
+        sendUpdates: 'all',
+      }),
+    ).toEqual({
       status: 'cancelled',
     });
     const [params, options] = cal.del.mock.calls[0]!;
     expect(params).toEqual({ calendarId: 'primary', eventId: 'evt-1', sendUpdates: 'all' });
     expect(options?.headers).toEqual({ 'If-Match': '"etag-1"' });
     cal.del.mockRejectedValueOnce(gaxiosError(410));
-    expect(await p.cancelEvent(credentials, { calendarId: 'primary', eventId: 'evt-1', etag: null, sendUpdates: 'all' })).toEqual({
+    expect(
+      await p.cancelEvent(credentials, {
+        calendarId: 'primary',
+        eventId: 'evt-1',
+        etag: null,
+        sendUpdates: 'all',
+      }),
+    ).toEqual({
       status: 'already_gone',
     });
   });
@@ -339,7 +427,9 @@ describe('GoogleCalendarProvider events', () => {
       timeZone: 'Africa/Lagos',
       items: [{ id: 'primary' }, { id: 'team@example.com' }],
     });
-    expect(result.busy).toEqual([{ calendarId: 'primary', start: '2026-11-02T10:00:00Z', end: '2026-11-02T10:30:00Z' }]);
+    expect(result.busy).toEqual([
+      { calendarId: 'primary', start: '2026-11-02T10:00:00Z', end: '2026-11-02T10:30:00Z' },
+    ]);
     expect(result.errors).toEqual([{ calendarId: 'team@example.com', reason: 'notFound' }]);
   });
 
@@ -360,9 +450,19 @@ describe('GoogleCalendarProvider events', () => {
       token: 'tok',
       expiration: String(1_700_000_000_000 + 604_800_000),
     });
-    expect(watch).toEqual({ channelId: 'chan-1', resourceId: 'res-1', expiration: new Date(1_800_000_000_000) });
+    expect(watch).toEqual({
+      channelId: 'chan-1',
+      resourceId: 'res-1',
+      expiration: new Date(1_800_000_000_000),
+    });
     await expect(
-      p.watchEvents(credentials, { calendarId: 'primary', channelId: 'c', address: 'http://insecure', token: 't', ttlSeconds: 60 }),
+      p.watchEvents(credentials, {
+        calendarId: 'primary',
+        channelId: 'c',
+        address: 'http://insecure',
+        token: 't',
+        ttlSeconds: 60,
+      }),
     ).rejects.toThrow(/HTTPS/);
     await p.stopChannel(credentials, { channelId: 'chan-1', resourceId: 'res-1' });
     expect(cal.stop.mock.calls[0]![0].requestBody).toEqual({ id: 'chan-1', resourceId: 'res-1' });
@@ -371,9 +471,18 @@ describe('GoogleCalendarProvider events', () => {
   it('lists changes incrementally with showDeleted and maps 410 to a full resync', async () => {
     const cal = calendarStub();
     const p = provider(oauthStub(), cal.api);
-    const changes = await p.listChanges(credentials, { calendarId: 'primary', syncToken: 'sync-1', timeMin: '2026-01-01T00:00:00Z' });
+    const changes = await p.listChanges(credentials, {
+      calendarId: 'primary',
+      syncToken: 'sync-1',
+      timeMin: '2026-01-01T00:00:00Z',
+    });
     const params = cal.list.mock.calls[0]![0];
-    expect(params).toMatchObject({ calendarId: 'primary', syncToken: 'sync-1', showDeleted: true, singleEvents: true });
+    expect(params).toMatchObject({
+      calendarId: 'primary',
+      syncToken: 'sync-1',
+      showDeleted: true,
+      singleEvents: true,
+    });
     expect(params.timeMin).toBeUndefined(); // forbidden together with syncToken
     expect(changes.items.map((i) => [i.id, i.status])).toEqual([
       ['evt-1', 'confirmed'],
@@ -382,9 +491,16 @@ describe('GoogleCalendarProvider events', () => {
     expect(changes.nextSyncToken).toBe('sync-2');
     expect(changes.fullResyncRequired).toBe(false);
 
-    cal.list.mockRejectedValueOnce(gaxiosError(410, { error: { errors: [{ reason: 'fullSyncRequired' }] } }));
+    cal.list.mockRejectedValueOnce(
+      gaxiosError(410, { error: { errors: [{ reason: 'fullSyncRequired' }] } }),
+    );
     const gone = await p.listChanges(credentials, { calendarId: 'primary', syncToken: 'sync-2' });
-    expect(gone).toEqual({ items: [], nextPageToken: null, nextSyncToken: null, fullResyncRequired: true });
+    expect(gone).toEqual({
+      items: [],
+      nextPageToken: null,
+      nextSyncToken: null,
+      fullResyncRequired: true,
+    });
 
     await p.listChanges(credentials, { calendarId: 'primary', timeMin: '2026-01-01T00:00:00Z' });
     expect(cal.list.mock.calls[2]![0].timeMin).toBe('2026-01-01T00:00:00.000Z');
@@ -395,11 +511,17 @@ describe('GoogleCalendarProvider events', () => {
     const cal = calendarStub();
     cal.calendarList.mockImplementationOnce(async () => {
       oauth.emitTokens({ access_token: 'ya29.rotated', expiry_date: 1_800_009_000_000 });
-      return { data: { items: [{ id: 'primary', summary: 'Organiser', primary: true, accessRole: 'owner' }] } };
+      return {
+        data: {
+          items: [{ id: 'primary', summary: 'Organiser', primary: true, accessRole: 'owner' }],
+        },
+      };
     });
     const onRotated = vi.fn();
     const calendars = await provider(oauth, cal.api).listCalendars({ ...credentials, onRotated });
-    expect(calendars).toEqual([{ id: 'primary', summary: 'Organiser', primary: true, accessRole: 'owner', timeZone: null }]);
+    expect(calendars).toEqual([
+      { id: 'primary', summary: 'Organiser', primary: true, accessRole: 'owner', timeZone: null },
+    ]);
     expect(onRotated).toHaveBeenCalledWith({
       accessToken: 'ya29.rotated',
       refreshToken: '1//refresh-stored',
@@ -412,8 +534,14 @@ describe('GoogleCalendarProvider events', () => {
   it('reports connection health with sanitised messages', async () => {
     const cal = calendarStub();
     const p = provider(oauthStub(), cal.api);
-    expect(await p.testConnection(credentials)).toMatchObject({ ok: true, calendarCount: 1, accountEmail: 'organiser@example.com' });
-    cal.calendarList.mockRejectedValueOnce(gaxiosError(401, { error: 'invalid_grant' }, 'invalid_grant ya29.leaked-token Bearer abc'));
+    expect(await p.testConnection(credentials)).toMatchObject({
+      ok: true,
+      calendarCount: 1,
+      accountEmail: 'organiser@example.com',
+    });
+    cal.calendarList.mockRejectedValueOnce(
+      gaxiosError(401, { error: 'invalid_grant' }, 'invalid_grant ya29.leaked-token Bearer abc'),
+    );
     const failed = await p.testConnection(credentials);
     expect(failed.ok).toBe(false);
     expect(failed.reconnectRequired).toBe(true);
@@ -424,16 +552,24 @@ describe('GoogleCalendarProvider events', () => {
 
 describe('mapGoogleError and factory', () => {
   it('classifies provider errors', () => {
-    expect(mapGoogleError(gaxiosError(403, { error: { errors: [{ reason: 'userRateLimitExceeded' }] } }))).toMatchObject({
+    expect(
+      mapGoogleError(
+        gaxiosError(403, { error: { errors: [{ reason: 'userRateLimitExceeded' }] } }),
+      ),
+    ).toMatchObject({
       code: 'rate_limited',
       retryable: true,
     });
-    expect(mapGoogleError(gaxiosError(403, { error: { errors: [{ reason: 'insufficientPermissions' }] } }))).toBeInstanceOf(
-      CalendarAuthError,
-    );
+    expect(
+      mapGoogleError(
+        gaxiosError(403, { error: { errors: [{ reason: 'insufficientPermissions' }] } }),
+      ),
+    ).toBeInstanceOf(CalendarAuthError);
     expect(mapGoogleError(gaxiosError(404))).toMatchObject({ code: 'not_found' });
     expect(mapGoogleError(gaxiosError(503))).toMatchObject({ retryable: true, httpStatus: 503 });
-    expect(mapGoogleError(Object.assign(new Error('socket hang up'), { code: 'ECONNRESET' }))).toMatchObject({
+    expect(
+      mapGoogleError(Object.assign(new Error('socket hang up'), { code: 'ECONNRESET' })),
+    ).toMatchObject({
       code: 'network',
       retryable: true,
     });
@@ -442,14 +578,25 @@ describe('mapGoogleError and factory', () => {
 
   it('selects adapters by configuration and refuses dev outside development/test', () => {
     expect(
-      createCalendarProvider({ appEnv: 'production', clientId: 'id', clientSecret: 'secret', redirectUri: 'https://app.example.com/cb' }).id,
+      createCalendarProvider({
+        appEnv: 'production',
+        clientId: 'id',
+        clientSecret: 'secret',
+        redirectUri: 'https://app.example.com/cb',
+      }).id,
     ).toBe('google');
-    expect(createCalendarProvider({ appEnv: 'test', redirectUri: 'http://localhost:3000/cb' }).id).toBe('dev');
-    expect(() => createCalendarProvider({ appEnv: 'production', redirectUri: 'https://app.example.com/cb' })).toThrow(
-      /not configured/,
-    );
+    expect(
+      createCalendarProvider({ appEnv: 'test', redirectUri: 'http://localhost:3000/cb' }).id,
+    ).toBe('dev');
     expect(() =>
-      createCalendarProvider({ appEnv: 'production', adapter: 'google', redirectUri: 'https://app.example.com/cb' }),
+      createCalendarProvider({ appEnv: 'production', redirectUri: 'https://app.example.com/cb' }),
+    ).toThrow(/not configured/);
+    expect(() =>
+      createCalendarProvider({
+        appEnv: 'production',
+        adapter: 'google',
+        redirectUri: 'https://app.example.com/cb',
+      }),
     ).toThrow(/client ID and secret/);
   });
 });

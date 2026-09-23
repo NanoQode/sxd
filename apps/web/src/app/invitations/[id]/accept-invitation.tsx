@@ -6,7 +6,15 @@ import { useState } from 'react';
 import { Alert, Button, formatDateTimeLabel } from '@simplexd/ui';
 import { authClient } from '@/lib/auth/client';
 
-export function AcceptInvitation({ invitationId, organizationName, expiresAt }: { invitationId: string; organizationName: string; expiresAt: string }) {
+export function AcceptInvitation({
+  invitationId,
+  organizationName,
+  expiresAt,
+}: {
+  invitationId: string;
+  organizationName: string;
+  expiresAt: string;
+}) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [busy, setBusy] = useState<'accept' | 'reject' | null>(null);
@@ -55,14 +63,27 @@ export function AcceptInvitation({ invitationId, organizationName, expiresAt }: 
         </Alert>
       ) : null}
       <p className="text-sm text-fg-muted">
-        Accepting makes {organizationName} your active organisation. You can switch organisations from the portal header at any time. Expires{' '}
-        {formatDateTimeLabel(expiresAt)}.
+        Accepting makes {organizationName} your active organisation. You can switch organisations
+        from the portal header at any time. Expires {formatDateTimeLabel(expiresAt)}.
       </p>
       <div className="flex flex-col gap-2 sm:flex-row">
-        <Button className="flex-1" onClick={() => void accept()} loading={busy === 'accept'} loadingLabel="Joining" disabled={busy === 'reject'}>
+        <Button
+          className="flex-1"
+          onClick={() => void accept()}
+          loading={busy === 'accept'}
+          loadingLabel="Joining"
+          disabled={busy === 'reject'}
+        >
           Accept and join
         </Button>
-        <Button variant="secondary" className="flex-1" onClick={() => void reject()} loading={busy === 'reject'} loadingLabel="Declining" disabled={busy === 'accept'}>
+        <Button
+          variant="secondary"
+          className="flex-1"
+          onClick={() => void reject()}
+          loading={busy === 'reject'}
+          loadingLabel="Declining"
+          disabled={busy === 'accept'}
+        >
           Decline
         </Button>
       </div>

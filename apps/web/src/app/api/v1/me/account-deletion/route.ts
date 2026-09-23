@@ -14,8 +14,14 @@ export const dynamic = 'force-dynamic';
 export const POST = route(async (req, { correlationId }) => {
   const identity = await getIdentity();
   if (!identity.session) throw new ApiError('unauthenticated', 'sign in required');
-  await enforceRateLimit(`account-deletion:${identity.session.user.id}`, { windowSeconds: 3600, max: 5 });
+  await enforceRateLimit(`account-deletion:${identity.session.user.id}`, {
+    windowSeconds: 3600,
+    max: 5,
+  });
   const body = await parseJson(req, accountDeletionRequestSchema);
-  const result = await requestAccountDeletion(identity, body, { correlationId, ipHash: hashIp(clientIp(req)) });
+  const result = await requestAccountDeletion(identity, body, {
+    correlationId,
+    ipHash: hashIp(clientIp(req)),
+  });
   return json(result, { status: result.alreadyRequested ? 200 : 201, correlationId });
 });

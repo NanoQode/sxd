@@ -413,14 +413,19 @@ export type RedirectDto = z.infer<typeof redirectDtoSchema>;
 export const redirectPatchSchema = z
   .object({
     active: z.boolean().optional(),
-    toPath: z.string().regex(/^\/[^\s]*$|^https:\/\/[^\s]+$/, 'relative path or https URL').optional(),
+    toPath: z
+      .string()
+      .regex(/^\/[^\s]*$|^https:\/\/[^\s]+$/, 'relative path or https URL')
+      .optional(),
     statusCode: z.union([z.literal(301), z.literal(302), z.literal(308)]).optional(),
     note: z.string().max(200).nullable().optional(),
   })
   .refine((v) => Object.keys(v).length > 0, 'nothing to update');
 
 /** Structured field shapes per content kind, used by the editor's fields panel. */
-export const CONTENT_FIELD_TEMPLATES: Partial<Record<z.infer<typeof contentKindSchema>, Record<string, unknown>>> = {
+export const CONTENT_FIELD_TEMPLATES: Partial<
+  Record<z.infer<typeof contentKindSchema>, Record<string, unknown>>
+> = {
   faq: { question: '', answer: '' },
   service: { overrides: { shortDescription: '', deliverables: [] } },
   contact: { email: null, phone: null, address: null, note: '' },

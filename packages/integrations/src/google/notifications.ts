@@ -31,8 +31,7 @@ export interface PushNotification {
 }
 
 export type HeaderSource =
-  | { get(name: string): string | null | undefined }
-  | Record<string, string | string[] | undefined>;
+  { get(name: string): string | null | undefined } | Record<string, string | string[] | undefined>;
 
 function readHeader(headers: HeaderSource, name: string): string | null {
   if (typeof (headers as { get?: unknown }).get === 'function') {
@@ -50,8 +49,7 @@ function readHeader(headers: HeaderSource, name: string): string | null {
 }
 
 export type ParsePushResult =
-  | { ok: true; notification: PushNotification }
-  | { ok: false; reason: string };
+  { ok: true; notification: PushNotification } | { ok: false; reason: string };
 
 /** Parses the notification headers. Does not validate the token (see verifyChannelToken). */
 export function parsePushNotification(headers: HeaderSource): ParsePushResult {
@@ -102,7 +100,9 @@ export function verifyChannelToken(
 export type PushAction = 'acknowledge' | 'fetch_changes';
 
 /** `sync` only confirms the channel; `exists`/`not_exists` mean "something changed, go and fetch". */
-export function pushNotificationAction(notification: Pick<PushNotification, 'resourceState'>): PushAction {
+export function pushNotificationAction(
+  notification: Pick<PushNotification, 'resourceState'>,
+): PushAction {
   return notification.resourceState === 'sync' ? 'acknowledge' : 'fetch_changes';
 }
 
@@ -133,7 +133,8 @@ export async function validatePushNotification(
   lookupTokenHash: (channelId: string) => Promise<string | null> | string | null,
 ): Promise<ValidatedPush> {
   const parsed = parsePushNotification(headers);
-  if (!parsed.ok) return { ok: false, reason: parsed.reason, respondWithStatus: 400, channelId: null };
+  if (!parsed.ok)
+    return { ok: false, reason: parsed.reason, respondWithStatus: 400, channelId: null };
   const { notification } = parsed;
   const storedHash = await lookupTokenHash(notification.channelId);
   if (!storedHash)

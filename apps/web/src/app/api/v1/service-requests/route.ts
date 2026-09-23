@@ -20,7 +20,10 @@ export const GET = route(async (req, { correlationId }) => {
 export const POST = route(async (req, { correlationId }) => {
   const identity = await getIdentity();
   if (!identity.session) throw new ApiError('unauthenticated', 'sign in required');
-  await enforceRateLimit(`service-requests:create:${identity.session.user.id}`, { windowSeconds: 3600, max: 20 });
+  await enforceRateLimit(`service-requests:create:${identity.session.user.id}`, {
+    windowSeconds: 3600,
+    max: 20,
+  });
   const body = await parseJson(req, serviceRequestCreateSchema);
   const created = await createServiceRequest(body, identity, { correlationId });
   return json(created, { status: 201, correlationId });

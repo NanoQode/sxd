@@ -25,9 +25,9 @@ export interface TaskParent {
 export async function resolveTaskParent(
   tx: DbExecutor,
   refs: {
-    serviceRequestId: string | null | undefined;
-    projectId: string | null | undefined;
-    assignmentId: string | null | undefined;
+    serviceRequestId?: string | null;
+    projectId?: string | null;
+    assignmentId?: string | null;
   },
 ): Promise<TaskParent | null> {
   let assignment: AssignmentRow | null = null;

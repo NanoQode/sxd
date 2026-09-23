@@ -12,7 +12,8 @@ export interface StorageFactoryInput {
 
 export function createStorageProvider(input: StorageFactoryInput): StorageProvider {
   if (input.provider === 'local-dev') {
-    if (!input.localDev) throw new StorageError('local-dev storage options are missing', 'not_configured');
+    if (!input.localDev)
+      throw new StorageError('local-dev storage options are missing', 'not_configured');
     return new LocalDevStorageProvider({
       appEnv: input.appEnv,
       ...input.localDev,

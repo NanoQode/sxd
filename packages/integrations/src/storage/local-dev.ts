@@ -62,7 +62,18 @@ export interface LocalDevStorageOptions {
 
 export const DEV_STORAGE_ROUTE_PREFIX = '/api/v1/dev/storage';
 const BUCKETS: readonly StorageBucket[] = ['private', 'quarantine', 'derivatives'];
-const SIGNED_FIELDS = ['op', 'bucket', 'key', 'exp', 'type', 'size', 'name', 'disposition', 'uploadId', 'partNumber'] as const;
+const SIGNED_FIELDS = [
+  'op',
+  'bucket',
+  'key',
+  'exp',
+  'type',
+  'size',
+  'name',
+  'disposition',
+  'uploadId',
+  'partNumber',
+] as const;
 
 function canonical(params: URLSearchParams): string {
   return SIGNED_FIELDS.map((field) => `${field}=${params.get(field) ?? ''}`).join('&');
@@ -93,7 +104,8 @@ export function signDevStorageUrl(appUrl: string, secret: string, input: DevSign
   params.set('key', input.key);
   params.set('exp', String(Math.floor(input.expiresAt.getTime() / 1000)));
   if (input.contentType) params.set('type', input.contentType);
-  if (input.sizeBytes !== undefined && input.sizeBytes !== null) params.set('size', String(input.sizeBytes));
+  if (input.sizeBytes !== undefined && input.sizeBytes !== null)
+    params.set('size', String(input.sizeBytes));
   if (input.fileName) params.set('name', input.fileName);
   if (input.disposition) params.set('disposition', input.disposition);
   if (input.uploadId) params.set('uploadId', input.uploadId);
@@ -122,8 +134,10 @@ export function verifyDevStorageUrl(
   const bucket = params.get('bucket');
   const key = params.get('key') ?? '';
   const exp = Number(params.get('exp'));
-  if (op !== 'upload' && op !== 'part' && op !== 'download') return { ok: false, reason: 'unknown op' };
-  if (!bucket || !BUCKETS.includes(bucket as StorageBucket)) return { ok: false, reason: 'unknown bucket' };
+  if (op !== 'upload' && op !== 'part' && op !== 'download')
+    return { ok: false, reason: 'unknown op' };
+  if (!bucket || !BUCKETS.includes(bucket as StorageBucket))
+    return { ok: false, reason: 'unknown bucket' };
   if (!Number.isFinite(exp)) return { ok: false, reason: 'malformed expiry' };
   if (exp * 1000 < now.getTime()) return { ok: false, reason: 'expired' };
   const pathOp = parsed.pathname.split('/').pop();
@@ -171,7 +185,10 @@ export class LocalDevStorageProvider implements StorageProvider {
       );
     }
     if (!options.signingSecret || options.signingSecret.length < 16)
-      throw new StorageError('local-dev storage needs a signing secret of at least 16 characters', 'not_configured');
+      throw new StorageError(
+        'local-dev storage needs a signing secret of at least 16 characters',
+        'not_configured',
+      );
     this.options = options;
     this.root = path.resolve(options.root ?? './uploads-dev');
     this.ttl = clampExpiry(options.signedUrlTtlSeconds, DEFAULT_SIGNED_URL_SECONDS);
@@ -183,9 +200,11 @@ export class LocalDevStorageProvider implements StorageProvider {
 
   private objectPath(location: ObjectLocation): string {
     assertValidStorageKey(location.key);
-    if (!BUCKETS.includes(location.bucket)) throw new StorageError('unknown bucket', 'invalid_request');
+    if (!BUCKETS.includes(location.bucket))
+      throw new StorageError('unknown bucket', 'invalid_request');
     const full = path.resolve(this.root, location.bucket, location.key);
-    if (!full.startsWith(`${this.root}${path.sep}`)) throw new StorageError('key escapes the storage root', 'invalid_key');
+    if (!full.startsWith(`${this.root}${path.sep}`))
+      throw new StorageError('key escapes the storage root', 'invalid_key');
     return full;
   }
 
@@ -194,7 +213,8 @@ export class LocalDevStorageProvider implements StorageProvider {
   }
 
   private partDir(uploadId: string): string {
-    if (!/^[a-f0-9-]{36}$/.test(uploadId)) throw new StorageError('invalid upload id', 'invalid_request');
+    if (!/^[a-f0-9-]{36}$/.test(uploadId))
+      throw new StorageError('invalid upload id', 'invalid_request');
     return path.resolve(this.root, '.multipart', uploadId);
   }
 
@@ -243,10 +263,16 @@ export class LocalDevStorageProvider implements StorageProvider {
     }
     const partCount = input.partCount ?? 0;
     if (!Number.isInteger(partCount) || partCount < 1 || partCount > MULTIPART_MAX_PARTS)
-      throw new StorageError(`partCount must be between 1 and ${MULTIPART_MAX_PARTS}`, 'invalid_request');
+      throw new StorageError(
+        `partCount must be between 1 and ${MULTIPART_MAX_PARTS}`,
+        'invalid_request',
+      );
     const uploadId = randomUUID();
     await mkdir(this.partDir(uploadId), { recursive: true });
-    await writeFile(path.join(this.partDir(uploadId), 'meta.json'), JSON.stringify({ bucket, key: input.key, contentType: input.contentType }));
+    await writeFile(
+      path.join(this.partDir(uploadId), 'meta.json'),
+      JSON.stringify({ bucket, key: input.key, contentType: input.contentType }),
+    );
     const partUrls = [];
     for (let partNumber = 1; partNumber <= partCount; partNumber += 1) {
       partUrls.push({
@@ -259,7 +285,15 @@ export class LocalDevStorageProvider implements StorageProvider {
         }),
       });
     }
-    return { kind: 'multipart', bucket, key: input.key, method: 'PUT', uploadId, partUrls, expiresAt };
+    return {
+      kind: 'multipart',
+      bucket,
+      key: input.key,
+      method: 'PUT',
+      uploadId,
+      partUrls,
+      expiresAt,
+    };
   }
 
   /** Dev route handler for `upload`: streams the body to disk, enforcing the signed size. */
@@ -267,7 +301,8 @@ export class LocalDevStorageProvider implements StorageProvider {
     params: DevSignedParams,
     body: Readable | Buffer | Uint8Array,
   ): Promise<{ sizeBytes: number; etag: string }> {
-    if (params.op !== 'upload') throw new StorageError('signed URL is not an upload URL', 'invalid_request');
+    if (params.op !== 'upload')
+      throw new StorageError('signed URL is not an upload URL', 'invalid_request');
     const target = this.objectPath({ bucket: params.bucket, key: params.key });
     await mkdir(path.dirname(target), { recursive: true });
     const tmp = `${target}.uploading-${randomUUID()}`;
@@ -279,7 +314,8 @@ export class LocalDevStorageProvider implements StorageProvider {
     });
     const pump = (async () => {
       for await (const chunk of source) {
-        const buf = typeof chunk === 'string' ? Buffer.from(chunk) : Buffer.from(chunk as Uint8Array);
+        const buf =
+          typeof chunk === 'string' ? Buffer.from(chunk) : Buffer.from(chunk as Uint8Array);
         size += buf.length;
         hash.update(buf);
         counted.push(buf);
@@ -289,15 +325,24 @@ export class LocalDevStorageProvider implements StorageProvider {
     await Promise.all([pipeline(counted, createWriteStream(tmp)), pump]);
     if (params.sizeBytes !== null && size !== params.sizeBytes) {
       await rm(tmp, { force: true });
-      throw new StorageError(`upload size ${size} does not match the signed size ${params.sizeBytes}`, 'invalid_request');
+      throw new StorageError(
+        `upload size ${size} does not match the signed size ${params.sizeBytes}`,
+        'invalid_request',
+      );
     }
     await rename(tmp, target);
-    await this.writeMeta({ bucket: params.bucket, key: params.key }, { contentType: params.contentType ?? 'application/octet-stream' });
+    await this.writeMeta(
+      { bucket: params.bucket, key: params.key },
+      { contentType: params.contentType ?? 'application/octet-stream' },
+    );
     return { sizeBytes: size, etag: `"${hash.digest('hex')}"` };
   }
 
   /** Dev route handler for `part`: stores one multipart part and returns its ETag. */
-  async writeUploadedPart(params: DevSignedParams, body: Readable | Buffer | Uint8Array): Promise<{ etag: string }> {
+  async writeUploadedPart(
+    params: DevSignedParams,
+    body: Readable | Buffer | Uint8Array,
+  ): Promise<{ etag: string }> {
     if (params.op !== 'part' || !params.uploadId || !params.partNumber)
       throw new StorageError('signed URL is not a part URL', 'invalid_request');
     const dir = this.partDir(params.uploadId);
@@ -314,10 +359,13 @@ export class LocalDevStorageProvider implements StorageProvider {
   async completeMultipart(input: CompleteMultipartInput): Promise<{ etag: string | null }> {
     assertValidStorageKey(input.key);
     const dir = this.partDir(input.uploadId);
-    const meta = JSON.parse(await readFile(path.join(dir, 'meta.json'), 'utf8').catch(() => {
-      throw new StorageError('unknown or aborted multipart upload', 'not_found');
-    })) as { bucket: StorageBucket; key: string; contentType: string };
-    if (meta.key !== input.key) throw new StorageError('upload id does not belong to this key', 'invalid_request');
+    const meta = JSON.parse(
+      await readFile(path.join(dir, 'meta.json'), 'utf8').catch(() => {
+        throw new StorageError('unknown or aborted multipart upload', 'not_found');
+      }),
+    ) as { bucket: StorageBucket; key: string; contentType: string };
+    if (meta.key !== input.key)
+      throw new StorageError('upload id does not belong to this key', 'invalid_request');
     const parts = [...input.parts].sort((a, b) => a.partNumber - b.partNumber);
     const location = { bucket: input.bucket ?? meta.bucket, key: input.key };
     const target = this.objectPath(location);
@@ -327,13 +375,20 @@ export class LocalDevStorageProvider implements StorageProvider {
     const failed = new Promise<never>((_resolve, reject) => out.once('error', reject));
     try {
       for (const part of parts) {
-        const stored = await readFile(path.join(dir, `${part.partNumber}.etag`), 'utf8').catch(() => null);
-        if (stored === null) throw new StorageError(`part ${part.partNumber} was not uploaded`, 'invalid_request');
-        if (stored !== part.etag) throw new StorageError(`part ${part.partNumber} etag mismatch`, 'invalid_request');
+        const stored = await readFile(path.join(dir, `${part.partNumber}.etag`), 'utf8').catch(
+          () => null,
+        );
+        if (stored === null)
+          throw new StorageError(`part ${part.partNumber} was not uploaded`, 'invalid_request');
+        if (stored !== part.etag)
+          throw new StorageError(`part ${part.partNumber} etag mismatch`, 'invalid_request');
         const data = await readFile(path.join(dir, `${part.partNumber}.part`));
         hash.update(data);
         if (!out.write(data))
-          await Promise.race([new Promise<void>((resolve) => out.once('drain', () => resolve())), failed]);
+          await Promise.race([
+            new Promise<void>((resolve) => out.once('drain', () => resolve())),
+            failed,
+          ]);
       }
       await Promise.race([new Promise<void>((resolve) => out.end(() => resolve())), failed]);
     } catch (err) {
@@ -355,8 +410,15 @@ export class LocalDevStorageProvider implements StorageProvider {
     try {
       const info = await stat(file);
       const meta = await this.readMeta(location);
-      const etag = `"${createHash('sha256').update(await readFile(file)).digest('hex')}"`;
-      return { sizeBytes: info.size, contentType: meta?.contentType ?? null, etag, lastModified: info.mtime };
+      const etag = `"${createHash('sha256')
+        .update(await readFile(file))
+        .digest('hex')}"`;
+      return {
+        sizeBytes: info.size,
+        contentType: meta?.contentType ?? null,
+        etag,
+        lastModified: info.mtime,
+      };
     } catch (err) {
       if ((err as { code?: string }).code === 'ENOENT') return null;
       throw err;
@@ -429,10 +491,16 @@ export class LocalDevStorageProvider implements StorageProvider {
 
   /** Headers the dev download route must send (nosniff + the signed disposition). */
   downloadHeaders(params: DevSignedParams): Record<string, string> {
-    const resolved = resolveContentDisposition(params.contentType ?? 'application/octet-stream', params.disposition ?? 'attachment');
+    const resolved = resolveContentDisposition(
+      params.contentType ?? 'application/octet-stream',
+      params.disposition ?? 'attachment',
+    );
     return {
       'Content-Type': resolved.contentType,
-      'Content-Disposition': contentDispositionHeader(resolved.disposition, params.fileName ?? 'download'),
+      'Content-Disposition': contentDispositionHeader(
+        resolved.disposition,
+        params.fileName ?? 'download',
+      ),
       'X-Content-Type-Options': 'nosniff',
       'Cache-Control': 'private, no-store',
       'Content-Security-Policy': "default-src 'none'; sandbox",
@@ -448,7 +516,8 @@ export class LocalDevStorageProvider implements StorageProvider {
       for (const entry of entries) {
         const full = path.join(current, entry.name);
         if (entry.isDirectory()) await walk(full);
-        else if (!entry.name.includes('.uploading-')) out.push(path.relative(dir, full).split(path.sep).join('/'));
+        else if (!entry.name.includes('.uploading-'))
+          out.push(path.relative(dir, full).split(path.sep).join('/'));
       }
     };
     await walk(dir);
@@ -458,6 +527,7 @@ export class LocalDevStorageProvider implements StorageProvider {
 
 async function collect(stream: Readable): Promise<Buffer[]> {
   const chunks: Buffer[] = [];
-  for await (const chunk of stream) chunks.push(typeof chunk === 'string' ? Buffer.from(chunk) : Buffer.from(chunk as Uint8Array));
+  for await (const chunk of stream)
+    chunks.push(typeof chunk === 'string' ? Buffer.from(chunk) : Buffer.from(chunk as Uint8Array));
   return chunks;
 }

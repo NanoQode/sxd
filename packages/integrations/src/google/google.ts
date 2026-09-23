@@ -122,7 +122,10 @@ export interface CalendarApi {
       params: calendar_v3.Params$Resource$Events$Patch,
       options?: RequestOptions,
     ): Promise<{ data: calendar_v3.Schema$Event }>;
-    delete(params: calendar_v3.Params$Resource$Events$Delete, options?: RequestOptions): Promise<unknown>;
+    delete(
+      params: calendar_v3.Params$Resource$Events$Delete,
+      options?: RequestOptions,
+    ): Promise<unknown>;
     list(
       params: calendar_v3.Params$Resource$Events$List,
       options?: RequestOptions,
@@ -133,7 +136,10 @@ export interface CalendarApi {
     ): Promise<{ data: calendar_v3.Schema$Channel }>;
   };
   channels: {
-    stop(params: calendar_v3.Params$Resource$Channels$Stop, options?: RequestOptions): Promise<unknown>;
+    stop(
+      params: calendar_v3.Params$Resource$Channels$Stop,
+      options?: RequestOptions,
+    ): Promise<unknown>;
   };
 }
 
@@ -186,9 +192,7 @@ export function mapGoogleError(err: unknown): CalendarProviderError {
   const message = typeof e.message === 'string' ? e.message : 'Google Calendar request failed';
   const status = extractHttpStatus(err);
   const data = (e.response?.data ?? null) as
-    | { error?: unknown; error_description?: unknown }
-    | string
-    | null;
+    { error?: unknown; error_description?: unknown } | string | null;
   const body = typeof data === 'object' && data !== null ? data : null;
   const oauthError = typeof body?.error === 'string' ? body.error : null;
   const description = typeof body?.error_description === 'string' ? body.error_description : '';
@@ -199,10 +203,13 @@ export function mapGoogleError(err: unknown): CalendarProviderError {
   const reason = apiError?.errors?.[0]?.reason ?? apiError?.status ?? null;
 
   if (oauthError === 'invalid_grant' || /invalid_grant/i.test(message)) {
-    return new CalendarAuthError(`Google rejected the stored grant (invalid_grant) ${description}`, {
-      httpStatus: status,
-      providerReason: 'invalid_grant',
-    });
+    return new CalendarAuthError(
+      `Google rejected the stored grant (invalid_grant) ${description}`,
+      {
+        httpStatus: status,
+        providerReason: 'invalid_grant',
+      },
+    );
   }
   if (oauthError === 'invalid_client' || oauthError === 'unauthorized_client') {
     return new CalendarAuthError(
@@ -330,9 +337,10 @@ export function deterministicEventId(appointmentId: string, conferenceRequestId:
 
 function toRfc3339(value: string): string {
   const d = new Date(value);
-  if (Number.isNaN(d.getTime())) throw new CalendarProviderError(`invalid date/time: ${value}`, {
-    code: 'invalid_request',
-  });
+  if (Number.isNaN(d.getTime()))
+    throw new CalendarProviderError(`invalid date/time: ${value}`, {
+      code: 'invalid_request',
+    });
   return d.toISOString();
 }
 
@@ -401,10 +409,14 @@ function remindersBody(
   reminders: CreateEventInput['reminders'],
 ): calendar_v3.Schema$Event['reminders'] {
   if (!reminders) return { useDefault: true };
-  if (reminders.length > 5) throw new CalendarProviderError('at most 5 reminder overrides', {
-    code: 'invalid_request',
-  });
-  return { useDefault: false, overrides: reminders.map((r) => ({ method: r.method, minutes: r.minutes })) };
+  if (reminders.length > 5)
+    throw new CalendarProviderError('at most 5 reminder overrides', {
+      code: 'invalid_request',
+    });
+  return {
+    useDefault: false,
+    overrides: reminders.map((r) => ({ method: r.method, minutes: r.minutes })),
+  };
 }
 
 function conferenceCreateRequest(requestId: string): calendar_v3.Schema$ConferenceData {
@@ -418,7 +430,8 @@ function patchBody(patch: EventPatch, appointmentId: string | null): calendar_v3
   if (patch.location !== undefined) body.location = patch.location;
   if (patch.start !== undefined)
     body.start = { dateTime: toRfc3339(patch.start), timeZone: patch.timeZone };
-  if (patch.end !== undefined) body.end = { dateTime: toRfc3339(patch.end), timeZone: patch.timeZone };
+  if (patch.end !== undefined)
+    body.end = { dateTime: toRfc3339(patch.end), timeZone: patch.timeZone };
   if (patch.attendees !== undefined) body.attendees = attendeesBody(patch.attendees);
   if (patch.reminders !== undefined) body.reminders = remindersBody(patch.reminders);
   if (patch.privateProps !== undefined) {
@@ -476,7 +489,9 @@ export class GoogleCalendarProvider implements CalendarProvider {
   }
 
   private requestOptions(extraHeaders?: Record<string, string>): RequestOptions {
-    return extraHeaders ? { timeout: this.timeoutMs, headers: extraHeaders } : { timeout: this.timeoutMs };
+    return extraHeaders
+      ? { timeout: this.timeoutMs, headers: extraHeaders }
+      : { timeout: this.timeoutMs };
   }
 
   /**
@@ -520,9 +535,10 @@ export class GoogleCalendarProvider implements CalendarProvider {
   }
 
   buildAuthorizationUrl(input: AuthorizationUrlInput): string {
-    if (input.scopes.length === 0) throw new CalendarProviderError('at least one scope is required', {
-      code: 'invalid_request',
-    });
+    if (input.scopes.length === 0)
+      throw new CalendarProviderError('at least one scope is required', {
+        code: 'invalid_request',
+      });
     const oauth = this.newOAuthClient();
     return oauth.generateAuthUrl({
       access_type: 'offline',
@@ -642,14 +658,18 @@ export class GoogleCalendarProvider implements CalendarProvider {
     });
   }
 
-  async createEvent(credentials: CalendarCredentials, input: CreateEventInput): Promise<EventResult> {
+  async createEvent(
+    credentials: CalendarCredentials,
+    input: CreateEventInput,
+  ): Promise<EventResult> {
     if (!input.appointmentId || !input.conferenceRequestId) {
       throw new CalendarProviderError('appointmentId and conferenceRequestId are required', {
         code: 'invalid_request',
       });
     }
     const wantConference = input.conference ?? true;
-    const eventId = input.eventId ?? deterministicEventId(input.appointmentId, input.conferenceRequestId);
+    const eventId =
+      input.eventId ?? deterministicEventId(input.appointmentId, input.conferenceRequestId);
     const requestBody: calendar_v3.Schema$Event = {
       id: eventId,
       summary: input.summary,
@@ -669,7 +689,8 @@ export class GoogleCalendarProvider implements CalendarProvider {
         },
       },
     };
-    if (wantConference) requestBody.conferenceData = conferenceCreateRequest(input.conferenceRequestId);
+    if (wantConference)
+      requestBody.conferenceData = conferenceCreateRequest(input.conferenceRequestId);
 
     return this.withClient(credentials, async (api) => {
       try {
@@ -710,7 +731,10 @@ export class GoogleCalendarProvider implements CalendarProvider {
     });
   }
 
-  async updateEvent(credentials: CalendarCredentials, input: UpdateEventInput): Promise<EventResult> {
+  async updateEvent(
+    credentials: CalendarCredentials,
+    input: UpdateEventInput,
+  ): Promise<EventResult> {
     return this.withClient(credentials, async (api) => {
       const { data } = await api.events.patch(
         {
@@ -745,11 +769,17 @@ export class GoogleCalendarProvider implements CalendarProvider {
     });
   }
 
-  async watchEvents(credentials: CalendarCredentials, input: WatchEventsInput): Promise<WatchResult> {
+  async watchEvents(
+    credentials: CalendarCredentials,
+    input: WatchEventsInput,
+  ): Promise<WatchResult> {
     if (!/^https:\/\//.test(input.address)) {
-      throw new CalendarProviderError('push notification address must be HTTPS on a verified domain', {
-        code: 'invalid_request',
-      });
+      throw new CalendarProviderError(
+        'push notification address must be HTTPS on a verified domain',
+        {
+          code: 'invalid_request',
+        },
+      );
     }
     const now = (this.options.now ?? (() => new Date()))();
     const expiration = now.getTime() + Math.max(60, input.ttlSeconds) * 1000;

@@ -7,7 +7,12 @@ import {
   type ComputeSlotsInput,
 } from './availability';
 
-const lagosHours = { timeZone: 'Africa/Lagos', days: [1, 2, 3, 4, 5], start: '09:00', end: '17:00' };
+const lagosHours = {
+  timeZone: 'Africa/Lagos',
+  days: [1, 2, 3, 4, 5],
+  start: '09:00',
+  end: '17:00',
+};
 const torontoHours = { ...lagosHours, timeZone: 'America/Toronto' };
 
 const base: ComputeSlotsInput = {
@@ -27,8 +32,14 @@ describe('computeSlots', () => {
     const slots = computeSlots(base);
     const friday = slots.filter((s) => s.start.startsWith('2026-10-30'));
     expect(friday).toHaveLength(16);
-    expect(friday[0]).toEqual({ start: '2026-10-30T08:00:00.000Z', end: '2026-10-30T08:30:00.000Z' });
-    expect(friday.at(-1)).toEqual({ start: '2026-10-30T15:30:00.000Z', end: '2026-10-30T16:00:00.000Z' });
+    expect(friday[0]).toEqual({
+      start: '2026-10-30T08:00:00.000Z',
+      end: '2026-10-30T08:30:00.000Z',
+    });
+    expect(friday.at(-1)).toEqual({
+      start: '2026-10-30T15:30:00.000Z',
+      end: '2026-10-30T16:00:00.000Z',
+    });
     expect(slots.some((s) => s.start.startsWith('2026-10-31'))).toBe(false); // Saturday
     expect(slots.some((s) => s.start.startsWith('2026-11-01'))).toBe(false); // Sunday
     expect(slots.filter((s) => s.start.startsWith('2026-11-02'))).toHaveLength(16);
@@ -87,14 +98,22 @@ describe('computeSlots', () => {
     });
     const friday = slots.find((s) => s.start.startsWith('2026-03-06'))!;
     const monday = slots.find((s) => s.start.startsWith('2026-03-09'))!;
-    expect(dualZoneLabel(friday.start, 'Africa/Lagos', 'America/Toronto').customer).toContain('03:00 EST');
-    expect(dualZoneLabel(monday.start, 'Africa/Lagos', 'America/Toronto').customer).toContain('04:00 EDT');
+    expect(dualZoneLabel(friday.start, 'Africa/Lagos', 'America/Toronto').customer).toContain(
+      '03:00 EST',
+    );
+    expect(dualZoneLabel(monday.start, 'Africa/Lagos', 'America/Toronto').customer).toContain(
+      '04:00 EDT',
+    );
   });
 
   it('shifts UTC instants when the business itself observes DST', () => {
     const autumn = computeSlots({ ...base, workingHours: torontoHours });
-    expect(autumn.find((s) => s.start.startsWith('2026-10-30'))?.start).toBe('2026-10-30T13:00:00.000Z');
-    expect(autumn.find((s) => s.start.startsWith('2026-11-02'))?.start).toBe('2026-11-02T14:00:00.000Z');
+    expect(autumn.find((s) => s.start.startsWith('2026-10-30'))?.start).toBe(
+      '2026-10-30T13:00:00.000Z',
+    );
+    expect(autumn.find((s) => s.start.startsWith('2026-11-02'))?.start).toBe(
+      '2026-11-02T14:00:00.000Z',
+    );
     const spring = computeSlots({
       ...base,
       workingHours: torontoHours,
@@ -102,15 +121,28 @@ describe('computeSlots', () => {
       to: '2026-03-10T00:00:00Z',
       now: '2026-03-05T12:00:00Z',
     });
-    expect(spring.find((s) => s.start.startsWith('2026-03-06'))?.start).toBe('2026-03-06T14:00:00.000Z');
-    expect(spring.find((s) => s.start.startsWith('2026-03-09'))?.start).toBe('2026-03-09T13:00:00.000Z');
+    expect(spring.find((s) => s.start.startsWith('2026-03-06'))?.start).toBe(
+      '2026-03-06T14:00:00.000Z',
+    );
+    expect(spring.find((s) => s.start.startsWith('2026-03-09'))?.start).toBe(
+      '2026-03-09T13:00:00.000Z',
+    );
   });
 
   it('rechecks a proposed slot before confirmation', () => {
-    const input = { ...base, busy: [{ start: '2026-10-30T10:00:00Z', end: '2026-10-30T10:30:00Z' }] };
-    expect(isSlotAvailable({ start: '2026-10-30T08:00:00Z', end: '2026-10-30T08:30:00Z' }, input)).toBe(true);
-    expect(isSlotAvailable({ start: '2026-10-30T10:00:00Z', end: '2026-10-30T10:30:00Z' }, input)).toBe(false);
-    expect(isSlotAvailable({ start: '2026-10-30T07:30:00Z', end: '2026-10-30T08:00:00Z' }, input)).toBe(false);
+    const input = {
+      ...base,
+      busy: [{ start: '2026-10-30T10:00:00Z', end: '2026-10-30T10:30:00Z' }],
+    };
+    expect(
+      isSlotAvailable({ start: '2026-10-30T08:00:00Z', end: '2026-10-30T08:30:00Z' }, input),
+    ).toBe(true);
+    expect(
+      isSlotAvailable({ start: '2026-10-30T10:00:00Z', end: '2026-10-30T10:30:00Z' }, input),
+    ).toBe(false);
+    expect(
+      isSlotAvailable({ start: '2026-10-30T07:30:00Z', end: '2026-10-30T08:00:00Z' }, input),
+    ).toBe(false);
   });
 
   it('labels dates that differ between zones and groups by local date', () => {
@@ -127,13 +159,13 @@ describe('computeSlots', () => {
   });
 
   it('validates inputs', () => {
-    expect(() => computeSlots({ ...base, workingHours: { ...lagosHours, timeZone: 'Mars/Olympus' } })).toThrow(
-      /unknown time zone/,
-    );
+    expect(() =>
+      computeSlots({ ...base, workingHours: { ...lagosHours, timeZone: 'Mars/Olympus' } }),
+    ).toThrow(/unknown time zone/);
     expect(() => computeSlots({ ...base, durationMinutes: 0 })).toThrow(/durationMinutes/);
-    expect(() => computeSlots({ ...base, workingHours: { ...lagosHours, start: '17:00', end: '09:00' } })).toThrow(
-      /start before/,
-    );
+    expect(() =>
+      computeSlots({ ...base, workingHours: { ...lagosHours, start: '17:00', end: '09:00' } }),
+    ).toThrow(/start before/);
     expect(computeSlots({ ...base, from: '2026-11-05T00:00:00Z' })).toEqual([]);
   });
 });

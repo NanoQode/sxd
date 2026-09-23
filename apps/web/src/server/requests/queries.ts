@@ -1,5 +1,5 @@
 import 'server-only';
-import { and, asc, desc, eq, inArray, lt, or } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray } from 'drizzle-orm';
 import {
   ApiError,
   type EngagementTransitionDto,
@@ -12,7 +12,7 @@ import {
 import { getDb, schema, withActor, type Transaction } from '@simplexd/db';
 import { availableTransitions, engagementMachine } from '@simplexd/domain/workflow';
 import type { RequestIdentity } from '@/lib/auth/session';
-import { decodeCursor, encodeCursor } from '@/server/portal/pagination';
+import { decodeCursor, encodeCursor, keysetAfter } from '@/server/portal/pagination';
 
 type SrRow = typeof schema.serviceRequests.$inferSelect;
 
@@ -84,21 +84,15 @@ export async function listServiceRequests(
         and(
           eq(schema.serviceRequests.organizationId, orgId),
           query.status ? eq(schema.serviceRequests.status, query.status) : undefined,
-          cursor
-            ? or(
-                lt(schema.serviceRequests.createdAt, cursor.createdAt),
-                and(
-                  eq(schema.serviceRequests.createdAt, cursor.createdAt),
-                  lt(schema.serviceRequests.id, cursor.id),
-                ),
-              )
-            : undefined,
+          cursor ? keysetAfter(schema.serviceRequests.createdAt, schema.serviceRequests.id, cursor) : undefined,
         ),
       )
       .orderBy(desc(schema.serviceRequests.createdAt), desc(schema.serviceRequests.id))
       .limit(query.limit + 1),
   );
-  const items = rows.slice(0, query.limit).map((r) => toServiceRequestDto(r.sr, r.service, r.market, r.pm));
+  const items = rows
+    .slice(0, query.limit)
+    .map((r) => toServiceRequestDto(r.sr, r.service, r.market, r.pm));
   const last = rows.length > query.limit ? rows[query.limit - 1] : null;
   return {
     items,
@@ -109,7 +103,12 @@ export async function listServiceRequests(
 export async function loadServiceRequest(
   tx: Transaction,
   id: string,
-): Promise<{ sr: SrRow; service: { slug: string; name: string }; market: { name: string | null } | null; pm: { id: string | null; name: string | null } | null } | null> {
+): Promise<{
+  sr: SrRow;
+  service: { slug: string; name: string };
+  market: { name: string | null } | null;
+  pm: { id: string | null; name: string | null } | null;
+} | null> {
   const rows = await baseSelect(tx).where(inArray(schema.serviceRequests.id, [id]));
   return rows[0] ?? null;
 }
@@ -145,7 +144,11 @@ export async function getServiceRequestDetail(
     const dto = toServiceRequestDto(row.sr, row.service, row.market, row.pm);
     const available = availableTransitions(engagementMachine, row.sr.status, 'customer')
       .filter((rule) => ['cancelled', 'paused', 'in_progress'].includes(rule.to))
-      .map((rule) => ({ to: rule.to, reasonRequired: Boolean(rule.reasonRequired), effect: rule.effect ?? null }));
+      .map((rule) => ({
+        to: rule.to,
+        reasonRequired: Boolean(rule.reasonRequired),
+        effect: rule.effect ?? null,
+      }));
     return {
       ...dto,
       transitions: transitions.map((r) => toTransitionDto(r.t, r.actorName)),

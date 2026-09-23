@@ -11,7 +11,10 @@ export type MarketFeature = MarketGeoJson['features'][number];
 /** Viewport frame: [minLon, minLat, maxLon, maxLat] comfortably containing all 50 markets. */
 export const NIGERIA_FRAME: readonly [number, number, number, number] = [2.4, 3.9, 15.0, 14.2];
 
-export function filterGeoJson(geojson: MarketGeoJson, visibleSlugs: ReadonlySet<string>): MarketGeoJson {
+export function filterGeoJson(
+  geojson: MarketGeoJson,
+  visibleSlugs: ReadonlySet<string>,
+): MarketGeoJson {
   return {
     type: 'FeatureCollection',
     features: geojson.features.filter((feature) => visibleSlugs.has(feature.properties.slug)),

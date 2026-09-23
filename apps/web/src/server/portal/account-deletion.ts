@@ -25,52 +25,64 @@ export async function requestAccountDeletion(
       details: [{ path: 'confirmEmail', message: 'does not match your account email' }],
     });
   }
-  return withActor(getDb(), { ...identity.ctx, correlationId: options.correlationId }, async (tx) => {
-    const existing = await tx
-      .select({ id: schema.leads.id })
-      .from(schema.leads)
-      .where(
-        and(
-          eq(schema.leads.userId, user.id),
-          sql`${schema.leads.context} ->> 'kind' = 'account_deletion'`,
-          sql`${schema.leads.status} IN ('new','contacted','qualified')`,
-        ),
-      );
-    if (existing[0]) {
-      return { leadId: existing[0].id, alreadyRequested: true, retentionPolicy: RETENTION_POLICY_SUMMARY };
-    }
-    const [lead] = await tx
-      .insert(schema.leads)
-      .values({
-        userId: user.id,
+  return withActor(
+    getDb(),
+    { ...identity.ctx, correlationId: options.correlationId },
+    async (tx) => {
+      const existing = await tx
+        .select({ id: schema.leads.id })
+        .from(schema.leads)
+        .where(
+          and(
+            eq(schema.leads.userId, user.id),
+            sql`${schema.leads.context} ->> 'kind' = 'account_deletion'`,
+            sql`${schema.leads.status} IN ('new','contacted','qualified')`,
+          ),
+        );
+      if (existing[0]) {
+        return {
+          leadId: existing[0].id,
+          alreadyRequested: true,
+          retentionPolicy: RETENTION_POLICY_SUMMARY,
+        };
+      }
+      const [lead] = await tx
+        .insert(schema.leads)
+        .values({
+          userId: user.id,
+          organizationId: identity.ctx.organizationId,
+          contactName: user.name,
+          email: user.email.toLowerCase(),
+          source: 'manual',
+          goal: 'other',
+          message: `Account deletion request.${input.reason ? ` Reason: ${input.reason}` : ''}`,
+          context: { kind: 'account_deletion', requestedAt: new Date().toISOString() },
+          status: 'new',
+          ipHash: options.ipHash,
+        })
+        .returning({ id: schema.leads.id });
+      await appendOutbox(tx, {
+        eventType: 'account.deletion_requested',
+        aggregateType: 'user',
+        aggregateId: user.id,
         organizationId: identity.ctx.organizationId,
-        contactName: user.name,
-        email: user.email.toLowerCase(),
-        source: 'manual',
-        goal: 'other',
-        message: `Account deletion request.${input.reason ? ` Reason: ${input.reason}` : ''}`,
-        context: { kind: 'account_deletion', requestedAt: new Date().toISOString() },
-        status: 'new',
-        ipHash: options.ipHash,
-      })
-      .returning({ id: schema.leads.id });
-    await appendOutbox(tx, {
-      eventType: 'account.deletion_requested',
-      aggregateType: 'user',
-      aggregateId: user.id,
-      organizationId: identity.ctx.organizationId,
-      actorUserId: user.id,
-      payload: { leadId: lead!.id, email: user.email },
-      correlationId: options.correlationId,
-    });
-    await recordAudit(tx, identity, {
-      action: 'account.deletion_requested',
-      entityType: 'user',
-      entityId: user.id,
-      after: { leadId: lead!.id },
-      reason: input.reason ?? null,
-      correlationId: options.correlationId,
-    });
-    return { leadId: lead!.id, alreadyRequested: false, retentionPolicy: RETENTION_POLICY_SUMMARY };
-  });
+        actorUserId: user.id,
+        payload: { leadId: lead!.id, email: user.email },
+        correlationId: options.correlationId,
+      });
+      await recordAudit(tx, identity, {
+        action: 'account.deletion_requested',
+        entityType: 'user',
+        entityId: user.id,
+        after: { leadId: lead!.id },
+        reason: input.reason ?? null,
+        correlationId: options.correlationId,
+      });
+      return {
+        leadId: lead!.id,
+        alreadyRequested: false,
+        retentionPolicy: RETENTION_POLICY_SUMMARY,
+      };
+    },
+  );
 }

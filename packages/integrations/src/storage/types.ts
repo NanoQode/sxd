@@ -126,12 +126,7 @@ export interface StorageProvider {
 }
 
 export type StorageErrorCode =
-  | 'invalid_key'
-  | 'invalid_request'
-  | 'quarantined'
-  | 'not_configured'
-  | 'not_found'
-  | 'provider';
+  'invalid_key' | 'invalid_request' | 'quarantined' | 'not_configured' | 'not_found' | 'provider';
 
 export class StorageError extends Error {
   readonly code: StorageErrorCode;
@@ -153,7 +148,8 @@ export function planMultipartUpload(
   sizeBytes: number,
   partSizeBytes: number = 16 * 1024 * 1024,
 ): { partCount: number; partSizeBytes: number } {
-  if (!Number.isInteger(sizeBytes) || sizeBytes <= 0) throw new StorageError('size must be positive', 'invalid_request');
+  if (!Number.isInteger(sizeBytes) || sizeBytes <= 0)
+    throw new StorageError('size must be positive', 'invalid_request');
   let partSize = Math.max(partSizeBytes, MULTIPART_MIN_PART_BYTES);
   let partCount = Math.ceil(sizeBytes / partSize);
   if (partCount > MULTIPART_MAX_PARTS) {

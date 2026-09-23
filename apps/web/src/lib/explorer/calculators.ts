@@ -11,8 +11,7 @@ import { z } from 'zod';
  */
 
 export type CalcResult<T> =
-  | { ok: true; value: T }
-  | { ok: false; reason: string; missing: string[] };
+  { ok: true; value: T } | { ok: false; reason: string; missing: string[] };
 
 export const failed = <T>(reason: string, missing: string[] = []): CalcResult<T> => ({
   ok: false,
@@ -233,7 +232,8 @@ export function pickKey(record: Record<string, unknown>, candidates: readonly st
 }
 
 function toResult<T>(raw: unknown, schema: z.ZodType<T>, what: string): CalcResult<T> {
-  if (raw === undefined || raw === null) return failed(`${what} was not returned by the calculator service.`);
+  if (raw === undefined || raw === null)
+    return failed(`${what} was not returned by the calculator service.`);
   if (!isRecord(raw)) return failed(`${what} came back in an unexpected shape.`);
   if (raw.ok === false) {
     const reason = typeof raw.reason === 'string' ? raw.reason : `${what} could not be computed.`;
@@ -281,7 +281,10 @@ function readLongLet(bundle: Record<string, unknown>): CalcResult<LongLetView> {
   return toResult(pickKey(bundle, KEYS.longLet), longLetViewSchema, 'Long-let economics');
 }
 
-function readSets(bundle: Record<string, unknown>, baseBundle: Record<string, unknown>): CalculatorSets | null {
+function readSets(
+  bundle: Record<string, unknown>,
+  baseBundle: Record<string, unknown>,
+): CalculatorSets | null {
   const raw = pickKey(bundle, KEYS.sets);
   const setsRecord = isRecord(raw) ? raw : null;
   const readSet = (name: 'low' | 'base' | 'high'): CalcResult<LongLetView> | null => {
@@ -312,8 +315,10 @@ export function normalizeCalculatorResponse(raw: unknown): CalculatorRunResult {
   // Per-set nesting: { base: {...bundle}, low: {...}, high: {...} }
   const baseBundle = looksLikeBundle(top.base) ? top.base : top;
   const npvIrr = pickKey(baseBundle, KEYS.npvIrr);
-  const npvRaw = pickKey(baseBundle, KEYS.npv) ?? (isRecord(npvIrr) ? pickKey(npvIrr, KEYS.npv) : undefined);
-  const irrRaw = pickKey(baseBundle, KEYS.irr) ?? (isRecord(npvIrr) ? pickKey(npvIrr, KEYS.irr) : undefined);
+  const npvRaw =
+    pickKey(baseBundle, KEYS.npv) ?? (isRecord(npvIrr) ? pickKey(npvIrr, KEYS.npv) : undefined);
+  const irrRaw =
+    pickKey(baseBundle, KEYS.irr) ?? (isRecord(npvIrr) ? pickKey(npvIrr, KEYS.irr) : undefined);
   const disclaimer = pickKey(top, KEYS.disclaimer);
 
   const result: CalculatorRunResult = {
@@ -323,11 +328,19 @@ export function normalizeCalculatorResponse(raw: unknown): CalculatorRunResult {
       'Development cost',
     ),
     longLet: readLongLet(baseBundle),
-    shortStay: toResult(pickKey(baseBundle, KEYS.shortStay), shortStayViewSchema, 'Short-stay economics'),
+    shortStay: toResult(
+      pickKey(baseBundle, KEYS.shortStay),
+      shortStayViewSchema,
+      'Short-stay economics',
+    ),
     phasing: toResult(pickKey(baseBundle, KEYS.phasing), phasingViewSchema, 'Monthly phasing'),
     npv: toResult(npvRaw, npvViewSchema, 'NPV'),
     irr: toResult(irrRaw, irrViewSchema, 'IRR'),
-    sensitivity: toResult(pickKey(top, KEYS.sensitivity) ?? pickKey(baseBundle, KEYS.sensitivity), sensitivityViewSchema, 'Sensitivity'),
+    sensitivity: toResult(
+      pickKey(top, KEYS.sensitivity) ?? pickKey(baseBundle, KEYS.sensitivity),
+      sensitivityViewSchema,
+      'Sensitivity',
+    ),
     sets: readSets(top, baseBundle),
     disclaimer: typeof disclaimer === 'string' ? disclaimer : null,
     empty: false,
@@ -362,10 +375,20 @@ export function emptyCalculatorResult(reason: string): CalculatorRunResult {
 /** Points for one sensitivity dimension: x = the varied value, y = net yield % (null when unavailable). */
 export function sensitivitySeries(
   cells: readonly SensitivityCellView[],
-): Array<{ x: number; netYield: number | null; cashFlowAfterDebt: number | null; reason: string | null }> {
+): Array<{
+  x: number;
+  netYield: number | null;
+  cashFlowAfterDebt: number | null;
+  reason: string | null;
+}> {
   return cells.map((cell) => {
     if (!cell.outcome.ok) {
-      return { x: cell.value, netYield: null, cashFlowAfterDebt: null, reason: cell.outcome.reason };
+      return {
+        x: cell.value,
+        netYield: null,
+        cashFlowAfterDebt: null,
+        reason: cell.outcome.reason,
+      };
     }
     const yieldResult = toNumberResult(cell.outcome.value.netYieldPercent);
     return {
@@ -377,6 +400,8 @@ export function sensitivitySeries(
   });
 }
 
-export function numberResult(raw: z.infer<typeof numberResultSchema> | undefined): CalcResult<number> {
+export function numberResult(
+  raw: z.infer<typeof numberResultSchema> | undefined,
+): CalcResult<number> {
   return toNumberResult(raw);
 }

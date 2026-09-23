@@ -8,8 +8,7 @@ import type {
 
 /** Deterministic fixtures for explorer unit tests. Never used at runtime. */
 
-export const uuid = (n: number): string =>
-  `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
+export const uuid = (n: number): string => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
 
 let counter = 1;
 

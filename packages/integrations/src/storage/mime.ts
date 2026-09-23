@@ -24,7 +24,10 @@ export type ActiveContentKind = 'svg' | 'html' | 'xml' | 'script' | null;
 const SNIFF_BYTES = 4096;
 
 /** Looks at the first bytes for markup or script signatures a browser could execute. */
-export function sniffActiveContent(buffer: Uint8Array): { active: boolean; kind: ActiveContentKind } {
+export function sniffActiveContent(buffer: Uint8Array): {
+  active: boolean;
+  kind: ActiveContentKind;
+} {
   const head = Buffer.from(buffer.subarray(0, SNIFF_BYTES))
     .toString('latin1')
     .replace(/^﻿|^\xEF\xBB\xBF/, '')
@@ -35,7 +38,8 @@ export function sniffActiveContent(buffer: Uint8Array): { active: boolean; kind:
   if (/^<!doctype html|<html[\s>]|<script[\s>]|<iframe[\s>]|<body[\s>]|<head[\s>]/.test(head))
     return { active: true, kind: 'html' };
   if (head.startsWith('<?xml')) {
-    if (/<svg[\s>]|<html[\s>]|<xsl:|xmlns:xlink|<script/.test(head)) return { active: true, kind: 'svg' };
+    if (/<svg[\s>]|<html[\s>]|<xsl:|xmlns:xlink|<script/.test(head))
+      return { active: true, kind: 'svg' };
     return { active: true, kind: 'xml' };
   }
   return { active: false, kind: null };

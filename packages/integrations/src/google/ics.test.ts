@@ -52,7 +52,9 @@ describe('buildIcs', () => {
       attendeeEmails: [],
     };
     expect(() => buildIcs(input)).toThrow(/organizerEmail/);
-    expect(() => buildIcs({ ...input, organizerEmail: 'a@b.co', url: 'javascript:alert(1)' })).toThrow(/http/);
+    expect(() =>
+      buildIcs({ ...input, organizerEmail: 'a@b.co', url: 'javascript:alert(1)' }),
+    ).toThrow(/http/);
     expect(icsFileName('Consultation: Due diligence!')).toBe('consultation-due-diligence.ics');
   });
 });

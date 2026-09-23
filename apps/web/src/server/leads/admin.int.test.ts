@@ -23,8 +23,10 @@ let serviceSlug: string;
 let leadWithAccount: string;
 let leadWithoutAccount: string;
 
-const ops = () => staffIdentity({ userId: opsId, email: `${opsId}@example.test`, roles: ['operations_manager'] });
-const supportOnly = () => staffIdentity({ userId: pmId, email: `${pmId}@example.test`, roles: ['support'] });
+const ops = () =>
+  staffIdentity({ userId: opsId, email: `${opsId}@example.test`, roles: ['operations_manager'] });
+const supportOnly = () =>
+  staffIdentity({ userId: pmId, email: `${pmId}@example.test`, roles: ['support'] });
 
 beforeAll(async () => {
   dbs = connectTestDatabases();
@@ -39,7 +41,9 @@ beforeAll(async () => {
     { userId: pmId, role: 'support' },
   ]);
   await owner.insert(schema.organization).values({ id: orgId, name: 'Customer Org', slug: orgId });
-  await owner.insert(schema.member).values({ id: `m_${customerId}`, organizationId: orgId, userId: customerId, role: 'owner' });
+  await owner
+    .insert(schema.member)
+    .values({ id: `m_${customerId}`, organizationId: orgId, userId: customerId, role: 'owner' });
   serviceSlug = `monitoring-${sfx}`;
   const [svc] = await owner
     .insert(schema.services)
@@ -108,7 +112,11 @@ describe('listing', () => {
   });
 
   it('filters unassigned leads', async () => {
-    const unassigned = await listLeads(ops(), { q: sfx, assignedToUserId: 'unassigned', limit: 10 });
+    const unassigned = await listLeads(ops(), {
+      q: sfx,
+      assignedToUserId: 'unassigned',
+      limit: 10,
+    });
     expect(unassigned.items.every((l) => l.assignedToUserId === null)).toBe(true);
   });
 });
@@ -118,13 +126,23 @@ describe('assignment and status', () => {
     await expect(
       updateLead(ops(), leadWithAccount, { assignedToUserId: customerId }, { correlationId: 'c' }),
     ).rejects.toMatchObject({ code: 'validation_failed' });
-    const updated = await updateLead(ops(), leadWithAccount, { assignedToUserId: pmId }, { correlationId: 'c' });
+    const updated = await updateLead(
+      ops(),
+      leadWithAccount,
+      { assignedToUserId: pmId },
+      { correlationId: 'c' },
+    );
     expect(updated.assignedToUserId).toBe(pmId);
     expect(updated.assignedToName).toBe('Support Person');
   });
 
   it('changes status with an internal note and records an audit entry', async () => {
-    const updated = await updateLead(ops(), leadWithAccount, { status: 'qualified', note: 'Spoke on the phone; budget confirmed.' }, { correlationId: 'c' });
+    const updated = await updateLead(
+      ops(),
+      leadWithAccount,
+      { status: 'qualified', note: 'Spoke on the phone; budget confirmed.' },
+      { correlationId: 'c' },
+    );
     expect(updated.status).toBe('qualified');
     const detail = await getLeadDetail(ops(), leadWithAccount);
     expect(detail.notes.map((n) => n.body)).toContain('Spoke on the phone; budget confirmed.');
@@ -135,17 +153,26 @@ describe('assignment and status', () => {
     const audit = await dbs.owner
       .select()
       .from(schema.auditEvents)
-      .where(and(eq(schema.auditEvents.entityId, leadWithAccount), eq(schema.auditEvents.action, 'lead.updated')));
+      .where(
+        and(
+          eq(schema.auditEvents.entityId, leadWithAccount),
+          eq(schema.auditEvents.action, 'lead.updated'),
+        ),
+      );
     expect(audit.length).toBeGreaterThanOrEqual(2);
     expect((audit.at(-1)!.after as { status: string }).status).toBe('qualified');
   });
 
   it('refuses converted status without the convert action', async () => {
-    await expect(updateLead(ops(), leadWithAccount, { status: 'converted' }, { correlationId: 'c' })).rejects.toMatchObject({ code: 'invalid_transition' });
+    await expect(
+      updateLead(ops(), leadWithAccount, { status: 'converted' }, { correlationId: 'c' }),
+    ).rejects.toMatchObject({ code: 'invalid_transition' });
   });
 
   it('adds internal notes', async () => {
-    const note = await addLeadNote(ops(), leadWithAccount, 'Follow up next week.', { correlationId: 'c' });
+    const note = await addLeadNote(ops(), leadWithAccount, 'Follow up next week.', {
+      correlationId: 'c',
+    });
     expect(note.visibility).toBe('internal');
     expect(note.authorName).toBe('Ops Manager');
   });
@@ -153,13 +180,21 @@ describe('assignment and status', () => {
 
 describe('conversion', () => {
   it('creates a service request when the email belongs to a customer organisation member', async () => {
-    const result = await convertLead(ops(), leadWithAccount, { note: 'Converted after call.' }, { correlationId: 'conv' });
+    const result = await convertLead(
+      ops(),
+      leadWithAccount,
+      { note: 'Converted after call.' },
+      { correlationId: 'conv' },
+    );
     expect(result.path).toBe('service_request_created');
     expect(result.organizationId).toBe(orgId);
     expect(result.reference).toMatch(/^SR-\d{4}-\d{6}$/);
     expect(result.leadStatus).toBe('converted');
 
-    const [sr] = await dbs.owner.select().from(schema.serviceRequests).where(eq(schema.serviceRequests.id, result.serviceRequestId!));
+    const [sr] = await dbs.owner
+      .select()
+      .from(schema.serviceRequests)
+      .where(eq(schema.serviceRequests.id, result.serviceRequestId!));
     expect(sr).toMatchObject({
       organizationId: orgId,
       requestedByUserId: customerId,
@@ -168,33 +203,69 @@ describe('conversion', () => {
       status: 'inquiry',
       description: 'I want monitoring for my build in Ibadan.',
     });
-    const [lead] = await dbs.owner.select().from(schema.leads).where(eq(schema.leads.id, leadWithAccount));
-    expect(lead).toMatchObject({ status: 'converted', convertedServiceRequestId: result.serviceRequestId, userId: customerId, organizationId: orgId });
+    const [lead] = await dbs.owner
+      .select()
+      .from(schema.leads)
+      .where(eq(schema.leads.id, leadWithAccount));
+    expect(lead).toMatchObject({
+      status: 'converted',
+      convertedServiceRequestId: result.serviceRequestId,
+      userId: customerId,
+      organizationId: orgId,
+    });
     const transitions = await dbs.owner
       .select()
       .from(schema.engagementTransitions)
       .where(eq(schema.engagementTransitions.serviceRequestId, result.serviceRequestId!));
     expect(transitions).toHaveLength(1);
-    expect(transitions[0]).toMatchObject({ toStatus: 'inquiry', actorType: 'staff', actorUserId: opsId });
+    expect(transitions[0]).toMatchObject({
+      toStatus: 'inquiry',
+      actorType: 'staff',
+      actorUserId: opsId,
+    });
     const outbox = await dbs.owner
       .select()
       .from(schema.outboxEvents)
-      .where(and(eq(schema.outboxEvents.aggregateId, result.serviceRequestId!), eq(schema.outboxEvents.eventType, 'service_request.transitioned')));
+      .where(
+        and(
+          eq(schema.outboxEvents.aggregateId, result.serviceRequestId!),
+          eq(schema.outboxEvents.eventType, 'service_request.transitioned'),
+        ),
+      );
     expect(outbox).toHaveLength(1);
     const detail = await getLeadDetail(ops(), leadWithAccount);
     expect(detail.convertedReference).toBe(result.reference);
-    await expect(convertLead(ops(), leadWithAccount, {}, { correlationId: 'conv2' })).rejects.toMatchObject({ code: 'invalid_transition' });
+    await expect(
+      convertLead(ops(), leadWithAccount, {}, { correlationId: 'conv2' }),
+    ).rejects.toMatchObject({ code: 'invalid_transition' });
   });
 
   it('queues an invitation and marks the lead contacted when no account matches', async () => {
-    const result = await convertLead(ops(), leadWithoutAccount, { serviceSlug }, { correlationId: 'inv' });
-    expect(result).toMatchObject({ path: 'invitation_sent', serviceRequestId: null, leadStatus: 'contacted' });
-    const [lead] = await dbs.owner.select().from(schema.leads).where(eq(schema.leads.id, leadWithoutAccount));
+    const result = await convertLead(
+      ops(),
+      leadWithoutAccount,
+      { serviceSlug },
+      { correlationId: 'inv' },
+    );
+    expect(result).toMatchObject({
+      path: 'invitation_sent',
+      serviceRequestId: null,
+      leadStatus: 'contacted',
+    });
+    const [lead] = await dbs.owner
+      .select()
+      .from(schema.leads)
+      .where(eq(schema.leads.id, leadWithoutAccount));
     expect(lead!.status).toBe('contacted');
     const outbox = await dbs.owner
       .select()
       .from(schema.outboxEvents)
-      .where(and(eq(schema.outboxEvents.aggregateId, leadWithoutAccount), eq(schema.outboxEvents.eventType, 'lead.invited')));
+      .where(
+        and(
+          eq(schema.outboxEvents.aggregateId, leadWithoutAccount),
+          eq(schema.outboxEvents.eventType, 'lead.invited'),
+        ),
+      );
     expect(outbox).toHaveLength(1);
     const payload = outbox[0]!.payload as { email: string; inviteUrl: string; serviceSlug: string };
     expect(payload.email).toBe(`new_${sfx}@example.test`);
@@ -203,7 +274,12 @@ describe('conversion', () => {
     const audit = await dbs.owner
       .select()
       .from(schema.auditEvents)
-      .where(and(eq(schema.auditEvents.entityId, leadWithoutAccount), eq(schema.auditEvents.action, 'lead.invited')));
+      .where(
+        and(
+          eq(schema.auditEvents.entityId, leadWithoutAccount),
+          eq(schema.auditEvents.action, 'lead.invited'),
+        ),
+      );
     expect(audit).toHaveLength(1);
   });
 
@@ -212,7 +288,9 @@ describe('conversion', () => {
       .select({ id: schema.leads.id })
       .from(schema.leads)
       .where(eq(schema.leads.email, `third_${sfx}@example.test`));
-    await expect(convertLead(ops(), third!.id, {}, { correlationId: 'c' })).rejects.toMatchObject({ code: 'validation_failed' });
+    await expect(convertLead(ops(), third!.id, {}, { correlationId: 'c' })).rejects.toMatchObject({
+      code: 'validation_failed',
+    });
   });
 });
 

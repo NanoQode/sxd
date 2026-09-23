@@ -30,13 +30,13 @@ export async function listIntakeServices(identity: RequestIdentity): Promise<Boo
     tx
       .select({ service: schema.services, pkg: schema.servicePackages })
       .from(schema.services)
-      .leftJoin(
-        schema.servicePackages,
-        eq(schema.servicePackages.serviceId, schema.services.id),
-      )
+      .leftJoin(schema.servicePackages, eq(schema.servicePackages.serviceId, schema.services.id))
       .orderBy(asc(schema.services.sortOrder), asc(schema.services.name)),
   );
-  const byId = new Map<string, { service: ServiceRow; pkg: typeof schema.servicePackages.$inferSelect | null }>();
+  const byId = new Map<
+    string,
+    { service: ServiceRow; pkg: typeof schema.servicePackages.$inferSelect | null }
+  >();
   for (const r of rows) {
     const existing = byId.get(r.service.id);
     if (!existing) byId.set(r.service.id, { service: r.service, pkg: r.pkg });
@@ -45,7 +45,9 @@ export async function listIntakeServices(identity: RequestIdentity): Promise<Boo
   const out: BookableServiceDto[] = [];
   for (const { service, pkg } of byId.values()) {
     const bookable = isBookable(service, identity.featureFlags);
-    const visible = service.publicationState === 'published' || (service.category === 'expansion' && service.inquiryEnabled);
+    const visible =
+      service.publicationState === 'published' ||
+      (service.category === 'expansion' && service.inquiryEnabled);
     if (!visible) continue;
     const publishedPackage = pkg && pkg.publicationState === 'published' ? pkg : null;
     out.push({
@@ -62,7 +64,8 @@ export async function listIntakeServices(identity: RequestIdentity): Promise<Boo
       startingPrice: publishedPackage
         ? {
             basis: publishedPackage.priceBasis,
-            amountKobo: publishedPackage.amountKobo === null ? null : publishedPackage.amountKobo.toString(),
+            amountKobo:
+              publishedPackage.amountKobo === null ? null : publishedPackage.amountKobo.toString(),
             percentageBps: publishedPackage.percentageBps,
           }
         : null,
@@ -72,28 +75,75 @@ export async function listIntakeServices(identity: RequestIdentity): Promise<Boo
 }
 
 /** Human labels for intake keys defined by the workflow templates. */
-export const INTAKE_FIELD_LABELS: Record<string, { label: string; hint?: string; multiline?: boolean }> = {
-  property: { label: 'Property or site', hint: 'Address or description of the property this request concerns.' },
-  project_stage: { label: 'Project stage', hint: 'e.g. land only, foundations, roofing, finishing.' },
-  drawings_or_boq: { label: 'Drawings or bill of quantities', hint: 'Describe what you already have. Uploads arrive in Wave 2.', multiline: true },
+export const INTAKE_FIELD_LABELS: Record<
+  string,
+  { label: string; hint?: string; multiline?: boolean }
+> = {
+  property: {
+    label: 'Property or site',
+    hint: 'Address or description of the property this request concerns.',
+  },
+  project_stage: {
+    label: 'Project stage',
+    hint: 'e.g. land only, foundations, roofing, finishing.',
+  },
+  drawings_or_boq: {
+    label: 'Drawings or bill of quantities',
+    hint: 'Describe what you already have. Uploads arrive in Wave 2.',
+    multiline: true,
+  },
   site_access: { label: 'Site access', hint: 'Who grants access and any constraints.' },
-  title_documents: { label: 'Title documents held', hint: 'e.g. Certificate of Occupancy, deed of assignment, survey plan.', multiline: true },
+  title_documents: {
+    label: 'Title documents held',
+    hint: 'e.g. Certificate of Occupancy, deed of assignment, survey plan.',
+    multiline: true,
+  },
   seller_contact: { label: 'Seller or agent contact', hint: 'Name and how to reach them.' },
   brief: { label: 'Design brief', hint: 'What you want to build and for whom.', multiline: true },
-  site_information: { label: 'Site information', hint: 'Location, size, topography, existing structures.', multiline: true },
+  site_information: {
+    label: 'Site information',
+    hint: 'Location, size, topography, existing structures.',
+    multiline: true,
+  },
   budget_range: { label: 'Budget range', hint: 'Whole naira, low to high.' },
   units: { label: 'Units', hint: 'Number and type of units to manage.' },
-  existing_leases: { label: 'Existing leases', hint: 'Current tenants and lease end dates, if any.', multiline: true },
+  existing_leases: {
+    label: 'Existing leases',
+    hint: 'Current tenants and lease end dates, if any.',
+    multiline: true,
+  },
   access_contact: { label: 'Access contact', hint: 'Who meets the inspector on site.' },
-  checklist_focus: { label: 'Inspection focus', hint: 'What should the inspector prioritise?', multiline: true },
-  search_criteria: { label: 'Search criteria', hint: 'Location, type, size and must-haves.', multiline: true },
+  checklist_focus: {
+    label: 'Inspection focus',
+    hint: 'What should the inspector prioritise?',
+    multiline: true,
+  },
+  search_criteria: {
+    label: 'Search criteria',
+    hint: 'Location, type, size and must-haves.',
+    multiline: true,
+  },
   budget: { label: 'Budget', hint: 'Whole naira.' },
-  fee_basis_agreement: { label: 'Fee basis acknowledgement', hint: 'Purchase representation is charged on an agreed percentage basis with signed scope; confirm you understand.' },
-  requirements: { label: 'Requirements', hint: 'Describe what you are looking for.', multiline: true },
+  fee_basis_agreement: {
+    label: 'Fee basis acknowledgement',
+    hint: 'Purchase representation is charged on an agreed percentage basis with signed scope; confirm you understand.',
+  },
+  requirements: {
+    label: 'Requirements',
+    hint: 'Describe what you are looking for.',
+    multiline: true,
+  },
   locations: { label: 'Preferred locations', hint: 'Cities or neighbourhoods.' },
-  owner_authority: { label: 'Owner authority', hint: 'Your relationship to the land and any authority documents.' },
+  owner_authority: {
+    label: 'Owner authority',
+    hint: 'Your relationship to the land and any authority documents.',
+  },
   parcel: { label: 'Parcel details', hint: 'Size, survey reference and location.' },
-  title_disclosures: { label: 'Title disclosures', hint: 'Known encumbrances, disputes or pending consents.', multiline: true },
+  title_disclosures: {
+    label: 'Title disclosures',
+    hint: 'Known encumbrances, disputes or pending consents.',
+    multiline: true,
+  },
 };
 
 export function intakeLabel(key: string): { label: string; hint?: string; multiline?: boolean } {

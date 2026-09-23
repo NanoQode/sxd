@@ -40,14 +40,43 @@ describe('normalizeCalculatorResponse', () => {
       phasing: { ok: false, reason: 'Needs a start month.' },
       npv: { ok: false, reason: 'NPV needs a discount rate.', missing: ['discountRate'] },
       irr: { ok: false, reason: 'irr_no_solution' },
-      sensitivity: { ok: true, value: { vacancy: [{ variable: 'vacancy', value: 0.1, outcome: { ok: true, value: { netYieldPercent: { ok: true, value: 3.9 }, noi: 3_900_000, cashFlowAfterDebt: 3_900_000 } } }] } },
-      scenarioSets: { low: { ok: false, reason: 'no low' }, base: { ok: true, value: longLet }, high: { ok: true, value: { ...longLet, noi: 5_000_000 } } },
+      sensitivity: {
+        ok: true,
+        value: {
+          vacancy: [
+            {
+              variable: 'vacancy',
+              value: 0.1,
+              outcome: {
+                ok: true,
+                value: {
+                  netYieldPercent: { ok: true, value: 3.9 },
+                  noi: 3_900_000,
+                  cashFlowAfterDebt: 3_900_000,
+                },
+              },
+            },
+          ],
+        },
+      },
+      scenarioSets: {
+        low: { ok: false, reason: 'no low' },
+        base: { ok: true, value: longLet },
+        high: { ok: true, value: { ...longLet, noi: 5_000_000 } },
+      },
       disclaimer: 'Scenarios, not valuations.',
     });
     expect(result.empty).toBe(false);
     expect(result.developmentCost.ok && result.developmentCost.value.total).toBe(100_000_000);
-    expect(result.longLet.ok && result.longLet.value.netYieldPercent).toEqual({ ok: true, value: 4.2 });
-    expect(result.shortStay).toEqual({ ok: false, reason: 'No short-stay inputs.', missing: ['shortStay'] });
+    expect(result.longLet.ok && result.longLet.value.netYieldPercent).toEqual({
+      ok: true,
+      value: 4.2,
+    });
+    expect(result.shortStay).toEqual({
+      ok: false,
+      reason: 'No short-stay inputs.',
+      missing: ['shortStay'],
+    });
     expect(result.npv.ok).toBe(false);
     expect(result.sensitivity.ok && result.sensitivity.value.vacancy.length).toBe(1);
     expect(result.sets?.low.ok).toBe(false);
@@ -60,7 +89,10 @@ describe('normalizeCalculatorResponse', () => {
       results: {
         development_cost: developmentCost,
         long_let: longLet,
-        npv_irr: { npv: { ok: true, value: { npv: 1_000, discountRate: 0.12 } }, irr: { ok: true, value: { irr: 0.15, uniqueness: 'unique' } } },
+        npv_irr: {
+          npv: { ok: true, value: { npv: 1_000, discountRate: 0.12 } },
+          irr: { ok: true, value: { irr: 0.15, uniqueness: 'unique' } },
+        },
       },
     });
     expect(result.developmentCost.ok).toBe(true);
@@ -71,7 +103,10 @@ describe('normalizeCalculatorResponse', () => {
 
   it('reads per-set nesting { base, low, high }', () => {
     const result = normalizeCalculatorResponse({
-      base: { developmentCost: { ok: true, value: developmentCost }, longLet: { ok: true, value: longLet } },
+      base: {
+        developmentCost: { ok: true, value: developmentCost },
+        longLet: { ok: true, value: longLet },
+      },
       low: { longLet: { ok: true, value: { ...longLet, noi: 1 } } },
       high: { longLet: { ok: false, reason: 'high failed' } },
     });
@@ -90,9 +125,27 @@ describe('normalizeCalculatorResponse', () => {
 
   it('builds sensitivity series with nulls for failed cells', () => {
     const series = sensitivitySeries([
-      { variable: 'rents', value: 0.9, outcome: { ok: true, value: { netYieldPercent: { ok: true, value: 3 }, noi: 1, cashFlowAfterDebt: 1 } } },
+      {
+        variable: 'rents',
+        value: 0.9,
+        outcome: {
+          ok: true,
+          value: { netYieldPercent: { ok: true, value: 3 }, noi: 1, cashFlowAfterDebt: 1 },
+        },
+      },
       { variable: 'rents', value: 1.1, outcome: { ok: false, reason: 'no' } },
-      { variable: 'rents', value: 1.2, outcome: { ok: true, value: { netYieldPercent: { ok: false, reason: 'zero denominator' }, noi: 1, cashFlowAfterDebt: 1 } } },
+      {
+        variable: 'rents',
+        value: 1.2,
+        outcome: {
+          ok: true,
+          value: {
+            netYieldPercent: { ok: false, reason: 'zero denominator' },
+            noi: 1,
+            cashFlowAfterDebt: 1,
+          },
+        },
+      },
     ]);
     expect(series.map((p) => p.netYield)).toEqual([3, null, null]);
     expect(series[2]?.reason).toBe('zero denominator');

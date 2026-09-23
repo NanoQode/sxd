@@ -26,13 +26,23 @@ import { ResultsList } from './results-list';
 import { ScenarioActions } from './scenario-actions';
 import { ScenarioBuilder } from './scenario-builder';
 
-function ViewSwitch({ view, onChange }: { view: ExplorerView; onChange: (view: ExplorerView) => void }) {
+function ViewSwitch({
+  view,
+  onChange,
+}: {
+  view: ExplorerView;
+  onChange: (view: ExplorerView) => void;
+}) {
   const options: Array<{ value: ExplorerView; label: string; icon: typeof MapIcon }> = [
     { value: 'map', label: 'Map', icon: MapIcon },
     { value: 'list', label: 'List', icon: List },
   ];
   return (
-    <div role="radiogroup" aria-label="Map or list view" className="inline-flex rounded-md border border-border bg-bg-elevated p-0.5">
+    <div
+      role="radiogroup"
+      aria-label="Map or list view"
+      className="inline-flex rounded-md border border-border bg-bg-elevated p-0.5"
+    >
       {options.map(({ value, label, icon: Icon }) => {
         const active = view === value;
         return (
@@ -57,8 +67,19 @@ function ViewSwitch({ view, onChange }: { view: ExplorerView; onChange: (view: E
 }
 
 function ResultsSection({ limit, moreHref }: { limit?: number; moreHref?: string }) {
-  const { rows, recommendation, selectedSlug, compareSlugs, compareFull, totalMarkets, markets, select, toggleCompare, setMode, resetFilters } =
-    useExplorer();
+  const {
+    rows,
+    recommendation,
+    selectedSlug,
+    compareSlugs,
+    compareFull,
+    totalMarkets,
+    markets,
+    select,
+    toggleCompare,
+    setMode,
+    resetFilters,
+  } = useExplorer();
   return (
     <ResultsList
       rows={rows}
@@ -82,14 +103,36 @@ function ResultsSection({ limit, moreHref }: { limit?: number; moreHref?: string
 
 export function ExplorerShell() {
   const ctx = useExplorer();
-  const { variant, params, mode, setMode, view, setView, filters, setFilters, priorities, setPriorities, recommendation, isDesktop, scenario, lastScenarioId, compareMarkets, rankedBySlug, assumptions, stateOptions } = ctx;
+  const {
+    variant,
+    params,
+    mode,
+    setMode,
+    view,
+    setView,
+    filters,
+    setFilters,
+    priorities,
+    setPriorities,
+    recommendation,
+    isDesktop,
+    scenario,
+    lastScenarioId,
+    compareMarkets,
+    rankedBySlug,
+    assumptions,
+    stateOptions,
+  } = ctx;
   const [comparisonOpen, setComparisonOpen] = useState(false);
   const [report, setReport] = useState<ReportBundle | null>(null);
   const [prioritiesOpen, setPrioritiesOpen] = useState(false);
   const [saveOpen, setSaveOpen] = useState(false);
   const [verificationOpen, setVerificationOpen] = useState(false);
   const exploreHref = useMemo(() => buildExploreHref(params), [params]);
-  const stateNames = useMemo(() => new Map(stateOptions.map((s) => [s.id, s.name])), [stateOptions]);
+  const stateNames = useMemo(
+    () => new Map(stateOptions.map((s) => [s.id, s.name])),
+    [stateOptions],
+  );
 
   const actions = (
     <ScenarioActions
@@ -100,7 +143,12 @@ export function ExplorerShell() {
       compact={variant === 'homepage'}
     />
   );
-  const locationPanel = <LocationPanel onSaveScenario={() => setSaveOpen(true)} onRequestVerification={() => setVerificationOpen(true)} />;
+  const locationPanel = (
+    <LocationPanel
+      onSaveScenario={() => setSaveOpen(true)}
+      onRequestVerification={() => setVerificationOpen(true)}
+    />
+  );
   const comparison = (
     <ComparisonDialog
       open={comparisonOpen}
@@ -117,7 +165,13 @@ export function ExplorerShell() {
       <ComparisonReport
         generated={report.generated}
         comparison={report.comparison}
-        markets={compareMarkets.map((m) => ({ id: m.id, name: m.name, stateName: m.stateName, parentMarketId: m.parentMarketId, overlapNote: m.overlapNote }))}
+        markets={compareMarkets.map((m) => ({
+          id: m.id,
+          name: m.name,
+          stateName: m.stateName,
+          parentMarketId: m.parentMarketId,
+          overlapNote: m.overlapNote,
+        }))}
         rankedBySlug={rankedBySlug}
         filters={filters}
         priorities={priorities}
@@ -148,7 +202,14 @@ export function ExplorerShell() {
   const resumeBanner =
     lastScenarioId && !scenario.id && !params.shared && !params.scenario ? (
       <Alert tone="info" title="Resume your last saved scenario">
-        <Link href={buildExploreHref(params, { scenario: lastScenarioId }, variant === 'full' ? '/explore' : '/')} className="underline">
+        <Link
+          href={buildExploreHref(
+            params,
+            { scenario: lastScenarioId },
+            variant === 'full' ? '/explore' : '/',
+          )}
+          className="underline"
+        >
           Open the scenario saved on this device
         </Link>
       </Alert>
@@ -156,17 +217,26 @@ export function ExplorerShell() {
 
   if (variant === 'homepage') {
     return (
-      <section aria-labelledby="explorer-heading" className="space-y-4 rounded-lg border border-border bg-bg-elevated p-4 sm:p-6" data-testid="location-explorer" data-variant="homepage">
+      <section
+        aria-labelledby="explorer-heading"
+        className="space-y-4 rounded-lg border border-border bg-bg-elevated p-4 sm:p-6"
+        data-testid="location-explorer"
+        data-variant="homepage"
+      >
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <h2 id="explorer-heading" className="text-lg font-semibold">
               Explore where to build
             </h2>
             <p className="text-sm text-fg-muted">
-              Fifty markets across all 36 states and the FCT. Badges show what is evidenced; unknown stays unknown, never an invented price.
+              Fifty markets across all 36 states and the FCT. Badges show what is evidenced; unknown
+              stays unknown, never an invented price.
             </p>
           </div>
-          <Link href={exploreHref} className="sx-touch inline-flex items-center gap-1 font-medium text-primary underline underline-offset-4">
+          <Link
+            href={exploreHref}
+            className="sx-touch inline-flex items-center gap-1 font-medium text-primary underline underline-offset-4"
+          >
             Open full explorer <ArrowRight aria-hidden="true" className="h-4 w-4" />
           </Link>
         </div>
@@ -174,7 +244,14 @@ export function ExplorerShell() {
           <label className="sr-only" htmlFor="homepage-objective">
             Objective
           </label>
-          <NativeSelect id="homepage-objective" className="w-auto" value={filters.objective} onChange={(event) => setFilters({ objective: event.target.value as typeof filters.objective })}>
+          <NativeSelect
+            id="homepage-objective"
+            className="w-auto"
+            value={filters.objective}
+            onChange={(event) =>
+              setFilters({ objective: event.target.value as typeof filters.objective })
+            }
+          >
             {OBJECTIVES.map((o) => (
               <option key={o} value={o}>
                 {OBJECTIVE_LABELS[o]}
@@ -189,8 +266,19 @@ export function ExplorerShell() {
                   <button
                     type="button"
                     aria-pressed={active}
-                    onClick={() => setFilters({ preferredZones: active ? filters.preferredZones.filter((z) => z !== zone) : [...filters.preferredZones, zone] })}
-                    className={cn('sx-transition sx-touch rounded-full border px-3 text-sm', active ? 'border-primary bg-primary-soft text-primary' : 'border-border text-fg-muted hover:text-fg')}
+                    onClick={() =>
+                      setFilters({
+                        preferredZones: active
+                          ? filters.preferredZones.filter((z) => z !== zone)
+                          : [...filters.preferredZones, zone],
+                      })
+                    }
+                    className={cn(
+                      'sx-transition sx-touch rounded-full border px-3 text-sm',
+                      active
+                        ? 'border-primary bg-primary-soft text-primary'
+                        : 'border-border text-fg-muted hover:text-fg',
+                    )}
                   >
                     {ZONE_LABELS[zone]}
                   </button>
@@ -222,7 +310,12 @@ export function ExplorerShell() {
         <div className="lg:hidden">
           <FilterSheet />
         </div>
-        <Button variant="secondary" aria-expanded={prioritiesOpen} aria-controls="priorities-region" onClick={() => setPrioritiesOpen((open) => !open)}>
+        <Button
+          variant="secondary"
+          aria-expanded={prioritiesOpen}
+          aria-controls="priorities-region"
+          onClick={() => setPrioritiesOpen((open) => !open)}
+        >
           <SlidersHorizontal aria-hidden="true" className="h-4 w-4" /> Priorities
         </Button>
         {recommendation.data ? (
@@ -258,8 +351,17 @@ export function ExplorerShell() {
         </div>
         <div className="space-y-4">
           {isDesktop ? locationPanel : null}
-          <div id="priorities-region" hidden={!prioritiesOpen} className="rounded-lg border border-border bg-bg-elevated p-4">
-            <PrioritiesPanel priorities={priorities} objective={filters.objective} onChange={setPriorities} effectiveWeights={recommendation.data?.effectiveWeights ?? null} />
+          <div
+            id="priorities-region"
+            hidden={!prioritiesOpen}
+            className="rounded-lg border border-border bg-bg-elevated p-4"
+          >
+            <PrioritiesPanel
+              priorities={priorities}
+              objective={filters.objective}
+              onChange={setPriorities}
+              effectiveWeights={recommendation.data?.effectiveWeights ?? null}
+            />
           </div>
           <div className="rounded-lg border border-border bg-bg-elevated p-4">{actions}</div>
         </div>

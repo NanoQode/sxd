@@ -31,7 +31,9 @@ export function MarketStatusPill({
 
 /** Service availability: separate from map coverage. */
 export function AvailabilityBadge({ availability }: { availability: string }) {
-  return <StatusBadge status={availability} label={AVAILABILITY_LABELS[availability] ?? availability} />;
+  return (
+    <StatusBadge status={availability} label={AVAILABILITY_LABELS[availability] ?? availability} />
+  );
 }
 
 /** The distinct evidence badges present for a market; never a single generic "Verified". */

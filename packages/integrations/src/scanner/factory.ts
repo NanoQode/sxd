@@ -10,7 +10,8 @@ export interface ScannerFactoryInput {
 
 export function createMalwareScanner(input: ScannerFactoryInput): MalwareScanner {
   if (input.scanner === 'clamav') {
-    if (!input.clamav) throw new Error('CLAMAV_HOST and CLAMAV_PORT are required for MALWARE_SCANNER=clamav');
+    if (!input.clamav)
+      throw new Error('CLAMAV_HOST and CLAMAV_PORT are required for MALWARE_SCANNER=clamav');
     return new ClamAvScanner(input.clamav);
   }
   return new DevMalwareScanner({ appEnv: input.appEnv });

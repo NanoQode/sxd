@@ -47,8 +47,8 @@ export function ComparisonTable({
     <div className="overflow-x-auto rounded-lg border border-border" data-testid="comparison-table">
       <table className="w-full min-w-[640px] text-sm">
         <caption className="sr-only">
-          Comparison of {comparison.markets.length} markets under policy version {comparison.policyVersion}, generated{' '}
-          {formatDateTimeLabel(comparison.generatedAt)}
+          Comparison of {comparison.markets.length} markets under policy version{' '}
+          {comparison.policyVersion}, generated {formatDateTimeLabel(comparison.generatedAt)}
         </caption>
         <thead className="bg-bg-sunken text-left text-xs uppercase tracking-wide text-fg-muted">
           <tr>
@@ -56,7 +56,11 @@ export function ComparisonTable({
               Metric
             </th>
             {comparison.markets.map((market) => (
-              <th key={market.marketId} scope="col" className="px-3 py-2 font-medium normal-case tracking-normal">
+              <th
+                key={market.marketId}
+                scope="col"
+                className="px-3 py-2 font-medium normal-case tracking-normal"
+              >
                 <span className="text-sm text-fg">{market.name}</span>
                 <span className="block text-xs">{market.stateName}</span>
               </th>
@@ -66,7 +70,10 @@ export function ComparisonTable({
         <tbody>
           {rankedBySlug ? (
             <tr className="border-t border-border">
-              <th scope="row" className="sticky left-0 bg-bg-elevated px-3 py-2 text-left font-medium">
+              <th
+                scope="row"
+                className="sticky left-0 bg-bg-elevated px-3 py-2 text-left font-medium"
+              >
                 Ranking status
               </th>
               {comparison.markets.map((market) => {
@@ -75,7 +82,9 @@ export function ComparisonTable({
                 return (
                   <td key={market.marketId} className="px-3 py-2 align-top">
                     <span className="font-medium">{summary.label}</span>
-                    {summary.detail ? <span className="block text-xs text-fg-muted">{summary.detail}</span> : null}
+                    {summary.detail ? (
+                      <span className="block text-xs text-fg-muted">{summary.detail}</span>
+                    ) : null}
                     {ranked ? (
                       <span className="block text-xs text-fg-muted">
                         Flood: {FLOOD_LABELS[floodStatusOf({ metrics: {} }, ranked)]}
@@ -88,7 +97,10 @@ export function ComparisonTable({
           ) : null}
           {comparison.rows.map((row) => (
             <tr key={row.metric} className="border-t border-border">
-              <th scope="row" className="sticky left-0 bg-bg-elevated px-3 py-2 text-left font-medium">
+              <th
+                scope="row"
+                className="sticky left-0 bg-bg-elevated px-3 py-2 text-left font-medium"
+              >
                 {row.label}
               </th>
               {comparison.markets.map((market) => {
@@ -103,20 +115,29 @@ export function ComparisonTable({
                 const statewide = isStatewide(cell);
                 return (
                   <td key={market.marketId} className="px-3 py-2 align-top">
-                    <span className="block font-semibold tabular-nums">{formatMetricValue(cell.value, cell.unit)}</span>
+                    <span className="block font-semibold tabular-nums">
+                      {formatMetricValue(cell.value, cell.unit)}
+                    </span>
                     <span className="mt-0.5 block">
                       <EvidenceBadge kind={cell.badge} showDescription />
                     </span>
                     {statewide ? (
-                      <span className="block text-xs font-medium text-warning">{COPY.statewideContext}</span>
+                      <span className="block text-xs font-medium text-warning">
+                        {COPY.statewideContext}
+                      </span>
                     ) : cell.geographicScope ? (
                       <span className="block text-xs text-fg-muted">{cell.geographicScope}</span>
                     ) : null}
                     <span className="block text-xs text-fg-muted">
-                      {cell.evidenceDate ? `Evidence ${formatDateLabel(cell.evidenceDate)}` : 'Undated'} · confidence{' '}
+                      {cell.evidenceDate
+                        ? `Evidence ${formatDateLabel(cell.evidenceDate)}`
+                        : 'Undated'}{' '}
+                      · confidence{' '}
                       {cell.confidence !== null ? `${Math.round(cell.confidence * 100)}%` : '—'}
                     </span>
-                    {cell.label ? <span className="block text-xs text-fg-muted">{cell.label}</span> : null}
+                    {cell.label ? (
+                      <span className="block text-xs text-fg-muted">{cell.label}</span>
+                    ) : null}
                   </td>
                 );
               })}
@@ -137,7 +158,8 @@ export function ComparisonDialog({
   onOpenChange: (open: boolean) => void;
   onReportGenerated: (bundle: ReportBundle) => void;
 }) {
-  const { compareMarkets, filters, mode, priorities, assumptions, rankedBySlug, scenario } = useExplorer();
+  const { compareMarkets, filters, mode, priorities, assumptions, rankedBySlug, scenario } =
+    useExplorer();
   const ids = useMemo(() => compareMarkets.map((m) => m.id), [compareMarkets]);
   const body = useMemo<ComparisonRequest>(
     () => ({
@@ -194,23 +216,34 @@ export function ComparisonDialog({
             </div>
           ) : null}
           {comparison.error ? (
-            <ErrorState title="The comparison could not be computed" error={comparison.error} onRetry={() => void comparison.refetch()} />
+            <ErrorState
+              title="The comparison could not be computed"
+              error={comparison.error}
+              onRetry={() => void comparison.refetch()}
+            />
           ) : null}
           {comparison.data ? (
             <>
               <ComparisonTable comparison={comparison.data} rankedBySlug={rankedBySlug} />
               <p className="text-xs text-fg-muted">
-                Policy version {comparison.data.policyVersion} · generated {formatDateTimeLabel(comparison.data.generatedAt)}.
-                Unknown cells are unknown: no value was invented. {COPY.scenarioDisclaimer}
+                Policy version {comparison.data.policyVersion} · generated{' '}
+                {formatDateTimeLabel(comparison.data.generatedAt)}. Unknown cells are unknown: no
+                value was invented. {COPY.scenarioDisclaimer}
               </p>
             </>
           ) : null}
           <div className="flex flex-wrap items-center gap-2">
-            <Button onClick={() => void generate()} loading={scenario.busy === 'reporting'} loadingLabel="Generating report…" disabled={!comparison.data}>
+            <Button
+              onClick={() => void generate()}
+              loading={scenario.busy === 'reporting'}
+              loadingLabel="Generating report…"
+              disabled={!comparison.data}
+            >
               <FileText aria-hidden="true" className="h-4 w-4" /> Generate dated comparison report
             </Button>
             <span className="text-xs text-fg-muted">
-              Saves the scenario, stores a snapshot of the policy version, inputs and source versions, and opens a printable report.
+              Saves the scenario, stores a snapshot of the policy version, inputs and source
+              versions, and opens a printable report.
             </span>
           </div>
         </div>

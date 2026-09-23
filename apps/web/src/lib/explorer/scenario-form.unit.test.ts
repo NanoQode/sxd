@@ -59,7 +59,9 @@ describe('scenario form mapping', () => {
     expect(assumptions.base.vacancyRate).toBeCloseTo(0.1);
     expect(assumptions.base.opex.managementFeeFraction).toBeCloseTo(0.05);
     expect(assumptions.base.tax).toEqual({ kind: 'fraction_of_noi', value: 0.075 });
-    expect(assumptions.base.units).toEqual([{ label: 'Units', count: 2, annualRentPerUnitNaira: 3_000_000 }]);
+    expect(assumptions.base.units).toEqual([
+      { label: 'Units', count: 2, annualRentPerUnitNaira: 3_000_000 },
+    ]);
     expect(assumptions.low).toEqual({
       vacancyRate: 0.2,
       units: [{ label: 'Units', count: 2, annualRentPerUnitNaira: 2_500_000 }],
@@ -76,9 +78,15 @@ describe('scenario form mapping', () => {
 
   it('rejects non-numeric and out-of-range input with field messages', () => {
     const form = formFromAssumptions(DEFAULT_ASSUMPTIONS);
-    const result = scenarioFormSchema.safeParse({ ...form, landCostNaira: 'ten million', vacancyPercent: '150' });
+    const result = scenarioFormSchema.safeParse({
+      ...form,
+      landCostNaira: 'ten million',
+      vacancyPercent: '150',
+    });
     expect(result.success).toBe(false);
-    const messages = result.success ? [] : result.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`);
+    const messages = result.success
+      ? []
+      : result.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`);
     expect(messages).toContain('landCostNaira: Land cost must be a number');
     expect(messages.some((m) => m.startsWith('vacancyPercent:'))).toBe(true);
   });

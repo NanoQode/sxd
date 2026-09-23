@@ -23,7 +23,10 @@ const bodySchema = z.object({
 export const POST = route(async (req, { correlationId }) => {
   const identity = await getIdentity();
   if (!identity.session) throw new ApiError('unauthenticated', 'sign in required');
-  await enforceRateLimit(`service-requests:interest:${identity.session.user.id}`, { windowSeconds: 3600, max: 10 });
+  await enforceRateLimit(`service-requests:interest:${identity.session.user.id}`, {
+    windowSeconds: 3600,
+    max: 10,
+  });
   const body = await parseJson(req, bodySchema);
   const lead = await createLead(
     {

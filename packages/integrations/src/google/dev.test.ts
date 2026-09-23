@@ -60,7 +60,11 @@ describe('DevCalendarProvider', () => {
       }),
     );
     await expect(
-      provider.exchangeCode({ code: url.searchParams.get('code')!, codeVerifier: wrongVerifier.codeVerifier, redirectUri: 'x' }),
+      provider.exchangeCode({
+        code: url.searchParams.get('code')!,
+        codeVerifier: wrongVerifier.codeVerifier,
+        redirectUri: 'x',
+      }),
     ).rejects.toThrow(/PKCE/);
   });
 
@@ -78,18 +82,34 @@ describe('DevCalendarProvider', () => {
       timeMin: '2026-11-02T00:00:00Z',
       timeMax: '2026-11-03T00:00:00Z',
     });
-    expect(busy.busy).toEqual([{ calendarId: 'primary', start: '2026-11-02T08:00:00.000Z', end: '2026-11-02T08:30:00.000Z' }]);
+    expect(busy.busy).toEqual([
+      { calendarId: 'primary', start: '2026-11-02T08:00:00.000Z', end: '2026-11-02T08:30:00.000Z' },
+    ]);
     expect(busy.errors).toEqual([{ calendarId: 'missing@example.com', reason: 'notFound' }]);
   });
 
   it('keeps a pending conference pending until polled, and fails then succeeds with a new request id', async () => {
-    const pending = new DevCalendarProvider({ appEnv: 'test', simulateConference: 'pending', pendingPolls: 2 });
+    const pending = new DevCalendarProvider({
+      appEnv: 'test',
+      simulateConference: 'pending',
+      pendingPolls: 2,
+    });
     const tokens = await connect(pending);
     const created = await pending.createEvent(tokens, booking);
-    expect(created.conference).toMatchObject({ status: 'pending', meetUrl: null, requestId: 'req-1' });
-    const poll1 = await pending.getEvent(tokens, { calendarId: 'primary', eventId: created.eventId });
+    expect(created.conference).toMatchObject({
+      status: 'pending',
+      meetUrl: null,
+      requestId: 'req-1',
+    });
+    const poll1 = await pending.getEvent(tokens, {
+      calendarId: 'primary',
+      eventId: created.eventId,
+    });
     expect(poll1.conference.status).toBe('pending');
-    const poll2 = await pending.getEvent(tokens, { calendarId: 'primary', eventId: created.eventId });
+    const poll2 = await pending.getEvent(tokens, {
+      calendarId: 'primary',
+      eventId: created.eventId,
+    });
     expect(poll2.conference.status).toBe('ready');
     expect(poll2.conference.meetUrl).toContain('meet.google.com/dev-');
 
@@ -138,13 +158,28 @@ describe('DevCalendarProvider', () => {
       }),
     ).rejects.toBeInstanceOf(CalendarConflictError);
     await expect(
-      provider.cancelEvent(tokens, { calendarId: 'primary', eventId: created.eventId, etag: created.etag, sendUpdates: 'all' }),
+      provider.cancelEvent(tokens, {
+        calendarId: 'primary',
+        eventId: created.eventId,
+        etag: created.etag,
+        sendUpdates: 'all',
+      }),
     ).rejects.toBeInstanceOf(CalendarConflictError);
     expect(
-      await provider.cancelEvent(tokens, { calendarId: 'primary', eventId: created.eventId, etag: moved.etag, sendUpdates: 'all' }),
+      await provider.cancelEvent(tokens, {
+        calendarId: 'primary',
+        eventId: created.eventId,
+        etag: moved.etag,
+        sendUpdates: 'all',
+      }),
     ).toEqual({ status: 'cancelled' });
     expect(
-      await provider.cancelEvent(tokens, { calendarId: 'primary', eventId: created.eventId, etag: null, sendUpdates: 'all' }),
+      await provider.cancelEvent(tokens, {
+        calendarId: 'primary',
+        eventId: created.eventId,
+        etag: null,
+        sendUpdates: 'all',
+      }),
     ).toEqual({ status: 'already_gone' });
   });
 
@@ -167,16 +202,28 @@ describe('DevCalendarProvider', () => {
     expect(full.items).toEqual([]);
     expect(full.nextSyncToken).toMatch(/^dev-sync-/);
     const created = await provider.createEvent(tokens, booking);
-    const incremental = await provider.listChanges(tokens, { calendarId: 'primary', syncToken: full.nextSyncToken });
+    const incremental = await provider.listChanges(tokens, {
+      calendarId: 'primary',
+      syncToken: full.nextSyncToken,
+    });
     expect(incremental.items.map((i) => i.id)).toEqual([created.eventId]);
     expect(incremental.fullResyncRequired).toBe(false);
-    const nothingNew = await provider.listChanges(tokens, { calendarId: 'primary', syncToken: incremental.nextSyncToken });
+    const nothingNew = await provider.listChanges(tokens, {
+      calendarId: 'primary',
+      syncToken: incremental.nextSyncToken,
+    });
     expect(nothingNew.items).toEqual([]);
 
     provider.expireSyncTokens();
-    const expired = await provider.listChanges(tokens, { calendarId: 'primary', syncToken: incremental.nextSyncToken });
+    const expired = await provider.listChanges(tokens, {
+      calendarId: 'primary',
+      syncToken: incremental.nextSyncToken,
+    });
     expect(expired.fullResyncRequired).toBe(true);
-    const garbage = await provider.listChanges(tokens, { calendarId: 'primary', syncToken: 'not-ours' });
+    const garbage = await provider.listChanges(tokens, {
+      calendarId: 'primary',
+      syncToken: 'not-ours',
+    });
     expect(garbage.fullResyncRequired).toBe(true);
     await provider.stopChannel(tokens, { channelId: 'chan-1', resourceId: watch.resourceId });
     expect(() => provider.simulateNotificationHeaders('chan-1')).toThrow(/unknown dev channel/);
