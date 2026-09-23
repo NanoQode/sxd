@@ -38,10 +38,7 @@ export const POST = route(async (req, { correlationId }) => {
       .insert(schema.staffRoles)
       .values({ userId, role: 'super_admin', reason: 'first administrator bootstrap' })
       .onConflictDoNothing();
-    await tx
-      .update(schema.user)
-      .set({ emailVerified: true, role: 'admin' })
-      .where(eq(schema.user.id, userId));
+    await tx.update(schema.user).set({ emailVerified: true }).where(eq(schema.user.id, userId));
     await tx.insert(schema.auditEvents).values({
       actorType: 'user',
       actorUserId: userId,
