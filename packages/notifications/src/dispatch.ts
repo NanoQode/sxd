@@ -155,7 +155,7 @@ async function dispatchChannel(
     if (!attemptId) return { kind: 'deduplicated' as const, prior: null };
 
     if (failure || decision.action === 'suppress' || decision.action === 'digest') {
-      const status = failure ? 'failed' : 'suppressed';
+      const status: 'failed' | 'suppressed' = failure ? 'failed' : 'suppressed';
       await tx
         .update(schema.deliveryAttempts)
         .set({ status, errorSanitized: decision.reason, failedAt: failure ? now : null })
@@ -187,18 +187,22 @@ async function dispatchChannel(
       return { kind: 'settled' as const, attemptId, status: 'delivered' as const, reason: null };
     }
 
-    const message: OutboundMessage =
-      rendered!.channel === 'email'
-        ? {
-            channel: 'email',
-            to: address!,
-            toName: recipient.name,
-            subject: rendered!.subject,
-            text: rendered!.text,
-            html: rendered!.html,
-            tags: [request.templateKey, request.category, ...(request.label ? [request.label] : [])],
-          }
-        : { channel: 'sms', to: address!, body: rendered!.body, category: smsCategoryFor(request.category) };
+    let message: OutboundMessage;
+    if (rendered?.channel === 'email') {
+      message = {
+        channel: 'email',
+        to: address!,
+        toName: recipient.name,
+        subject: rendered.subject,
+        text: rendered.text,
+        html: rendered.html,
+        tags: [request.templateKey, request.category, ...(request.label ? [request.label] : [])],
+      };
+    } else if (rendered?.channel === 'sms') {
+      message = { channel: 'sms', to: address!, body: rendered.body, category: smsCategoryFor(request.category) };
+    } else {
+      return { kind: 'settled' as const, attemptId, status: 'failed' as const, reason: 'unsupported_channel' };
+    }
 
     if (decision.action === 'defer' && decision.deferUntil) {
       await scheduleDeferredSend(tx, {

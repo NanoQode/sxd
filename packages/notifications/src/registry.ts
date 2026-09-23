@@ -12,6 +12,7 @@ import type {
   NotificationRequest,
   PipelineOptions,
   RecipientSpec,
+  ResolvedRecipient,
 } from './types';
 
 /**
@@ -190,7 +191,7 @@ const resolvers: Record<string, EventResolver> = {
         category: 'transactional',
         channels: EMAIL_APP,
         recipients,
-        variables: (r) => ({
+        variables: (r: ResolvedRecipient) => ({
           name: r.name,
           title: sr.title,
           reference: sr.reference,
@@ -245,7 +246,7 @@ const resolvers: Record<string, EventResolver> = {
         category: 'transactional',
         channels: EMAIL_APP,
         recipients: await customerRecipients(tx, sr.organizationId, [sr.requestedByUserId]),
-        variables: (r) => ({
+        variables: (r: ResolvedRecipient) => ({
           name: r.name,
           reference: sr.reference,
           version: Number(payload['version'] ?? quote.currentVersion),
@@ -270,7 +271,7 @@ const resolvers: Record<string, EventResolver> = {
         category: 'transactional',
         channels: ALL,
         recipients: await customerRecipients(tx, invoice.organizationId, [invoice.customerUserId]),
-        variables: (r) => ({
+        variables: (r: ResolvedRecipient) => ({
           name: r.name,
           invoiceNumber: invoice.number,
           amount: formatNaira(invoice.totalKobo),
@@ -295,7 +296,7 @@ const resolvers: Record<string, EventResolver> = {
       .select()
       .from(schema.receipts)
       .where(eq(schema.receipts.invoiceId, invoice.id))
-      .orderBy(desc(schema.receipts.createdAt))
+      .orderBy(desc(schema.receipts.issuedAt))
       .limit(1);
     const amount = payload['amountKobo'] ?? receipt?.amountKobo ?? invoice.amountPaidKobo;
     return [
@@ -304,7 +305,7 @@ const resolvers: Record<string, EventResolver> = {
         category: 'transactional',
         channels: EMAIL_APP,
         recipients: await customerRecipients(tx, invoice.organizationId, [invoice.customerUserId]),
-        variables: (r) => ({
+        variables: (r: ResolvedRecipient) => ({
           name: r.name,
           amount: formatNaira(amount as bigint | number | string),
           invoiceNumber: invoice.number,
@@ -340,7 +341,7 @@ const resolvers: Record<string, EventResolver> = {
         category: 'transactional',
         channels: ALL,
         recipients: await customerRecipients(tx, co.organizationId, [project?.customerContactUserId]),
-        variables: (r) => ({
+        variables: (r: ResolvedRecipient) => ({
           name: r.name,
           subject: `Change order #${co.number}: ${co.title}`,
           dueAt: dueAt ? formatWhen(dueAt) : 'as soon as possible',
@@ -367,7 +368,7 @@ const resolvers: Record<string, EventResolver> = {
         category: 'transactional',
         channels: EMAIL_APP,
         recipients,
-        variables: (r) => ({
+        variables: (r: ResolvedRecipient) => ({
           name: r.name,
           tenderTitle: tender.title,
           deadline: formatWhen(tender.submissionDeadlineAt, tender.displayTimeZone),
@@ -400,7 +401,7 @@ const resolvers: Record<string, EventResolver> = {
         category: 'transactional',
         channels: EMAIL_APP,
         recipients,
-        variables: (r) => ({
+        variables: (r: ResolvedRecipient) => ({
           name: r.name,
           tenderTitle: tender.title,
           tenderUrl: `${env.appUrl}/portal/tenders/${tender.id}`,
@@ -429,7 +430,7 @@ const resolvers: Record<string, EventResolver> = {
         category: 'transactional',
         channels: EMAIL_APP,
         recipients,
-        variables: (r) => ({
+        variables: (r: ResolvedRecipient) => ({
           name: r.name,
           title: wo.title,
           statusLabel: statusLabel(to),
@@ -463,7 +464,7 @@ const resolvers: Record<string, EventResolver> = {
         category: 'transactional',
         channels: EMAIL_APP,
         recipients,
-        variables: (r) => ({ name: r.name, title: task.title, taskUrl: `${env.appUrl}${linkPath}` }),
+        variables: (r: ResolvedRecipient) => ({ name: r.name, title: task.title, taskUrl: `${env.appUrl}${linkPath}` }),
         dedupeScope: scope,
         inApp: { linkPath },
         relatedEntity: { type: 'task', id: task.id },
@@ -559,7 +560,7 @@ async function appointmentRequest(
       category,
       channels: ALL,
       recipients: [recipient],
-      variables: (r) => ({
+      variables: (r: ResolvedRecipient) => ({
         name: r.name,
         kind: statusLabel(appt.kind),
         change: change ?? statusLabel(appt.status),
@@ -592,7 +593,7 @@ async function reportRequest({ tx, event, payload, env, scope }: ResolverContext
       category: 'transactional',
       channels: ALL,
       recipients: await customerRecipients(tx, report.organizationId, [project?.customerContactUserId]),
-      variables: (r) => ({ name: r.name, reportTitle: report.title, reportUrl }),
+      variables: (r: ResolvedRecipient) => ({ name: r.name, reportTitle: report.title, reportUrl }),
       dedupeScope: scope,
       inApp: { linkPath: `/portal/reports/${report.id}` },
       relatedEntity: { type: 'report', id: report.id },
