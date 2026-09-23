@@ -19,6 +19,7 @@ import {
   geometryPoint,
   id,
   jsonObject,
+  jsonObjectNotNull,
   kobo,
   koboNotNull,
   koboZero,
@@ -464,6 +465,36 @@ export const reports = pgTable(
     index('reports_project_idx').on(t.projectId),
     index('reports_sr_idx').on(t.serviceRequestId),
   ],
+);
+
+export interface ReportTemplateSection {
+  key: string;
+  heading: string;
+  /** Guidance for the author; never shown to the customer. */
+  guidance?: string;
+  required: boolean;
+}
+
+/**
+ * Section outlines for each report kind. Authors start a report from the
+ * active template of its kind; the stored report keeps its own copy, so
+ * editing a template never rewrites issued reports.
+ */
+export const reportTemplates = pgTable(
+  'report_templates',
+  {
+    id: id(),
+    kind: reportKindEnum().notNull(),
+    name: text().notNull(),
+    sections: jsonObjectNotNull<ReportTemplateSection[]>([]),
+    /** Standard scope and limitations wording appended to the report. */
+    limitationsMarkdown: text(),
+    active: boolean().notNull().default(true),
+    createdBy: text().references(() => user.id),
+    version: version(),
+    ...timestamps(),
+  },
+  (t) => [index('report_templates_kind_idx').on(t.kind, t.active)],
 );
 
 export const reportRevisions = pgTable(

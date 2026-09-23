@@ -50,6 +50,13 @@
       "when": 1790132010268,
       "tag": "0006_conversation_participant_update",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1790169133178,
+      "tag": "0007_engagement_items_templates_requirements",
+      "breakpoints": true
     }
   ]
 }

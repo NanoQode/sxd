@@ -16,6 +16,7 @@ import {
   currency,
   id,
   jsonObject,
+  jsonObjectNotNull,
   kobo,
   koboNotNull,
   timestamps,
@@ -484,3 +485,107 @@ export const quoteTemplates = pgTable('quote_templates', {
   createdBy: text().references(() => user.id),
   ...timestamps(),
 });
+
+/* ---------------------------------------------------------------------- */
+/* Structured engagement records                                           */
+/* ---------------------------------------------------------------------- */
+
+/**
+ * Items that make an engagement's progress inspectable: the due-diligence
+ * document checklist, survey references, site findings, queries and red flags;
+ * purchase conditions, closing tasks and document handover; land-transaction
+ * milestones. Each belongs to one service request. `visibility` decides whether
+ * the customer or assigned partners see it (internal items stay with staff).
+ */
+export const engagementItemKindEnum = pgEnum('engagement_item_kind', [
+  'document_check',
+  'survey_reference',
+  'site_finding',
+  'query',
+  'red_flag',
+  'condition',
+  'closing_task',
+  'handover_document',
+  'lease_milestone',
+]);
+
+export const engagementItemStatusEnum = pgEnum('engagement_item_status', [
+  'open',
+  'in_progress',
+  'satisfied',
+  'waived',
+  'failed',
+  'cancelled',
+]);
+
+export const engagementItemSeverityEnum = pgEnum('engagement_item_severity', [
+  'info',
+  'low',
+  'medium',
+  'high',
+  'critical',
+]);
+
+export const engagementItems = pgTable(
+  'engagement_items',
+  {
+    id: id(),
+    organizationId: text()
+      .notNull()
+      .references(() => organization.id),
+    serviceRequestId: uuid()
+      .notNull()
+      .references(() => serviceRequests.id),
+    kind: engagementItemKindEnum().notNull(),
+    title: text().notNull(),
+    detail: text(),
+    /** External reference such as a survey plan number or registry entry. */
+    reference: text(),
+    status: engagementItemStatusEnum().notNull().default('open'),
+    severity: engagementItemSeverityEnum(),
+    visibility: visibilityEnum().notNull().default('customer'),
+    assigneeUserId: text().references(() => user.id),
+    dueAt: tstz(),
+    resolvedAt: tstz(),
+    resolvedBy: text().references(() => user.id),
+    resolutionNote: text(),
+    /** Evidence files (file_objects ids) supporting the item. */
+    fileIds: jsonObjectNotNull<string[]>([]),
+    /** Optional link to the record the item concerns (offer, listing, site visit...). */
+    subjectType: text(),
+    subjectId: uuid(),
+    sortOrder: integer().notNull().default(0),
+    createdBy: text().references(() => user.id),
+    version: version(),
+    ...timestamps(),
+  },
+  (t) => [
+    index('engagement_items_sr_idx').on(t.serviceRequestId, t.kind),
+    index('engagement_items_assignee_idx').on(t.assigneeUserId, t.status),
+  ],
+);
+
+/**
+ * Documents a service asks the customer for. Sensitive (identity) documents
+ * are requested only when the chosen transaction needs them.
+ */
+export const documentRequirements = pgTable(
+  'document_requirements',
+  {
+    id: id(),
+    /** Null applies to every service. */
+    serviceId: uuid().references(() => services.id),
+    name: text().notNull(),
+    description: text(),
+    /** Stage from which the document is needed; null means at intake. */
+    stage: engagementStatusEnum(),
+    required: boolean().notNull().default(true),
+    sensitive: boolean().notNull().default(false),
+    active: boolean().notNull().default(true),
+    sortOrder: integer().notNull().default(0),
+    createdBy: text().references(() => user.id),
+    version: version(),
+    ...timestamps(),
+  },
+  (t) => [index('document_requirements_service_idx').on(t.serviceId, t.active)],
+);
