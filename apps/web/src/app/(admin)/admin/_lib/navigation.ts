@@ -54,7 +54,6 @@ export const ADMIN_NAV: NavItem[] = [
     href: '/admin/customers',
     icon: 'customers',
     permissions: ['customers.read'],
-    plannedWave: 2,
   },
   {
     key: 'properties',
@@ -62,7 +61,6 @@ export const ADMIN_NAV: NavItem[] = [
     href: '/admin/properties',
     icon: 'properties',
     permissions: ['customers.read', 'projects.read_all'],
-    plannedWave: 2,
   },
   {
     key: 'projects',
@@ -70,7 +68,6 @@ export const ADMIN_NAV: NavItem[] = [
     href: '/admin/projects',
     icon: 'projects',
     permissions: ['projects.read_all'],
-    plannedWave: 2,
   },
   {
     key: 'service-requests',
@@ -78,7 +75,6 @@ export const ADMIN_NAV: NavItem[] = [
     href: '/admin/service-requests',
     icon: 'requests',
     permissions: ['service_requests.read_all'],
-    plannedWave: 2,
   },
   {
     key: 'assignments',
@@ -86,7 +82,6 @@ export const ADMIN_NAV: NavItem[] = [
     href: '/admin/assignments',
     icon: 'assignments',
     permissions: ['service_requests.assign'],
-    plannedWave: 2,
   },
   {
     key: 'reports',
@@ -94,7 +89,6 @@ export const ADMIN_NAV: NavItem[] = [
     href: '/admin/reports',
     icon: 'reports',
     permissions: ['reports.review', 'reports.draft', 'reports.release'],
-    plannedWave: 2,
   },
   {
     key: 'tenders',
@@ -102,7 +96,6 @@ export const ADMIN_NAV: NavItem[] = [
     href: '/admin/tenders',
     icon: 'tenders',
     permissions: ['tenders.manage', 'bids.evaluate'],
-    plannedWave: 4,
   },
   {
     key: 'procurement',
@@ -110,7 +103,6 @@ export const ADMIN_NAV: NavItem[] = [
     href: '/admin/procurement',
     icon: 'procurement',
     permissions: ['procurement.manage'],
-    plannedWave: 4,
   },
   {
     key: 'rentals',
@@ -118,7 +110,6 @@ export const ADMIN_NAV: NavItem[] = [
     href: '/admin/rentals',
     icon: 'rentals',
     permissions: ['rentals.manage', 'maintenance.manage', 'estates.manage'],
-    plannedWave: 4,
   },
   {
     key: 'finance',
@@ -126,7 +117,6 @@ export const ADMIN_NAV: NavItem[] = [
     href: '/admin/finance',
     icon: 'finance',
     permissions: ['finance.read'],
-    plannedWave: 3,
   },
   {
     key: 'appointments',
@@ -134,7 +124,6 @@ export const ADMIN_NAV: NavItem[] = [
     href: '/admin/appointments',
     icon: 'appointments',
     permissions: ['appointments.manage_all'],
-    plannedWave: 3,
   },
   {
     key: 'messages',
@@ -142,7 +131,6 @@ export const ADMIN_NAV: NavItem[] = [
     href: '/admin/messages',
     icon: 'messages',
     permissions: ['messages.read_all', 'support.tickets.read'],
-    plannedWave: 2,
   },
   {
     key: 'market-data',
@@ -164,7 +152,6 @@ export const ADMIN_NAV: NavItem[] = [
     href: '/admin/partners',
     icon: 'partners',
     permissions: ['access.partners.verify'],
-    plannedWave: 4,
   },
   {
     key: 'integrations',
@@ -172,7 +159,6 @@ export const ADMIN_NAV: NavItem[] = [
     href: '/admin/integrations',
     icon: 'integrations',
     permissions: ['integrations.read'],
-    plannedWave: 3,
   },
   {
     key: 'settings',
@@ -312,113 +298,3 @@ export function visibleSubNav(permissions: ReadonlySet<StaffPermission>): SubNav
     (item) => item.permissions.length === 0 || item.permissions.some((p) => permissions.has(p)),
   );
 }
-
-export interface PlannedSection {
-  key: string;
-  title: string;
-  wave: number;
-  summary: string;
-  related?: Array<{ label: string; href: string }>;
-}
-
-export const PLANNED_SECTIONS: Record<string, PlannedSection> = {
-  customers: {
-    key: 'customers',
-    title: 'Customers',
-    wave: 2,
-    summary:
-      'Customer organisations, members, granted access, masked sensitive fields and support escalation arrive with the service-delivery portals.',
-  },
-  properties: {
-    key: 'properties',
-    title: 'Properties',
-    wave: 2,
-    summary:
-      'Private property assets, parcels, units, owner authority and listing moderation are part of the service workflows.',
-  },
-  projects: {
-    key: 'projects',
-    title: 'Projects',
-    wave: 2,
-    summary:
-      'Baselines, budgets, schedules, site visits, evidence, defects and change orders ship with the eight core service modules.',
-  },
-  'service-requests': {
-    key: 'service-requests',
-    title: 'Service Requests',
-    wave: 2,
-    summary:
-      'Triage, SLA queues, quotations and the engagement state machine are wired to the portals in the service-delivery wave.',
-  },
-  assignments: {
-    key: 'assignments',
-    title: 'Assignments',
-    wave: 2,
-    summary:
-      'Staff and partner assignments, workload and calendar views are delivered with service requests and projects.',
-  },
-  reports: {
-    key: 'reports',
-    title: 'Reports',
-    wave: 2,
-    summary:
-      'Report templates, named reviewers and versioned releases belong to the service workflows.',
-  },
-  tenders: {
-    key: 'tenders',
-    title: 'Tenders',
-    wave: 4,
-    summary:
-      'Sealed submissions, clarifications, weighted evaluation and published awards are an expansion workflow.',
-  },
-  procurement: {
-    key: 'procurement',
-    title: 'Procurement',
-    wave: 4,
-    summary:
-      'Supplier directory, RFQs, normalised delivered-cost comparisons, purchase orders and delivery discrepancies are an expansion workflow.',
-  },
-  rentals: {
-    key: 'rentals',
-    title: 'Rentals / Maintenance',
-    wave: 4,
-    summary:
-      'Leases, rent schedules, work orders, assets and owner statements arrive with the rental and maintenance modules.',
-  },
-  finance: {
-    key: 'finance',
-    title: 'Finance',
-    wave: 3,
-    summary:
-      'Invoices, payment reconciliation, refunds, payouts and ledger exports are delivered with the payment gateway integration.',
-  },
-  appointments: {
-    key: 'appointments',
-    title: 'Appointments',
-    wave: 3,
-    summary:
-      'Availability, holds, Google Calendar and Meet synchronisation and reminders ship with the scheduling integration.',
-  },
-  messages: {
-    key: 'messages',
-    title: 'Messages',
-    wave: 2,
-    summary:
-      'Conversations, internal notes and notification templates are part of the portal wave.',
-  },
-  partners: {
-    key: 'partners',
-    title: 'Partners',
-    wave: 4,
-    summary:
-      'Partner credentials, coverage, availability, conflict disclosures and reviews arrive with the professional partner network. Verification of partner profiles is already available under Access.',
-    related: [{ label: 'Partner verification queue', href: '/admin/access/partners' }],
-  },
-  integrations: {
-    key: 'integrations',
-    title: 'Integrations',
-    wave: 3,
-    summary:
-      'Payment, SMS, SMTP, Google, storage and map providers with save/test/activate states, sanitized logs and secret rotation are delivered in the integrations wave.',
-  },
-};

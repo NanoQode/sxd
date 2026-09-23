@@ -1,6 +1,10 @@
 @import 'tailwindcss';
 @import '@simplexd/ui/tokens.css';
 
+/* The shared component library lives outside this app's directory, so
+   Tailwind must scan it explicitly or its utility classes are never emitted. */
+@source '../../../../packages/ui/src';
+
 @custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
 
 @theme inline {
