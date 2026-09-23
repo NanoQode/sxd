@@ -115,7 +115,9 @@ export default async function DeliveriesPage({
     <div className="space-y-6">
       {header}
       {!parsed.success ? (
-        <p className="text-sm text-danger">Some filters were ignored: {parsed.error.issues[0]?.message}</p>
+        <p className="text-sm text-danger">
+          Some filters were ignored: {parsed.error.issues[0]?.message}
+        </p>
       ) : null}
       <FilterBar>
         <FilterSelect

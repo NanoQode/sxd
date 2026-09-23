@@ -38,7 +38,9 @@ export default async function TemplateFamilyPage({
   const key = templateKeySchema.safeParse(raw.key);
   const channel = notificationChannelSchema.safeParse(raw.channel);
   if (!key.success || !channel.success) notFound();
-  const identity = await requireSignedIn(`/admin/communications/templates/${raw.key}/${raw.channel}`);
+  const identity = await requireSignedIn(
+    `/admin/communications/templates/${raw.key}/${raw.channel}`,
+  );
   const sp = await searchParams;
   const locale = first(sp['locale'])?.slice(0, 16) ?? 'en';
   const version = Number(first(sp['version']));

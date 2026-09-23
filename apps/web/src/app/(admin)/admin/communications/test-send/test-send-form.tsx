@@ -52,7 +52,9 @@ function AdapterBadge({ hint }: { hint: ProviderHint | undefined }) {
   if (hint.devFallback)
     return <Badge tone="warning">Development adapter — no real message will be sent</Badge>;
   if (!hint.configured)
-    return <Badge tone="danger">Not configured — the send will fail with provider_not_configured</Badge>;
+    return (
+      <Badge tone="danger">Not configured — the send will fail with provider_not_configured</Badge>
+    );
   return (
     <Badge tone="primary">
       {hint.adapter} · {hint.environment}
@@ -314,13 +316,19 @@ export function TestSendForm({
         {result ? (
           <>
             <section aria-labelledby="provider-answer" className="space-y-2">
-              <h2 id="provider-answer" className="text-sm font-medium uppercase tracking-wide text-fg-muted">
+              <h2
+                id="provider-answer"
+                className="text-sm font-medium uppercase tracking-wide text-fg-muted"
+              >
                 1 · Provider answer
               </h2>
               <ProviderAnswer result={result} />
             </section>
             <section aria-labelledby="delivery-status" className="space-y-2">
-              <h2 id="delivery-status" className="text-sm font-medium uppercase tracking-wide text-fg-muted">
+              <h2
+                id="delivery-status"
+                className="text-sm font-medium uppercase tracking-wide text-fg-muted"
+              >
                 2 · Delivery status
               </h2>
               {attempt ? (
@@ -393,9 +401,8 @@ export function TestSendForm({
                     </div>
                     {attempt.developmentAdapter ? (
                       <p className="text-xs text-fg-muted">
-                        The development adapter keeps messages in memory and never reports
-                        delivery on its own; simulated receipts exercise the real webhook
-                        handler.
+                        The development adapter keeps messages in memory and never reports delivery
+                        on its own; simulated receipts exercise the real webhook handler.
                       </p>
                     ) : null}
                   </CardContent>

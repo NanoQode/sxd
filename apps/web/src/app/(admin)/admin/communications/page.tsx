@@ -31,7 +31,9 @@ const PROVIDER_NAMES: Record<string, string> = { smtp: 'Email (SMTP)', termii: '
 function AdapterLine({ p }: { p: ProviderStatusDto }) {
   if (p.devFallback) {
     return (
-      <Badge tone="warning">Development adapter — no real message is sent from this environment</Badge>
+      <Badge tone="warning">
+        Development adapter — no real message is sent from this environment
+      </Badge>
     );
   }
   if (!p.configured) {
@@ -104,7 +106,10 @@ export default async function CommunicationsOverviewPage() {
   const failed24h = providers
     ? providers.reduce(
         (sum, p) =>
-          sum + (p.last24h['failed'] ?? 0) + (p.last24h['rejected'] ?? 0) + (p.last24h['bounced'] ?? 0),
+          sum +
+          (p.last24h['failed'] ?? 0) +
+          (p.last24h['rejected'] ?? 0) +
+          (p.last24h['bounced'] ?? 0),
         0,
       )
     : null;

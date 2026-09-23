@@ -50,6 +50,10 @@ business change ──▶ outbox_events ──▶ worker relay ──▶ jobs (n
      `digest:<period>` and the in-app row feeds the next digest;
    - quiet hours (preference row, or the `notifications.quiet_hours` setting when the user has
      no rows) defer non-security email/SMS to the end of the window in the recipient's zone;
+   - SMS goes only to a profile number confirmed with a one-time code
+     (`user_profiles.phone_verified_at`; `ResolvedRecipient.phoneVerified`). Any other number is
+     recorded as `suppressed` with reason `phone_unverified`; the verification code itself and
+     explicit staff test sends set `allowUnverifiedPhone` on the request;
    - SMS also needs consent (`sms_consents`: marketing opt-in, no transactional opt-out), an
      enabled Termii purpose and headroom under the daily spend cap (`evaluateSendPolicy`).
 5. **Templates** (`templates.ts`) come from the `templates` table: highest approved version for
@@ -104,24 +108,58 @@ Booking reminders are emitted by the calendar scan (`appointments.scan_reminders
 
 ## 4. Admin
 
-Routes (`apps/web/src/app/api/v1/admin/notifications/**`, OpenAPI in
-`apps/web/src/lib/api/registry/notifications.ts`):
+UI: _Admin → Communications_ (`apps/web/src/app/(admin)/admin/communications`, server module
+`apps/web/src/server/admin/communications/service.ts`, package module
+`packages/notifications/src/communications.ts`). Reachable with `notifications.templates.manage`
+or `notifications.test_send`; neither is MFA-gated. Routes live under
+`apps/web/src/app/api/v1/admin/notifications/**` and are registered in
+`apps/web/src/lib/api/registry/{notifications,communications}.ts`.
 
-- Templates (`notifications.templates.manage`): list/get, create a draft version (next version
-  number for key/channel/locale, variables extracted automatically), edit drafts (approved and
-  retired versions are immutable), `actions` (`approve` retires older approved versions;
-  `retire`; `reopen` a retired version as a draft), `preview` with sample variables (missing
-  ones render as `[name]`; SMS previews include segment counts).
-- Test send (`notifications.test_send`, no MFA step, 30/hour/user): explicit email or SMS to a
-  staff-entered recipient through the active provider. Records an attempt labelled test
-  (`relatedEntityType = test_send`), audits `notifications.test_send`, and returns the real
-  provider outcome, including negative ones (`provider_not_configured`, rejected numbers).
-- Delivery log: `GET .../deliveries` with channel/status/template/recipient/provider/test/date
-  filters; cursor paged.
-- Provider status: `GET .../providers` (`integrations.read`) reports SMTP and Termii state for
-  the current environment from `integration_configs` (`configured`, `status`, last check,
-  rotation timestamps, dev fallback) with the last 24 hours of delivery counts. No settings or
-  secrets are returned.
+- **Templates** (`notifications.templates.manage`): one family per key × channel × locale
+  (`GET …/templates/families`, `GET …/templates/families/{key}/{channel}`). Editing saves the
+  next version as a draft (`POST …/templates`); drafts are edited in place (`PATCH`); approved
+  and retired versions are immutable. `approve` activates a version and retires the previous
+  active one; `retire`; `reopen` a retired version as a draft. Rollback
+  (`POST …/templates/{id}/restore`, `activate: true`) copies an older version into a new one and
+  activates it in one transaction (audit `template.rollback`; `template.restored` for a draft
+  copy). The history is never rewritten.
+- **Preview** (`POST …/templates/preview`): server render of a stored version or unsaved content
+  with a fixed catalogue of sample values plus optional staff-typed overrides
+  (`sampleVariablesFor`); nothing is read from customer records. Email previews are shown in a
+  sandboxed frame; SMS previews report GSM-7/Unicode, the characters forcing Unicode, segments,
+  units left and the estimated cost at the active Termii `unitCostKobo` (default labelled).
+- **Test send** (`notifications.test_send`, 30/hour/user, `POST …/test-send`): email or SMS to a
+  staff-entered recipient, shown before sending and echoed back; templates render with sample
+  values. The response separates the provider's answer (accepted / rejected with sanitised
+  reason, adapter, development-adapter flag) from delivery status. The attempt is labelled
+  (`related_entity_type = test_send`) and audited (`notifications.test_send`).
+  `GET …/deliveries/{id}` lets the page refresh delivery status; with the development adapter
+  `POST …/deliveries/{id}/simulate-receipt` (404 in production) runs a signed simulated Termii
+  receipt through the real webhook handler.
+- **Delivery log** (`GET …/deliveries`): masked recipients (`a•••i@example.com`,
+  `+234 ••• ••• 5678`), channel/status/template/date filters, exact-match recipient or user-id
+  lookup, test-only and development-only filters, cursor paging. Each item carries a status
+  timeline derived from the attempt timestamps, a `delivery` state (`confirmed` only from a
+  receipt; `not_reported` for SMTP acceptance), the sanitised error, provider ids, cost and
+  segments, and `retry.allowed` with the reason when not.
+- **Retry** (`POST …/deliveries/{id}/retry`, `notifications.templates.manage`): failed or
+  rejected attempts only. The original message is re-rendered from its outbox event
+  (`resolveOutboxEventRequests`) or, for test sends, with sample values, for the same recipient
+  and channel under the scope `retry:<attempt id>`; current preferences, suppressions and the
+  verified-number rule apply again. The retry row is claimed before anything is sent, so a
+  repeated or concurrent request returns the same retry (`created: false`) and never sends twice.
+  Verification codes are never resent, and attempts whose source is not retained (business-key
+  scopes, digests) are not retryable — the UI says why instead of showing a dead button. Audited
+  as `notifications.delivery.retried`.
+- **Suppressions** (`GET …/suppressions`, `POST …/suppressions/{id}/remove`): STOP replies, hard
+  bounces and complaints with masked addresses and exact-address lookup. Lifting one needs a
+  reason (≥ 3 characters) and is audited (`notifications.suppression.removed`); a STOP reply's
+  opted-out consent is left in place, so transactional and marketing SMS stay blocked until the
+  person replies START. `POST …/bounces` records a manual bounce/complaint (audited
+  `notifications.bounce.recorded`).
+- **Provider status** (`GET …/providers`, `integrations.read`): SMTP and Termii state for the
+  current environment with the last 24 hours of delivery counts; development fallbacks are
+  labelled. No settings or secrets are returned.
 
 ## 5. Feed
 
@@ -145,9 +183,28 @@ await ensureNotificationTemplates(db); // approved, locale en, version 1; existi
 
 Run it after `pnpm db:seed` (or from a deploy hook); the test suite calls it in `beforeAll`.
 
-## 7. Tests
+## 7. Phone verification (portal)
+
+`apps/web/src/server/portal/phone-verification.ts`, `POST /api/v1/me/phone/verification` and
+`POST …/confirm`, UI in _Portal → Settings → Profile_. The saved profile number receives a
+6-digit code through the `otp` template (`security`, `allowUnverifiedPhone`); `otp_challenges`
+stores only `scrypt$salt$hash`, expiry (10 min), attempts (5) and `consumed_at`. Limits come from
+the challenge rows: 60 s cooldown, 5 per user per hour, 5 per number per hour, 10 per number per
+day. Success sets `phone_verified_at` (audit `profile.phone_verified`); STOP-suppressed numbers
+and provider rejections are refused with plain-language errors and the code is consumed. The
+development adapter is labelled and, only in `APP_ENV=development|test`, echoes the code so the
+flow can be completed locally. See `docs/providers/termii.md` §8.
+
+## 8. Tests
 
 `pnpm vitest run --project notifications` (real test database, development adapters). Covers:
 three-channel dispatch, replay deduplication, marketing consent, quiet-hour deferral and the
 reminder sweep, receipts and STOP/START, missing variables, production without configuration,
 labelled test sends, bounce intake, digests, the feed and template lifecycle.
+
+`pnpm vitest run --project web-integration apps/web/src/server/admin/communications/communications.int.test.ts apps/web/src/server/portal/phone-verification.int.test.ts`
+covers template versioning and rollback, sample-only previews, labelled test sends with the real
+provider answer, simulated development receipts, idempotent retry (test and outbox sources), SMS
+skipped for unverified numbers, masked log lookups, audited unsuppression, permission denials,
+and the OTP flow (hashing, wrong-code limit, expiry, cooldown, per-user and per-number limits,
+STOP refusal, provider rejection).

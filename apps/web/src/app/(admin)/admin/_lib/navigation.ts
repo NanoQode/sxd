@@ -28,6 +28,8 @@ export type NavIcon =
   | 'integrations'
   | 'settings'
   | 'operations'
+  | 'services'
+  | 'analytics'
   | 'audit';
 
 export interface NavItem {
@@ -78,6 +80,14 @@ export const ADMIN_NAV: NavItem[] = [
     permissions: ['service_requests.read_all'],
   },
   {
+    // Service configuration: price anchors, quote/report templates, document requirements, SLA.
+    key: 'services',
+    label: 'Service Setup',
+    href: '/admin/services',
+    icon: 'services',
+    permissions: ['pricing.manage', 'sla.manage', 'reports.review', 'quotes.issue'],
+  },
+  {
     key: 'assignments',
     label: 'Assignments',
     href: '/admin/assignments',
@@ -118,6 +128,14 @@ export const ADMIN_NAV: NavItem[] = [
     href: '/admin/finance',
     icon: 'finance',
     permissions: ['finance.read'],
+  },
+  {
+    // Portfolio analytics: counts and sums derived from records (brief §11, §19).
+    key: 'analytics',
+    label: 'Portfolio Analytics',
+    href: '/admin/analytics',
+    icon: 'analytics',
+    permissions: ['finance.read', 'rentals.manage', 'projects.read_all', 'service_requests.read_all'],
   },
   {
     key: 'appointments',
@@ -343,6 +361,42 @@ export const ADMIN_SUBNAV: SubNavItem[] = [
     href: '/admin/communications/suppressions',
     parent: 'communications',
     permissions: ['notifications.templates.manage'],
+  },
+  {
+    label: 'Service setup: price anchors',
+    href: '/admin/services',
+    parent: 'services',
+    permissions: ['pricing.manage'],
+  },
+  {
+    label: 'Service setup: quote templates',
+    href: '/admin/services/quote-templates',
+    parent: 'services',
+    permissions: ['pricing.manage', 'quotes.issue'],
+  },
+  {
+    label: 'Service setup: report templates',
+    href: '/admin/services/report-templates',
+    parent: 'services',
+    permissions: ['reports.review', 'reports.draft', 'reports.release'],
+  },
+  {
+    label: 'Service setup: document requirements',
+    href: '/admin/services/document-requirements',
+    parent: 'services',
+    permissions: ['pricing.manage', 'service_requests.read_all'],
+  },
+  {
+    label: 'Service setup: SLA policies',
+    href: '/admin/services/sla-policies',
+    parent: 'services',
+    permissions: ['sla.manage', 'service_requests.read_all'],
+  },
+  {
+    label: 'Portfolio analytics',
+    href: '/admin/analytics',
+    parent: 'analytics',
+    permissions: ['finance.read', 'rentals.manage', 'projects.read_all', 'service_requests.read_all'],
   },
 ];
 

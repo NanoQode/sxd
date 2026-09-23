@@ -24,3 +24,4 @@ export * from './rentals';
 export * from './listings';
 export * from './diligence';
 export * from './search-purchase';
+export * from './partner-ops';

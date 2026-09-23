@@ -43,10 +43,13 @@ export function PhoneVerification({ phoneE164 }: { phoneE164: string }) {
     setBusy('request');
     setError(null);
     try {
-      const res = await apiFetch<PhoneVerificationRequestResponse>('/api/v1/me/phone/verification', {
-        method: 'POST',
-        body: {},
-      });
+      const res = await apiFetch<PhoneVerificationRequestResponse>(
+        '/api/v1/me/phone/verification',
+        {
+          method: 'POST',
+          body: {},
+        },
+      );
       if (res.status === 'already_verified') {
         toast({ title: 'This number is already verified', tone: 'info' });
         router.refresh();

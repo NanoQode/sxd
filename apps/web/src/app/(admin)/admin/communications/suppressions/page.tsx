@@ -76,7 +76,10 @@ export default async function SuppressionsPage({
           name="channel"
           label="Channel"
           value={query.channel}
-          options={(['email', 'sms'] as const).map((c) => ({ value: c, label: CHANNEL_LABELS[c]! }))}
+          options={(['email', 'sms'] as const).map((c) => ({
+            value: c,
+            label: CHANNEL_LABELS[c]!,
+          }))}
         />
         <FilterSelect
           name="kind"

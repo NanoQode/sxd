@@ -50,8 +50,8 @@ export default async function TestSendPage() {
       />
       {!access.providers ? (
         <Alert tone="info" title="Adapter is shown after sending">
-          Provider status needs integrations.read, so the adapter that handled the send is
-          reported in the result instead of beforehand.
+          Provider status needs integrations.read, so the adapter that handled the send is reported
+          in the result instead of beforehand.
         </Alert>
       ) : null}
       <TestSendForm

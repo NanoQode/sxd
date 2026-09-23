@@ -140,6 +140,14 @@ notification carry the same id and receivers dedupe them.
 `accepted`, never `delivered`, unless a provider feedback loop (bounce/complaint webhooks) is
 configured later. Do not present "delivered" to users for SMTP-only setups.
 
+The send log is _Admin → Communications → Delivery log_ (`notifications.templates.manage`): every
+attempt with a masked recipient, the status timeline (queued → accepted by relay → bounced),
+the sanitised failure reason, the provider message id and a _Retry_ action for failed or rejected
+attempts. A retry re-renders the original message for the same recipient under the scope
+`retry:<attempt id>`, so repeating it returns the existing retry and never sends twice; it is
+audited as `notifications.delivery.retried`. _Admin → Communications → Test send_ sends an explicit
+test email to a staff-entered address and shows the relay's answer separately from delivery.
+
 Failure codes returned by `sanitizeMailError` and their queue treatment:
 
 | Code                  | Meaning                                                                                              | Retry                             |
@@ -161,8 +169,11 @@ Credentials never appear in diagnostics: the password, its base64 forms, the use
 ## 8. Bounces, complaints and suppression (limits)
 
 - With a bare SMTP relay, bounces arrive as emails to the sender or reply-to mailbox and cannot
-  be processed automatically. Point `Reply-to` at a monitored mailbox and add bouncing addresses
-  to `suppressions` (channel `email`) manually from the send log.
+  be processed automatically. Point `Reply-to` at a monitored mailbox and record bouncing
+  addresses from _Admin → Communications → Suppressions → Record an email bounce or complaint_
+  (`POST /api/v1/admin/notifications/bounces`): hard bounces and complaints suppress the address
+  and mark the last attempt `bounced`; soft bounces only mark the attempt. Lifting a suppression
+  needs a reason and is audited (`notifications.suppression.removed`).
 - Providers with feedback loops (SES notifications, SendGrid/Postmark/Mailgun event webhooks)
   can populate `suppressions` automatically; this is a later integration and is not part of the
   SMTP adapter. Until then the send log will show `accepted` for messages that later bounce.
@@ -177,6 +188,11 @@ verbatim. `renderEmail` wraps the body in the branded layout (`wrapHtmlLayout`: 
 inline styles, light background, no external images or scripts, `lang` and a real heading) and
 always produces a plain-text part. `previewTemplate` renders with sample values for the admin
 preview, showing `[name]` for variables without a sample.
+
+_Admin → Communications → Templates_ edits templates as new versions (approved versions are
+immutable), previews them on the server in a sandboxed frame with a fixed catalogue of sample
+values (never customer records), activates a version (retiring the previous one) and rolls back
+by copying an older version into a new one, so the history is never rewritten.
 
 ## 10. Troubleshooting
 

@@ -286,7 +286,8 @@ export async function deliveryDetail(ctx: AdminContext, id: string): Promise<Del
   const item = await getDeliveryLogItem(ctx.db, id);
   if (!item) throw new ApiError('not_found', 'delivery attempt not found');
   // Without template/log access, only test attempts are visible.
-  if (!access.templates && !item.isTest) throw new ApiError('not_found', 'delivery attempt not found');
+  if (!access.templates && !item.isTest)
+    throw new ApiError('not_found', 'delivery attempt not found');
   return item;
 }
 

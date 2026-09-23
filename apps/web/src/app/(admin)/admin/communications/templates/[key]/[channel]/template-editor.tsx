@@ -69,8 +69,9 @@ function SmsEstimate({ sms }: { sms: NonNullable<SamplePreviewResponse['sms']> }
           {sms.segments} segment{sms.segments === 1 ? '' : 's'}
         </Badge>
         <span className="text-fg-muted">
-          {sms.characters} characters · {sms.units}/{sms.segments * sms.unitsPerSegment || sms.unitsPerSegment}{' '}
-          units used · {sms.remainingInSegment} left in this segment
+          {sms.characters} characters · {sms.units}/
+          {sms.segments * sms.unitsPerSegment || sms.unitsPerSegment} units used ·{' '}
+          {sms.remainingInSegment} left in this segment
         </span>
       </div>
       {sms.encoding === 'ucs2' ? (
@@ -258,7 +259,11 @@ export function TemplateEditor({
   }
 
   const historyColumns: Column<TemplateDto>[] = [
-    { key: 'version', header: 'Version', cell: (v) => <span className="font-medium">v{v.version}</span> },
+    {
+      key: 'version',
+      header: 'Version',
+      cell: (v) => <span className="font-medium">v{v.version}</span>,
+    },
     {
       key: 'status',
       header: 'State',
@@ -367,8 +372,8 @@ export function TemplateEditor({
         <CardHeader>
           <CardTitle>History</CardTitle>
           <CardDescription>
-            Every version is kept. Rolling back copies an older version into a new one and
-            activates it; nothing is rewritten.
+            Every version is kept. Rolling back copies an older version into a new one and activates
+            it; nothing is rewritten.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -458,13 +463,11 @@ function VersionForm({
     );
   }, [draft, selected]);
 
+  const emptyBody = !draft.bodyText.trim();
+
   // Live preview: server render with sample values only, debounced.
   useEffect(() => {
-    if (!draft.bodyText.trim()) {
-      setPreview(null);
-      setPreviewError('Body text is required.');
-      return;
-    }
+    if (emptyBody) return;
     const controller = new AbortController();
     const timer = setTimeout(async () => {
       setPreviewing(true);
@@ -496,7 +499,7 @@ function VersionForm({
       clearTimeout(timer);
       controller.abort();
     };
-  }, [draft, overrides, channel]);
+  }, [draft, overrides, channel, emptyBody]);
 
   const variables = preview?.variables ?? family.variables.map((v) => v.name);
   const samplesByName = new Map(
@@ -782,7 +785,11 @@ function VersionForm({
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <PreviewPane preview={preview} error={previewError} loading={previewing} />
+            <PreviewPane
+              preview={emptyBody ? null : preview}
+              error={emptyBody ? 'Body text is required.' : previewError}
+              loading={previewing}
+            />
           </CardContent>
         </Card>
         <p className="text-xs text-fg-muted">

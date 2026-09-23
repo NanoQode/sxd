@@ -19,9 +19,7 @@ export default async function CommunicationsLayout({ children }: { children: Rea
   if (!access.any) await requireStaffPage('notifications.test_send');
   const nav: SectionNavItem[] = [
     { href: '/admin/communications', label: 'Overview', exact: true },
-    ...(access.templates
-      ? [{ href: '/admin/communications/templates', label: 'Templates' }]
-      : []),
+    ...(access.templates ? [{ href: '/admin/communications/templates', label: 'Templates' }] : []),
     ...(access.testSend ? [{ href: '/admin/communications/test-send', label: 'Test send' }] : []),
     ...(access.templates
       ? [

@@ -1,9 +1,6 @@
 import 'server-only';
 import { and, desc, eq, gte, isNull, like, sql } from 'drizzle-orm';
-import {
-  ApiError,
-  type PhoneVerificationRequestResponse,
-} from '@simplexd/contracts';
+import { ApiError, type PhoneVerificationRequestResponse } from '@simplexd/contracts';
 import { getDb, schema, systemContext, withActor, type Database } from '@simplexd/db';
 import { createOtpChallenge, verifyOtpAttempt } from '@simplexd/integrations/sms';
 import { dispatchRequest, maskAddress, type PipelineOptions } from '@simplexd/notifications';
@@ -313,8 +310,7 @@ export async function requestPhoneVerification(
 }
 
 type VerifyOutcome =
-  | { ok: true; phoneE164: string; verifiedAt: Date }
-  | { ok: false; error: ApiError };
+  { ok: true; phoneE164: string; verifiedAt: Date } | { ok: false; error: ApiError };
 
 function codeError(message: string, reason: string, extra: Record<string, unknown> = {}): ApiError {
   return new ApiError('validation_failed', message, {
@@ -427,10 +423,7 @@ export async function confirmPhoneVerification(
         }
         return {
           ok: false,
-          error: codeError(
-            'Too many incorrect codes. Request a new code.',
-            'too_many_attempts',
-          ),
+          error: codeError('Too many incorrect codes. Request a new code.', 'too_many_attempts'),
         };
       }
       return {

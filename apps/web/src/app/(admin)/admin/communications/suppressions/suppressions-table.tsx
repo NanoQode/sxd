@@ -216,7 +216,12 @@ export function BounceImportForm() {
               />
             )}
           </Field>
-          <Button type="submit" disabled={!email.trim() || busy} loading={busy} loadingLabel="Recording">
+          <Button
+            type="submit"
+            disabled={!email.trim() || busy}
+            loading={busy}
+            loadingLabel="Recording"
+          >
             Record
           </Button>
         </form>

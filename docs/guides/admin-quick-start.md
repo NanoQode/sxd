@@ -189,6 +189,38 @@ awards). _Verification queue_ opens `/admin/access/partners`.
   _Mark submitted to bank_ → _Record settlement_ with the bank reference, or _Mark failed_.
 - **Rent invoicing run** runs the hourly rent job on demand and shows its result.
 
+## Communications (`/admin/communications`)
+
+Notification templates, explicit test sends, the delivery log and suppressions. Provider
+credentials (SMTP, Termii) stay under _Integrations_; this section needs
+`notifications.templates.manage` (templates, log, suppressions) or `notifications.test_send`
+(test sends). Neither needs an authenticator.
+
+1. **Overview** shows each provider's state for the current environment, the adapter that will
+   handle sends (a development adapter is labelled “no real message is sent”) and the last 24
+   hours of attempts by status.
+2. **Templates** lists one row per event key and channel with the version that sends today.
+   Open one to edit: the preview on the right is rendered by the server with sample values (never
+   a customer's data); for SMS it shows GSM-7 vs Unicode, segments and the estimated cost at the
+   configured price. _Save as new draft version_ never changes an approved version;
+   _Activate this version_ makes it the one that sends and retires the previous one; _Roll back
+   to vN_ in the history copies an older version into a new active one with your reason recorded.
+3. **Test send**: choose email or SMS, type the recipient (shown before you send), pick a
+   template and press _Send test_. The result shows the provider's answer (accepted or rejected
+   with the reason) and, separately, delivery status — “accepted” is not “delivered”. With the
+   development adapter you can simulate a delivery receipt.
+4. **Delivery log**: every attempt with a masked recipient and a status timeline. Filter by
+   channel, status, template, date, test sends or development sends; look a person up by their
+   exact address or user id. _Details_ shows the failure reason and provider ids; _Retry_ re-sends
+   a failed attempt once (pressing it again returns the same retry).
+5. **Suppressions**: STOP replies, hard bounces and complaints. _Remove…_ asks for a reason and
+   is audited; a STOP reply's opt-out stays until the person replies START. Record email bounces
+   from the form at the bottom while no provider feedback webhook is configured.
+
+Customers verify their phone number themselves from _Portal → Settings → Profile_; SMS
+notifications only go to verified numbers, so an unverified number shows up in the log as
+_Not sent (suppressed)_ with reason `phone_unverified`.
+
 ## Known limitations
 
 - Staff bookings are recorded with the staff member as the contact (booking API); the customer's

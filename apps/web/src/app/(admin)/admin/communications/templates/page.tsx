@@ -126,7 +126,12 @@ export default async function TemplatesPage({
           value={channel}
           options={CHANNELS.map((c) => ({ value: c, label: CHANNEL_LABELS[c]! }))}
         />
-        <FilterInput name="search" label="Event key contains" value={search} placeholder="invoice" />
+        <FilterInput
+          name="search"
+          label="Event key contains"
+          value={search}
+          placeholder="invoice"
+        />
       </FilterBar>
       <DataTable
         columns={columns}
@@ -138,8 +143,8 @@ export default async function TemplatesPage({
       />
       <p className="text-sm text-fg-muted">
         Outside production a draft is used when no approved version exists and its output is
-        labelled “[DRAFT TEMPLATE]”. In production only approved versions send; a family without
-        one records a failed attempt (template_not_approved).
+        labelled “[DRAFT TEMPLATE]”. In production only approved versions send; a family without one
+        records a failed attempt (template_not_approved).
       </p>
     </div>
   );

@@ -108,7 +108,12 @@ recipients})` multiplies by the configured unit cost. The worker records `segmen
 counter checked by `evaluateSendPolicy`.
 
 Termii bills per segment per destination network; the exact NGN price per segment is
-account-specific (set the unit cost from the dashboard price list).
+account-specific (set the unit cost from the dashboard price list). While editing an SMS template
+in _Admin → Communications → Templates_ the preview shows the encoding (GSM-7 or Unicode, with the
+characters that forced Unicode), the segment count, the units left in the current segment and the
+estimated cost per recipient at the active configuration's `unitCostKobo` (the default ₦4.00 per
+segment is labelled as such until a Termii configuration sets the price). Bodies over five
+segments are refused.
 
 ## 6. Consent, categories, opt-out and quiet hours
 
@@ -133,6 +138,13 @@ remain the primary opt-out path.
 Transactional messages carry minimal private information and link to authenticated content
 (the seed templates use `{{manageUrl}}`, `{{invoiceUrl}}`, `{{reportUrl}}` links; amounts and
 names are kept to what the customer already knows).
+
+**Verified numbers only.** The pipeline sends SMS only to a profile number that its owner
+confirmed with a one-time code (`user_profiles.phone_verified_at`). Any other number — a changed
+profile number, or one typed into a public booking or lead form — records a `suppressed` attempt
+with reason `phone_unverified` and the email/in-app channels still go out. The only exceptions are
+the verification code itself and explicit staff test sends, which set `allowUnverifiedPhone` on
+the request. This closes the SMS-pumping and harassment vector of free-text phone fields.
 
 ## 7. Delivery reports
 
@@ -185,12 +197,39 @@ Termii's Token API (`sendProviderOtp` / `verifyProviderOtp`) is implemented but 
 **not** used for staff MFA. Staff MFA prefers authenticator apps; SMS is never the only
 protection for a privileged account.
 
+**Phone verification (portal).** Customers verify the number saved on their profile from
+_Portal → Settings → Profile → Verify your phone number_ (`apps/web/src/server/portal/phone-verification.ts`,
+`POST /api/v1/me/phone/verification` then `POST …/confirm`):
+
+- a 6-digit code goes out as the `otp` template (`security` category, `allowUnverifiedPhone`),
+  recorded as a `delivery_attempts` row with `related_entity_type = otp_challenge` and no body;
+- `otp_challenges` keeps `scrypt$salt$hash`, the expiry (10 minutes), the attempt counter (5) and
+  `consumed_at`; requesting a new code supersedes the previous one;
+- limits, enforced from the challenge rows (not from memory): one request per 60 s, 5 per user
+  per hour, 5 per number per hour, 10 per number per day (429 with `Retry-After`);
+- wrong codes count even though the request fails; the fifth locks the code; expired, superseded
+  and locked codes need a new request; a changed number invalidates the code;
+- a number that replied STOP is refused with a clear message (the suppression is honoured even
+  for security messages); a provider rejection is reported honestly and the code is consumed;
+- success sets `phone_verified_at`, audits `profile.phone_verified` (masked number, never the
+  code) and unlocks SMS preferences;
+- with the development adapter the response is labelled “Development adapter — no real message
+  was sent” and, in `APP_ENV=development|test` only, carries the code so the flow can be
+  completed locally. A real adapter never returns the code.
+
 ## 9. Test sends
 
-A test send is a permission-controlled admin action that sends the `test_message` template to
-the configured test recipient, which is displayed on the confirmation dialog. It never sends to
-customers, and it is recorded in the send log like any other message. The development adapter
-records test sends in its in-memory outbox instead of contacting Termii.
+_Admin → Communications → Test send_ (`notifications.test_send`, no MFA step, 30 per hour per
+user) sends one SMS or email to the address the operator types; the recipient is shown before
+sending and echoed in the result, and nothing goes to customers. Any template can be chosen and
+renders with the same sample values the preview uses (never customer data). The result has two
+separate parts: the provider's own answer (accepted, or rejected with the sanitised reason and
+provider message id, plus which adapter handled it — the development adapter is labelled “no real
+message was sent”), and the delivery status, which only a Termii receipt changes. The attempt is
+recorded in the delivery log with `related_entity_type = test_send`, audited as
+`notifications.test_send`, and can be refreshed from the page. With the development adapter the
+page can also feed a signed simulated receipt (“delivered” / “failed”) through the real webhook
+handler to show the accepted → delivered distinction.
 
 ## 10. Failure handling
 
@@ -212,7 +251,9 @@ automatically (it refuses to start in production). It keeps messages in memory, 
 deterministic message ids per idempotency key, and can simulate signed delivery receipts and
 inbound replies (`simulateDeliveryReceipt`, `simulateInbound`) to exercise the webhook route.
 Numbers ending in `0000` are rejected at send time, `1111` fail after acceptance and `2222` are
-rejected as DND.
+rejected as DND. The delivery log and test-send page label every attempt the development adapter
+handled, and `POST /api/v1/admin/notifications/deliveries/{id}/simulate-receipt` (404 in
+production) runs a simulated receipt through the webhook route.
 
 ## Unverified items
 
