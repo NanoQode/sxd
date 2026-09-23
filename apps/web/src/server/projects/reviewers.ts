@@ -66,7 +66,10 @@ export async function listReviewers(
       if (r.banned) continue;
       const existing = byUser.get(r.userId);
       // Prefer the most specific reviewing role for display (PM over ops over admin).
-      if (!existing || REVIEWER_ROLES.indexOf(r.role) > REVIEWER_ROLES.indexOf(existing.role as StaffRole)) {
+      if (
+        !existing ||
+        REVIEWER_ROLES.indexOf(r.role) > REVIEWER_ROLES.indexOf(existing.role as StaffRole)
+      ) {
         byUser.set(r.userId, {
           id: r.userId,
           name: r.name,

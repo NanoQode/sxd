@@ -19,7 +19,11 @@ export async function waitForScan(
   for (let i = 0; i < attempts; i += 1) {
     if (options.signal?.aborted) break;
     last = await partnerFetch<FileDto>(`/api/v1/files/${fileId}`, { signal: options.signal });
-    if (last.status !== 'scanning' && last.status !== 'uploaded' && last.status !== 'pending_upload') {
+    if (
+      last.status !== 'scanning' &&
+      last.status !== 'uploaded' &&
+      last.status !== 'pending_upload'
+    ) {
       return { status: last.status, reason: last.statusReason };
     }
     await new Promise((r) => setTimeout(r, interval));

@@ -14,7 +14,10 @@ export const POST = route<{ params: Promise<{ id: string }> }>(async (req, ctx) 
   const identity = await getIdentity();
   const { id } = await params(ctx, idParams);
   const body = await parseJson(req, partnerInvoiceRejectSchema);
-  return json(await rejectPartnerInvoice(identity, id, body, { correlationId: ctx.correlationId }), {
-    correlationId: ctx.correlationId,
-  });
+  return json(
+    await rejectPartnerInvoice(identity, id, body, { correlationId: ctx.correlationId }),
+    {
+      correlationId: ctx.correlationId,
+    },
+  );
 });

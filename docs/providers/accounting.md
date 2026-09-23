@@ -208,6 +208,8 @@ Dr 2400 Partner and supplier payables 1,000,000
 
 `maintenanceExpenseRecoverable` — `work_order:<id>:expense` (`Dr 5200 / Cr 2400`) and `maintenanceExpenseRecovered` — `work_order:<id>:recovered` (`Dr 2100 / Cr 5200`) net a recoverable repair against the owner's rent balance. `partnerFeeAccrued` — `partner_fee:<id>:accrued` (`Dr 5300 / Cr 2400`).
 
+`partnerInvoiceAccepted` — `payout:<id>:accepted` — finance accepts a partner invoice (a `payouts` row of kind `partner_invoice`, status `first_approved`). The payable is recognised at acceptance, not at submission: `Dr 5200` for materials billed on a purchase order (a recoverable project cost, re-invoiced to the customer under the `procurement` invoice kind) or `Dr 5300` for work billed on an assignment, `Cr 2400` tagged with the partner's organisation. The second approval posts nothing; settlement discharges the payable through `ownerPayoutSettled`. `partnerInvoiceAcceptanceReversed` — `payout:<id>:accepted:reversed` — reverses the accrual when finance rejects an invoice it had accepted. **Confirm** the 5200/5300 split for materials versus services (see §5.5).
+
 ## 4. Allocation rules (`allocation.ts`)
 
 - `invoiceBalance = total − paid − credited`, never below zero.
@@ -235,6 +237,8 @@ Declared receipts post nothing. Account 1400 is reserved for finance's manual st
 ### 5.5 Payouts
 
 Owner distributions and partner payments require: a balanced reconciliation for the period, first approval, second approval by a different person (`payoutMachine`), then submission and bank confirmation. Ordinary service checkout never authorises a transfer. **Confirm** approval limits and who holds the two approver roles.
+
+Partner invoices (`apps/web/src/server/finance/partner-invoices.ts`) follow the same machine without a period reconciliation: the partner's submission is the proposal, finance's acceptance is the first approval (and the accrual), a different finance approver gives the second, and settlement needs the bank reference. Invoices against a purchase order may never exceed the order total in aggregate. **Confirm** whether materials should hit 5200 (recoverable) or a dedicated cost-of-materials account, and whether partner invoices need a reconciliation gate as owner distributions do.
 
 ### 5.6 Gateway fees and settlement
 

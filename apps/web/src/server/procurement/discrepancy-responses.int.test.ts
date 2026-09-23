@@ -236,7 +236,10 @@ describe('supplier responses to delivery discrepancies', () => {
       'reject',
       'accept',
     ]);
-    expect(decided[1]?.payload).toMatchObject({ outcome: 'credited', recipientUserIds: [f.vendorAId] });
+    expect(decided[1]?.payload).toMatchObject({
+      outcome: 'credited',
+      recipientUserIds: [f.vendorAId],
+    });
     // With every discrepancy closed the delivery can be accepted.
     expect((await acceptDelivery(f.staff, delivery.id)).status).toBe('accepted');
   });

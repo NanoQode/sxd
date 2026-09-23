@@ -116,7 +116,9 @@ export const partnerOpsResolvers: Record<string, EventResolver> = {
   'delivery.discrepancy.decided': activity({
     entityType: 'delivery',
     title: (p) =>
-      str(p['decision']) === 'accept' ? 'Discrepancy response accepted' : 'Discrepancy response rejected',
+      str(p['decision']) === 'accept'
+        ? 'Discrepancy response accepted'
+        : 'Discrepancy response rejected',
     message: (p) =>
       str(p['decision']) === 'accept'
         ? `Staff accepted your proposal; the discrepancy is now ${label(str(p['outcome']))}.`

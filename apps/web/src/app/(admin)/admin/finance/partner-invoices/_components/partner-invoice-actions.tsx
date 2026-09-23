@@ -68,7 +68,8 @@ export function PartnerInvoiceActions({
           disabledReason="You accepted this invoice; a different approver must give the second approval."
           confirm={{
             title: 'Authorise payment?',
-            description: 'Second approval by a different person. The transfer can then be submitted to the bank.',
+            description:
+              'Second approval by a different person. The transfer can then be submitted to the bank.',
             confirmLabel: 'Approve',
           }}
           successMessage="Payment authorised"
@@ -80,7 +81,8 @@ export function PartnerInvoiceActions({
           label="Mark submitted to bank"
           confirm={{
             title: 'Mark as submitted?',
-            description: 'Records that the transfer instruction was sent. It is not settled until the bank confirms.',
+            description:
+              'Records that the transfer instruction was sent. It is not settled until the bank confirms.',
             confirmLabel: 'Mark submitted',
           }}
           successMessage="Marked submitted"
@@ -94,14 +96,21 @@ export function PartnerInvoiceActions({
             description="Enter the bank's settlement reference from the statement. Posts Dr 2400 / Cr 1000 and tells the partner the invoice is paid."
             path={`${base}/settle`}
             successMessage="Settlement recorded"
-            fields={[{ name: 'settlementReference', label: 'Settlement reference', required: true }]}
+            fields={[
+              { name: 'settlementReference', label: 'Settlement reference', required: true },
+            ]}
           />
           <ApiAction
             path={`${base}/fail`}
             reasonKey="reason"
             label="Mark failed"
             variant="ghost"
-            confirm={{ title: 'Mark as failed?', requireReason: true, confirmLabel: 'Mark failed', tone: 'danger' }}
+            confirm={{
+              title: 'Mark as failed?',
+              requireReason: true,
+              confirmLabel: 'Mark failed',
+              tone: 'danger',
+            }}
             successMessage="Marked failed"
           />
         </>

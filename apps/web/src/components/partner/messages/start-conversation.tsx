@@ -82,7 +82,9 @@ export function StartConversation() {
     ...(assignments.data?.items ?? [])
       .filter((a) => a.status === 'accepted' || a.status === 'active')
       .map((a): Subject => {
-        const entityType: PartnerConversationEntityType = a.projectId ? 'project' : 'service_request';
+        const entityType: PartnerConversationEntityType = a.projectId
+          ? 'project'
+          : 'service_request';
         const entityId = a.projectId ?? a.serviceRequestId ?? '';
         return {
           key: `assignment:${a.id}`,
@@ -94,34 +96,29 @@ export function StartConversation() {
       .filter((s) => s.entityId !== ''),
     ...(tenders.data?.items ?? [])
       .filter((t) => t.invitation.status !== 'declined')
-      .map(
-        (t): Subject => ({
-          key: `tender:${t.id}`,
-          entityType: 'tender',
-          entityId: t.id,
-          label: `Tender · ${t.title}`,
-        }),
-      ),
-    ...(rfqs.data?.items ?? []).map(
-      (r): Subject => ({
-        key: `rfq:${r.id}`,
-        entityType: 'rfq',
-        entityId: r.id,
-        label: `RFQ · ${r.title}`,
-      }),
-    ),
-    ...(orders.data?.items ?? []).map(
-      (o): Subject => ({
-        key: `po:${o.id}`,
-        entityType: 'purchase_order',
-        entityId: o.id,
-        label: `Purchase order · ${o.number}`,
-      }),
-    ),
+      .map((t): Subject => ({
+        key: `tender:${t.id}`,
+        entityType: 'tender',
+        entityId: t.id,
+        label: `Tender · ${t.title}`,
+      })),
+    ...(rfqs.data?.items ?? []).map((r): Subject => ({
+      key: `rfq:${r.id}`,
+      entityType: 'rfq',
+      entityId: r.id,
+      label: `RFQ · ${r.title}`,
+    })),
+    ...(orders.data?.items ?? []).map((o): Subject => ({
+      key: `po:${o.id}`,
+      entityType: 'purchase_order',
+      entityId: o.id,
+      label: `Purchase order · ${o.number}`,
+    })),
   ];
   // Deduplicate subjects that resolve to the same record (two assignments on one project).
   const uniqueSubjects = subjects.filter(
-    (s, i, all) => all.findIndex((x) => x.entityType === s.entityType && x.entityId === s.entityId) === i,
+    (s, i, all) =>
+      all.findIndex((x) => x.entityType === s.entityType && x.entityId === s.entityId) === i,
   );
   const selected = uniqueSubjects.find((s) => s.key === subjectKey) ?? uniqueSubjects[0] ?? null;
   const loading =

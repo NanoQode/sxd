@@ -285,11 +285,7 @@ async function loadBillableSource(
   };
 }
 
-async function requireOwnCleanFile(
-  tx: Transaction,
-  userId: string,
-  fileId: string,
-): Promise<void> {
+async function requireOwnCleanFile(tx: Transaction, userId: string, fileId: string): Promise<void> {
   const [file] = await tx
     .select({
       id: schema.fileObjects.id,
@@ -356,9 +352,13 @@ export async function submitPartnerInvoice(
         )
         .limit(1);
       if (duplicate.length > 0) {
-        throw new ApiError('conflict', `you already submitted an invoice with reference ${input.reference}`, {
-          details: { partnerInvoiceId: duplicate[0]!.id },
-        });
+        throw new ApiError(
+          'conflict',
+          `you already submitted an invoice with reference ${input.reference}`,
+          {
+            details: { partnerInvoiceId: duplicate[0]!.id },
+          },
+        );
       }
       if (source.capKobo !== null) {
         const committed = (
@@ -707,7 +707,10 @@ export function rejectPartnerInvoice(
           await elevated(tx, ctxFor(identity, options), () =>
             postJournal(
               tx,
-              partnerInvoiceAcceptanceReversed(postingInput(row, json, 'first_approved'), input.reason),
+              partnerInvoiceAcceptanceReversed(
+                postingInput(row, json, 'first_approved'),
+                input.reason,
+              ),
               { postedBy: userId },
             ),
           );
@@ -733,6 +736,7 @@ export function rejectPartnerInvoice(
 export function secondApprovePartnerInvoice(
   identity: RequestIdentity,
   id: string,
+  input: { reason?: string } = {},
   options: ServiceOptions = {},
 ): Promise<PartnerInvoiceDto> {
   const userId = requireUserId(identity);
@@ -744,6 +748,8 @@ export function secondApprovePartnerInvoice(
       permission: 'finance.payouts.second_approve',
       actor: 'staff',
       action: 'second_approved',
+      // The machine demands a reason when re-approving after a failed transfer.
+      reason: input.reason ?? null,
       patch: async (row) => {
         if (row.firstApproverId === userId)
           throw new ApiError('forbidden', 'second approval must come from a different approver');

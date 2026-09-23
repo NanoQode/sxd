@@ -73,6 +73,23 @@ Credit notes: `POST /invoices/{id}/credit-notes` (finance) posts `creditNoteIssu
 
 `/dev/paystack-checkout?reference=…` renders only outside production, is labelled "Development adapter — not a real gateway", shows the attempt and offers **Simulate success / failure / abandon**, which drive `DevPaymentProvider.simulate` and redirect to the callback. The adapter keeps simulated transactions in memory **per process**: the web process (checkout, callback, webhook route) shares one instance; a separate worker process cannot verify a dev attempt and will record `provider status unknown` → `keep_pending`, so drive dev payments through the callback/verify endpoints. Paystack test mode is the sandbox for end-to-end worker journeys.
 
+## 7a. Partner invoices (payables)
+
+Partners bill SimplexD from their workspace (`/partner/invoices`, `POST /api/v1/partner-invoices`, `partner.invoices.submit`) against a purchase order issued to them or an assignment staff marked `completed`: amount, their own reference (unique per partner), an optional description and the invoice document (their own scanned `partner_submission` file). Without a schema change an invoice is a `payouts` row of kind `partner_invoice` whose `beneficiary` JSON holds the submission, review and history; the `payouts` policy is organisation-scoped, so partner reads and the insert run elevated after the explicit checks and always filter on `proposed_by`.
+
+Finance reviews under `/admin/finance/partner-invoices`:
+
+| Step | Endpoint | Permission | Effect |
+| --- | --- | --- | --- |
+| Accept | `POST /partner-invoices/{id}/accept` | `finance.payouts.first_approve` (MFA) | `proposed → first_approved`; posts `partnerInvoiceAccepted` (`Dr 5200` materials / `Dr 5300` services, `Cr 2400`) |
+| Reject | `POST …/reject` (reason) | `finance.payouts.first_approve` | `proposed \| first_approved → rejected`; an accrual already posted is reversed |
+| Second approval | `POST …/second-approve` | `finance.payouts.second_approve`, a different person | `first_approved → approved` (or `failed → approved` with a reason); nothing posted |
+| Submit payment | `POST …/submit-payment` | `finance.reconcile` | `approved → submitted` |
+| Settle | `POST …/settle` (bank reference) | `finance.reconcile` | `submitted → settled`; posts `ownerPayoutSettled` (`Dr 2400 / Cr 1000`) |
+| Fail | `POST …/fail` (reason) | `finance.reconcile` | `submitted → failed` |
+
+Nothing leaves the bank before both approvals and a recorded settlement. The partner is told at every transition (`partner_invoice.transitioned`), finance when an invoice arrives (`partner_invoice.submitted`). Owner-payout lists exclude this kind. Tests: `apps/web/src/server/finance/partner-invoices.int.test.ts`.
+
 ## 8. Events and jobs
 
 Outbox events: `engagement.transitioned`, `quote.issued|accepted|expired`, `invoice.issued|paid|partially_paid|voided`, `payment.initialized|settled|reversed`, `bank_transfer.declared|rejected`, `refund.requested|approved|pending|settled|failed`, `credit_note.issued`, `chargeback.opened|won|lost`. Jobs: `payments.process_provider_event`, `payments.submit_refund`, `payments.reconcile_pending` (scheduled), `engagements.expire_quotes`, `finance.post_payment` (legacy no-op: posting happens at settlement).

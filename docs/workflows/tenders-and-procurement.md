@@ -100,8 +100,11 @@ note? }` plus response-level `deliveryKobo`, `leadTimeDays`, `validUntil`. Suppl
    delivery) computed server-side through the same comparison; unknown conversions must first be
    declared by staff (`lineConversions`, basis `staff_measured`). `POST /purchase-orders/{id}/issue`
    is idempotent, marks the response `selected` and the RFQ `awarded`, and appends
-   `purchase_order.issued` for the supplier. Suppliers see and acknowledge orders only once issued;
-   cancellation needs a reason. Number `PO-YYYY-NNNN`.
+   `purchase_order.issued` for the supplier. Issuing also records the accepted response as dated,
+   verified `supplier_quotes` rows for the RFQ's delivery market (one per order line, never
+   rank-eligible by default; `server/procurement/supplier-quotes.ts`), which the location panel
+   shows as verified supplier quotations (see `explorer-scenarios.md`). Suppliers see and
+   acknowledge orders only once issued; cancellation needs a reason. Number `PO-YYYY-NNNN`.
 6. **Deliveries**: received quantity per order line, evidence files of the organisation,
    `deliveredAt`, receiver. `deliveryVariance` derives outstanding/excess per line and moves the
    order to `partially_delivered` or `delivered`. Delivery status `received → disputed → accepted`
@@ -111,9 +114,29 @@ note? }` plus response-level `deliveryKobo`, `leadTimeDays`, `validUntil`. Suppl
    `open → supplier_notified → resolved | credited | returned` with a resolution note; the
    supplier is told through `delivery.discrepancy.opened`. A delivery is accepted only when no
    discrepancy is open.
+8. **Supplier response and staff decision** (`apps/web/src/server/procurement/discrepancy-responses.ts`):
+   the supplier named on the order replies (`POST /deliveries/{id}/discrepancies/{did}/respond`)
+   with a response, a proposed resolution (`replace`, `credit`, `dispute`) and their own scanned
+   files, which become `evidence` rows linked to the delivery (`evidence.delivery_id`, idempotent
+   per file). Replying moves an `open` discrepancy to `supplier_notified` and tells staff
+   (`delivery.discrepancy.supplier_responded`). Staff with `procurement.manage` decide
+   (`POST …/decide`): `accept` closes the discrepancy as `resolved`, `credited` or `returned`
+   (default from the proposal: credit → credited, otherwise resolved) with the reason as
+   resolution note; `reject` keeps it open with a reason and the supplier may reply again. The
+   supplier is told either way (`delivery.discrepancy.decided`). Every reply and decision is an
+   append-only `notes` row (`entity_type = 'discrepancy_response'`, JSON body, visibility
+   `partner`), read elevated after the caller's order access is proven, so no schema change was
+   needed. `GET /deliveries/{id}/discrepancy-threads` returns each discrepancy with its entries
+   and a `responseState` (`awaiting_supplier | responded | rejected | accepted | closed`) for
+   staff, the supplier, or the ordering organisation (read-only).
+9. **Partner invoices**: a vendor bills an issued order (`POST /partner-invoices`, see
+   `docs/workflows/engagements-and-payments.md` for the payout side): the sum of committed
+   invoices never exceeds the order total, the attachment must be the vendor's own scanned file
+   and the reference is unique per vendor.
 
 Vendors (`partner.deliveries.view`, `partner.rfqs.respond`) see exactly the RFQs, orders,
-deliveries and discrepancies that name them.
+deliveries and discrepancies that name them, and can open a conversation with the staff who
+issued an order or RFQ (`POST /conversations/partner`, entity `purchase_order` or `rfq`).
 
 ## Outbox events and jobs
 
@@ -121,7 +144,9 @@ deliveries and discrepancies that name them.
 `tender.question.answered`, `tender.closed`, `tender.cancelled`, `tender.bids_opened`,
 `bid.submitted`, `tender.award.published`, `tender.award.responded`, `rfq.issued`,
 `rfq.response.submitted`, `purchase_order.issued`, `purchase_order.cancelled`,
-`delivery.recorded`, `delivery.discrepancy.opened`, `delivery.discrepancy.supplier_notified`.
+`delivery.recorded`, `delivery.discrepancy.opened`, `delivery.discrepancy.supplier_notified`,
+`delivery.discrepancy.supplier_responded` (staff: order issuer, receiver, raiser and operations
+managers), `delivery.discrepancy.decided` (supplier).
 Payloads carry ids and recipient user ids only. Jobs `tenders.publish_answers` and
 `tenders.notify_award` (worker `handlers/commercial.ts`) fan out `notification.requested` events
 per recipient; `tenders.close_due` is scheduled in `handlers/maintenance.ts`.

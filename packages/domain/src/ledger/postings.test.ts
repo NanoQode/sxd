@@ -621,7 +621,10 @@ describe('tax, owners and partners', () => {
     expect(accountsDebited(services)).toEqual([ACCOUNTS.PARTNER_PROFESSIONAL_FEES]);
     expect(services.lines.some((l) => isRevenueAccount(l.accountCode))).toBe(false);
     const reversal = partnerInvoiceAcceptanceReversed(
-      { payout: { ...payout, status: 'first_approved' }, source: { type: 'assignment', id: 'as-1' } },
+      {
+        payout: { ...payout, status: 'first_approved' },
+        source: { type: 'assignment', id: 'as-1' },
+      },
       'rejected after acceptance',
     );
     expect(reversal.reversalOfBusinessEventRef).toBe('payout:pi-2:accepted');

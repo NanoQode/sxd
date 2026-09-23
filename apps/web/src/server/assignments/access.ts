@@ -389,7 +389,10 @@ async function loadEntityRow(
         organizationId: row.organizationId,
         createdBy: row.createdBy,
         // A supplier learns about an order only once it is issued.
-        assigneeUserIds: uniqueIds([row.createdBy, row.status === 'draft' ? null : row.supplierUserId]),
+        assigneeUserIds: uniqueIds([
+          row.createdBy,
+          row.status === 'draft' ? null : row.supplierUserId,
+        ]),
         serviceRequestId: null,
         projectId: row.projectId,
       };

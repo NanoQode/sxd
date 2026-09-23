@@ -59,8 +59,8 @@ export function DiscrepancyDecisions({
           {thread.entries.map((e) => (
             <li key={e.id} className="rounded-md border border-border bg-bg-elevated p-2">
               <p className="text-xs text-fg-muted">
-                {e.kind === 'supplier_response' ? 'Supplier' : 'Staff'} · {e.authorName ?? e.authorUserId}{' '}
-                · {formatDateTimeLabel(e.createdAt)}
+                {e.kind === 'supplier_response' ? 'Supplier' : 'Staff'} ·{' '}
+                {e.authorName ?? e.authorUserId} · {formatDateTimeLabel(e.createdAt)}
                 {e.kind === 'supplier_response' && e.proposedResolution
                   ? ` · proposes to ${PROPOSAL_LABEL[e.proposedResolution] ?? e.proposedResolution}`
                   : ''}
@@ -71,8 +71,9 @@ export function DiscrepancyDecisions({
               <p className="mt-1 whitespace-pre-wrap">{e.text}</p>
               {e.evidenceFileIds.length > 0 ? (
                 <p className="mt-1 text-xs text-fg-muted">
-                  {e.evidenceFileIds.length} evidence file{e.evidenceFileIds.length === 1 ? '' : 's'}{' '}
-                  linked to the delivery (see the project evidence tab).
+                  {e.evidenceFileIds.length} evidence file
+                  {e.evidenceFileIds.length === 1 ? '' : 's'} linked to the delivery (see the
+                  project evidence tab).
                 </p>
               ) : null}
             </li>

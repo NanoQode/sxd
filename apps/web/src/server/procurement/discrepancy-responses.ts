@@ -249,9 +249,9 @@ async function linkSupplierEvidence(
     if (file.status !== 'clean' || !file.checksumSha256) {
       throw new ApiError(
         file.status === 'clean' ||
-        file.status === 'uploaded' ||
-        file.status === 'scanning' ||
-        file.status === 'pending_upload'
+          file.status === 'uploaded' ||
+          file.status === 'scanning' ||
+          file.status === 'pending_upload'
           ? 'file_quarantined'
           : 'file_rejected',
         `the file is ${file.status} and cannot be attached yet`,
@@ -322,7 +322,9 @@ export async function respondToDiscrepancy(
       await tx
         .update(schema.discrepancies)
         .set({ status: 'supplier_notified' })
-        .where(and(eq(schema.discrepancies.id, discrepancyId), eq(schema.discrepancies.status, 'open')));
+        .where(
+          and(eq(schema.discrepancies.id, discrepancyId), eq(schema.discrepancies.status, 'open')),
+        );
     }
     const recipients = [
       access.po.createdBy,

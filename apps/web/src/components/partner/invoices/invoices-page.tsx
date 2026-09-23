@@ -131,7 +131,9 @@ export function PartnerInvoicesPage() {
               cell: (i) => (
                 <span>
                   <StatusBadge status={STATUS_LABEL[i.status].badge} label={humanize(i.status)} />
-                  <span className="block text-xs text-fg-muted">{STATUS_LABEL[i.status].label}</span>
+                  <span className="block text-xs text-fg-muted">
+                    {STATUS_LABEL[i.status].label}
+                  </span>
                   {i.status === 'rejected' || i.status === 'failed' ? (
                     <span className="block text-xs text-danger">{i.failureReason}</span>
                   ) : null}
@@ -229,24 +231,20 @@ function SubmitInvoiceDialog({
   const sources: Source[] = [
     ...(orders.data?.items ?? [])
       .filter((o) => BILLABLE_ORDER.has(o.status))
-      .map(
-        (o): Source => ({
-          key: `po:${o.id}`,
-          type: 'purchase_order',
-          id: o.id,
-          label: `Purchase order ${o.number} · ${formatNairaString(o.totalKobo)}`,
-          capKobo: o.totalKobo,
-        }),
-      ),
-    ...(assignments.data?.items ?? []).map(
-      (a): Source => ({
-        key: `as:${a.id}`,
-        type: 'assignment',
-        id: a.id,
-        label: `${humanize(a.role)} assignment · completed ${a.respondedAt ? formatDateTimeLabel(a.updatedAt, p.timeZone) : ''}`,
-        capKobo: null,
-      }),
-    ),
+      .map((o): Source => ({
+        key: `po:${o.id}`,
+        type: 'purchase_order',
+        id: o.id,
+        label: `Purchase order ${o.number} · ${formatNairaString(o.totalKobo)}`,
+        capKobo: o.totalKobo,
+      })),
+    ...(assignments.data?.items ?? []).map((a): Source => ({
+      key: `as:${a.id}`,
+      type: 'assignment',
+      id: a.id,
+      label: `${humanize(a.role)} assignment · completed ${a.respondedAt ? formatDateTimeLabel(a.updatedAt, p.timeZone) : ''}`,
+      capKobo: null,
+    })),
   ];
   const selected = sources.find((s) => s.key === sourceKey) ?? sources[0] ?? null;
   const amountKobo = nairaInputToKobo(amountNaira);

@@ -210,8 +210,8 @@ describe('unscheduled site visits', () => {
       scheduledAt: new Date(Date.now() + 86_400_000).toISOString(),
     });
     expect(scheduled.unscheduled).toBe(false);
-    expect(
-      await errorCode(rejectUnscheduledSiteVisit(ops, scheduled.id, { reason: 'no' })),
-    ).toBe('invalid_transition');
+    expect(await errorCode(rejectUnscheduledSiteVisit(ops, scheduled.id, { reason: 'no' }))).toBe(
+      'invalid_transition',
+    );
   });
 });

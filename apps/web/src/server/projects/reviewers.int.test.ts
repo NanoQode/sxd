@@ -63,7 +63,11 @@ describe('GET /reviewers', () => {
     const { items } = await listReviewers(staffIdentity(f.ops, 'operations_manager'), {
       projectId,
     });
-    expect(items[0]).toMatchObject({ id: f.pm.id, isProjectManager: true, role: 'project_manager' });
+    expect(items[0]).toMatchObject({
+      id: f.pm.id,
+      isProjectManager: true,
+      role: 'project_manager',
+    });
     expect(items.filter((r) => r.isProjectManager)).toHaveLength(1);
     // A partner not assigned to the project cannot resolve its manager, but still gets the directory.
     const partnerView = await listReviewers(partnerIdentity(f.partner), { projectId });

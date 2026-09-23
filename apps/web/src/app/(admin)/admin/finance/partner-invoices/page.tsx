@@ -78,10 +78,7 @@ export default async function PartnerInvoicesPage({
             header: 'For',
             cell: (i) => (
               <span>
-                <Link
-                  href={SOURCE_LINK[i.source.type]?.(i.source.id) ?? '#'}
-                  className="underline"
-                >
+                <Link href={SOURCE_LINK[i.source.type]?.(i.source.id) ?? '#'} className="underline">
                   {i.source.label}
                 </Link>
                 <span className="block text-xs text-fg-muted">

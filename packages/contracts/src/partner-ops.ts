@@ -174,6 +174,10 @@ export const partnerInvoiceAcceptSchema = z.object({
 export const partnerInvoiceRejectSchema = z.object({
   reason: z.string().trim().min(3).max(2000),
 });
+/** A reason is required only when re-approving after a failed transfer. */
+export const partnerInvoiceSecondApproveSchema = z.object({
+  reason: z.string().trim().min(3).max(2000).optional(),
+});
 export const partnerInvoiceSettleSchema = z.object({
   settlementReference: z.string().trim().min(2).max(120),
 });

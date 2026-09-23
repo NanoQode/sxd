@@ -13,7 +13,10 @@ const idParams = z.object({ id: uuidSchema });
 export const POST = route<{ params: Promise<{ id: string }> }>(async (req, ctx) => {
   const identity = await getIdentity();
   const { id } = await params(ctx, idParams);
-  return json(await submitPartnerInvoicePayment(identity, id, { correlationId: ctx.correlationId }), {
-    correlationId: ctx.correlationId,
-  });
+  return json(
+    await submitPartnerInvoicePayment(identity, id, { correlationId: ctx.correlationId }),
+    {
+      correlationId: ctx.correlationId,
+    },
+  );
 });

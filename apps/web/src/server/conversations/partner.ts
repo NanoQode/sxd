@@ -47,11 +47,12 @@ async function entitySeeds(tx: Transaction, entity: EntityAccess): Promise<strin
   const seeds: Array<string | null | undefined> = [];
   switch (entity.type) {
     case 'project': {
+      // The assigned manager, not whoever created the record.
       const [p] = await tx
-        .select({ pm: schema.projects.pmUserId, createdBy: schema.projects.createdBy })
+        .select({ pm: schema.projects.pmUserId })
         .from(schema.projects)
         .where(eq(schema.projects.id, entity.id));
-      seeds.push(p?.pm, p?.createdBy);
+      seeds.push(p?.pm);
       break;
     }
     case 'service_request': {
@@ -148,7 +149,10 @@ export async function startPartnerConversation(
     const entity = await resolveEntity(tx, input.entityType, input.entityId);
     if (!entity) throw new ApiError('not_found', `${input.entityType.replace('_', ' ')} not found`);
     if (!entity.assigneeUserIds.includes(userId)) {
-      throw new ApiError('forbidden', 'you are not assigned to, invited to or named on this record');
+      throw new ApiError(
+        'forbidden',
+        'you are not assigned to, invited to or named on this record',
+      );
     }
     const resolved = await resolveTeam(tx, ctx, entity, userId);
     if (resolved.length === 0) {

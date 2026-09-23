@@ -93,8 +93,12 @@ describe('partner conversations', () => {
     const pmView = await getConversation(staffIdentity(f.pm, 'project_manager'), conversation.id);
     expect(pmView.participants).toHaveLength(2);
     expect(
-      (await listConversations(customerIdentity(f, f.ownerA, 'owner'), { limit: 20, status: 'all' }))
-        .items.map((c) => c.id),
+      (
+        await listConversations(customerIdentity(f, f.ownerA, 'owner'), {
+          limit: 20,
+          status: 'all',
+        })
+      ).items.map((c) => c.id),
     ).not.toContain(conversation.id);
     const [message] = await dbs.owner
       .select({ body: schema.messages.body, sender: schema.messages.senderUserId })

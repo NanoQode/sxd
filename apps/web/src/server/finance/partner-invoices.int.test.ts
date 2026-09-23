@@ -240,8 +240,23 @@ describe('partner invoices', () => {
       reason: 'Bank rejected the account number',
     });
     expect(failed.status).toBe('failed');
-    const reapproved = await secondApprovePartnerInvoice(f.financeB, third.id);
+    // Re-approval after a failure needs a reason (workflow rule) and still a second approver.
+    expect(await errorCode(secondApprovePartnerInvoice(f.financeB, third.id))).toBe(
+      'invalid_transition',
+    );
+    expect(
+      await errorCode(
+        secondApprovePartnerInvoice(f.financeA, third.id, { reason: 'Account number corrected' }),
+      ),
+    ).toMatch(/^forbidden/);
+    const reapproved = await secondApprovePartnerInvoice(f.financeB, third.id, {
+      reason: 'Account number corrected with the partner',
+    });
     expect(reapproved.status).toBe('approved');
+    expect(reapproved.history.at(-1)).toMatchObject({
+      action: 'second_approved',
+      note: 'Account number corrected with the partner',
+    });
   });
 
   it('assignment invoices need a completed assignment and post professional fees', async () => {

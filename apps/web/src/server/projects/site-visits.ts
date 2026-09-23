@@ -46,7 +46,9 @@ type VisitRow = typeof schema.siteVisits.$inferSelect;
  */
 const UNSCHEDULED_MARKER = 'UNSCHEDULED: ';
 
-export function unscheduledReasonOf(v: Pick<VisitRow, 'scheduledAt' | 'instructions'>): string | null {
+export function unscheduledReasonOf(
+  v: Pick<VisitRow, 'scheduledAt' | 'instructions'>,
+): string | null {
   if (v.scheduledAt !== null) return null;
   return v.instructions?.startsWith(UNSCHEDULED_MARKER)
     ? v.instructions.slice(UNSCHEDULED_MARKER.length)
@@ -605,11 +607,7 @@ async function createFieldVisitInTx(
       projectId: access.project.id,
       propertyId: access.project.propertyId,
       serviceRequestId: access.project.serviceRequestId,
-      scheduledAt: unscheduled
-        ? null
-        : input.scheduledAt
-          ? new Date(input.scheduledAt)
-          : startedAt,
+      scheduledAt: unscheduled ? null : input.scheduledAt ? new Date(input.scheduledAt) : startedAt,
       inspectorUserId: actorId,
       status: 'in_progress',
       instructions: unscheduled ? `${UNSCHEDULED_MARKER}${input.reason}` : null,
@@ -710,7 +708,9 @@ export async function rejectUnscheduledSiteVisit(
     if (v.inspectorUserId === actorId)
       throw new ApiError('forbidden', 'an inspector cannot reject their own visit');
     if (v.status !== 'in_progress' && v.status !== 'submitted')
-      throw invalidTransition(`visit is ${v.status}; only in-progress or submitted visits can be rejected`);
+      throw invalidTransition(
+        `visit is ${v.status}; only in-progress or submitted visits can be rejected`,
+      );
     const [updated] = await tx
       .update(schema.siteVisits)
       .set({ status: 'cancelled' })

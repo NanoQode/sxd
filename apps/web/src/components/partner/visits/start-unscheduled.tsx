@@ -49,7 +49,8 @@ export function StartUnscheduledVisit({
       toast({
         tone: 'success',
         title: 'Unscheduled visit started',
-        description: 'Staff have been notified. Capture your findings; they can reject the visit until it is reviewed.',
+        description:
+          'Staff have been notified. Capture your findings; they can reject the visit until it is reviewed.',
       });
       setOpen(false);
       router.push(`/partner/visits/${visit.id}`);

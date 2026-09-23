@@ -33,7 +33,11 @@ const PROPOSALS: Array<{ value: DiscrepancyProposedResolution; label: string; hi
     label: 'Replace the goods',
     hint: 'You will deliver the missing or replacement items.',
   },
-  { value: 'credit', label: 'Issue a credit', hint: 'The shortfall is credited against the order.' },
+  {
+    value: 'credit',
+    label: 'Issue a credit',
+    hint: 'The shortfall is credited against the order.',
+  },
   {
     value: 'dispute',
     label: 'Dispute the finding',
@@ -41,7 +45,10 @@ const PROPOSALS: Array<{ value: DiscrepancyProposedResolution; label: string; hi
   },
 ];
 
-const STATE_TONE: Record<DiscrepancyThreadDto['responseState'], 'warning' | 'primary' | 'danger' | 'success' | 'neutral'> = {
+const STATE_TONE: Record<
+  DiscrepancyThreadDto['responseState'],
+  'warning' | 'primary' | 'danger' | 'success' | 'neutral'
+> = {
   awaiting_supplier: 'warning',
   responded: 'primary',
   rejected: 'danger',
@@ -182,7 +189,8 @@ function DiscrepancyThread({
         Raised {formatDateTimeLabel(d.createdAt, p.timeZone)}
         {d.resolvedAt ? ` · closed ${formatDateTimeLabel(d.resolvedAt, p.timeZone)}` : ''}
       </p>
-      {d.resolution && !thread.entries.some((e) => e.kind === 'staff_decision' && e.decision === 'accept') ? (
+      {d.resolution &&
+      !thread.entries.some((e) => e.kind === 'staff_decision' && e.decision === 'accept') ? (
         <p className="mt-1 text-fg-muted">Resolution: {d.resolution}</p>
       ) : null}
       {thread.entries.length > 0 ? (

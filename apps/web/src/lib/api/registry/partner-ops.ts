@@ -14,6 +14,7 @@ import {
   partnerInvoiceFailSchema,
   partnerInvoiceListQuerySchema,
   partnerInvoiceRejectSchema,
+  partnerInvoiceSecondApproveSchema,
   partnerInvoiceSettleSchema,
   partnerInvoiceSubmitSchema,
   registerRoute,
@@ -106,7 +107,12 @@ const specs: RouteSpec[] = [
     operationId: 'siteVisits.reject',
     auth: 'staff',
     request: { params: partnerOpsIdParams, body: siteVisitRejectSchema },
-    responses: { 200: { description: 'Visit', body: siteVisitMutationResponseSchema.omit({ idempotentReplay: true }) } },
+    responses: {
+      200: {
+        description: 'Visit',
+        body: siteVisitMutationResponseSchema.omit({ idempotentReplay: true }),
+      },
+    },
   },
   /* ------------------------------- reviewers ---------------------------------- */
   {
@@ -197,11 +203,12 @@ const specs: RouteSpec[] = [
     method: 'post',
     path: '/api/v1/partner-invoices/{id}/second-approve',
     summary: 'Second approval by a different approver',
-    description: 'finance.payouts.second_approve; first_approved → approved. Nothing is posted; the transfer may now be submitted.',
+    description:
+      'finance.payouts.second_approve; first_approved → approved (or failed → approved with a reason). Nothing is posted; the transfer may now be submitted.',
     tags: invoiceTags,
     operationId: 'partnerInvoices.secondApprove',
     auth: 'staff',
-    request: { params: partnerOpsIdParams },
+    request: { params: partnerOpsIdParams, body: partnerInvoiceSecondApproveSchema },
     responses: { 200: { description: 'Invoice', body: partnerInvoiceDtoSchema } },
   },
   {
@@ -219,7 +226,8 @@ const specs: RouteSpec[] = [
     method: 'post',
     path: '/api/v1/partner-invoices/{id}/settle',
     summary: 'Record settlement against the bank statement',
-    description: 'finance.reconcile; submitted → settled with the bank reference; posts Dr 2400 / Cr 1000.',
+    description:
+      'finance.reconcile; submitted → settled with the bank reference; posts Dr 2400 / Cr 1000.',
     tags: invoiceTags,
     operationId: 'partnerInvoices.settle',
     auth: 'staff',
@@ -230,7 +238,8 @@ const specs: RouteSpec[] = [
     method: 'post',
     path: '/api/v1/partner-invoices/{id}/fail',
     summary: 'Mark the transfer failed',
-    description: 'finance.reconcile; submitted → failed with a reason; a second approver can re-approve.',
+    description:
+      'finance.reconcile; submitted → failed with a reason; a second approver can re-approve.',
     tags: invoiceTags,
     operationId: 'partnerInvoices.fail',
     auth: 'staff',
