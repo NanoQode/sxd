@@ -249,11 +249,12 @@ describe('createErrorReporter', () => {
       transaction: '/api/v1/x/:id',
       tags: { correlation_id: 'corr-9', method: 'GET', source: 'web' },
     });
-    expect(event.exception.values[0].value).toBe('failed for [email] with token=[redacted]');
+    expect(event.exception.values[0]?.value).toBe('failed for [email] with token=[redacted]');
     const raw = String(init.body);
     expect(raw).not.toMatch(/example\.com|secret123|cookie|authorization/i);
-    expect(event.request).toBeUndefined();
-    expect(event.user).toBeUndefined();
+    const loose = event as unknown as Record<string, unknown>;
+    expect(loose['request']).toBeUndefined();
+    expect(loose['user']).toBeUndefined();
     expect(reporter.stats()).toEqual({ sent: 1, dropped: 0, failed: 0 });
   });
 

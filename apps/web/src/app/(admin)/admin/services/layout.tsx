@@ -8,7 +8,12 @@ import { CONFIG_READ_PERMISSIONS } from '@/server/admin/configuration/shared';
 export const dynamic = 'force-dynamic';
 
 const NAV = [
-  { href: '/admin/services', label: 'Price anchors', exact: true, alsoActive: ['/admin/services/pricing/'] },
+  {
+    href: '/admin/services',
+    label: 'Price anchors',
+    exact: true,
+    alsoActive: ['/admin/services/pricing/'],
+  },
   { href: '/admin/services/quote-templates', label: 'Quote templates' },
   { href: '/admin/services/report-templates', label: 'Report templates' },
   { href: '/admin/services/document-requirements', label: 'Document requirements' },

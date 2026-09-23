@@ -115,20 +115,34 @@ export function SlaPoliciesEditor({
   }
 
   const columns: Column<SlaPolicyDto>[] = [
-    { key: 'service', header: 'Service', cell: (p) => p.serviceName ?? <span className="font-medium">All services</span> },
+    {
+      key: 'service',
+      header: 'Service',
+      cell: (p) => p.serviceName ?? <span className="font-medium">All services</span>,
+    },
     { key: 'stage', header: 'Stage', cell: (p) => humanize(p.stage) },
     {
       key: 'target',
       header: 'Target',
       cell: (p) => `${p.targetHours} h${p.businessHoursOnly ? ' (business hours)' : ''}`,
     },
-    { key: 'escalate', header: 'Escalate to', cell: (p) => (p.escalateToRole ? humanize(p.escalateToRole) : '—') },
+    {
+      key: 'escalate',
+      header: 'Escalate to',
+      cell: (p) => (p.escalateToRole ? humanize(p.escalateToRole) : '—'),
+    },
     {
       key: 'active',
       header: 'Status',
-      cell: (p) => (p.active ? <Badge tone="success">Active</Badge> : <Badge tone="neutral">Inactive</Badge>),
+      cell: (p) =>
+        p.active ? <Badge tone="success">Active</Badge> : <Badge tone="neutral">Inactive</Badge>,
     },
-    { key: 'updated', header: 'Updated', hideOnMobile: true, cell: (p) => <span className="text-xs">{fmtDate(p.updatedAt)}</span> },
+    {
+      key: 'updated',
+      header: 'Updated',
+      hideOnMobile: true,
+      cell: (p) => <span className="text-xs">{fmtDate(p.updatedAt)}</span>,
+    },
     {
       key: 'actions',
       header: 'Actions',
@@ -165,9 +179,18 @@ export function SlaPoliciesEditor({
               </Alert>
             ) : null}
             <div className="grid gap-3 sm:grid-cols-2">
-              <Field label="Service" required hint="Service and stage cannot change after creation; add a new policy instead.">
+              <Field
+                label="Service"
+                required
+                hint="Service and stage cannot change after creation; add a new policy instead."
+              >
                 {({ id }) => (
-                  <NativeSelect id={id} value={serviceId} disabled={editing !== 'new'} onChange={(e) => setServiceId(e.target.value)}>
+                  <NativeSelect
+                    id={id}
+                    value={serviceId}
+                    disabled={editing !== 'new'}
+                    onChange={(e) => setServiceId(e.target.value)}
+                  >
                     <option value={GLOBAL}>All services (global)</option>
                     {services.map((s) => (
                       <option key={s.id} value={s.id}>
@@ -194,7 +217,14 @@ export function SlaPoliciesEditor({
                 )}
               </Field>
               <Field label="Target hours" required>
-                {({ id }) => <Input id={id} inputMode="numeric" value={hours} onChange={(e) => setHours(e.target.value)} />}
+                {({ id }) => (
+                  <Input
+                    id={id}
+                    inputMode="numeric"
+                    value={hours}
+                    onChange={(e) => setHours(e.target.value)}
+                  />
+                )}
               </Field>
               <Field label="Escalate to role" hint="Recorded for the future escalation job.">
                 {({ id }) => (
@@ -210,16 +240,37 @@ export function SlaPoliciesEditor({
               </Field>
             </div>
             <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" className="h-4 w-4" checked={businessHours} onChange={(e) => setBusinessHours(e.target.checked)} />
+              <input
+                type="checkbox"
+                className="h-4 w-4"
+                checked={businessHours}
+                onChange={(e) => setBusinessHours(e.target.checked)}
+              />
               Count business hours only (triage currently approximates with calendar hours)
             </label>
             <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" className="h-4 w-4" checked={active} onChange={(e) => setActive(e.target.checked)} />
+              <input
+                type="checkbox"
+                className="h-4 w-4"
+                checked={active}
+                onChange={(e) => setActive(e.target.checked)}
+              />
               Active (one active policy per service and stage)
             </label>
             {editing !== 'new' ? (
-              <Field label="Reason (recorded in the audit log)" required hint="At least 3 characters.">
-                {({ id }) => <Textarea id={id} value={reason} onChange={(e) => setReason(e.target.value)} className="min-h-14" />}
+              <Field
+                label="Reason (recorded in the audit log)"
+                required
+                hint="At least 3 characters."
+              >
+                {({ id }) => (
+                  <Textarea
+                    id={id}
+                    value={reason}
+                    onChange={(e) => setReason(e.target.value)}
+                    className="min-h-14"
+                  />
+                )}
               </Field>
             ) : null}
             <DialogFooter>

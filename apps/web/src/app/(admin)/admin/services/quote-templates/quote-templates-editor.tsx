@@ -174,7 +174,11 @@ export function QuoteTemplatesEditor({
         <DialogContent
           className={DIALOG_MAX_H}
           size="lg"
-          title={editing === 'new' ? 'New quotation template' : `Edit ${editing === null ? '' : editing.name}`}
+          title={
+            editing === 'new'
+              ? 'New quotation template'
+              : `Edit ${editing === null ? '' : editing.name}`
+          }
           description="Amounts are whole naira; line amounts are recomputed on the server."
         >
           <div className="space-y-4">
@@ -185,11 +189,25 @@ export function QuoteTemplatesEditor({
             ) : null}
             <div className="grid gap-3 sm:grid-cols-2">
               <Field label="Name" required>
-                {({ id }) => <Input id={id} value={name} onChange={(e) => setName(e.target.value)} maxLength={120} />}
-              </Field>
-              <Field label="Applies to" hint="A template for all services appears on every request.">
                 {({ id }) => (
-                  <NativeSelect id={id} value={serviceId} onChange={(e) => setServiceId(e.target.value)}>
+                  <Input
+                    id={id}
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    maxLength={120}
+                  />
+                )}
+              </Field>
+              <Field
+                label="Applies to"
+                hint="A template for all services appears on every request."
+              >
+                {({ id }) => (
+                  <NativeSelect
+                    id={id}
+                    value={serviceId}
+                    onChange={(e) => setServiceId(e.target.value)}
+                  >
                     <option value={ALL}>All services</option>
                     {services.map((s) => (
                       <option key={s.id} value={s.id}>
@@ -203,22 +221,48 @@ export function QuoteTemplatesEditor({
             <LinesEditor lines={lines} onChange={setLines} />
             <Field label="Scope (markdown)">
               {({ id }) => (
-                <Textarea id={id} value={scope} onChange={(e) => setScope(e.target.value)} className="min-h-20" maxLength={20000} />
+                <Textarea
+                  id={id}
+                  value={scope}
+                  onChange={(e) => setScope(e.target.value)}
+                  className="min-h-20"
+                  maxLength={20000}
+                />
               )}
             </Field>
             <Field label="Exclusions">
               {({ id }) => (
-                <Textarea id={id} value={exclusions} onChange={(e) => setExclusions(e.target.value)} className="min-h-16" maxLength={8000} />
+                <Textarea
+                  id={id}
+                  value={exclusions}
+                  onChange={(e) => setExclusions(e.target.value)}
+                  className="min-h-16"
+                  maxLength={8000}
+                />
               )}
             </Field>
             <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" className="h-4 w-4" checked={active} onChange={(e) => setActive(e.target.checked)} />
+              <input
+                type="checkbox"
+                className="h-4 w-4"
+                checked={active}
+                onChange={(e) => setActive(e.target.checked)}
+              />
               Active (offered when drafting quotes)
             </label>
             {editing !== 'new' ? (
-              <Field label="Reason (recorded in the audit log)" required hint="At least 3 characters.">
+              <Field
+                label="Reason (recorded in the audit log)"
+                required
+                hint="At least 3 characters."
+              >
                 {({ id }) => (
-                  <Textarea id={id} value={reason} onChange={(e) => setReason(e.target.value)} className="min-h-14" />
+                  <Textarea
+                    id={id}
+                    value={reason}
+                    onChange={(e) => setReason(e.target.value)}
+                    className="min-h-14"
+                  />
                 )}
               </Field>
             ) : null}

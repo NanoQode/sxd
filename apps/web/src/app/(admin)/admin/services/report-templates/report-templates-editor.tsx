@@ -29,7 +29,12 @@ import { fmtDate } from '../../_components/bits';
 
 const KINDS = reportKindSchema.options;
 
-const EMPTY_SECTION: ReportTemplateSectionDto = { key: '', heading: '', guidance: '', required: true };
+const EMPTY_SECTION: ReportTemplateSectionDto = {
+  key: '',
+  heading: '',
+  guidance: '',
+  required: true,
+};
 
 function keyFromHeading(heading: string): string {
   return heading
@@ -114,7 +119,13 @@ export function ReportTemplatesEditor({
     try {
       if (editing === 'new') {
         await adminFetch('/api/v1/admin/report-templates', {
-          body: { kind, name: name.trim(), sections: cleanSections, limitationsMarkdown: limitations.trim(), active },
+          body: {
+            kind,
+            name: name.trim(),
+            sections: cleanSections,
+            limitationsMarkdown: limitations.trim(),
+            active,
+          },
         });
         toast({ title: 'Report template created', tone: 'success' });
       } else if (editing) {
@@ -146,7 +157,10 @@ export function ReportTemplatesEditor({
       method: 'PATCH',
       body: { active: true, expectedVersion: activating.version, reason: r },
     });
-    toast({ title: `${activating.name} is now the active ${humanize(activating.kind)} template`, tone: 'success' });
+    toast({
+      title: `${activating.name} is now the active ${humanize(activating.kind)} template`,
+      tone: 'success',
+    });
     router.refresh();
   }
 
@@ -162,7 +176,8 @@ export function ReportTemplatesEditor({
       ) : null}
       {items.length === 0 ? (
         <p className="rounded-md border border-dashed border-border p-6 text-center text-sm text-fg-muted">
-          No report templates yet. Run the seed (pnpm db:seed) for the starter templates or create one here.
+          No report templates yet. Run the seed (pnpm db:seed) for the starter templates or create
+          one here.
         </p>
       ) : null}
       {KINDS.filter((k) => byKind.has(k)).map((k) => (
@@ -176,7 +191,11 @@ export function ReportTemplatesEditor({
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <p className="font-medium">
                     {t.name}{' '}
-                    {t.active ? <Badge tone="success">Active</Badge> : <Badge tone="neutral">Inactive</Badge>}
+                    {t.active ? (
+                      <Badge tone="success">Active</Badge>
+                    ) : (
+                      <Badge tone="neutral">Inactive</Badge>
+                    )}
                   </p>
                   <span className="text-xs text-fg-muted">
                     v{t.version} · {fmtDate(t.updatedAt)}
@@ -191,8 +210,12 @@ export function ReportTemplatesEditor({
                   ))}
                 </ol>
                 <details className="mt-2 text-sm">
-                  <summary className="cursor-pointer text-fg-muted">Scope and limitations wording</summary>
-                  <p className="mt-1 whitespace-pre-wrap text-fg-muted">{t.limitationsMarkdown ?? '—'}</p>
+                  <summary className="cursor-pointer text-fg-muted">
+                    Scope and limitations wording
+                  </summary>
+                  <p className="mt-1 whitespace-pre-wrap text-fg-muted">
+                    {t.limitationsMarkdown ?? '—'}
+                  </p>
                 </details>
                 {canManage ? (
                   <div className="mt-3 flex flex-wrap gap-2">
@@ -216,7 +239,11 @@ export function ReportTemplatesEditor({
         <DialogContent
           className={DIALOG_MAX_H}
           size="lg"
-          title={editing === 'new' ? 'New report template' : `Edit ${editing === null ? '' : editing.name}`}
+          title={
+            editing === 'new'
+              ? 'New report template'
+              : `Edit ${editing === null ? '' : editing.name}`
+          }
           description="Sections are the report outline in order; guidance is shown to the author only. The limitations wording is appended to every report of this kind."
         >
           <div className="space-y-4">
@@ -243,7 +270,14 @@ export function ReportTemplatesEditor({
                 )}
               </Field>
               <Field label="Name" required>
-                {({ id }) => <Input id={id} value={name} onChange={(e) => setName(e.target.value)} maxLength={120} />}
+                {({ id }) => (
+                  <Input
+                    id={id}
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    maxLength={120}
+                  />
+                )}
               </Field>
             </div>
             <div className="space-y-2">
@@ -258,7 +292,10 @@ export function ReportTemplatesEditor({
                       onChange={(e) =>
                         updateSection(i, {
                           heading: e.target.value,
-                          key: s.key && s.key !== keyFromHeading(s.heading) ? s.key : keyFromHeading(e.target.value),
+                          key:
+                            s.key && s.key !== keyFromHeading(s.heading)
+                              ? s.key
+                              : keyFromHeading(e.target.value),
                         })
                       }
                     />
@@ -289,7 +326,13 @@ export function ReportTemplatesEditor({
                       Required
                     </label>
                     <span className="flex-1" />
-                    <Button variant="ghost" size="sm" aria-label={`Move section ${i + 1} up`} disabled={i === 0} onClick={() => move(i, -1)}>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      aria-label={`Move section ${i + 1} up`}
+                      disabled={i === 0}
+                      onClick={() => move(i, -1)}
+                    >
                       Up
                     </Button>
                     <Button
@@ -313,11 +356,17 @@ export function ReportTemplatesEditor({
                   </div>
                 </div>
               ))}
-              <Button variant="ghost" size="sm" onClick={() => setSections([...sections, { ...EMPTY_SECTION }])}>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setSections([...sections, { ...EMPTY_SECTION }])}
+              >
                 Add section
               </Button>
               {!sectionsOk && sections.some((s) => s.heading) ? (
-                <p className="text-xs text-danger">Every section needs a heading and a unique snake_case key.</p>
+                <p className="text-xs text-danger">
+                  Every section needs a heading and a unique snake_case key.
+                </p>
               ) : null}
             </div>
             <Field
@@ -326,16 +375,38 @@ export function ReportTemplatesEditor({
               hint="Plain statement of what the report does and does not do. Do not promise legal, structural or title guarantees."
             >
               {({ id }) => (
-                <Textarea id={id} value={limitations} onChange={(e) => setLimitations(e.target.value)} className="min-h-32" maxLength={8000} />
+                <Textarea
+                  id={id}
+                  value={limitations}
+                  onChange={(e) => setLimitations(e.target.value)}
+                  className="min-h-32"
+                  maxLength={8000}
+                />
               )}
             </Field>
             <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" className="h-4 w-4" checked={active} onChange={(e) => setActive(e.target.checked)} />
+              <input
+                type="checkbox"
+                className="h-4 w-4"
+                checked={active}
+                onChange={(e) => setActive(e.target.checked)}
+              />
               Active for this kind (the other active template of the kind is deactivated)
             </label>
             {editing !== 'new' ? (
-              <Field label="Reason (recorded in the audit log)" required hint="At least 3 characters.">
-                {({ id }) => <Textarea id={id} value={reason} onChange={(e) => setReason(e.target.value)} className="min-h-14" />}
+              <Field
+                label="Reason (recorded in the audit log)"
+                required
+                hint="At least 3 characters."
+              >
+                {({ id }) => (
+                  <Textarea
+                    id={id}
+                    value={reason}
+                    onChange={(e) => setReason(e.target.value)}
+                    className="min-h-14"
+                  />
+                )}
               </Field>
             ) : null}
             <DialogFooter>

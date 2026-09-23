@@ -64,7 +64,12 @@ export default async function PortfolioAnalyticsPage({
       );
     return (
       <span key={section} className="text-xs text-fg-muted">
-        {label}: {exportNeedsMfa(section) ? (mfa ? 'needs finance.export' : 'needs finance.export with a verified authenticator') : 'not permitted'}
+        {label}:{' '}
+        {exportNeedsMfa(section)
+          ? mfa
+            ? 'needs finance.export'
+            : 'needs finance.export with a verified authenticator'
+          : 'not permitted'}
       </span>
     );
   };
@@ -75,19 +80,36 @@ export default async function PortfolioAnalyticsPage({
         title="Portfolio analytics"
         description="Counts and sums derived from the records at the moment you load this page. Every export lists the rows a figure was summed from, so a spreadsheet total reproduces what you see here."
       />
-      <form method="get" className="grid gap-3 rounded-lg border border-border bg-bg-elevated p-4 sm:grid-cols-[1fr_1fr_2fr_auto]">
+      <form
+        method="get"
+        className="grid gap-3 rounded-lg border border-border bg-bg-elevated p-4 sm:grid-cols-[1fr_1fr_2fr_auto]"
+      >
         <label className="text-sm">
           <span className="mb-1 block text-fg-muted">From</span>
-          <input type="date" name="from" defaultValue={loaded.ok ? loaded.value.range.from : ''} className="h-11 w-full rounded-md border border-border-strong bg-bg px-3" />
+          <input
+            type="date"
+            name="from"
+            defaultValue={loaded.ok ? loaded.value.range.from : ''}
+            className="h-11 w-full rounded-md border border-border-strong bg-bg px-3"
+          />
         </label>
         <label className="text-sm">
           <span className="mb-1 block text-fg-muted">To</span>
-          <input type="date" name="to" defaultValue={loaded.ok ? loaded.value.range.to : ''} className="h-11 w-full rounded-md border border-border-strong bg-bg px-3" />
+          <input
+            type="date"
+            name="to"
+            defaultValue={loaded.ok ? loaded.value.range.to : ''}
+            className="h-11 w-full rounded-md border border-border-strong bg-bg px-3"
+          />
         </label>
         <label className="text-sm">
           <span className="mb-1 block text-fg-muted">Customer organisation</span>
           {orgs.ok ? (
-            <select name="organizationId" defaultValue={query.organizationId ?? ''} className="h-11 w-full rounded-md border border-border-strong bg-bg px-3">
+            <select
+              name="organizationId"
+              defaultValue={query.organizationId ?? ''}
+              className="h-11 w-full rounded-md border border-border-strong bg-bg px-3"
+            >
               <option value="">All organisations</option>
               {orgs.value.map((o) => (
                 <option key={o.id} value={o.id}>
@@ -96,7 +118,12 @@ export default async function PortfolioAnalyticsPage({
               ))}
             </select>
           ) : (
-            <input name="organizationId" defaultValue={query.organizationId ?? ''} placeholder="Organisation id" className="h-11 w-full rounded-md border border-border-strong bg-bg px-3" />
+            <input
+              name="organizationId"
+              defaultValue={query.organizationId ?? ''}
+              placeholder="Organisation id"
+              className="h-11 w-full rounded-md border border-border-strong bg-bg px-3"
+            />
           )}
         </label>
         <div className="flex items-end">
@@ -128,13 +155,14 @@ function AnalyticsSections({
   return (
     <div className="space-y-6">
       <p className="text-sm text-fg-muted">
-        Range {formatDateLabel(r.from)} to {formatDateLabel(r.to)} (Africa/Lagos). Point-in-time sections are as at{' '}
-        {formatDateLabel(r.asOf)}.
+        Range {formatDateLabel(r.from)} to {formatDateLabel(r.to)} (Africa/Lagos). Point-in-time
+        sections are as at {formatDateLabel(r.asOf)}.
         {data.organizationId ? ` Limited to organisation ${data.organizationId}.` : ''}
       </p>
       {nothing ? (
         <Alert tone="info" title="No section is available to your role">
-          Analytics sections need finance.read, rentals.manage, projects.read_all or service_requests.read_all.
+          Analytics sections need finance.read, rentals.manage, projects.read_all or
+          service_requests.read_all.
         </Alert>
       ) : null}
 
@@ -142,15 +170,26 @@ function AnalyticsSections({
         <Section
           title="Properties and occupancy"
           description={`As at ${formatDateLabel(r.asOf)}: properties not archived, their units, and units with a lease active on that date.`}
-          actions={[exportLink('properties', 'Export properties CSV'), exportLink('occupancy', 'Export units CSV')]}
+          actions={[
+            exportLink('properties', 'Export properties CSV'),
+            exportLink('occupancy', 'Export units CSV'),
+          ]}
         >
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <StatTile label="Properties" value={data.properties.propertyCount} href="/admin/properties" />
+            <StatTile
+              label="Properties"
+              value={data.properties.propertyCount}
+              href="/admin/properties"
+            />
             <StatTile label="Units" value={data.properties.unitCount} />
             <StatTile
               label="Occupied units"
               value={data.properties.occupiedUnits}
-              hint={data.properties.occupancyPct === null ? 'No units recorded' : `${data.properties.occupancyPct}% occupancy`}
+              hint={
+                data.properties.occupancyPct === null
+                  ? 'No units recorded'
+                  : `${data.properties.occupancyPct}% occupancy`
+              }
             />
             <StatTile
               label="Active leases"
@@ -169,9 +208,20 @@ function AnalyticsSections({
           actions={exportLink('arrears', 'Export invoices CSV')}
         >
           <div className="grid gap-3 sm:grid-cols-3">
-            <StatTile label="Outstanding" value={<Money kobo={data.arrears.outstandingKobo} />} hint={`${data.arrears.invoiceCount} invoices with a balance`} />
-            <StatTile label="Overdue" value={<Money kobo={data.arrears.overdueKobo} />} tone={data.arrears.overdueKobo !== '0' ? 'warning' : 'neutral'} />
-            <StatTile label="Not yet due" value={<Money kobo={data.arrears.buckets.current ?? '0'} />} />
+            <StatTile
+              label="Outstanding"
+              value={<Money kobo={data.arrears.outstandingKobo} />}
+              hint={`${data.arrears.invoiceCount} invoices with a balance`}
+            />
+            <StatTile
+              label="Overdue"
+              value={<Money kobo={data.arrears.overdueKobo} />}
+              tone={data.arrears.overdueKobo !== '0' ? 'warning' : 'neutral'}
+            />
+            <StatTile
+              label="Not yet due"
+              value={<Money kobo={data.arrears.buckets.current ?? '0'} />}
+            />
           </div>
           <table className="mt-3 w-full text-sm">
             <caption className="sr-only">Arrears ageing</caption>
@@ -202,17 +252,36 @@ function AnalyticsSections({
           actions={exportLink('projects', 'Export projects CSV')}
         >
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <StatTile label="Active projects" value={data.projects.activeCount} hint={`${data.projects.withApprovedBudget} with an approved budget`} href="/admin/projects" />
-            <StatTile label="Approved budget" value={<Money kobo={data.projects.approvedBudgetKobo} />} />
-            <StatTile label="Forecast final cost" value={<Money kobo={data.projects.forecastFinalCostKobo} />} hint={
+            <StatTile
+              label="Active projects"
+              value={data.projects.activeCount}
+              hint={`${data.projects.withApprovedBudget} with an approved budget`}
+              href="/admin/projects"
+            />
+            <StatTile
+              label="Approved budget"
+              value={<Money kobo={data.projects.approvedBudgetKobo} />}
+            />
+            <StatTile
+              label="Forecast final cost"
+              value={<Money kobo={data.projects.forecastFinalCostKobo} />}
+              hint={
                 <>
                   Variance <Money kobo={data.projects.varianceKobo} />
                 </>
-              } tone={data.projects.overBudgetCount > 0 ? 'warning' : 'neutral'} />
-            <StatTile label="Committed / actual" value={<Money kobo={data.projects.committedKobo} />} hint={<Money kobo={data.projects.actualKobo} />} />
+              }
+              tone={data.projects.overBudgetCount > 0 ? 'warning' : 'neutral'}
+            />
+            <StatTile
+              label="Committed / actual"
+              value={<Money kobo={data.projects.committedKobo} />}
+              hint={<Money kobo={data.projects.actualKobo} />}
+            />
           </div>
           {data.projects.overBudgetCount > 0 ? (
-            <p className="text-sm text-warning">{data.projects.overBudgetCount} project(s) are over-committed or over-spent.</p>
+            <p className="text-sm text-warning">
+              {data.projects.overBudgetCount} project(s) are over-committed or over-spent.
+            </p>
           ) : null}
         </Section>
       ) : null}
@@ -225,7 +294,10 @@ function AnalyticsSections({
         >
           <div className="grid gap-3 sm:grid-cols-2">
             <StatTile label="Awaiting decision" value={data.changeOrders.openCount} />
-            <StatTile label="Exposure if all approved" value={<Money kobo={data.changeOrders.openExposureKobo} />} />
+            <StatTile
+              label="Exposure if all approved"
+              value={<Money kobo={data.changeOrders.openExposureKobo} />}
+            />
           </div>
           <ul className="mt-2 flex flex-wrap gap-2 text-sm">
             {Object.entries(data.changeOrders.byStatus).map(([s, v]) => (
@@ -235,7 +307,9 @@ function AnalyticsSections({
                 </Badge>
               </li>
             ))}
-            {Object.keys(data.changeOrders.byStatus).length === 0 ? <li className="text-fg-muted">None open.</li> : null}
+            {Object.keys(data.changeOrders.byStatus).length === 0 ? (
+              <li className="text-fg-muted">None open.</li>
+            ) : null}
           </ul>
         </Section>
       ) : null}
@@ -247,10 +321,25 @@ function AnalyticsSections({
           actions={exportLink('service_requests', 'Export requests CSV')}
         >
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <StatTile label="Created in range" value={data.serviceRequests.createdInRange} href="/admin/service-requests" />
-            <StatTile label="Open with an SLA due time" value={data.serviceRequests.sla.openWithDueTime} />
-            <StatTile label="Past SLA now" value={data.serviceRequests.sla.openBreaches} tone={data.serviceRequests.sla.openBreaches > 0 ? 'danger' : 'neutral'} />
-            <StatTile label="Due within 8 hours" value={data.serviceRequests.sla.dueSoon} tone={data.serviceRequests.sla.dueSoon > 0 ? 'warning' : 'neutral'} />
+            <StatTile
+              label="Created in range"
+              value={data.serviceRequests.createdInRange}
+              href="/admin/service-requests"
+            />
+            <StatTile
+              label="Open with an SLA due time"
+              value={data.serviceRequests.sla.openWithDueTime}
+            />
+            <StatTile
+              label="Past SLA now"
+              value={data.serviceRequests.sla.openBreaches}
+              tone={data.serviceRequests.sla.openBreaches > 0 ? 'danger' : 'neutral'}
+            />
+            <StatTile
+              label="Due within 8 hours"
+              value={data.serviceRequests.sla.dueSoon}
+              tone={data.serviceRequests.sla.dueSoon > 0 ? 'warning' : 'neutral'}
+            />
           </div>
           {data.serviceRequests.sla.activePolicies === 0 ? (
             <Alert tone="info" title="No SLA policies are configured">
@@ -261,11 +350,15 @@ function AnalyticsSections({
               .
             </Alert>
           ) : (
-            <p className="text-xs text-fg-muted">{data.serviceRequests.sla.activePolicies} active SLA policies.</p>
+            <p className="text-xs text-fg-muted">
+              {data.serviceRequests.sla.activePolicies} active SLA policies.
+            </p>
           )}
           <div className="grid gap-4 md:grid-cols-2">
             <table className="w-full text-sm">
-              <caption className="text-left text-xs font-medium uppercase tracking-wide text-fg-muted">By status</caption>
+              <caption className="text-left text-xs font-medium uppercase tracking-wide text-fg-muted">
+                By status
+              </caption>
               <tbody>
                 {Object.entries(data.serviceRequests.byStatus).map(([s, n]) => (
                   <tr key={s} className="border-t border-border">
@@ -281,7 +374,9 @@ function AnalyticsSections({
               </tbody>
             </table>
             <table className="w-full text-sm">
-              <caption className="text-left text-xs font-medium uppercase tracking-wide text-fg-muted">By service</caption>
+              <caption className="text-left text-xs font-medium uppercase tracking-wide text-fg-muted">
+                By service
+              </caption>
               <tbody>
                 {data.serviceRequests.byService.map((s) => (
                   <tr key={s.serviceId} className="border-t border-border">
@@ -304,12 +399,19 @@ function AnalyticsSections({
           actions={exportLink('revenue', 'Export journal lines CSV')}
         >
           <div className="grid gap-3 sm:grid-cols-2">
-            <StatTile label="Revenue in range" value={<Money kobo={data.revenue.totalKobo} />} hint={`${data.revenue.lineCount} journal lines`} href="/admin/finance/journals" />
+            <StatTile
+              label="Revenue in range"
+              value={<Money kobo={data.revenue.totalKobo} />}
+              hint={`${data.revenue.lineCount} journal lines`}
+              href="/admin/finance/journals"
+            />
             <StatTile label="Revenue accounts touched" value={data.revenue.byAccount.length} />
           </div>
           <div className="grid gap-4 md:grid-cols-2">
             <table className="w-full text-sm">
-              <caption className="text-left text-xs font-medium uppercase tracking-wide text-fg-muted">Months</caption>
+              <caption className="text-left text-xs font-medium uppercase tracking-wide text-fg-muted">
+                Months
+              </caption>
               <tbody>
                 {data.revenue.months.map((m) => (
                   <tr key={m.month} className="border-t border-border">
@@ -322,7 +424,9 @@ function AnalyticsSections({
               </tbody>
             </table>
             <table className="w-full text-sm">
-              <caption className="text-left text-xs font-medium uppercase tracking-wide text-fg-muted">Accounts</caption>
+              <caption className="text-left text-xs font-medium uppercase tracking-wide text-fg-muted">
+                Accounts
+              </caption>
               <tbody>
                 {data.revenue.byAccount.map((a) => (
                   <tr key={a.code} className="border-t border-border">
@@ -344,7 +448,9 @@ function AnalyticsSections({
           </div>
         </Section>
       ) : null}
-      <p className="text-xs text-fg-muted">Generated {data.generatedAt}. How exports reconcile: docs/workflows/admin-configuration.md.</p>
+      <p className="text-xs text-fg-muted">
+        Generated {data.generatedAt}. How exports reconcile: docs/workflows/admin-configuration.md.
+      </p>
     </div>
   );
 }

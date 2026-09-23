@@ -15,7 +15,11 @@ import { ValuesSummary, figureLabel } from '../../_components/price-anchors-boar
 export const metadata: Metadata = { title: 'Price anchor history' };
 export const dynamic = 'force-dynamic';
 
-export default async function PriceAnchorHistoryPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function PriceAnchorHistoryPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
   const { id } = await params;
   if (!uuidSchema.safeParse(id).success) notFound();
   const identity = await requireSignedIn(`/admin/services/pricing/${id}`);
@@ -27,8 +31,16 @@ export default async function PriceAnchorHistoryPage({ params }: { params: Promi
   const a = loaded.value;
   const revisions = a.revisions ?? [];
   const columns: Column<PriceAnchorRevisionDto>[] = [
-    { key: 'rev', header: 'Revision', cell: (r) => <span className="font-mono">#{r.revision}</span> },
-    { key: 'event', header: 'Event', cell: (r) => <StatusBadge status={r.state} label={humanize(r.event)} /> },
+    {
+      key: 'rev',
+      header: 'Revision',
+      cell: (r) => <span className="font-mono">#{r.revision}</span>,
+    },
+    {
+      key: 'event',
+      header: 'Event',
+      cell: (r) => <StatusBadge status={r.state} label={humanize(r.event)} />,
+    },
     { key: 'figure', header: 'Figure', cell: (r) => figureLabel(r.values) },
     {
       key: 'effective',
@@ -37,8 +49,16 @@ export default async function PriceAnchorHistoryPage({ params }: { params: Promi
       hideOnMobile: true,
     },
     { key: 'who', header: 'By', cell: (r) => r.changedBy?.name ?? 'System' },
-    { key: 'when', header: 'When', cell: (r) => <span className="text-xs">{fmtDate(r.createdAt)}</span> },
-    { key: 'reason', header: 'Reason', cell: (r) => <span className="text-xs text-fg-muted">{r.reason ?? '—'}</span> },
+    {
+      key: 'when',
+      header: 'When',
+      cell: (r) => <span className="text-xs">{fmtDate(r.createdAt)}</span>,
+    },
+    {
+      key: 'reason',
+      header: 'Reason',
+      cell: (r) => <span className="text-xs text-fg-muted">{r.reason ?? '—'}</span>,
+    },
   ];
   return (
     <div className="space-y-6">
@@ -50,7 +70,9 @@ export default async function PriceAnchorHistoryPage({ params }: { params: Promi
         }
         title={`${a.serviceName}: ${a.live.name}`}
         description="Append-only revision history. Nothing here is ever edited or deleted; a rejected or withdrawn proposal stays on record."
-        actions={<StatusBadge status={a.publicationState} label={priceStatusLabel(a.publicationState)} />}
+        actions={
+          <StatusBadge status={a.publicationState} label={priceStatusLabel(a.publicationState)} />
+        }
       />
       <div className="grid gap-4 lg:grid-cols-2">
         <section className="rounded-lg border border-border bg-bg-elevated p-4">
@@ -81,7 +103,9 @@ export default async function PriceAnchorHistoryPage({ params }: { params: Promi
               </p>
             </>
           ) : (
-            <p className="text-sm text-fg-muted">None. Propose a change from the price anchors list.</p>
+            <p className="text-sm text-fg-muted">
+              None. Propose a change from the price anchors list.
+            </p>
           )}
         </section>
       </div>

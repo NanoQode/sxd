@@ -37,7 +37,11 @@ export default async function DocumentRequirementsPage() {
       {!loaded.ok ? (
         <LoadError code={loaded.code} message={loaded.message} what="Document requirements" />
       ) : (
-        <DocumentRequirementsEditor items={loaded.value} services={services} canManage={canManage} />
+        <DocumentRequirementsEditor
+          items={loaded.value}
+          services={services}
+          canManage={canManage}
+        />
       )}
     </div>
   );

@@ -62,12 +62,16 @@ export function ValuesSummary({ v }: { v: AnchorValues }) {
 
 type Action = 'submit' | 'publish' | 'reject' | 'withdraw';
 
-const ACTION_COPY: Record<Action, { title: string; confirm: string; tone: 'primary' | 'danger'; description: string }> = {
+const ACTION_COPY: Record<
+  Action,
+  { title: string; confirm: string; tone: 'primary' | 'danger'; description: string }
+> = {
   submit: {
     title: 'Submit for business review',
     confirm: 'Submit',
     tone: 'primary',
-    description: 'A different pricing manager must publish it. Nothing changes publicly until then.',
+    description:
+      'A different pricing manager must publish it. Nothing changes publicly until then.',
   },
   publish: {
     title: 'Publish this anchor',
@@ -80,7 +84,8 @@ const ACTION_COPY: Record<Action, { title: string; confirm: string; tone: 'prima
     title: 'Reject this proposal',
     confirm: 'Reject',
     tone: 'danger',
-    description: 'The live anchor stays as it is; the proposal is kept in history with your reason.',
+    description:
+      'The live anchor stays as it is; the proposal is kept in history with your reason.',
   },
   withdraw: {
     title: 'Withdraw this proposal',
@@ -149,13 +154,22 @@ export function PriceAnchorsBoard({
     try {
       if (creating) {
         await adminFetch('/api/v1/admin/price-anchors', {
-          body: { serviceId: newServiceId, slug: newSlug.trim(), values: payload.values, note: note || undefined },
+          body: {
+            serviceId: newServiceId,
+            slug: newSlug.trim(),
+            values: payload.values,
+            note: note || undefined,
+          },
         });
         toast({ title: 'Package created as a draft proposal', tone: 'success' });
         setCreating(false);
       } else if (editing) {
         await adminFetch(`/api/v1/admin/price-anchors/${editing.id}/draft`, {
-          body: { values: payload.values, expectedRevision: editing.latestRevision, note: note || undefined },
+          body: {
+            values: payload.values,
+            expectedRevision: editing.latestRevision,
+            note: note || undefined,
+          },
         });
         toast({ title: 'Draft saved as a new revision', tone: 'success' });
         setEditing(null);
@@ -173,7 +187,10 @@ export function PriceAnchorsBoard({
     await adminFetch(`/api/v1/admin/price-anchors/${pending.item.id}/transition`, {
       body: { action: pending.action, expectedRevision: pending.item.latestRevision, reason },
     });
-    toast({ title: `${ACTION_COPY[pending.action].confirm}: ${pending.item.live.name}`, tone: 'success' });
+    toast({
+      title: `${ACTION_COPY[pending.action].confirm}: ${pending.item.live.name}`,
+      tone: 'success',
+    });
     router.refresh();
   }
 
@@ -214,12 +231,17 @@ export function PriceAnchorsBoard({
         <section key={service.id} aria-labelledby={`svc-${service.id}`} className="space-y-3">
           <h2 id={`svc-${service.id}`} className="text-lg font-semibold">
             {service.name}{' '}
-            <Link href={`/services/${service.slug}`} className="text-sm font-normal text-primary underline">
+            <Link
+              href={`/services/${service.slug}`}
+              className="text-sm font-normal text-primary underline"
+            >
               public page
             </Link>
           </h2>
           {anchors.length === 0 ? (
-            <p className="text-sm text-fg-muted">No package yet; the public page says pricing is by quotation.</p>
+            <p className="text-sm text-fg-muted">
+              No package yet; the public page says pricing is by quotation.
+            </p>
           ) : (
             <ul className="grid gap-3 lg:grid-cols-2">
               {anchors.map((a) => {
@@ -230,17 +252,26 @@ export function PriceAnchorsBoard({
                     <div className="flex flex-wrap items-start justify-between gap-2">
                       <div>
                         <p className="font-medium">
-                          {a.live.name} <span className="font-mono text-xs text-fg-muted">{a.slug}</span>
+                          {a.live.name}{' '}
+                          <span className="font-mono text-xs text-fg-muted">{a.slug}</span>
                         </p>
-                        <StatusBadge status={a.publicationState} label={priceStatusLabel(a.publicationState)} />
+                        <StatusBadge
+                          status={a.publicationState}
+                          label={priceStatusLabel(a.publicationState)}
+                        />
                       </div>
-                      <Link href={`/admin/services/pricing/${a.id}`} className="text-sm text-primary underline">
+                      <Link
+                        href={`/admin/services/pricing/${a.id}`}
+                        className="text-sm text-primary underline"
+                      >
                         History ({a.latestRevision} revision{a.latestRevision === 1 ? '' : 's'})
                       </Link>
                     </div>
                     <div className="mt-3">
                       <p className="text-xs font-medium uppercase tracking-wide text-fg-muted">
-                        {a.publicationState === 'published' ? 'Live on the public site' : 'Stored values (not public)'}
+                        {a.publicationState === 'published'
+                          ? 'Live on the public site'
+                          : 'Stored values (not public)'}
                       </p>
                       <ValuesSummary v={a.live} />
                       {a.publishedAt ? (
@@ -257,7 +288,9 @@ export function PriceAnchorsBoard({
                             {p.state === 'in_review' ? 'Proposal under review' : 'Draft proposal'}
                           </Badge>
                           {p.implicit ? (
-                            <span className="text-xs text-fg-muted">Seeded anchor awaiting first business review</span>
+                            <span className="text-xs text-fg-muted">
+                              Seeded anchor awaiting first business review
+                            </span>
                           ) : (
                             <span className="text-xs text-fg-muted">
                               by {p.authors.map((u) => u.name).join(', ') || 'unknown'} · updated{' '}
@@ -277,7 +310,10 @@ export function PriceAnchorsBoard({
                                 <Button size="sm" variant="secondary" onClick={() => openEdit(a)}>
                                   Edit draft
                                 </Button>
-                                <Button size="sm" onClick={() => setPending({ item: a, action: 'submit' })}>
+                                <Button
+                                  size="sm"
+                                  onClick={() => setPending({ item: a, action: 'submit' })}
+                                >
                                   Submit for review
                                 </Button>
                               </>
@@ -298,7 +334,11 @@ export function PriceAnchorsBoard({
                                   Publish
                                 </Button>
                                 {!isAuthor ? (
-                                  <Button size="sm" variant="secondary" onClick={() => setPending({ item: a, action: 'reject' })}>
+                                  <Button
+                                    size="sm"
+                                    variant="secondary"
+                                    onClick={() => setPending({ item: a, action: 'reject' })}
+                                  >
                                     Reject
                                   </Button>
                                 ) : null}
@@ -310,7 +350,11 @@ export function PriceAnchorsBoard({
                               </>
                             )}
                             {!p.implicit ? (
-                              <Button size="sm" variant="ghost" onClick={() => setPending({ item: a, action: 'withdraw' })}>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => setPending({ item: a, action: 'withdraw' })}
+                              >
                                 Withdraw
                               </Button>
                             ) : null}
@@ -318,7 +362,8 @@ export function PriceAnchorsBoard({
                         ) : null}
                         {canManage && p.state === 'in_review' && isAuthor ? (
                           <p className="mt-2 text-xs text-fg-muted">
-                            You are an author of this proposal, so someone else must publish or reject it.
+                            You are an author of this proposal, so someone else must publish or
+                            reject it.
                           </p>
                         ) : null}
                         {canManage && p.state === 'in_review' && !isAuthor && !mfaVerified ? (
@@ -341,7 +386,9 @@ export function PriceAnchorsBoard({
                             variant="ghost"
                             onClick={() => setRetiring(a)}
                             disabled={!mfaVerified}
-                            title={!mfaVerified ? 'Retiring needs a verified authenticator.' : undefined}
+                            title={
+                              !mfaVerified ? 'Retiring needs a verified authenticator.' : undefined
+                            }
                           >
                             Retire
                           </Button>
@@ -377,7 +424,11 @@ export function PriceAnchorsBoard({
               <div className="grid gap-3 sm:grid-cols-2">
                 <Field label="Service" required>
                   {({ id }) => (
-                    <NativeSelect id={id} value={newServiceId} onChange={(e) => setNewServiceId(e.target.value)}>
+                    <NativeSelect
+                      id={id}
+                      value={newServiceId}
+                      onChange={(e) => setNewServiceId(e.target.value)}
+                    >
                       {services.map((s) => (
                         <option key={s.id} value={s.id}>
                           {s.name}
@@ -387,15 +438,27 @@ export function PriceAnchorsBoard({
                     </NativeSelect>
                   )}
                 </Field>
-                <Field label="Package slug" required hint="Lowercase, unique within the service, e.g. standard.">
-                  {({ id }) => <Input id={id} value={newSlug} onChange={(e) => setNewSlug(e.target.value)} />}
+                <Field
+                  label="Package slug"
+                  required
+                  hint="Lowercase, unique within the service, e.g. standard."
+                >
+                  {({ id }) => (
+                    <Input id={id} value={newSlug} onChange={(e) => setNewSlug(e.target.value)} />
+                  )}
                 </Field>
               </div>
             ) : null}
             <AnchorForm value={form} onChange={setForm} />
             <Field label="Note for reviewers (optional)">
               {({ id }) => (
-                <Textarea id={id} value={note} onChange={(e) => setNote(e.target.value)} className="min-h-14" maxLength={500} />
+                <Textarea
+                  id={id}
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  className="min-h-14"
+                  maxLength={500}
+                />
               )}
             </Field>
             <DialogFooter>
@@ -422,10 +485,13 @@ export function PriceAnchorsBoard({
       >
         {pending?.action === 'publish' && pending.item.proposal ? (
           <div className="rounded-md bg-bg-sunken p-3">
-            <p className="mb-1 text-xs font-medium uppercase tracking-wide text-fg-muted">Going live</p>
+            <p className="mb-1 text-xs font-medium uppercase tracking-wide text-fg-muted">
+              Going live
+            </p>
             <ValuesSummary v={pending.item.proposal.values} />
             <p className="mt-2 text-xs text-fg-muted">
-              Now: {figureLabel(pending.item.live)} ({priceStatusLabel(pending.item.publicationState)})
+              Now: {figureLabel(pending.item.live)} (
+              {priceStatusLabel(pending.item.publicationState)})
             </p>
           </div>
         ) : null}

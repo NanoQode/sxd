@@ -25,7 +25,11 @@ export function parseLines(lines: DraftLine[]): ParsedLines {
     const unit = parseNairaToKobo(l.unitNaira);
     const qtyOk = /^\d+(\.\d{1,3})?$/.test(l.quantity);
     if (!l.description.trim() || !unit || unit.startsWith('-') || !qtyOk) valid = false;
-    out.push({ description: l.description.trim(), quantity: l.quantity, unitAmountKobo: unit ?? '0' });
+    out.push({
+      description: l.description.trim(),
+      quantity: l.quantity,
+      unitAmountKobo: unit ?? '0',
+    });
   }
   return {
     valid,
@@ -35,7 +39,13 @@ export function parseLines(lines: DraftLine[]): ParsedLines {
 }
 
 /** Quote line editor shared by the quotation template form (amounts in whole naira). */
-export function LinesEditor({ lines, onChange }: { lines: DraftLine[]; onChange: (next: DraftLine[]) => void }) {
+export function LinesEditor({
+  lines,
+  onChange,
+}: {
+  lines: DraftLine[];
+  onChange: (next: DraftLine[]) => void;
+}) {
   const parsed = parseLines(lines);
   return (
     <div className="space-y-2">
@@ -46,20 +56,26 @@ export function LinesEditor({ lines, onChange }: { lines: DraftLine[]; onChange:
             aria-label={`Line ${i + 1} description`}
             placeholder="Description"
             value={l.description}
-            onChange={(e) => onChange(lines.map((x, j) => (j === i ? { ...x, description: e.target.value } : x)))}
+            onChange={(e) =>
+              onChange(lines.map((x, j) => (j === i ? { ...x, description: e.target.value } : x)))
+            }
           />
           <Input
             aria-label={`Line ${i + 1} quantity`}
             placeholder="Qty"
             value={l.quantity}
-            onChange={(e) => onChange(lines.map((x, j) => (j === i ? { ...x, quantity: e.target.value } : x)))}
+            onChange={(e) =>
+              onChange(lines.map((x, j) => (j === i ? { ...x, quantity: e.target.value } : x)))
+            }
           />
           <Input
             aria-label={`Line ${i + 1} unit amount in naira`}
             placeholder="Unit ₦"
             inputMode="decimal"
             value={l.unitNaira}
-            onChange={(e) => onChange(lines.map((x, j) => (j === i ? { ...x, unitNaira: e.target.value } : x)))}
+            onChange={(e) =>
+              onChange(lines.map((x, j) => (j === i ? { ...x, unitNaira: e.target.value } : x)))
+            }
             aria-invalid={l.unitNaira !== '' && !parseNairaToKobo(l.unitNaira)}
           />
           <Button

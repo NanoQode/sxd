@@ -25,10 +25,10 @@ export default async function SlaPoliciesPage() {
         description="Target hours per engagement stage, for one service or for every service. The service-specific policy wins over the global one."
       />
       <Alert tone="info" title="What is applied automatically today">
-        Triage sets a request’s SLA due time from the active <strong>triage</strong> policy (unless the
-        triager types an explicit due time). Targets for the other stages are stored and shown in queues
-        and analytics; an escalation job that re-times each stage and notifies the escalation role is
-        not built yet, so “escalate to” is recorded but not acted on.
+        Triage sets a request’s SLA due time from the active <strong>triage</strong> policy (unless
+        the triager types an explicit due time). Targets for the other stages are stored and shown
+        in queues and analytics; an escalation job that re-times each stage and notifies the
+        escalation role is not built yet, so “escalate to” is recorded but not acted on.
       </Alert>
       {!canManage ? (
         <Alert tone="info" title="Read-only">

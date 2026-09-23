@@ -109,14 +109,12 @@ beforeAll(async () => {
     percentageBps: 150,
     publicationState: 'published',
   });
-  await dbs.owner
-    .insert(schema.slaPolicies)
-    .values({
-      serviceId: purchaseServiceId,
-      stage: 'triage',
-      targetHours: 24,
-      businessHoursOnly: false,
-    });
+  await dbs.owner.insert(schema.slaPolicies).values({
+    serviceId: purchaseServiceId,
+    stage: 'triage',
+    targetHours: 24,
+    businessHoursOnly: false,
+  });
 });
 
 afterAll(async () => {

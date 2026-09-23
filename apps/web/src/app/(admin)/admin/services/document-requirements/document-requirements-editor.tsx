@@ -81,7 +81,10 @@ export function DocumentRequirementsEditor({
     }
   }
 
-  const ready = name.trim().length >= 3 && /^\d+$/.test(sortOrder) && (editing === 'new' || reason.trim().length >= 3);
+  const ready =
+    name.trim().length >= 3 &&
+    /^\d+$/.test(sortOrder) &&
+    (editing === 'new' || reason.trim().length >= 3);
 
   async function save() {
     setBusy(true);
@@ -116,7 +119,9 @@ export function DocumentRequirementsEditor({
     }
   }
 
-  const visible = items.filter((r) => (filter === ALL ? true : r.serviceId === filter || r.serviceId === null));
+  const visible = items.filter((r) =>
+    filter === ALL ? true : r.serviceId === filter || r.serviceId === null,
+  );
   const columns: Column<DocumentRequirementDto>[] = [
     {
       key: 'name',
@@ -124,7 +129,9 @@ export function DocumentRequirementsEditor({
       cell: (r) => (
         <span>
           <span className="font-medium">{r.name}</span>
-          {r.description ? <span className="block text-xs text-fg-muted">{r.description}</span> : null}
+          {r.description ? (
+            <span className="block text-xs text-fg-muted">{r.description}</span>
+          ) : null}
         </span>
       ),
     },
@@ -135,7 +142,9 @@ export function DocumentRequirementsEditor({
       header: 'Flags',
       cell: (r) => (
         <span className="flex flex-wrap gap-1">
-          <Badge tone={r.required ? 'primary' : 'neutral'}>{r.required ? 'Required' : 'Optional'}</Badge>
+          <Badge tone={r.required ? 'primary' : 'neutral'}>
+            {r.required ? 'Required' : 'Optional'}
+          </Badge>
           {r.sensitive ? <Badge tone="warning">Sensitive</Badge> : null}
           {!r.active ? <Badge tone="neutral">Inactive</Badge> : null}
         </span>
@@ -182,7 +191,11 @@ export function DocumentRequirementsEditor({
       <Dialog open={editing !== null} onOpenChange={(v) => !busy && !v && setEditing(null)}>
         <DialogContent
           className={DIALOG_MAX_H}
-          title={editing === 'new' ? 'Add a document requirement' : `Edit ${editing === null ? '' : editing.name}`}
+          title={
+            editing === 'new'
+              ? 'Add a document requirement'
+              : `Edit ${editing === null ? '' : editing.name}`
+          }
         >
           <div className="space-y-4">
             {error ? (
@@ -192,7 +205,11 @@ export function DocumentRequirementsEditor({
             ) : null}
             <Field label="Applies to" required>
               {({ id }) => (
-                <NativeSelect id={id} value={serviceId} onChange={(e) => setServiceId(e.target.value)}>
+                <NativeSelect
+                  id={id}
+                  value={serviceId}
+                  onChange={(e) => setServiceId(e.target.value)}
+                >
                   <option value={ALL}>All services</option>
                   {services.map((s) => (
                     <option key={s.id} value={s.id}>
@@ -203,15 +220,32 @@ export function DocumentRequirementsEditor({
               )}
             </Field>
             <Field label="Document" required>
-              {({ id }) => <Input id={id} value={name} onChange={(e) => setName(e.target.value)} maxLength={160} />}
+              {({ id }) => (
+                <Input
+                  id={id}
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  maxLength={160}
+                />
+              )}
             </Field>
             <Field label="Why it is needed (shown to the customer)">
               {({ id }) => (
-                <Textarea id={id} value={description} onChange={(e) => setDescription(e.target.value)} className="min-h-16" maxLength={2000} />
+                <Textarea
+                  id={id}
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  className="min-h-16"
+                  maxLength={2000}
+                />
               )}
             </Field>
             <div className="grid gap-3 sm:grid-cols-2">
-              <Field label="Needed from stage" required hint="The customer sees it once the request reaches this stage.">
+              <Field
+                label="Needed from stage"
+                required
+                hint="The customer sees it once the request reaches this stage."
+              >
                 {({ id }) => (
                   <NativeSelect id={id} value={stage} onChange={(e) => setStage(e.target.value)}>
                     <option value={INTAKE}>At intake</option>
@@ -224,32 +258,65 @@ export function DocumentRequirementsEditor({
                 )}
               </Field>
               <Field label="Sort order" hint="Lower first within a stage.">
-                {({ id }) => <Input id={id} inputMode="numeric" value={sortOrder} onChange={(e) => setSortOrder(e.target.value)} />}
+                {({ id }) => (
+                  <Input
+                    id={id}
+                    inputMode="numeric"
+                    value={sortOrder}
+                    onChange={(e) => setSortOrder(e.target.value)}
+                  />
+                )}
               </Field>
             </div>
             <div className="space-y-2 text-sm">
               <label className="flex items-center gap-2">
-                <input type="checkbox" className="h-4 w-4" checked={required} onChange={(e) => setRequired(e.target.checked)} />
+                <input
+                  type="checkbox"
+                  className="h-4 w-4"
+                  checked={required}
+                  onChange={(e) => setRequired(e.target.checked)}
+                />
                 Required (otherwise shown as optional)
               </label>
               <label className="flex items-start gap-2">
-                <input type="checkbox" className="mt-0.5 h-4 w-4" checked={sensitive} onChange={(e) => setSensitive(e.target.checked)} />
+                <input
+                  type="checkbox"
+                  className="mt-0.5 h-4 w-4"
+                  checked={sensitive}
+                  onChange={(e) => setSensitive(e.target.checked)}
+                />
                 <span>
                   Sensitive (identity or financial document)
                   <span className="block text-xs text-fg-muted">
-                    Requested only when the transaction requires it, shown to the customer inside their request with that
-                    explanation, and never listed on public pages.
+                    Requested only when the transaction requires it, shown to the customer inside
+                    their request with that explanation, and never listed on public pages.
                   </span>
                 </span>
               </label>
               <label className="flex items-center gap-2">
-                <input type="checkbox" className="h-4 w-4" checked={active} onChange={(e) => setActive(e.target.checked)} />
+                <input
+                  type="checkbox"
+                  className="h-4 w-4"
+                  checked={active}
+                  onChange={(e) => setActive(e.target.checked)}
+                />
                 Active
               </label>
             </div>
             {editing !== 'new' ? (
-              <Field label="Reason (recorded in the audit log)" required hint="At least 3 characters.">
-                {({ id }) => <Textarea id={id} value={reason} onChange={(e) => setReason(e.target.value)} className="min-h-14" />}
+              <Field
+                label="Reason (recorded in the audit log)"
+                required
+                hint="At least 3 characters."
+              >
+                {({ id }) => (
+                  <Textarea
+                    id={id}
+                    value={reason}
+                    onChange={(e) => setReason(e.target.value)}
+                    className="min-h-14"
+                  />
+                )}
               </Field>
             ) : null}
             <DialogFooter>

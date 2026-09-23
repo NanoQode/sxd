@@ -1,4 +1,4 @@
-import { schema, type DbExecutor } from '@simplexd/db';
+import type { DbExecutor, schema } from '@simplexd/db';
 import type { PipelineEnv } from './env';
 import { staffWithRoles } from './recipients';
 import type { NotificationChannel, NotificationRequest, RecipientSpec } from './types';

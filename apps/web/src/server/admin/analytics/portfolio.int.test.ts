@@ -85,14 +85,12 @@ beforeAll(async () => {
   await owner
     .insert(schema.organization)
     .values({ id: orgId, name: `Portfolio org ${sfx}`, slug: orgId });
-  await owner
-    .insert(schema.member)
-    .values({
-      id: `m_${users.cust.id}`,
-      organizationId: orgId,
-      userId: users.cust.id,
-      role: 'owner',
-    });
+  await owner.insert(schema.member).values({
+    id: `m_${users.cust.id}`,
+    organizationId: orgId,
+    userId: users.cust.id,
+    role: 'owner',
+  });
   await owner
     .insert(schema.ledgerAccounts)
     .values(chartOfAccounts)

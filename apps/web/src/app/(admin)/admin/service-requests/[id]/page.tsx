@@ -294,7 +294,8 @@ export default async function ServiceRequestDetailPage({
             )}
           </Section>
 
-          {r.serviceSlug.startsWith('property-search') || r.serviceSlug.startsWith('purchase-support') ? (
+          {r.serviceSlug.startsWith('property-search') ||
+          r.serviceSlug.startsWith('purchase-support') ? (
             <SearchAdminPanel identity={identity} requestId={r.id} canManage={permissions.triage} />
           ) : null}
 

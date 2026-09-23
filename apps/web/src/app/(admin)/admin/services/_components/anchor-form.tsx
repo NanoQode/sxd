@@ -28,7 +28,10 @@ export function formFromValues(v: AnchorValues | null, today: string): AnchorFor
     scopeMarkdown: v?.scopeMarkdown ?? '',
     priceBasis: v?.priceBasis ?? 'from',
     amountNaira: koboToNairaInput(v?.amountKobo),
-    percent: v?.percentageBps === null || v?.percentageBps === undefined ? '' : String(v.percentageBps / 100),
+    percent:
+      v?.percentageBps === null || v?.percentageBps === undefined
+        ? ''
+        : String(v.percentageBps / 100),
     minimumScope: v?.minimumScope ?? '',
     exclusions: v?.exclusions ?? '',
     effectiveFrom: v?.effectiveFrom ?? today,
@@ -39,7 +42,10 @@ export function formFromValues(v: AnchorValues | null, today: string): AnchorFor
 const hasAmount = (b: PriceBasis) => b === 'fixed' || b === 'from' || b === 'per_month';
 
 /** Converts the form to the API payload, or returns the first client-side problem. */
-export function payloadFromForm(f: AnchorFormState): { values?: Record<string, unknown>; error?: string } {
+export function payloadFromForm(f: AnchorFormState): {
+  values?: Record<string, unknown>;
+  error?: string;
+} {
   const amountKobo = hasAmount(f.priceBasis) ? parseNairaToKobo(f.amountNaira) : null;
   if (hasAmount(f.priceBasis) && (!amountKobo || amountKobo.startsWith('-') || amountKobo === '0'))
     return { error: 'Enter the amount in naira (whole naira or naira.kobo).' };
@@ -82,7 +88,12 @@ export function AnchorForm({
     <div className="grid gap-3 sm:grid-cols-2">
       <Field label="Package name" required className="sm:col-span-2">
         {({ id }) => (
-          <Input id={id} value={value.name} onChange={(e) => set('name', e.target.value)} maxLength={120} />
+          <Input
+            id={id}
+            value={value.name}
+            onChange={(e) => set('name', e.target.value)}
+            maxLength={120}
+          />
         )}
       </Field>
       <Field label="Price basis" required>
@@ -131,9 +142,16 @@ export function AnchorForm({
           )}
         </Field>
       ) : (
-        <p className="self-end pb-3 text-sm text-fg-muted">Priced by quotation; no figure is shown.</p>
+        <p className="self-end pb-3 text-sm text-fg-muted">
+          Priced by quotation; no figure is shown.
+        </p>
       )}
-      <Field label="Minimum scope" required className="sm:col-span-2" hint="What the anchor covers at minimum.">
+      <Field
+        label="Minimum scope"
+        required
+        className="sm:col-span-2"
+        hint="What the anchor covers at minimum."
+      >
         {({ id }) => (
           <Textarea
             id={id}
@@ -155,19 +173,38 @@ export function AnchorForm({
           />
         )}
       </Field>
-      <Field label="Effective from" required hint="A future date keeps the current published anchor until then.">
+      <Field
+        label="Effective from"
+        required
+        hint="A future date keeps the current published anchor until then."
+      >
         {({ id }) => (
-          <Input id={id} type="date" value={value.effectiveFrom} onChange={(e) => set('effectiveFrom', e.target.value)} />
+          <Input
+            id={id}
+            type="date"
+            value={value.effectiveFrom}
+            onChange={(e) => set('effectiveFrom', e.target.value)}
+          />
         )}
       </Field>
       <Field label="Effective to (optional)">
         {({ id }) => (
-          <Input id={id} type="date" value={value.effectiveTo} onChange={(e) => set('effectiveTo', e.target.value)} />
+          <Input
+            id={id}
+            type="date"
+            value={value.effectiveTo}
+            onChange={(e) => set('effectiveTo', e.target.value)}
+          />
         )}
       </Field>
       <Field label="Short description (optional)" className="sm:col-span-2">
         {({ id }) => (
-          <Input id={id} value={value.description} onChange={(e) => set('description', e.target.value)} maxLength={2000} />
+          <Input
+            id={id}
+            value={value.description}
+            onChange={(e) => set('description', e.target.value)}
+            maxLength={2000}
+          />
         )}
       </Field>
       <Field label="Scope details (markdown, optional)" className="sm:col-span-2">
