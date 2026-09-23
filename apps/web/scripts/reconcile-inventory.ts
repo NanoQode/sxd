@@ -24,7 +24,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { parse } from 'csv-parse/sync';
-import { and, eq } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { closeDb, getDb, schema, withActor } from '@simplexd/db';
 import { toSitePath } from '../src/lib/site-routes';
 import { livePageKind } from '../src/server/content/site-routes';
